@@ -22,6 +22,7 @@ export interface CreateSongBookOptions {
   backSheetPageNumber: boolean;
   carnivalMode: boolean;
   antiAssedioPages: boolean;
+  includeFingering: boolean;
   stripInstrumentFromPartLabel: boolean;
   debugBoundingBoxes?: boolean;
 }
@@ -52,6 +53,46 @@ const debugRect = (
 ) => {
   if (!debug) return;
   doc.save().rect(x, y, w, h).strokeColor(color).stroke().restore();
+};
+
+const filterSvgFingering = (svgString: string, includeFingering: boolean): string => {
+  if (includeFingering) {
+    return svgString;
+  }
+
+  try {
+    let filtered = svgString;
+    const originalLength = filtered.length;
+    
+    // MuseScore 3.6 renders fingering as SVG <path> elements with class="Fingering"
+    // These are self-closing tags: <path ... class="Fingering" ... />
+    // We need to match the entire path element including the d="..." attribute
+    
+    // Remove all <path ...class="Fingering".../>  elements (case-sensitive for efficiency)
+    // This regex matches: <path followed by any attributes, class="Fingering" with any other attributes, and />
+    filtered = filtered.replace(/<path\b[^>]*\bclass="Fingering"[^>]*\/>/g, "");
+    
+    let removed = originalLength - filtered.length;
+    if (removed > 0) {
+      console.log(`[FilterFingering] Removed ${removed} chars (${Math.round(removed / 100)} Fingering paths)`);
+    } else {
+      console.log(`[FilterFingering] No Fingering paths found with class="Fingering" pattern`);
+      
+      // Fallback: Try to find fingering as numeric text (for other SVG formats)
+      filtered = filtered.replace(/<text[^>]*>\s*\d{1,3}\s*<\/text>/g, "");
+      filtered = filtered.replace(/<tspan[^>]*>\s*\d{1,3}\s*<\/tspan>/g, "");
+      
+      removed = originalLength - filtered.length;
+      if (removed > 0) {
+        console.log(`[FilterFingering] Removed ${removed} chars (numeric text elements)`);
+      }
+    }
+    
+    return filtered;
+  } catch (e) {
+    console.error("[FilterFingering] Error filtering fingering from SVG:", e);
+    return svgString;
+  }
 };
 
 export const createSongBook = async (opts: CreateSongBookOptions) => {
@@ -214,20 +255,38 @@ const download = (doc: any, file_name: string) => {
   doc.end();
 };
 
-const drawSvg = async (doc: any, url: string, page: number): Promise<void> => {
+const drawSvg = async (doc: any, url: string, page: number, includeFingering: boolean = true): Promise<void> => {
   try {
     const resp = await fetch(url);
-    const svg = await resp.text();
-    doc.switchToPage(page);
-    const width = 17.17 * cm2pt;
-    const height = 9.82 * cm2pt;
-    SVGtoPDF(doc, svg, 0.44 * cm2pt, 2.55 * cm2pt, {
-      width: width,
-      height: height,
-      preserveAspectRatio: `${width}x${height}`,
-    });
+    let svg = await resp.text();
+    
+    const originalLength = svg.length;
+    console.log(`[DrawSVG] Fetched SVG from ${url}, length=${originalLength}, includeFingering=${includeFingering}`);
+    
+    // Filter fingering if requested
+    svg = filterSvgFingering(svg, includeFingering);
+    
+    if (svg.length !== originalLength) {
+      console.log(`[DrawSVG] Filtered SVG: ${originalLength} -> ${svg.length} chars`);
+    }
+    
+    try {
+      doc.switchToPage(page);
+      const width = 17.17 * cm2pt;
+      const height = 9.82 * cm2pt;
+      SVGtoPDF(doc, svg, 0.44 * cm2pt, 2.55 * cm2pt, {
+        width: width,
+        height: height,
+        preserveAspectRatio: `${width}x${height}`,
+      });
+      console.log(`[DrawSVG] Successfully rendered SVG on page ${page}`);
+    } catch (svgError) {
+      console.error(`[DrawSVG] SVGtoPDF failed for page ${page}:`, svgError);
+      throw svgError;
+    }
   } catch (e) {
-    console.error(e);
+    console.error(`[DrawSVG] Error in drawSvg (${url}):`, e);
+    throw e; // Re-throw so caller knows something failed
   }
 };
 
@@ -300,6 +359,7 @@ const addSongPage = async (
   {
     instrument,
     backSheetPageNumber,
+    includeFingering,
     debugBoundingBoxes,
   }: CreateSongBookOptions,
 ): Promise<[number, Promise<void>[]]> => {
@@ -527,7 +587,7 @@ const addSongPage = async (
       );
 
     promises.push(
-      drawSvg(doc, `/collection/${part.svg[svgPageIdx]}`, currentPage),
+      drawSvg(doc, `/collection/${part.svg[svgPageIdx]}`, currentPage, includeFingering),
     );
   }
 

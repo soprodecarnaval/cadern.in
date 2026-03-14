@@ -65,6 +65,12 @@ const AntiAssedioTooltip = (
   </Tooltip>
 );
 
+const FingeringTooltip = (
+  <Tooltip id="fingering-tooltip">
+    Inclui ou exclui o dedilhado nas partituras geradas
+  </Tooltip>
+);
+
 const HelpIcon = ({ tooltip }: { tooltip: JSX.Element }) => (
   <OverlayTrigger placement="right" overlay={tooltip}>
     <span style={{ cursor: "help", marginLeft: "0.5rem", color: "#6c757d" }}>
@@ -103,6 +109,7 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
   const [carnivalMode, setCarnivalMode] = useState(false);
   const [backSheetPageNumber, setBackSheetPageNumber] = useState(false);
   const [antiAssedioPages, setAntiAssedioPages] = useState(false);
+  const [includeFingering, setIncludeFingering] = useState(true);
   const [debugBoundingBoxes, setDebugBoundingBoxes] = useState(false);
 
   const setInstrumentCover = (instrument: Instrument, file: File | null) => {
@@ -254,6 +261,7 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
           carnivalMode,
           backSheetPageNumber,
           antiAssedioPages,
+          includeFingering,
           stripInstrumentFromPartLabel: false,
           debugBoundingBoxes,
         });
@@ -492,6 +500,16 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
                   onChange={(e) => setAntiAssedioPages(e.target.checked)}
                 />
                 <HelpIcon tooltip={AntiAssedioTooltip} />
+              </div>
+              <div className="d-flex align-items-center">
+                <Form.Check
+                  type="switch"
+                  id="include-fingering"
+                  label="Incluir dedilhado"
+                  checked={includeFingering}
+                  onChange={(e) => setIncludeFingering(e.target.checked)}
+                />
+                <HelpIcon tooltip={FingeringTooltip} />
               </div>
               {import.meta.env.DEV && (
                 <Form.Check
