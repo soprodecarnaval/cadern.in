@@ -18,7 +18,9 @@
     "export:collection": "tsx scripts exportCollection",
     "build:songbook": "tsx scripts/buildSongbook.ts",
     "test": "vitest",
+    "test:all": "npm run test -- --run && npm run test:e2e:chromium",
     "test:e2e": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium",
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {

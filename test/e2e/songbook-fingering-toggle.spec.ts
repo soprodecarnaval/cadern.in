@@ -3,9 +3,11 @@ import { test, expect } from '@playwright/test';
 test.describe('Songbook Generation - Fingering Toggle', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    
-    // Wait for the app to load
-    await expect(page.locator('main')).toBeVisible({ timeout: 5000 });
+
+    // Wait for the app shell to render.
+    await expect(
+      page.locator('button:has-text("Gerar caderninhos")').first(),
+    ).toBeVisible({ timeout: 15000 });
   });
 
   test('should display the "Incluir dedilhado" toggle in the songbook modal', async ({ page }) => {
@@ -122,7 +124,9 @@ test.describe('Songbook Generation - Fingering Toggle', () => {
 test.describe('Regression Tests - Existing Features', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('main')).toBeVisible({ timeout: 5000 });
+    await expect(
+      page.locator('button:has-text("Gerar caderninhos")').first(),
+    ).toBeVisible({ timeout: 15000 });
   });
 
   test('should not break carnival mode toggle', async ({ page }) => {

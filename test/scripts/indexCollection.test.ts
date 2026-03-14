@@ -118,7 +118,7 @@ const compareCollections = (inputDir: string, outputDir: string) => {
 describe("indexCollection", () => {
   it("should be idempotent", () => {
     if (fs.existsSync(outputDir)) {
-      fs.rmdirSync(outputDir, { recursive: true });
+      fs.rmSync(outputDir, { recursive: true, force: true });
     }
     indexCollection(["--input", inputDir, "--output", outputDir]);
     compareCollections(inputDir, outputDir);
@@ -127,7 +127,7 @@ describe("indexCollection", () => {
   it("should copy tags from an existing collection in the output directory", async () => {
     // copy over the entire input collection to the output directory
     if (fs.existsSync(outputDir)) {
-      fs.rmdirSync(outputDir, { recursive: true });
+      fs.rmSync(outputDir, { recursive: true, force: true });
     }
     fs.cpSync(inputDir, outputDir, { recursive: true });
 
