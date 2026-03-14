@@ -17,7 +17,11 @@
     "export:project": "tsx scripts exportProject",
     "export:collection": "tsx scripts exportCollection",
     "build:songbook": "tsx scripts/buildSongbook.ts",
-    "test": "vitest"
+    "test": "vitest",
+    "test:all": "npm run test -- --run && npm run test:e2e:chromium",
+    "test:e2e": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@types/node": "^20.4.1",
@@ -39,6 +43,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@swc/cli": "^0.1.63",
     "@swc/core": "^1.3.102",
     "@types/argparse": "^2.0.11",

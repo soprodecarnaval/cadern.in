@@ -83,6 +83,32 @@ npm run dev
 npm run build
 ```
 
+## Testes
+
+```bash
+# Testes unitários (execução única)
+npm run test -- --run
+
+# Testes e2e (Chromium/Chrome)
+npm run test:e2e:chromium
+
+# Todos os testes (unit + e2e Chromium)
+npm run test:all
+```
+
+Para rodar e2e em todos os browsers configurados, instale os browsers do Playwright e execute:
+
+```bash
+npx playwright install
+npm run test:e2e
+```
+
+Se quiser depurar os e2e com interface gráfica:
+
+```bash
+npm run test:e2e:ui
+```
+
 ## Licença
 
 MIT License - veja [LICENSE](LICENSE) para detalhes.
