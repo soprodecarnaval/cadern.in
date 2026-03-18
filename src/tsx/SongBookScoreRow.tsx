@@ -62,14 +62,14 @@ const SongBookScoreRow = ({
         </td>
         <td>
           {score.midi != "" && (
-            <a href={`collection/${score.midi}`} target="_blank">
+            <a href={score.midi} target="_blank">
               <SiMidi />
             </a>
           )}
         </td>
         <td>
           {score.mscz && (
-            <a href={`collection/${score.mscz}`} target="_blank">
+            <a href={score.mscz} target="_blank">
               <SiMusescore />
             </a>
           )}

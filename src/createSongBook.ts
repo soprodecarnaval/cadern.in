@@ -527,7 +527,7 @@ const addSongPage = async (
       );
 
     promises.push(
-      drawSvg(doc, `/collection/${part.svg[svgPageIdx]}`, currentPage),
+      drawSvg(doc, part.svg[svgPageIdx], currentPage),
     );
   }
 

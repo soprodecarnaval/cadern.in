@@ -17,7 +17,9 @@
     "export:project": "tsx scripts exportProject",
     "export:collection": "tsx scripts exportCollection",
     "build:songbook": "tsx scripts/buildSongbook.ts",
-    "migrate": "tsx --env-file=.env.local scripts/migrateToFirebase.ts",
+    "migrate:firebase": "tsx --env-file=.env.local scripts/migrateToFirebase.ts",
+    "verify:assets": "tsx --env-file=.env.local scripts/verifyAssets.ts",
+    "deploy": "npm run build && firebase deploy",
     "test": "vitest"
   },
   "dependencies": {

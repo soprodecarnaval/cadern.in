@@ -27,7 +27,7 @@ const FilesCarousel = ({ svgs }: SvgCarouselProps) => {
     <Carousel activeIndex={index} onSelect={handleSelect}>
       {svgs.map((svg) => (
         <Carousel.Item key={svg}>
-          <Image src={`/collection/${svg}`} />
+          <Image src={svg} />
         </Carousel.Item>
       ))}
     </Carousel>
@@ -47,7 +47,7 @@ const PreviewModal = ({ show, handleShow, part }: PreviewModalProps) => {
   };
 
   const handlePlay = async () => {
-    await playMidiPart(`collection/${part.midi}`, part.instrument);
+    await playMidiPart(part.midi, part.instrument);
   };
 
   const handlePause = () => {

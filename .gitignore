@@ -37,3 +37,4 @@ test/scripts/indexCollectionTestOutput
 *.autosave
 
 service-account.json
+.firebase

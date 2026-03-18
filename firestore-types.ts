@@ -40,6 +40,7 @@ export const zRevisionDoc = z.object({
   midi: z.string(),
   parts: z.array(zPart),
   notes: z.string(),
+  isLatest: z.boolean(),
 });
 export type RevisionDoc = z.infer<typeof zRevisionDoc>;
 

@@ -23,7 +23,7 @@ const PartItem = ({ score, part, handlePlayingSong }: PartItemProps) => {
 
   const handlePlay = async () => {
     handlePlayingSong({ score, part });
-    await playMidiPart(`collection/${part.midi}`, part.instrument);
+    await playMidiPart(part.midi, part.instrument);
   };
 
   const handleStop = () => {
@@ -49,7 +49,7 @@ const PartItem = ({ score, part, handlePlayingSong }: PartItemProps) => {
                 onClick={handleStop}
               />
               {part.midi != "" && (
-                <a href={`collection/${part.midi}`} target="_blank">
+                <a href={part.midi} target="_blank">
                   <SiMidi />
                 </a>
               )}
