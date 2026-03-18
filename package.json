@@ -17,6 +17,7 @@
     "export:project": "tsx scripts exportProject",
     "export:collection": "tsx scripts exportCollection",
     "build:songbook": "tsx scripts/buildSongbook.ts",
+    "migrate": "tsx --env-file=.env.local scripts/migrateToFirebase.ts",
     "test": "vitest"
   },
   "dependencies": {
@@ -58,6 +59,7 @@
     "eslint": "^8.44.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.1",
+    "firebase-admin": "^13.7.0",
     "fs": "^0.0.1-security",
     "react-bootstrap-range-slider": "^3.0.8",
     "ts-node": "^10.9.1",
