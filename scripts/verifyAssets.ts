@@ -1,12 +1,7 @@
 import { initializeApp, applicationDefault } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { fileURLToPath } from "url";
-import * as path from "path";
 import { zRevisionDoc } from "../firestore-types.js";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.join(__dirname, "..");
 
 const STORAGE_BUCKET =
   process.env.STORAGE_BUCKET ??
@@ -14,7 +9,10 @@ const STORAGE_BUCKET =
     throw new Error("STORAGE_BUCKET not set");
   })();
 
-initializeApp({ credential: applicationDefault(), storageBucket: STORAGE_BUCKET });
+initializeApp({
+  credential: applicationDefault(),
+  storageBucket: STORAGE_BUCKET,
+});
 
 const db = getFirestore();
 const bucket = getStorage().bucket();
@@ -42,7 +40,7 @@ async function main(): Promise<void> {
     ];
 
     const results = await Promise.all(
-      paths.map(async (p) => ({ path: p, exists: await fileExists(p) }))
+      paths.map(async (p) => ({ path: p, exists: await fileExists(p) })),
     );
 
     const missing = results.filter((r) => !r.exists);
@@ -55,7 +53,9 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`\n${missingTotal === 0 ? "All files present." : `${missingTotal} file(s) missing.`}`);
+  console.log(
+    `\n${missingTotal === 0 ? "All files present." : `${missingTotal} file(s) missing.`}`,
+  );
   process.exit(missingTotal > 0 ? 1 : 0);
 }
 
