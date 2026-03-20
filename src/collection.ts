@@ -5,7 +5,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { db } from "./firebase.js";
+import { db } from "./firebase";
 import { storagePathToUrl } from "./storage.js";
 import { zSongDoc, zProjectDoc, zRevisionDoc } from "../firestore-types.js";
 import type { Collection, Score, Part } from "../types.js";
@@ -18,11 +18,13 @@ async function loadCollection(): Promise<Collection> {
   const [projectsSnap, songsSnap, revisionsSnap] = await Promise.all([
     getDocs(collection(db, "projects")),
     getDocs(collection(db, "songs")),
-    getDocs(query(collectionGroup(db, "revisions"), where("isLatest", "==", true))),
+    getDocs(
+      query(collectionGroup(db, "revisions"), where("isLatest", "==", true)),
+    ),
   ]);
 
   const projectTitles = new Map(
-    projectsSnap.docs.map((d) => [d.id, zProjectDoc.parse(d.data()).title])
+    projectsSnap.docs.map((d) => [d.id, zProjectDoc.parse(d.data()).title]),
   );
 
   // Map revisions by songId (parent doc id)
@@ -30,7 +32,7 @@ async function loadCollection(): Promise<Collection> {
     revisionsSnap.docs.map((d) => {
       const songId = d.ref.parent.parent!.id;
       return [songId, zRevisionDoc.parse(d.data())];
-    })
+    }),
   );
 
   const scoresByProject = new Map<string, Score[]>();
@@ -64,10 +66,12 @@ async function loadCollection(): Promise<Collection> {
     scoresByProject.set(song.projectId, existing);
   }
 
-  const projects = Array.from(scoresByProject.entries()).map(([projectId, scores]) => ({
-    title: projectTitles.get(projectId) ?? projectId,
-    scores,
-  }));
+  const projects = Array.from(scoresByProject.entries()).map(
+    ([projectId, scores]) => ({
+      title: projectTitles.get(projectId) ?? projectId,
+      scores,
+    }),
+  );
 
   return { projects, version: 3 };
 }

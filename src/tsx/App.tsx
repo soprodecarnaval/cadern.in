@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Col, Container, Navbar, Row } from "react-bootstrap";
+import { Button, Col, Container, Navbar, Row } from "react-bootstrap";
+import { useAuth } from "../auth";
+import { AuthModal } from "./AuthModal";
 
 import { Sort } from "./Sort";
 import { SearchBar } from "./SearchBar";
@@ -25,9 +27,11 @@ import "../css/App.css";
 import SaveLoadModal from "./SaveLoadModal";
 
 function App() {
+  const { currentUser, logout } = useAuth();
   const [results, setResults] = useState<Score[]>([]);
   const [items, setItems] = useState<SongBookItem[]>([]);
   const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [playingPart, setPlayingPart] = useState<PlayingPart | null>(null);
   const handleSelectSong = (song: Score, checked: boolean) => {
     checked ? handleAddScore(song) : handleRemoveScore(song);
@@ -111,6 +115,16 @@ function App() {
               Plugin de Musescore
             </a>
           </div>
+          <div className="ms-auto">
+            {currentUser ? (
+              <>
+                <span className="text-light me-3">{currentUser.displayName}</span>
+                <Button variant="outline-light" size="sm" onClick={() => void logout()}>Sair</Button>
+              </>
+            ) : (
+              <Button variant="outline-light" size="sm" onClick={() => setShowAuthModal(true)}>Entrar</Button>
+            )}
+          </div>
         </Container>
       </Navbar>
       <Container>
@@ -171,6 +185,7 @@ function App() {
         onHide={() => setShowSaveLoadModal(false)}
         show={showSaveLoadModal}
       />
+      <AuthModal show={showAuthModal} onHide={() => setShowAuthModal(false)} />
     </>
   );
 }
