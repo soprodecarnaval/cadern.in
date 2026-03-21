@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button, Col, Container, Navbar, Row } from "react-bootstrap";
 import { useAuth } from "../auth";
 import { AuthModal } from "./AuthModal";
+import { ProfileModal } from "./ProfileModal";
 
 import { Sort } from "./Sort";
 import { SearchBar } from "./SearchBar";
@@ -32,6 +33,7 @@ function App() {
   const [items, setItems] = useState<SongBookItem[]>([]);
   const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [playingPart, setPlayingPart] = useState<PlayingPart | null>(null);
   const handleSelectSong = (song: Score, checked: boolean) => {
     checked ? handleAddScore(song) : handleRemoveScore(song);
@@ -115,10 +117,39 @@ function App() {
               Plugin de Musescore
             </a>
           </div>
-          <div className="ms-auto">
+          <div className="ms-auto d-flex align-items-center gap-2">
             {currentUser ? (
               <>
-                <span className="text-light me-3">{currentUser.displayName}</span>
+                <button
+                  type="button"
+                  className="btn btn-link p-0 d-flex align-items-center gap-2 text-light text-decoration-none"
+                  onClick={() => setShowProfileModal(true)}
+                >
+                  {currentUser.photoURL ? (
+                    <img
+                      src={currentUser.photoURL}
+                      alt="Avatar"
+                      style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        background: "#888",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 13,
+                        color: "#fff",
+                      }}
+                    >
+                      {(currentUser.displayName?.[0] ?? "?").toUpperCase()}
+                    </div>
+                  )}
+                  <span>{currentUser.displayName}</span>
+                </button>
                 <Button variant="outline-light" size="sm" onClick={() => void logout()}>Sair</Button>
               </>
             ) : (
@@ -186,6 +217,7 @@ function App() {
         show={showSaveLoadModal}
       />
       <AuthModal show={showAuthModal} onHide={() => setShowAuthModal(false)} />
+      <ProfileModal show={showProfileModal} onHide={() => setShowProfileModal(false)} />
     </>
   );
 }

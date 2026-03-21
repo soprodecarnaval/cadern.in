@@ -7,14 +7,18 @@ import {
 } from "react";
 import {
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
+  updatePassword as firebaseUpdatePassword,
   updateProfile,
   type User,
 } from "firebase/auth";
-import { auth } from "./firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { auth, storage } from "./firebase";
 
 interface AuthContextValue {
   currentUser: User | null;
@@ -26,6 +30,9 @@ interface AuthContextValue {
     password: string,
     displayName: string,
   ) => Promise<void>;
+  updateDisplayName: (name: string) => Promise<void>;
+  updateAvatar: (blob: Blob) => Promise<void>;
+  changePassword: (current: string, newPass: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -64,8 +71,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCurrentUser({ ...user, displayName });
   };
 
+  const updateDisplayName = async (name: string) => {
+    await updateProfile(auth.currentUser!, { displayName: name });
+    setCurrentUser({ ...auth.currentUser!, displayName: name });
+  };
+
+  const updateAvatar = async (blob: Blob) => {
+    const storageRef = ref(storage, `avatars/${auth.currentUser!.uid}`);
+    await uploadBytes(storageRef, blob);
+    const photoURL = await getDownloadURL(storageRef);
+    await updateProfile(auth.currentUser!, { photoURL });
+    setCurrentUser({ ...auth.currentUser!, photoURL });
+  };
+
+  const changePassword = async (current: string, newPass: string) => {
+    const credential = EmailAuthProvider.credential(auth.currentUser!.email!, current);
+    await reauthenticateWithCredential(auth.currentUser!, credential);
+    await firebaseUpdatePassword(auth.currentUser!, newPass);
+  };
+
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout, resetPassword, register }}>
+    <AuthContext.Provider value={{ currentUser, login, logout, resetPassword, register, updateDisplayName, updateAvatar, changePassword }}>
       {children}
     </AuthContext.Provider>
   );
