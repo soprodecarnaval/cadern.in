@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Button, Col, Container, Navbar, Row } from "react-bootstrap";
-import { useAuth } from "../auth";
+import { Col, Container, Navbar, Row } from "react-bootstrap";
 import { AuthModal } from "./AuthModal";
 import { ProfileModal } from "./ProfileModal";
 
@@ -26,9 +25,10 @@ import {
 import "bootstrap/dist/css/bootstrap.css";
 import "../css/App.css";
 import SaveLoadModal from "./SaveLoadModal";
+import { AuthButton } from "./AuthButton";
+import { FEATURE_FLAT_AUTH_ENABLED as FEATURE_FLAG_AUTH_ENABLED } from "../featureFlags";
 
 function App() {
-  const { currentUser, logout } = useAuth();
   const [results, setResults] = useState<Score[]>([]);
   const [items, setItems] = useState<SongBookItem[]>([]);
   const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
@@ -117,45 +117,11 @@ function App() {
               Plugin de Musescore
             </a>
           </div>
-          <div className="ms-auto d-flex align-items-center gap-2">
-            {currentUser ? (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-link p-0 d-flex align-items-center gap-2 text-light text-decoration-none"
-                  onClick={() => setShowProfileModal(true)}
-                >
-                  {currentUser.photoURL ? (
-                    <img
-                      src={currentUser.photoURL}
-                      alt="Avatar"
-                      style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        background: "#888",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 13,
-                        color: "#fff",
-                      }}
-                    >
-                      {(currentUser.displayName?.[0] ?? "?").toUpperCase()}
-                    </div>
-                  )}
-                  <span>{currentUser.displayName}</span>
-                </button>
-                <Button variant="outline-light" size="sm" onClick={() => void logout()}>Sair</Button>
-              </>
-            ) : (
-              <Button variant="outline-light" size="sm" onClick={() => setShowAuthModal(true)}>Entrar</Button>
-            )}
-          </div>
+          {FEATURE_FLAG_AUTH_ENABLED && (
+            <div className="ms-auto d-flex align-items-center gap-2">
+              <AuthButton onOpenAuthModal={() => setShowAuthModal(true)} />
+            </div>
+          )}
         </Container>
       </Navbar>
       <Container>
@@ -217,7 +183,10 @@ function App() {
         show={showSaveLoadModal}
       />
       <AuthModal show={showAuthModal} onHide={() => setShowAuthModal(false)} />
-      <ProfileModal show={showProfileModal} onHide={() => setShowProfileModal(false)} />
+      <ProfileModal
+        show={showProfileModal}
+        onHide={() => setShowProfileModal(false)}
+      />
     </>
   );
 }
