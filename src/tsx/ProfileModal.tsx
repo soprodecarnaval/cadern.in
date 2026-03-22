@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Modal, Tab, Tabs } from "react-bootstrap";
-import { useAuth } from "../auth.js";
-import { resizeImage } from "../utils/image.js";
+import { useAuth } from "../auth";
+import { resizeImage } from "../utils/image";
 
 interface ProfileModalProps {
   show: boolean;

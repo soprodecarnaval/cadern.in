@@ -2,49 +2,20 @@ import { useState, useEffect } from "react";
 import { Row, Col, Form } from "react-bootstrap";
 
 import { Score } from "../../types";
-import collection from "../collection";
-
-import Fuse from "fuse.js";
+import { useCollectionContext } from "../useCollectionContext";
 
 interface SearchBarProps {
   handleResults: (results: Score[]) => void;
 }
 
-const allScores = collection.projects.flatMap((project) => {
-  return project.scores;
-});
-
-const searchKeys = ["title", "composer", "tags", "projectTitle"];
-
-const scoreSearchIndex = Fuse.createIndex(searchKeys, allScores);
-const fuse = new Fuse(
-  allScores,
-  {
-    keys: searchKeys,
-    includeScore: true,
-    shouldSort: true,
-    threshold: 0.1,
-    useExtendedSearch: true,
-    ignoreDiacritics: true,
-    ignoreLocation: true,
-  },
-  scoreSearchIndex,
-);
-
 const SearchBar = ({ handleResults }: SearchBarProps) => {
+  const { status, search } = useCollectionContext();
   const [searchInput, setSearchInput] = useState("");
 
-  // Perform search whenever searchInput changes
   useEffect(() => {
-    if (searchInput === "") {
-      handleResults(allScores);
-      return;
-    }
-
-    const searchResult = fuse.search(searchInput);
-    const results = searchResult.map((result) => result.item);
-    handleResults(results);
-  }, [searchInput, handleResults]);
+    if (status !== "ready") return;
+    handleResults(search(searchInput));
+  }, [searchInput, status, handleResults, search]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchInput(e.target.value);
@@ -65,6 +36,7 @@ const SearchBar = ({ handleResults }: SearchBarProps) => {
             placeholder="Procurar por título, arranjo ou tags"
             className="me-2"
             aria-label="Search"
+            disabled={status !== "ready"}
             onKeyDown={handleKeyDown}
             value={searchInput}
             onChange={handleChange}

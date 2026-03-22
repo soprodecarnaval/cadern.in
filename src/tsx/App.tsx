@@ -3,14 +3,12 @@ import { Col, Container, Navbar, Row } from "react-bootstrap";
 import { AuthModal } from "./AuthModal";
 import { ProfileModal } from "./ProfileModal";
 
-import { Sort } from "./Sort";
 import { SearchBar } from "./SearchBar";
-import { ScoreSearchResultTable } from "./ScoreSearchResultTable";
+import { ScoreSearchResults } from "./ScoreSearchResults";
 import { SongBookTable } from "./SongBookTable";
 import { PDFGenerator } from "./PdfGenerator";
 import { sortByColumn, SortColumn, SortDirection } from "../utils/sort";
 import { SongBar } from "./PlayerBar";
-import { AddAllSongsButton } from "./AddAllScoresButton";
 import { BsFillSave2Fill } from "react-icons/bs";
 
 import {
@@ -136,28 +134,13 @@ function App() {
         <SongBar info={playingPart} />
         <Row className="mt-4">
           <Col sm={6}>
-            {results.length > 0 && (
-              <>
-                <h3 className="results">Resultados</h3>
-                <Row>
-                  <Col sm="6">
-                    <Sort onSortBy={handleResultsSortBy} />
-                  </Col>
-                  <Col sm="2" />
-                  <Col sm="4">
-                    <AddAllSongsButton
-                      count={results.length}
-                      onAddAllScores={handleAddAllSongs}
-                    />
-                  </Col>
-                </Row>
-                <ScoreSearchResultTable
-                  songs={results}
-                  onSetPlayingPart={setPlayingPart}
-                  handleSelect={handleSelectSong}
-                />
-              </>
-            )}
+            <ScoreSearchResults
+              results={results}
+              onSortBy={handleResultsSortBy}
+              onAddAll={handleAddAllSongs}
+              onSelectSong={handleSelectSong}
+              onSetPlayingPart={setPlayingPart}
+            />
           </Col>
           <Col sm={6}>
             <>
