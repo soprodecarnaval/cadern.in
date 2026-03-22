@@ -6,7 +6,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import Fuse from "fuse.js";
+import Fuse, { IFuseOptions } from "fuse.js";
 import { db } from "./firebase";
 import { storagePathToUrl } from "./storage";
 import { zSongDoc, zProjectDoc, zRevisionDoc } from "../firestore-types";
@@ -77,7 +77,7 @@ async function loadCollection(): Promise<Collection> {
   return { projects, version: 3 };
 }
 
-const fuseOptions: Fuse.IFuseOptions<Score> = {
+const fuseOptions: IFuseOptions<Score> = {
   keys: ["title", "composer", "tags", "projectTitle"],
   includeScore: true,
   shouldSort: true,
