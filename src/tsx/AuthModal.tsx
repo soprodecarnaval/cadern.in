@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal, Tab, Tabs } from "react-bootstrap";
-import { useAuth } from "../auth.js";
+import { useAuth } from "../auth";
 
 interface AuthModalProps {
   show: boolean;

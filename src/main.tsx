@@ -5,13 +5,16 @@ import "./main.css";
 
 import "bootstrap/dist/css/bootstrap.css";
 import { app } from "./firebase";
-import { AuthProvider } from "./auth.js";
+import { AuthProvider } from "./auth";
+import { CollectionProvider } from "./CollectionContext";
 console.log("Firebase app initialized:", app.name, app.options.projectId);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AuthProvider>
-      <App />
+      <CollectionProvider>
+        <App />
+      </CollectionProvider>
     </AuthProvider>
   </React.StrictMode>,
 );
