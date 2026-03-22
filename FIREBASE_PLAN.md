@@ -71,28 +71,28 @@ songbooks/{songbookId}/pdfs/{instrument}.pdf
 ## Phases
 
 ### Phase 1 — Firebase Setup
-- [ ] Add `firebase` and `react-router-dom` packages
-- [ ] `src/firebase.ts` — Firebase app init, export `auth`, `db`, `storage`
-- [ ] `.env` / `.env.example` for Firebase config keys
-- [ ] Update `vite.config.ts` to expose env vars
-- [ ] `firebase.json` + `.firebaserc` for Firebase Hosting with SPA rewrites
+- [x] Add `firebase` and `react-router-dom` packages
+- [x] `src/firebase.ts` — Firebase app init, export `auth`, `db`, `storage`
+- [x] `.env` / `.env.example` for Firebase config keys
+- [x] Update `vite.config.ts` to expose env vars
+- [x] `firebase.json` + `.firebaserc` for Firebase Hosting with SPA rewrites
 
 ### Phase 2 — Migration Script
-- [ ] `scripts/migrateToFirebase.ts`
+- [x] `scripts/migrateToFirebase.ts`
   - Reads `public/collection/collection.json`
   - Uploads all files (mscz, midi, svgs) to Storage under `songs/{songId}/{revisionId}/`
   - Writes Firestore `projects`, `songs`, and `songs/{id}/revisions/1` docs
   - All songs owned by hardcoded `cadern.in` org UID
   - Each existing project title → one Firestore `projects` doc
-- [ ] Add `migrate` npm script
+- [x] Add `migrate` npm script
 
 ### Phase 3 — Auth
-- [ ] `src/auth.tsx` — `AuthContext` with `currentUser`, `login`, `logout`, `register`
-- [ ] Login/register modal UI
-- [ ] Wrap app in `AuthProvider`
+- [x] `src/auth.tsx` — `AuthContext` with `currentUser`, `login`, `logout`, `register`
+- [x] Login/register modal UI
+- [x] Wrap app in `AuthProvider`
 
 ### Phase 4 — Data Layer
-- [ ] `src/collection.ts` — replace static JSON load with Firestore queries
+- [x] `src/collection.ts` — replace static JSON load with Firestore queries
 - [ ] Update `types.ts`: add Firebase-aware variants of `Score`/`Revision`/`Part` with Storage paths
 - [ ] `firestore.rules` — read-open for published content; writes require auth + project membership
 

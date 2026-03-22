@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Col, Container, Navbar, Row } from "react-bootstrap";
+import { AuthModal } from "./AuthModal";
+import { ProfileModal } from "./ProfileModal";
 
 import { Sort } from "./Sort";
 import { SearchBar } from "./SearchBar";
@@ -23,11 +25,15 @@ import {
 import "bootstrap/dist/css/bootstrap.css";
 import "../css/App.css";
 import SaveLoadModal from "./SaveLoadModal";
+import { AuthButton } from "./AuthButton";
+import { FEATURE_FLAT_AUTH_ENABLED as FEATURE_FLAG_AUTH_ENABLED } from "../featureFlags";
 
 function App() {
   const [results, setResults] = useState<Score[]>([]);
   const [items, setItems] = useState<SongBookItem[]>([]);
   const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [playingPart, setPlayingPart] = useState<PlayingPart | null>(null);
   const handleSelectSong = (song: Score, checked: boolean) => {
     checked ? handleAddScore(song) : handleRemoveScore(song);
@@ -111,6 +117,11 @@ function App() {
               Plugin de Musescore
             </a>
           </div>
+          {FEATURE_FLAG_AUTH_ENABLED && (
+            <div className="ms-auto d-flex align-items-center gap-2">
+              <AuthButton onOpenAuthModal={() => setShowAuthModal(true)} />
+            </div>
+          )}
         </Container>
       </Navbar>
       <Container>
@@ -170,6 +181,11 @@ function App() {
         onLoad={loadSongBook}
         onHide={() => setShowSaveLoadModal(false)}
         show={showSaveLoadModal}
+      />
+      <AuthModal show={showAuthModal} onHide={() => setShowAuthModal(false)} />
+      <ProfileModal
+        show={showProfileModal}
+        onHide={() => setShowProfileModal(false)}
       />
     </>
   );
