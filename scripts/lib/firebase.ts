@@ -1,27 +1,20 @@
-import { initializeApp, applicationDefault } from "firebase-admin/app";
+import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
-import type { Collection, Score } from "../types.js";
-import { zProjectDoc, zSongDoc, zRevisionDoc } from "../firestore-types.js";
+import fs from "fs";
+import path from "path";
+import type { Collection, Score } from "../../types";
+import { zProjectDoc, zSongDoc, zRevisionDoc } from "../../firestore-types";
 import type { z } from "zod";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.join(__dirname, "..");
-const COLLECTION_BASE = path.join(ROOT, "public", "collection");
+export interface FirebaseConfig {
+  uid: string;
+  storageBucket: string;
+}
 
-const CADERN_IN_UID = process.env.CADERN_IN_UID ?? (() => { throw new Error("CADERN_IN_UID not set"); })();
-const STORAGE_BUCKET = process.env.STORAGE_BUCKET ?? (() => { throw new Error("STORAGE_BUCKET not set"); })();
-
-initializeApp({
-  credential: applicationDefault(),
-  storageBucket: STORAGE_BUCKET,
-});
-
-const db = getFirestore();
-const bucket = getStorage().bucket();
+export interface SeedOptions {
+  clean: boolean;
+}
 
 function slugify(str: string): string {
   return str
@@ -36,8 +29,7 @@ function slugify(str: string): string {
 
 function slugifyFilename(filename: string): string {
   const ext = path.extname(filename);
-  const base = path.basename(filename, ext);
-  return slugify(base) + ext;
+  return slugify(path.basename(filename, ext)) + ext;
 }
 
 function revisionStoragePaths(rev: z.infer<typeof zRevisionDoc>): string[] {
@@ -49,26 +41,39 @@ function revisionStoragePaths(rev: z.infer<typeof zRevisionDoc>): string[] {
   ];
 }
 
-async function allAssetsExist(paths: string[]): Promise<boolean> {
+async function allAssetsExist(
+  bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>,
+  paths: string[]
+): Promise<boolean> {
   const results = await Promise.all(paths.map((p) => bucket.file(p).exists()));
   return results.every(([exists]) => exists);
 }
 
-async function uploadFile(localPath: string, storagePath: string): Promise<void> {
+async function uploadFile(
+  bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>,
+  localPath: string,
+  storagePath: string
+): Promise<void> {
   if (!fs.existsSync(localPath)) {
-    console.warn(`    ⚠ not found, skipping: ${localPath}`);
+    console.warn(`    ! not found, skipping: ${localPath}`);
     return;
   }
-  console.log(`    ↑ storage: ${storagePath}`);
+  console.log(`    ^ storage: ${storagePath}`);
   await bucket.upload(localPath, { destination: storagePath });
 }
 
-async function migrateScore(score: Score, projectId: string): Promise<void> {
+async function uploadScore(
+  db: FirebaseFirestore.Firestore,
+  bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>,
+  collectionBase: string,
+  score: Score,
+  projectId: string,
+  uid: string
+): Promise<void> {
   const songId = slugify(score.id);
   const revId = "1";
   const storageBase = `songs/${songId}/${revId}`;
 
-  // Build storage paths for parts
   const migratedParts = [];
   const fileUploads: [string, string][] = [
     [score.mscz, `${storageBase}/score.mscz`],
@@ -90,57 +95,61 @@ async function migrateScore(score: Score, projectId: string): Promise<void> {
 
   console.log(`  song: ${score.title} (${songId})`);
 
-  // Skip if already migrated and all assets are present
   const songRef = db.collection("songs").doc(songId);
   const existing = await songRef.collection("revisions").doc(revId).get();
   if (existing.exists) {
     const existingRev = zRevisionDoc.parse(existing.data());
-    if (await allAssetsExist(revisionStoragePaths(existingRev))) {
-      console.log(`  ⏭ already migrated, skipping\n`);
+    if (await allAssetsExist(bucket, revisionStoragePaths(existingRev))) {
+      console.log(`  - already uploaded, skipping\n`);
       return;
     }
-    console.log(`  ⚠ assets missing, re-migrating...`);
+    console.log(`  ! assets missing, re-uploading...`);
   }
 
   console.log(`  uploading ${fileUploads.length} files...`);
   for (const [relPath, storagePath] of fileUploads) {
-    const absPath = path.join(COLLECTION_BASE, relPath);
-    await uploadFile(absPath, storagePath);
+    await uploadFile(bucket, path.join(collectionBase, relPath), storagePath);
   }
 
   console.log(`  writing firestore: songs/${songId}`);
-  await songRef.set(zSongDoc.parse({
-    title: score.title,
-    composer: score.composer,
-    sub: score.sub,
-    tags: score.tags,
-    projectId,
-    uploadedBy: CADERN_IN_UID,
-    latestRevisionId: revId,
-    createdAt: FieldValue.serverTimestamp(),
-  }));
+  await songRef.set(
+    zSongDoc.parse({
+      title: score.title,
+      composer: score.composer,
+      sub: score.sub,
+      tags: score.tags,
+      projectId,
+      uploadedBy: uid,
+      latestRevisionId: revId,
+      createdAt: FieldValue.serverTimestamp(),
+    })
+  );
 
   console.log(`  writing firestore: songs/${songId}/revisions/${revId}`);
-  await songRef.collection("revisions").doc(revId).set(zRevisionDoc.parse({
-    revisionNumber: 1,
-    uploadedBy: CADERN_IN_UID,
-    uploadedAt: FieldValue.serverTimestamp(),
-    mscz: `${storageBase}/score.mscz`,
-    metajson: `${storageBase}/score.metajson`,
-    midi: `${storageBase}/score.midi`,
-    parts: migratedParts,
-    notes: "",
-    isLatest: true,
-  }));
+  await songRef.collection("revisions").doc(revId).set(
+    zRevisionDoc.parse({
+      revisionNumber: 1,
+      uploadedBy: uid,
+      uploadedAt: FieldValue.serverTimestamp(),
+      mscz: `${storageBase}/score.mscz`,
+      metajson: `${storageBase}/score.metajson`,
+      midi: `${storageBase}/score.midi`,
+      parts: migratedParts,
+      notes: "",
+      isLatest: true,
+    })
+  );
 
-  console.log(`  ✓ done\n`);
+  console.log(`  done\n`);
 }
 
 async function cleanOrphans(
+  db: FirebaseFirestore.Firestore,
+  bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>,
   expectedSongIds: Set<string>,
   expectedProjectIds: Set<string>
 ): Promise<void> {
-  console.log("\n🧹 Cleaning orphaned docs...");
+  console.log("\nCleaning orphaned docs...");
 
   const [songsSnap, projectsSnap] = await Promise.all([
     db.collection("songs").get(),
@@ -151,59 +160,63 @@ async function cleanOrphans(
   const orphanedProjects = projectsSnap.docs.filter((d) => !expectedProjectIds.has(d.id));
 
   for (const doc of orphanedSongs) {
-    console.log(`  🗑 storage: songs/${doc.id}/`);
+    console.log(`  deleting storage: songs/${doc.id}/`);
     await bucket.deleteFiles({ prefix: `songs/${doc.id}/` });
-    console.log(`  🗑 firestore: songs/${doc.id}`);
+    console.log(`  deleting firestore: songs/${doc.id}`);
     const revisions = await doc.ref.collection("revisions").get();
     await Promise.all(revisions.docs.map((r) => r.ref.delete()));
     await doc.ref.delete();
   }
 
   for (const doc of orphanedProjects) {
-    console.log(`  🗑 firestore: projects/${doc.id}`);
+    console.log(`  deleting firestore: projects/${doc.id}`);
     await doc.ref.delete();
   }
 
   console.log(`  removed ${orphanedSongs.length} song(s), ${orphanedProjects.length} project(s)\n`);
 }
 
-async function main(): Promise<void> {
-  const clean = process.argv.includes("--clean");
+/**
+ * Uploads a collection's assets to Cloud Storage and indexes it in Firestore.
+ * collectionBase is the directory containing collection.json and all asset files.
+ */
+export async function seedToFirebase(
+  collectionBase: string,
+  collection: Collection,
+  config: FirebaseConfig,
+  opts: SeedOptions
+): Promise<void> {
+  // Uses Application Default Credentials (ADC). Before running, authenticate via:
+  //   gcloud auth application-default login
+  // Or set the GOOGLE_APPLICATION_CREDENTIALS env var to a service account key file.
+  initializeApp({ credential: undefined, storageBucket: config.storageBucket });
 
-  const collectionPath = path.join(COLLECTION_BASE, "collection.json");
-  const collection = JSON.parse(
-    fs.readFileSync(collectionPath, "utf-8")
-  ) as Collection;
+  const db = getFirestore();
+  const bucket = getStorage().bucket();
 
   const expectedSongIds = new Set(
     collection.projects.flatMap((p) => p.scores.map((s) => slugify(s.id)))
   );
   const expectedProjectIds = new Set(collection.projects.map((p) => slugify(p.title)));
 
-  if (clean) {
-    await cleanOrphans(expectedSongIds, expectedProjectIds);
+  if (opts.clean) {
+    await cleanOrphans(db, bucket, expectedSongIds, expectedProjectIds);
   }
 
   for (const project of collection.projects) {
     const projectId = slugify(project.title);
     console.log(`\nproject: ${project.title} (${projectId})`);
     console.log(`writing firestore: projects/${projectId}`);
-    await db.collection("projects").doc(projectId).set(zProjectDoc.parse({
-      title: project.title,
-      ownerId: CADERN_IN_UID,
-      collaboratorIds: [],
-      createdAt: FieldValue.serverTimestamp(),
-    }));
-
+    await db.collection("projects").doc(projectId).set(
+      zProjectDoc.parse({
+        title: project.title,
+        ownerId: config.uid,
+        collaboratorIds: [],
+        createdAt: FieldValue.serverTimestamp(),
+      })
+    );
     for (const score of project.scores) {
-      await migrateScore(score, projectId);
+      await uploadScore(db, bucket, collectionBase, score, projectId, config.uid);
     }
   }
-
-  console.log("\n✓ Migration complete");
 }
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
