@@ -9,8 +9,6 @@
     "build": "tsc && vite build",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "download-gdrive": "tsx scripts downloadGoogleDrive",
-    "build:songbook": "tsx scripts/buildSongbook.ts",
     "seed": "tsx --env-file=.env.local scripts/seedFromFolder.ts",
     "export:mscz": "tsx scripts/exportMscz.ts",
     "verify:assets": "tsx --env-file=.env.local scripts/verifyAssets.ts",
