@@ -1,1 +1,2 @@
-export const FEATURE_FLAT_AUTH_ENABLED = false;
+export const FEATURE_FLAG_AUTH_ENABLED =
+  import.meta.env.VITE_FEATURE_FLAG_AUTH_ENABLED === "true";

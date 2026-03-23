@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import App from "./tsx/App";
 import "./main.css";
 
@@ -11,10 +12,12 @@ console.log("Firebase app initialized:", app.name, app.options.projectId);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AuthProvider>
-      <CollectionProvider>
-        <App />
-      </CollectionProvider>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <CollectionProvider>
+          <App />
+        </CollectionProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </React.StrictMode>,
 );

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Col, Container, Navbar, Row } from "react-bootstrap";
+import { Col, Container, Nav, Navbar, Row } from "react-bootstrap";
+import { Link, Route, Routes } from "react-router-dom";
 import { AuthModal } from "./AuthModal";
 import { ProfileModal } from "./ProfileModal";
 
@@ -24,14 +25,15 @@ import "bootstrap/dist/css/bootstrap.css";
 import "../css/App.css";
 import SaveLoadModal from "./SaveLoadModal";
 import { AuthButton } from "./AuthButton";
-import { FEATURE_FLAT_AUTH_ENABLED as FEATURE_FLAG_AUTH_ENABLED } from "../featureFlags";
+import { FEATURE_FLAG_AUTH_ENABLED } from "../featureFlags";
+import { useAuth } from "../auth";
+import { UploadPage } from "./UploadPage";
+import { MyScoresPage } from "./MyScoresPage";
 
-function App() {
+function HomePage() {
   const [results, setResults] = useState<Score[]>([]);
   const [items, setItems] = useState<SongBookItem[]>([]);
   const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const [playingPart, setPlayingPart] = useState<PlayingPart | null>(null);
   const handleSelectSong = (song: Score, checked: boolean) => {
     checked ? handleAddScore(song) : handleRemoveScore(song);
@@ -97,31 +99,6 @@ function App() {
 
   return (
     <>
-      <Navbar
-        expand="lg"
-        className="bg-body-tertiary"
-        bg="dark"
-        data-bs-theme="dark"
-      >
-        <Container>
-          <Navbar.Brand className="nav-bar-title" href="#">
-            cadern.in
-          </Navbar.Brand>
-          <div className="banner-container">
-            <a href="/2026" className="banner banner-yellow">
-              Carnaval BH 2026
-            </a>
-            <a href="/plugin" className="banner banner-blue">
-              Plugin de Musescore
-            </a>
-          </div>
-          {FEATURE_FLAG_AUTH_ENABLED && (
-            <div className="ms-auto d-flex align-items-center gap-2">
-              <AuthButton onOpenAuthModal={() => setShowAuthModal(true)} />
-            </div>
-          )}
-        </Container>
-      </Navbar>
       <Container>
         <Row>
           <Col sm={6}>
@@ -165,6 +142,60 @@ function App() {
         onHide={() => setShowSaveLoadModal(false)}
         show={showSaveLoadModal}
       />
+    </>
+  );
+}
+
+function App() {
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const { currentUser } = useAuth();
+
+  return (
+    <>
+      <Navbar
+        expand="lg"
+        className="bg-body-tertiary"
+        bg="dark"
+        data-bs-theme="dark"
+      >
+        <Container>
+          <Navbar.Brand as={Link} to="/" className="nav-bar-title">
+            cadern.in
+          </Navbar.Brand>
+          <div className="banner-container">
+            <a href="/2026" className="banner banner-yellow">
+              Carnaval BH 2026
+            </a>
+            <a href="/plugin" className="banner banner-blue">
+              Plugin de Musescore
+            </a>
+          </div>
+          {FEATURE_FLAG_AUTH_ENABLED && (
+            <Nav className="ms-auto d-flex align-items-center gap-2">
+              {currentUser && (
+                <>
+                  <Nav.Link as={Link} to="/upload">
+                    Enviar
+                  </Nav.Link>
+                  <Nav.Link as={Link} to="/my-scores">
+                    Minhas partituras
+                  </Nav.Link>
+                </>
+              )}
+              <AuthButton onOpenAuthModal={() => setShowAuthModal(true)} />
+            </Nav>
+          )}
+        </Container>
+      </Navbar>
+
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/upload" element={<UploadPage />} />
+        <Route path="/upload/:songId" element={<UploadPage />} />
+        <Route path="/my-scores" element={<MyScoresPage />} />
+      </Routes>
+
       <AuthModal show={showAuthModal} onHide={() => setShowAuthModal(false)} />
       <ProfileModal
         show={showProfileModal}

@@ -6,7 +6,9 @@
       "Bash(npx tsc:*)",
       "Bash(npm run export:*)",
       "Bash(npm run export:project:*)",
-      "Bash(npm run build:songbook:*)"
+      "Bash(npm run build:songbook:*)",
+      "Bash(npm install:*)",
+      "Bash(npx vite:*)"
     ]
   }
 }
