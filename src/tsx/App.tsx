@@ -29,6 +29,7 @@ import { FEATURE_FLAG_AUTH_ENABLED } from "../featureFlags";
 import { useAuth } from "../auth";
 import { UploadPage } from "./UploadPage";
 import { MyScoresPage } from "./MyScoresPage";
+import { ScorePage } from "./ScorePage";
 
 function HomePage() {
   const [results, setResults] = useState<Score[]>([]);
@@ -194,6 +195,8 @@ function App() {
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/upload/:songId" element={<UploadPage />} />
         <Route path="/my-scores" element={<MyScoresPage />} />
+        <Route path="/score/:songId" element={<ScorePage />} />
+        <Route path="/score/:songId/:revisionId" element={<ScorePage />} />
       </Routes>
 
       <AuthModal show={showAuthModal} onHide={() => setShowAuthModal(false)} />

@@ -25,21 +25,18 @@ import {
 } from "../lib/uploadScore";
 import { translateWarning } from "../lib/warningMessages";
 import type { Warning } from "../result";
+import { ScoreDisplay, type ScoreDisplayPart } from "./ScoreDisplay";
 
-function SvgPreview({ file }: { file: File }) {
-  const [url, setUrl] = useState("");
+function useFileUrls(fileMap: Map<string, File> | null): Map<string, string> {
+  const [urlMap, setUrlMap] = useState<Map<string, string>>(new Map());
   useEffect(() => {
-    const u = URL.createObjectURL(file);
-    setUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [file]);
-  return url ? (
-    <img
-      src={url}
-      alt=""
-      style={{ width: "100%", border: "1px solid #dee2e6", background: "#fff" }}
-    />
-  ) : null;
+    if (!fileMap) { setUrlMap(new Map()); return; }
+    const urls = new Map<string, string>();
+    for (const [key, file] of fileMap) urls.set(key, URL.createObjectURL(file));
+    setUrlMap(urls);
+    return () => { for (const url of urls.values()) URL.revokeObjectURL(url); };
+  }, [fileMap]);
+  return urlMap;
 }
 
 const FIELD_HELP = [
@@ -112,6 +109,8 @@ export function UploadPage() {
       setStep("idle");
     }
   };
+
+  const fileUrls = useFileUrls(parsed?.fileMap ?? null);
 
   const allWarnings = [...(parsed?.warnings ?? []), ...validationWarnings];
   const hasErrors = validationWarnings.length > 0;
@@ -239,15 +238,6 @@ export function UploadPage() {
 
           <Card className="mb-3">
             <Card.Body>
-              <p><strong>Título:</strong> {parsed.title || <em>não detectado</em>}</p>
-              <p><strong>Compositor:</strong> {parsed.composer || <em>não detectado</em>}</p>
-              <p><strong>Sub:</strong> {parsed.sub || <em>não detectado</em>}</p>
-              <p className="mb-0"><strong>Tags:</strong> {parsed.tags.length > 0 ? parsed.tags.join(", ") : <em>nenhuma</em>}</p>
-            </Card.Body>
-          </Card>
-
-          <Card className="mb-3">
-            <Card.Body>
               <Card.Title>Arquivos processados</Card.Title>
               <ul className="mb-0" style={{ listStyle: "none", padding: 0 }}>
                 {Array.from(parsed.fileMap.entries()).map(([key, file]) => {
@@ -265,40 +255,19 @@ export function UploadPage() {
             </Card.Body>
           </Card>
 
-          {parsed.parts.length > 0 && (
-            <Card className="mb-3">
-              <Card.Body>
-                <Card.Title>Partes detectadas</Card.Title>
-                {parsed.parts.map((part) => {
-                  const pw = warningsForPart(part.name);
-                  const svgFiles = part.svg
-                    .map((svgKey) => parsed.fileMap.get(svgKey))
-                    .filter((f): f is File => f !== undefined);
-                  return (
-                    <div key={part.name} className="mb-3">
-                      <div className="d-flex align-items-center gap-2 mb-1">
-                        <strong>{part.name}</strong>
-                        <span className="text-muted">— {part.instrument}</span>
-                        {parsed.fileMap.has(`parts/${part.name}.midi`) ? (
-                          <Badge bg="secondary">MIDI</Badge>
-                        ) : (
-                          <Badge bg="danger">sem MIDI</Badge>
-                        )}
-                        {pw.map((w, i) => (
-                          <Badge bg="warning" text="dark" key={i}>{translateWarning(w.code, w.meta)}</Badge>
-                        ))}
-                      </div>
-                      <div className="d-flex flex-column gap-2">
-                        {svgFiles.map((file, i) => (
-                          <SvgPreview key={i} file={file} />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </Card.Body>
-            </Card>
-          )}
+          <ScoreDisplay
+            title={parsed.title}
+            composer={parsed.composer}
+            sub={parsed.sub}
+            tags={parsed.tags}
+            parts={parsed.parts.map((part): ScoreDisplayPart => ({
+              name: part.name,
+              instrument: part.instrument,
+              svgUrls: part.svg.map((key) => fileUrls.get(key) ?? ""),
+              midiUrl: fileUrls.get(`parts/${part.name}.midi`) ?? null,
+              warnings: warningsForPart(part.name).map((w) => translateWarning(w.code, w.meta)),
+            }))}
+          />
 
           <Card className="mb-3">
             <Card.Body>

@@ -93,7 +93,7 @@ export async function uploadScore(
     storagePaths.set(key, storagePath);
     const storageRef = ref(storage, storagePath);
     const buffer = await file.arrayBuffer();
-    await uploadBytes(storageRef, buffer);
+    await uploadBytes(storageRef, buffer, { contentType: file.type || "application/octet-stream" });
 
     filesUploaded++;
     onProgress?.({ stage: "uploading", filesUploaded, filesTotal });
