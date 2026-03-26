@@ -23,6 +23,7 @@ import {
   type OnProgress,
   type UploadProgress,
 } from "../lib/uploadScore";
+import { translateWarning } from "../lib/warningMessages";
 import type { Warning } from "../result";
 
 function SvgPreview({ file }: { file: File }) {
@@ -230,7 +231,7 @@ export function UploadPage() {
             <Alert variant={hasErrors ? "danger" : "warning"}>
               <ul className="mb-0">
                 {globalWarnings.map((w, i) => (
-                  <li key={i}>{w.message}</li>
+                  <li key={i}>{translateWarning(w.code, w.meta)}</li>
                 ))}
               </ul>
             </Alert>
@@ -255,7 +256,7 @@ export function UploadPage() {
                     <li key={key} className="d-flex align-items-center gap-2 py-1">
                       <code>{key}</code>
                       {fw.map((w, i) => (
-                        <Badge bg="warning" text="dark" key={i}>{w.message}</Badge>
+                        <Badge bg="warning" text="dark" key={i}>{translateWarning(w.code, w.meta)}</Badge>
                       ))}
                     </li>
                   );
@@ -284,7 +285,7 @@ export function UploadPage() {
                           <Badge bg="danger">sem MIDI</Badge>
                         )}
                         {pw.map((w, i) => (
-                          <Badge bg="warning" text="dark" key={i}>{w.message}</Badge>
+                          <Badge bg="warning" text="dark" key={i}>{translateWarning(w.code, w.meta)}</Badge>
                         ))}
                       </div>
                       <div className="d-flex flex-column gap-2">

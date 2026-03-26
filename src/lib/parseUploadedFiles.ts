@@ -74,14 +74,11 @@ export async function parseUploadedFiles(
     msczFile = msczFiles[0];
     title = removeExtension(msczFile.name);
   } else if (msczFiles.length > 1) {
-    warnings.push({
-      message: "Multiple .mscz files found, using first one",
-      meta: { files: msczFiles.map((f) => f.name) },
-    });
+    warnings.push({ code: "MULTIPLE_MSCZ", meta: { files: msczFiles.map((f) => f.name) } });
     msczFile = msczFiles[0];
     title = removeExtension(msczFile.name);
   } else {
-    warnings.push({ message: "No .mscz file found", meta: {} });
+    warnings.push({ code: "NO_MSCZ", meta: {} });
   }
 
   for (const file of files) {
@@ -94,10 +91,7 @@ export async function parseUploadedFiles(
         meta = parsed;
         fileMap.set("metajson", file);
       } else {
-        warnings.push({
-          message: "Failed to parse metajson",
-          meta: { file: file.name },
-        });
+        warnings.push({ code: "METAJSON_PARSE_FAILED", meta: { file: file.name } });
       }
       continue;
     }
@@ -119,10 +113,7 @@ export async function parseUploadedFiles(
       if (ext === ".midi" && !fileMap.has("midi")) {
         fileMap.set("midi", file);
       } else {
-        warnings.push({
-          message: `Could not detect instrument in filename`,
-          meta: { file: file.name },
-        });
+        warnings.push({ code: "INSTRUMENT_NOT_DETECTED", meta: { file: file.name } });
       }
       continue;
     }
@@ -164,16 +155,10 @@ export async function parseUploadedFiles(
     const midiPath = `parts/${draft.name}.midi`;
 
     if (svgPaths.length === 0) {
-      warnings.push({
-        message: `Part "${draft.name}" has no SVG files`,
-        meta: { partName: draft.name },
-      });
+      warnings.push({ code: "PART_NO_SVG", meta: { partName: draft.name } });
     }
     if (!draft.midiFile) {
-      warnings.push({
-        message: `Part "${draft.name}" has no MIDI file`,
-        meta: { partName: draft.name },
-      });
+      warnings.push({ code: "PART_NO_MIDI", meta: { partName: draft.name } });
     }
 
     parts.push({
@@ -213,7 +198,7 @@ export function validateParsedScore(parsed: ParsedScore): Warning[] {
   if (result.success) return [];
 
   return result.error.errors.map((e) => ({
-    message: `Validation: ${e.path.join(".")} - ${e.message}`,
-    meta: { path: e.path.join("."), code: e.code },
+    code: "VALIDATION_ERROR" as const,
+    meta: { path: e.path.join("."), zodMessage: e.message },
   }));
 }
