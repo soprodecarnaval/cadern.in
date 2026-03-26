@@ -181,6 +181,7 @@ export function UploadPage() {
             composer={parsed.composer}
             sub={parsed.sub}
             tags={parsed.tags}
+            arrangementMidiUrl={fileUrls.get("midi") ?? null}
             parts={parsed.parts.map((part): ScoreDisplayPart => ({
               name: part.name,
               instrument: part.instrument,
@@ -274,6 +275,7 @@ export function UploadPage() {
             composer={parsed.composer}
             sub={parsed.sub}
             tags={parsed.tags}
+            arrangementMidiUrl={fileUrls.get("midi") ?? null}
             parts={parsed.parts.map((part): ScoreDisplayPart => ({
               name: part.name,
               instrument: part.instrument,

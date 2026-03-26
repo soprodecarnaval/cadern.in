@@ -1,6 +1,6 @@
-import "html-midi-player";
 import { useState } from "react";
 import { Badge, Card, Placeholder } from "react-bootstrap";
+import { MidiPlayer } from "./MidiPlayer";
 
 function SvgImage({ url }: { url: string }) {
   const [loaded, setLoaded] = useState(false);
@@ -39,10 +39,11 @@ interface Props {
   composer: string;
   sub: string;
   tags: string[];
+  arrangementMidiUrl?: string | null;
   parts: ScoreDisplayPart[];
 }
 
-export function ScoreDisplay({ title, composer, sub, tags, parts }: Props) {
+export function ScoreDisplay({ title, composer, sub, tags, arrangementMidiUrl, parts }: Props) {
   return (
     <>
       <Card className="mb-3">
@@ -56,6 +57,15 @@ export function ScoreDisplay({ title, composer, sub, tags, parts }: Props) {
           </p>
         </Card.Body>
       </Card>
+
+      {arrangementMidiUrl && (
+        <Card className="mb-3">
+          <Card.Body>
+            <Card.Title>Arranjo completo</Card.Title>
+            <MidiPlayer src={arrangementMidiUrl} />
+          </Card.Body>
+        </Card>
+      )}
 
       {parts.length > 0 && (
         <Card className="mb-3">
@@ -74,7 +84,7 @@ export function ScoreDisplay({ title, composer, sub, tags, parts }: Props) {
                   ))}
                 </div>
                 {part.midiUrl && (
-                  <midi-player src={part.midiUrl} sound-font="https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus" className="mb-2" />
+                  <MidiPlayer src={part.midiUrl} />
                 )}
                 <div className="d-flex flex-column gap-2">
                   {part.svgUrls.map((url, i) => (

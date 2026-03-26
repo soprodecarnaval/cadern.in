@@ -17,6 +17,7 @@ interface LoadedScore {
   tags: string[];
   projectTitle: string;
   msczUrl: string;
+  arrangementMidiUrl: string | null;
   parts: ScoreDisplayPart[];
 }
 
@@ -47,6 +48,7 @@ async function loadScore(songId: string, revisionId?: string): Promise<LoadedSco
     tags: song.tags,
     projectTitle,
     msczUrl: storagePathToUrl(rev.mscz),
+    arrangementMidiUrl: rev.midi ? storagePathToUrl(rev.midi) : null,
     parts: rev.parts.map((part) => ({
       name: part.name,
       instrument: part.instrument,
@@ -107,6 +109,7 @@ export function ScorePage() {
         composer={score.composer}
         sub={score.sub}
         tags={score.tags}
+        arrangementMidiUrl={score.arrangementMidiUrl}
         parts={score.parts}
       />
     </Container>
