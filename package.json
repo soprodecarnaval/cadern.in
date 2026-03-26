@@ -24,6 +24,7 @@
     "firebase": "^12.10.0",
     "fuse.js": "^7.1.0",
     "googleapis": "^128.0.0",
+    "html-midi-player": "^1.6.0",
     "iconv-lite": "^0.6.3",
     "midi-player-js": "^2.0.16",
     "pdfkit": "0.16.0",

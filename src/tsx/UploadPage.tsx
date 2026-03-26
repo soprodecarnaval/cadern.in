@@ -175,6 +175,20 @@ export function UploadPage() {
             </Button>
           </div>
         </Alert>
+        {parsed && (
+          <ScoreDisplay
+            title={parsed.title}
+            composer={parsed.composer}
+            sub={parsed.sub}
+            tags={parsed.tags}
+            parts={parsed.parts.map((part): ScoreDisplayPart => ({
+              name: part.name,
+              instrument: part.instrument,
+              svgUrls: part.svg.map((key) => fileUrls.get(key) ?? ""),
+              midiUrl: fileUrls.get(`parts/${part.name}.midi`) ?? null,
+            }))}
+          />
+        )}
       </Container>
     );
   }
