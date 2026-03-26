@@ -14,7 +14,7 @@
 
 import fs from "fs";
 import path from "path";
-import { detectMscore, generateAssets, exportScoreAssets, ExportOptions } from "./lib/mscz";
+import { detectMscore, exportScoreAssets, ExportOptions } from "./lib/mscz";
 
 function parseArgs(argv: string[]): { msczPath: string; force: boolean } {
   const args = argv.slice(2);
@@ -47,7 +47,7 @@ function parseArgs(argv: string[]): { msczPath: string; force: boolean } {
   return { msczPath: resolved, force };
 }
 
-async function main(): Promise<void> {
+function main() {
   const { msczPath, force } = parseArgs(process.argv);
   const folderPath = path.dirname(msczPath);
 
@@ -62,7 +62,4 @@ async function main(): Promise<void> {
   console.log("\nDone.");
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main();
