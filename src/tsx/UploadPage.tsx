@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Badge,
   Button,
   Card,
-  Col,
   Container,
   Form,
   ProgressBar,
-  Row,
   Table,
 } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
@@ -26,6 +25,22 @@ import {
 } from "../lib/uploadScore";
 import type { Warning } from "../result";
 
+function SvgPreview({ file }: { file: File }) {
+  const [url, setUrl] = useState("");
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  return url ? (
+    <img
+      src={url}
+      alt=""
+      style={{ width: "100%", border: "1px solid #dee2e6", background: "#fff" }}
+    />
+  ) : null;
+}
+
 const FIELD_HELP = [
   { field: "workTitle", description: "nome da música" },
   { field: "composer", description: "nome do(s) compositor(es)" },
@@ -36,7 +51,7 @@ const FIELD_HELP = [
   { field: "source", description: "verso referência (sub)" },
 ];
 
-type Step = "select" | "review" | "uploading" | "done";
+type Step = "idle" | "uploading" | "done";
 
 export function UploadPage() {
   const { currentUser } = useAuth();
@@ -44,12 +59,10 @@ export function UploadPage() {
   const { songId: existingSongId } = useParams<{ songId: string }>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [step, setStep] = useState<Step>("select");
+  const [step, setStep] = useState<Step>("idle");
   const [parsed, setParsed] = useState<ParsedScore | null>(null);
   const [validationWarnings, setValidationWarnings] = useState<Warning[]>([]);
-  const [projects, setProjects] = useState<{ id: string; title: string }[]>(
-    [],
-  );
+  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [error, setError] = useState("");
@@ -70,9 +83,7 @@ export function UploadPage() {
   if (!currentUser) {
     return (
       <Container className="mt-4">
-        <Alert variant="warning">
-          Faça login para enviar partituras.
-        </Alert>
+        <Alert variant="warning">Faça login para enviar partituras.</Alert>
       </Container>
     );
   }
@@ -80,103 +91,145 @@ export function UploadPage() {
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setError("");
-
     const fileArray = Array.from(files);
     const result = await parseUploadedFiles(fileArray);
     const validation = validateParsedScore(result);
-
     setParsed(result);
     setValidationWarnings(validation);
-    setStep("review");
   };
 
   const handlePublish = async () => {
     if (!parsed || !currentUser) return;
     setError("");
     setStep("uploading");
-
     try {
       const onProgress: OnProgress = (p) => setProgress(p);
-      await uploadScore(
-        parsed,
-        selectedProjectId,
-        currentUser,
-        onProgress,
-        existingSongId,
-      );
+      await uploadScore(parsed, selectedProjectId, currentUser, onProgress, existingSongId);
       setStep("done");
     } catch (err: any) {
       setError(err.message ?? "Erro ao enviar partitura");
-      setStep("review");
+      setStep("idle");
     }
   };
 
-  const allWarnings = [
-    ...(parsed?.warnings ?? []),
-    ...validationWarnings,
-  ];
+  const allWarnings = [...(parsed?.warnings ?? []), ...validationWarnings];
   const hasErrors = validationWarnings.length > 0;
+  const globalWarnings = allWarnings.filter((w) => !w.meta?.file && !w.meta?.partName);
+
+  const warningsForFile = (file: File) =>
+    allWarnings.filter((w) => w.meta?.file === file.name);
+
+  const warningsForPart = (partName: string) =>
+    allWarnings.filter((w) => w.meta?.partName === partName);
+
+  if (step === "uploading") {
+    return (
+      <Container className="mt-4">
+        <h2>{existingSongId ? "Nova revisão" : "Enviar partitura"}</h2>
+        <Card>
+          <Card.Body>
+            <p>
+              {progress?.stage === "uploading" && "Enviando arquivos..."}
+              {progress?.stage === "writing-firestore" && "Salvando metadados..."}
+            </p>
+            <ProgressBar
+              now={
+                progress && progress.filesTotal > 0
+                  ? (progress.filesUploaded / progress.filesTotal) * 100
+                  : 0
+              }
+              label={progress ? `${progress.filesUploaded}/${progress.filesTotal}` : ""}
+            />
+          </Card.Body>
+        </Card>
+      </Container>
+    );
+  }
+
+  if (step === "done") {
+    return (
+      <Container className="mt-4">
+        <Alert variant="success">
+          <p>Partitura publicada com sucesso!</p>
+          <div className="d-flex gap-2">
+            <Button variant="primary" onClick={() => navigate("/")}>
+              Ir para o acervo
+            </Button>
+            <Button variant="outline-primary" onClick={() => navigate("/my-scores")}>
+              Minhas partituras
+            </Button>
+          </div>
+        </Alert>
+        <Alert variant="warning">
+          Fazer upload novamente substituirá a versão recém-publicada.
+          <div className="mt-2">
+            <Button
+              variant="outline-warning"
+              onClick={() => {
+                setParsed(null);
+                setValidationWarnings([]);
+                setStep("idle");
+              }}
+            >
+              Fazer upload novamente
+            </Button>
+          </div>
+        </Alert>
+      </Container>
+    );
+  }
 
   return (
     <Container className="mt-4">
       <h2>{existingSongId ? "Nova revisão" : "Enviar partitura"}</h2>
 
-      {step === "select" && (
-        <>
-          <Card className="mb-3">
-            <Card.Body>
-              <Card.Title>Mapeamento de campos do MuseScore</Card.Title>
-              <Table size="sm" bordered>
-                <thead>
-                  <tr>
-                    <th>Campo no MuseScore</th>
-                    <th>Uso no cadern.in</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {FIELD_HELP.map((f) => (
-                    <tr key={f.field}>
-                      <td><code>{f.field}</code></td>
-                      <td>{f.description}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </Card.Body>
-          </Card>
+      <Card className="mb-3">
+        <Card.Body>
+          <Card.Title>Mapeamento de campos do MuseScore</Card.Title>
+          <Table size="sm" bordered>
+            <thead>
+              <tr>
+                <th>Campo no MuseScore</th>
+                <th>Uso no cadern.in</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FIELD_HELP.map((f) => (
+                <tr key={f.field}>
+                  <td><code>{f.field}</code></td>
+                  <td>{f.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Card.Body>
+      </Card>
 
-          <Card>
-            <Card.Body>
-              <p>
-                Selecione a pasta exportada pelo plugin do MuseScore contendo os
-                arquivos <code>.mscz</code>, <code>.svg</code>,{" "}
-                <code>.midi</code> e <code>.metajson</code>.
-              </p>
-              <Form.Control
-                ref={fileInputRef}
-                type="file"
-                // @ts-expect-error webkitdirectory is not in the type defs
-                webkitdirectory=""
-                directory=""
-                multiple
-                onChange={(e) =>
-                  handleFiles((e.target as HTMLInputElement).files)
-                }
-              />
-            </Card.Body>
-          </Card>
-        </>
-      )}
+      <Card className="mb-3">
+        <Card.Body>
+          <p>
+            Selecione a pasta exportada pelo plugin do MuseScore contendo os
+            arquivos <code>.mscz</code>, <code>.svg</code>,{" "}
+            <code>.midi</code> e <code>.metajson</code>.
+          </p>
+          <Form.Control
+            ref={fileInputRef}
+            type="file"
+            // @ts-expect-error webkitdirectory is not in the type defs
+            webkitdirectory=""
+            directory=""
+            multiple
+            onChange={(e) => handleFiles((e.target as HTMLInputElement).files)}
+          />
+        </Card.Body>
+      </Card>
 
-      {step === "review" && parsed && (
+      {parsed && (
         <>
-          {allWarnings.length > 0 && (
+          {globalWarnings.length > 0 && (
             <Alert variant={hasErrors ? "danger" : "warning"}>
-              <strong>
-                {hasErrors ? "Erros encontrados:" : "Avisos:"}
-              </strong>
-              <ul className="mb-0 mt-1">
-                {allWarnings.map((w, i) => (
+              <ul className="mb-0">
+                {globalWarnings.map((w, i) => (
                   <li key={i}>{w.message}</li>
                 ))}
               </ul>
@@ -185,18 +238,29 @@ export function UploadPage() {
 
           <Card className="mb-3">
             <Card.Body>
-              <Row>
-                <Col sm={6}>
-                  <p><strong>Título:</strong> {parsed.title || <em>não detectado</em>}</p>
-                  <p><strong>Compositor:</strong> {parsed.composer || <em>não detectado</em>}</p>
-                  <p><strong>Sub:</strong> {parsed.sub || <em>não detectado</em>}</p>
-                  <p><strong>Tags:</strong> {parsed.tags.length > 0 ? parsed.tags.join(", ") : <em>nenhuma</em>}</p>
-                </Col>
-                <Col sm={6}>
-                  <p><strong>Arquivos:</strong> {parsed.fileMap.size}</p>
-                  <p><strong>Partes:</strong> {parsed.parts.length}</p>
-                </Col>
-              </Row>
+              <p><strong>Título:</strong> {parsed.title || <em>não detectado</em>}</p>
+              <p><strong>Compositor:</strong> {parsed.composer || <em>não detectado</em>}</p>
+              <p><strong>Sub:</strong> {parsed.sub || <em>não detectado</em>}</p>
+              <p className="mb-0"><strong>Tags:</strong> {parsed.tags.length > 0 ? parsed.tags.join(", ") : <em>nenhuma</em>}</p>
+            </Card.Body>
+          </Card>
+
+          <Card className="mb-3">
+            <Card.Body>
+              <Card.Title>Arquivos processados</Card.Title>
+              <ul className="mb-0" style={{ listStyle: "none", padding: 0 }}>
+                {Array.from(parsed.fileMap.entries()).map(([key, file]) => {
+                  const fw = warningsForFile(file);
+                  return (
+                    <li key={key} className="d-flex align-items-center gap-2 py-1">
+                      <code>{key}</code>
+                      {fw.map((w, i) => (
+                        <Badge bg="warning" text="dark" key={i}>{w.message}</Badge>
+                      ))}
+                    </li>
+                  );
+                })}
+              </ul>
             </Card.Body>
           </Card>
 
@@ -204,26 +268,33 @@ export function UploadPage() {
             <Card className="mb-3">
               <Card.Body>
                 <Card.Title>Partes detectadas</Card.Title>
-                <Table size="sm" bordered>
-                  <thead>
-                    <tr>
-                      <th>Nome</th>
-                      <th>Instrumento</th>
-                      <th>Páginas SVG</th>
-                      <th>MIDI</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parsed.parts.map((part) => (
-                      <tr key={part.name}>
-                        <td>{part.name}</td>
-                        <td>{part.instrument}</td>
-                        <td>{part.svg.length}</td>
-                        <td>{parsed.fileMap.has(`parts/${part.name}.midi`) ? "sim" : "não"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
+                {parsed.parts.map((part) => {
+                  const pw = warningsForPart(part.name);
+                  const svgFiles = part.svg
+                    .map((svgKey) => parsed.fileMap.get(svgKey))
+                    .filter((f): f is File => f !== undefined);
+                  return (
+                    <div key={part.name} className="mb-3">
+                      <div className="d-flex align-items-center gap-2 mb-1">
+                        <strong>{part.name}</strong>
+                        <span className="text-muted">— {part.instrument}</span>
+                        {parsed.fileMap.has(`parts/${part.name}.midi`) ? (
+                          <Badge bg="secondary">MIDI</Badge>
+                        ) : (
+                          <Badge bg="danger">sem MIDI</Badge>
+                        )}
+                        {pw.map((w, i) => (
+                          <Badge bg="warning" text="dark" key={i}>{w.message}</Badge>
+                        ))}
+                      </div>
+                      <div className="d-flex flex-column gap-2">
+                        {svgFiles.map((file, i) => (
+                          <SvgPreview key={i} file={file} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </Card.Body>
             </Card>
           )}
@@ -237,9 +308,7 @@ export function UploadPage() {
                   onChange={(e) => setSelectedProjectId(e.target.value)}
                 >
                   {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.title}
-                    </option>
+                    <option key={p.id} value={p.id}>{p.title}</option>
                   ))}
                 </Form.Select>
               </Form.Group>
@@ -248,18 +317,7 @@ export function UploadPage() {
 
           {error && <Alert variant="danger">{error}</Alert>}
 
-          <div className="d-flex gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setStep("select");
-                setParsed(null);
-                setValidationWarnings([]);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}
-            >
-              Voltar
-            </Button>
+          <div className="d-flex gap-2 mb-4">
             <Button
               variant="primary"
               disabled={hasErrors || parsed.parts.length === 0}
@@ -269,39 +327,6 @@ export function UploadPage() {
             </Button>
           </div>
         </>
-      )}
-
-      {step === "uploading" && progress && (
-        <Card>
-          <Card.Body>
-            <p>
-              {progress.stage === "uploading" && "Enviando arquivos..."}
-              {progress.stage === "writing-firestore" && "Salvando metadados..."}
-            </p>
-            <ProgressBar
-              now={
-                progress.filesTotal > 0
-                  ? (progress.filesUploaded / progress.filesTotal) * 100
-                  : 0
-              }
-              label={`${progress.filesUploaded}/${progress.filesTotal}`}
-            />
-          </Card.Body>
-        </Card>
-      )}
-
-      {step === "done" && (
-        <Alert variant="success">
-          <p>Partitura publicada com sucesso!</p>
-          <div className="d-flex gap-2">
-            <Button variant="primary" onClick={() => navigate("/")}>
-              Ir para o acervo
-            </Button>
-            <Button variant="outline-primary" onClick={() => navigate("/my-scores")}>
-              Minhas partituras
-            </Button>
-          </div>
-        </Alert>
       )}
     </Container>
   );

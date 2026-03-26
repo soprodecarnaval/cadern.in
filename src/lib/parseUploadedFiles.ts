@@ -116,13 +116,13 @@ export async function parseUploadedFiles(
     const instrument = parseInstrument(withoutTitle);
 
     if (!instrument) {
-      warnings.push({
-        message: `Could not detect instrument in filename`,
-        meta: { file: file.name },
-      });
       if (ext === ".midi" && !fileMap.has("midi")) {
-        // Score-level midi (no instrument in name)
         fileMap.set("midi", file);
+      } else {
+        warnings.push({
+          message: `Could not detect instrument in filename`,
+          meta: { file: file.name },
+        });
       }
       continue;
     }
@@ -166,13 +166,13 @@ export async function parseUploadedFiles(
     if (svgPaths.length === 0) {
       warnings.push({
         message: `Part "${draft.name}" has no SVG files`,
-        meta: {},
+        meta: { partName: draft.name },
       });
     }
     if (!draft.midiFile) {
       warnings.push({
         message: `Part "${draft.name}" has no MIDI file`,
-        meta: {},
+        meta: { partName: draft.name },
       });
     }
 
