@@ -23,6 +23,8 @@ jobs:
           cache: "npm"
       - name: Install dependencies
         run: npm ci
+      - name: Install functions dependencies
+        run: npm ci --prefix functions
       - name: Deploy
         run: npm run deploy
         env:
