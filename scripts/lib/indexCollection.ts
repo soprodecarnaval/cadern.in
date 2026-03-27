@@ -59,7 +59,7 @@ const scrapeMediaAsset = (
     }
 
     if (!name || name.trim() === "") {
-      return err(warning(`Part name is empty`, { entryPath, songDirectory }));
+      return err(warning("PART_NAME_EMPTY", { entryPath }));
     }
 
     let partIdx = draft.parts.findIndex((p: any) => p.name === name);
@@ -88,12 +88,12 @@ const normalizeSongTitle = (songTitle: string): string =>
 
 function readJsonFile(absPath: string): Result<any> {
   if (!fs.existsSync(absPath)) {
-    return err(warning(`No json file found`, { absPath }));
+    return err(warning("METAJSON_MISSING", { absPath }));
   }
   try {
     return ok(JSON.parse(fs.readFileSync(absPath, "utf-8")));
   } catch {
-    return err(warning(`Invalid json file`, { absPath }));
+    return err(warning("METAJSON_PARSE_FAILED", { absPath }));
   }
 }
 
@@ -160,10 +160,9 @@ const indexScore = (
   const result = zScore.safeParse(draft);
   if (result.success) return ok(result.data, scrapeAssetErrors);
   return err(
-    warning("Invalid song", {
-      errors: result.error.errors.map((e) => ({ ...e, path: e.path.join(".") })),
-      songDirectory: scoreDirectory,
-    })
+    result.error.errors.map((e) =>
+      warning("VALIDATION_ERROR", { path: e.path.join("."), zodMessage: e.message })
+    )
   );
 };
 
