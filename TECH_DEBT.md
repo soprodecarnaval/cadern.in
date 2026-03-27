@@ -14,3 +14,9 @@ Create a script that permanently deletes soft-deleted songs (Firestore docs + St
 
 ## Refresh CollectionContext after upload
 Currently `CollectionContext` loads data once on mount. After a user uploads a new score, the collection is stale until page reload.
+
+## Multi-instrument parts
+`Part.instrument` is currently a single `Instrument` value. In theory a part (e.g. a doubling part) could cover more than one instrument. The type should be changed to `instrument: Instrument | Instrument[]` and the instrument detection in `parseUploadedFiles` updated accordingly.
+
+## Refactor away collection format (zScore / zCollection)
+`zScore` in `types.ts` is the legacy static-collection format. It is currently used as a structural proxy in `validateParsedScore` in `parseUploadedFiles.ts`. Once the collection format is fully replaced by the Firestore-native types (`zSongDoc`, `zRevisionDoc`), `zScore` and `zCollection` should be removed and `validateParsedScore` should validate against the Firestore doc schemas instead.

@@ -17,7 +17,7 @@ import {
   type ParsedScore,
 } from "../lib/parseUploadedFiles";
 import {
-  getOrCreateAcervoProject,
+  getOrCreateDefaultProject,
   getUserProjects,
   uploadScore,
   type OnProgress,
@@ -69,11 +69,11 @@ export function UploadPage() {
     if (!currentUser) return;
     Promise.all([
       getUserProjects(currentUser.uid),
-      getOrCreateAcervoProject(currentUser),
-    ]).then(([userProjects, acervoId]) => {
+      getOrCreateDefaultProject(currentUser),
+    ]).then(([userProjects, defaultProjectId]) => {
       setProjects(userProjects);
       if (!selectedProjectId) {
-        setSelectedProjectId(acervoId);
+        setSelectedProjectId(defaultProjectId);
       }
     });
   }, [currentUser]);

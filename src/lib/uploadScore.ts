@@ -15,10 +15,10 @@ import { slugify } from "./slugify";
 import type { ParsedScore } from "./parseUploadedFiles";
 import type { User } from "firebase/auth";
 
-const ACERVO_PREFIX = "Acervo @";
+const DEFAULT_PROJECT_PREFIX = "Acervo @";
 
-export function acervoProjectTitle(displayName: string): string {
-  return `${ACERVO_PREFIX}${displayName}`;
+export function defaultProjectTitle(displayName: string): string {
+  return `${DEFAULT_PROJECT_PREFIX}${displayName}`;
 }
 
 export interface UploadProgress {
@@ -29,8 +29,8 @@ export interface UploadProgress {
 
 export type OnProgress = (progress: UploadProgress) => void;
 
-async function ensureAcervoProject(user: User): Promise<string> {
-  const title = acervoProjectTitle(user.displayName ?? user.email ?? "user");
+async function ensureDefaultProject(user: User): Promise<string> {
+  const title = defaultProjectTitle(user.displayName ?? user.email ?? "user");
   const projectId = slugify(title);
   const projectRef = doc(db, "projects", projectId);
   const existing = await getDoc(projectRef);
@@ -161,8 +161,8 @@ export async function uploadScore(
   return songId;
 }
 
-export async function getOrCreateAcervoProject(user: User): Promise<string> {
-  return ensureAcervoProject(user);
+export async function getOrCreateDefaultProject(user: User): Promise<string> {
+  return ensureDefaultProject(user);
 }
 
 export async function getUserProjects(
