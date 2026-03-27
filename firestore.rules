@@ -30,6 +30,11 @@ service cloud.firestore {
       }
     }
 
+    // Required for collectionGroup("revisions") queries
+    match /{path=**}/revisions/{revisionId} {
+      allow read: if true;
+    }
+
     match /songbooks/{songbookId} {
       allow read: if resource.data.isPublished == true || (
         request.auth != null && resource.data.ownerId == request.auth.uid

@@ -22,11 +22,11 @@ async function loadCollection(): Promise<Collection> {
     ? projectDocs
     : projectDocs.filter((p) => p.ownerId === CADERN_IN_UID);
 
-  const projectTitles = new Map(filteredProjectDocs.map((p) => [p.id, p.title]));
-
-  const revisionsBySongId = new Map(
-    revisionDocs.map((r) => [r.songId, r]),
+  const projectTitles = new Map(
+    filteredProjectDocs.map((p) => [p.id, p.title]),
   );
+
+  const revisionsBySongId = new Map(revisionDocs.map((r) => [r.songId, r]));
 
   const scoresByProject = new Map<string, Score[]>();
 

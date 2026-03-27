@@ -54,7 +54,9 @@ export async function getSongRevisions(
     .sort((a, b) => b.revisionNumber - a.revisionNumber);
 }
 
-export async function getProject(id: string): Promise<WithId<ProjectDoc> | null> {
+export async function getProject(
+  id: string,
+): Promise<WithId<ProjectDoc> | null> {
   const snap = await getDoc(doc(db, "projects", id));
   if (!snap.exists()) return null;
   return { id: snap.id, ...zProjectDoc.parse(snap.data()) };
@@ -69,10 +71,17 @@ export async function getUserSongs(uid: string): Promise<WithId<SongDoc>[]> {
     .filter((s) => !s.deletedAt);
 }
 
-export async function getUserProjects(uid: string): Promise<WithId<ProjectDoc>[]> {
+export async function getUserProjects(
+  uid: string,
+): Promise<WithId<ProjectDoc>[]> {
   const [ownedSnap, collabSnap] = await Promise.all([
     getDocs(query(collection(db, "projects"), where("ownerId", "==", uid))),
-    getDocs(query(collection(db, "projects"), where("collaboratorIds", "array-contains", uid))),
+    getDocs(
+      query(
+        collection(db, "projects"),
+        where("collaboratorIds", "array-contains", uid),
+      ),
+    ),
   ]);
   const seen = new Map<string, WithId<ProjectDoc>>();
   for (const d of [...ownedSnap.docs, ...collabSnap.docs]) {
@@ -92,7 +101,9 @@ export async function getAllSongs(): Promise<WithId<SongDoc>[]> {
   return snap.docs.map((d) => ({ id: d.id, ...zSongDoc.parse(d.data()) }));
 }
 
-export async function getLatestRevisions(): Promise<(WithId<RevisionDoc> & { songId: string })[]> {
+export async function getLatestRevisions(): Promise<
+  (WithId<RevisionDoc> & { songId: string })[]
+> {
   const snap = await getDocs(
     query(collectionGroup(db, "revisions"), where("isLatest", "==", true)),
   );
@@ -113,7 +124,10 @@ export async function createSong(id: string, data: SongData): Promise<void> {
   });
 }
 
-export async function updateSong(id: string, data: Partial<SongData>): Promise<void> {
+export async function updateSong(
+  id: string,
+  data: Partial<SongData>,
+): Promise<void> {
   await updateDoc(doc(db, "songs", id), data);
 }
 
@@ -140,7 +154,10 @@ export async function updateRevision(
   await updateDoc(doc(db, "songs", songId, "revisions", revisionId), data);
 }
 
-export async function createProject(id: string, data: ProjectData): Promise<void> {
+export async function createProject(
+  id: string,
+  data: ProjectData,
+): Promise<void> {
   await setDoc(doc(db, "projects", id), {
     ...zProjectData.parse(data),
     createdAt: serverTimestamp(),
