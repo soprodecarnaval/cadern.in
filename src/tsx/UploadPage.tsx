@@ -16,9 +16,9 @@ import {
   validateParsedScore,
   type ParsedScore,
 } from "../lib/parseUploadedFiles";
+import { getUserProjects } from "../lib/db";
 import {
   getOrCreateDefaultProject,
-  getUserProjects,
   uploadScore,
   type OnProgress,
   type UploadProgress,

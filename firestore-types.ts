@@ -4,22 +4,24 @@ import { zInstrument, zPart } from "./types.js";
 // Firestore Timestamps (serverTimestamp() on write, Timestamp on read)
 const zTimestamp = z.any();
 
-export const zUserDoc = z.object({
+export const zUserData = z.object({
   displayName: z.string(),
   email: z.string().email(),
-  createdAt: zTimestamp,
 });
+export const zUserDoc = zUserData.extend({ createdAt: zTimestamp });
+export type UserData = z.infer<typeof zUserData>;
 export type UserDoc = z.infer<typeof zUserDoc>;
 
-export const zProjectDoc = z.object({
+export const zProjectData = z.object({
   title: z.string(),
   ownerId: z.string(),
   collaboratorIds: z.array(z.string()),
-  createdAt: zTimestamp,
 });
+export const zProjectDoc = zProjectData.extend({ createdAt: zTimestamp });
+export type ProjectData = z.infer<typeof zProjectData>;
 export type ProjectDoc = z.infer<typeof zProjectDoc>;
 
-export const zSongDoc = z.object({
+export const zSongData = z.object({
   title: z.string(),
   composer: z.string(),
   sub: z.string(),
@@ -27,15 +29,17 @@ export const zSongDoc = z.object({
   projectId: z.string(),
   uploadedBy: z.string(),
   latestRevisionId: z.string(),
+});
+export const zSongDoc = zSongData.extend({
   createdAt: zTimestamp,
   deletedAt: zTimestamp.nullable().optional(),
 });
+export type SongData = z.infer<typeof zSongData>;
 export type SongDoc = z.infer<typeof zSongDoc>;
 
-export const zRevisionDoc = z.object({
+export const zRevisionData = z.object({
   revisionNumber: z.number().int().positive(),
   uploadedBy: z.string(),
-  uploadedAt: zTimestamp,
   mscz: z.string(),
   metajson: z.string(),
   midi: z.string(),
@@ -43,23 +47,28 @@ export const zRevisionDoc = z.object({
   notes: z.string(),
   isLatest: z.boolean(),
 });
+export const zRevisionDoc = zRevisionData.extend({ uploadedAt: zTimestamp });
+export type RevisionData = z.infer<typeof zRevisionData>;
 export type RevisionDoc = z.infer<typeof zRevisionDoc>;
 
 export const zSongbookEntry = z.object({
   songId: z.string(),
   revisionId: z.string(),
   order: z.number().int(),
-  instrument: zInstrument.optional(),
+  instruments: z.array(zInstrument),
 });
 export type SongbookEntry = z.infer<typeof zSongbookEntry>;
 
-export const zSongbookDoc = z.object({
+export const zSongbookData = z.object({
   title: z.string(),
   ownerId: z.string(),
   slug: z.string(),
   isPublished: z.boolean(),
   entries: z.array(zSongbookEntry),
+});
+export const zSongbookDoc = zSongbookData.extend({
   createdAt: zTimestamp,
   updatedAt: zTimestamp,
 });
+export type SongbookData = z.infer<typeof zSongbookData>;
 export type SongbookDoc = z.infer<typeof zSongbookDoc>;

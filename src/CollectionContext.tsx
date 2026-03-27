@@ -1,47 +1,38 @@
 import { useCallback, useEffect, useState, ReactNode } from "react";
-import {
-  getDocs,
-  collection,
-  collectionGroup,
-  query,
-  where,
-} from "firebase/firestore";
 import Fuse, { IFuseOptions } from "fuse.js";
-import { db } from "./firebase";
 import { storagePathToUrl } from "./storage";
-import { zSongDoc, zProjectDoc, zRevisionDoc } from "../firestore-types";
+import { getAllProjects, getAllSongs, getLatestRevisions } from "./lib/db";
 import type { Collection, Score, Part } from "../types";
+import { FEATURE_FLAG_AUTH_ENABLED } from "./featureFlags";
 import {
   CollectionContext,
   type CollectionStatus,
 } from "./useCollectionContext";
 
+const CADERN_IN_UID = import.meta.env.VITE_CADERN_IN_UID as string | undefined;
+
 async function loadCollection(): Promise<Collection> {
-  const [projectsSnap, songsSnap, revisionsSnap] = await Promise.all([
-    getDocs(collection(db, "projects")),
-    getDocs(collection(db, "songs")),
-    getDocs(
-      query(collectionGroup(db, "revisions"), where("isLatest", "==", true)),
-    ),
+  const [projectDocs, songDocs, revisionDocs] = await Promise.all([
+    getAllProjects(),
+    getAllSongs(),
+    getLatestRevisions(),
   ]);
 
-  const projectTitles = new Map(
-    projectsSnap.docs.map((d) => [d.id, zProjectDoc.parse(d.data()).title]),
-  );
+  const filteredProjectDocs = FEATURE_FLAG_AUTH_ENABLED
+    ? projectDocs
+    : projectDocs.filter((p) => p.ownerId === CADERN_IN_UID);
+
+  const projectTitles = new Map(filteredProjectDocs.map((p) => [p.id, p.title]));
 
   const revisionsBySongId = new Map(
-    revisionsSnap.docs.map((d) => {
-      const songId = d.ref.parent.parent!.id;
-      return [songId, zRevisionDoc.parse(d.data())];
-    }),
+    revisionDocs.map((r) => [r.songId, r]),
   );
 
   const scoresByProject = new Map<string, Score[]>();
 
-  for (const songDoc of songsSnap.docs) {
-    const song = zSongDoc.parse(songDoc.data());
+  for (const song of songDocs) {
     if (song.deletedAt) continue;
-    const revision = revisionsBySongId.get(songDoc.id);
+    const revision = revisionsBySongId.get(song.id);
     if (!revision) continue;
 
     const parts: Part[] = revision.parts.map((p) => ({
@@ -51,7 +42,7 @@ async function loadCollection(): Promise<Collection> {
     }));
 
     const score: Score = {
-      id: songDoc.id,
+      id: song.id,
       title: song.title,
       composer: song.composer,
       sub: song.sub,
