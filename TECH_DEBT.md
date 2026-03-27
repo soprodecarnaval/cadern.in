@@ -9,6 +9,9 @@ Implement mechanisms for admins to review user-uploaded scores. Currently all up
 ## Storage monitoring
 Implement mechanisms for admins to monitor storage usage and set per-user upload limits.
 
+## Add `isDeleted` boolean field to song docs
+`getUserSongs` filters soft-deleted scores in memory because Firestore can't efficiently query "deletedAt is null or missing" in a single `where` clause. Adding an explicit `isDeleted: boolean` field would allow a clean `where("isDeleted", "==", false)` filter and avoid fetching deleted docs over the wire.
+
 ## Purge script for soft-deleted songs
 Create a script that permanently deletes soft-deleted songs (Firestore docs + Storage files) after a retention period.
 
