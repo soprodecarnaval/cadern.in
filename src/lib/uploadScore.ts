@@ -1,19 +1,17 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-} from "firebase/firestore";
 import { ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "../firebase";
+import { storage } from "../firebase";
 import { slugify } from "./slugify";
 import type { ParsedScore } from "./parseUploadedFiles";
 import type { User } from "firebase/auth";
+import {
+  createProject,
+  createRevision,
+  createSong,
+  getSongRevisions,
+  getProject,
+  updateRevision,
+  updateSong,
+} from "./db";
 
 const DEFAULT_PROJECT_PREFIX = "Acervo @";
 
@@ -29,26 +27,18 @@ export interface UploadProgress {
 
 export type OnProgress = (progress: UploadProgress) => void;
 
-async function ensureDefaultProject(user: User): Promise<string> {
+export async function getOrCreateDefaultProject(user: User): Promise<string> {
   const title = defaultProjectTitle(user.displayName ?? user.email ?? "user");
   const projectId = slugify(title);
-  const projectRef = doc(db, "projects", projectId);
-  const existing = await getDoc(projectRef);
-  if (!existing.exists()) {
-    await setDoc(projectRef, {
+  const existing = await getProject(projectId);
+  if (!existing) {
+    await createProject(projectId, {
       title,
       ownerId: user.uid,
       collaboratorIds: [],
-      createdAt: serverTimestamp(),
     });
   }
   return projectId;
-}
-
-async function getNextRevisionNumber(songId: string): Promise<number> {
-  const revisionsRef = collection(db, "songs", songId, "revisions");
-  const snap = await getDocs(revisionsRef);
-  return snap.size + 1;
 }
 
 export async function uploadScore(
@@ -60,7 +50,7 @@ export async function uploadScore(
 ): Promise<string> {
   const songId = existingSongId ?? `${projectId}-${slugify(parsed.title)}`;
   const revisionNumber = existingSongId
-    ? await getNextRevisionNumber(songId)
+    ? (await getSongRevisions(songId)).length + 1
     : 1;
   const revId = String(revisionNumber);
   const storageBase = `songs/${songId}/${revId}`;
@@ -68,13 +58,8 @@ export async function uploadScore(
   const filesTotal = parsed.fileMap.size;
   let filesUploaded = 0;
 
-  onProgress?.({
-    stage: "uploading",
-    filesUploaded: 0,
-    filesTotal,
-  });
+  onProgress?.({ stage: "uploading", filesUploaded: 0, filesTotal });
 
-  // Upload all files to Storage
   const storagePaths = new Map<string, string>();
 
   for (const [key, file] of parsed.fileMap) {
@@ -86,7 +71,6 @@ export async function uploadScore(
     } else if (key === "midi") {
       storagePath = `${storageBase}/score.midi`;
     } else {
-      // parts/... paths are already relative
       storagePath = `${storageBase}/${key}`;
     }
 
@@ -99,13 +83,8 @@ export async function uploadScore(
     onProgress?.({ stage: "uploading", filesUploaded, filesTotal });
   }
 
-  onProgress?.({
-    stage: "writing-firestore",
-    filesUploaded: filesTotal,
-    filesTotal,
-  });
+  onProgress?.({ stage: "writing-firestore", filesUploaded: filesTotal, filesTotal });
 
-  // Build revision parts with storage paths
   const revisionParts = parsed.parts.map((part) => ({
     name: part.name,
     instrument: part.instrument,
@@ -113,24 +92,13 @@ export async function uploadScore(
     midi: storagePaths.get(`parts/${part.name}.midi`) ?? part.midi,
   }));
 
-  // If updating, mark previous revision as not latest
   if (existingSongId && revisionNumber > 1) {
-    const prevRevRef = doc(
-      db,
-      "songs",
-      songId,
-      "revisions",
-      String(revisionNumber - 1),
-    );
-    await updateDoc(prevRevRef, { isLatest: false });
+    await updateRevision(songId, String(revisionNumber - 1), { isLatest: false });
   }
 
-  // Write revision doc
-  const revisionRef = doc(db, "songs", songId, "revisions", revId);
-  await setDoc(revisionRef, {
+  await createRevision(songId, revId, {
     revisionNumber,
     uploadedBy: user.uid,
-    uploadedAt: serverTimestamp(),
     mscz: storagePaths.get("mscz") ?? "",
     metajson: storagePaths.get("metajson") ?? "",
     midi: storagePaths.get("midi") ?? "",
@@ -139,12 +107,10 @@ export async function uploadScore(
     isLatest: true,
   });
 
-  // Write or update song doc
-  const songRef = doc(db, "songs", songId);
   if (existingSongId) {
-    await updateDoc(songRef, { latestRevisionId: revId });
+    await updateSong(songId, { latestRevisionId: revId });
   } else {
-    await setDoc(songRef, {
+    await createSong(songId, {
       title: parsed.title,
       composer: parsed.composer,
       sub: parsed.sub,
@@ -152,45 +118,9 @@ export async function uploadScore(
       projectId,
       uploadedBy: user.uid,
       latestRevisionId: revId,
-      createdAt: serverTimestamp(),
-      deletedAt: null,
     });
   }
 
   onProgress?.({ stage: "done", filesUploaded: filesTotal, filesTotal });
   return songId;
-}
-
-export async function getOrCreateDefaultProject(user: User): Promise<string> {
-  return ensureDefaultProject(user);
-}
-
-export async function getUserProjects(
-  uid: string,
-): Promise<{ id: string; title: string }[]> {
-  const ownedQuery = query(
-    collection(db, "projects"),
-    where("ownerId", "==", uid),
-  );
-  const collabQuery = query(
-    collection(db, "projects"),
-    where("collaboratorIds", "array-contains", uid),
-  );
-
-  const [ownedSnap, collabSnap] = await Promise.all([
-    getDocs(ownedQuery),
-    getDocs(collabQuery),
-  ]);
-
-  const projects = new Map<string, string>();
-  for (const d of [...ownedSnap.docs, ...collabSnap.docs]) {
-    projects.set(d.id, d.data().title);
-  }
-
-  return Array.from(projects, ([id, title]) => ({ id, title }));
-}
-
-export async function softDeleteSong(songId: string): Promise<void> {
-  const songRef = doc(db, "songs", songId);
-  await updateDoc(songRef, { deletedAt: serverTimestamp() });
 }

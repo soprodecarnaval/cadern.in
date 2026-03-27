@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Container, Spinner } from "react-bootstrap";
 import { useParams } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
-import { zSongDoc, zRevisionDoc, zProjectDoc, type RevisionDoc } from "../../firestore-types";
+import { getSong, getRevision, getProject } from "../lib/db";
 import { storagePathToUrl } from "../storage";
 import { ScoreDisplay, type ScoreDisplayPart } from "./ScoreDisplay";
 
@@ -22,21 +20,16 @@ interface LoadedScore {
 }
 
 async function loadScore(songId: string, revisionId?: string): Promise<LoadedScore> {
-  const songSnap = await getDoc(doc(db, "songs", songId));
-  if (!songSnap.exists()) throw new Error("Partitura não encontrada");
-  const song = zSongDoc.parse(songSnap.data());
-  if (song.deletedAt) throw new Error("Partitura não encontrada");
+  const song = await getSong(songId);
+  if (!song || song.deletedAt) throw new Error("Partitura não encontrada");
 
   const resolvedRevisionId = revisionId ?? song.latestRevisionId;
-  const [revSnap, projectSnap] = await Promise.all([
-    getDoc(doc(db, "songs", songId, "revisions", resolvedRevisionId)),
-    getDoc(doc(db, "projects", song.projectId)),
+  const [rev, project] = await Promise.all([
+    getRevision(songId, resolvedRevisionId),
+    getProject(song.projectId),
   ]);
-  if (!revSnap.exists()) throw new Error("Revisão não encontrada");
-  const rev: RevisionDoc = zRevisionDoc.parse(revSnap.data());
-  const projectTitle = projectSnap.exists()
-    ? zProjectDoc.parse(projectSnap.data()).title
-    : song.projectId;
+  if (!rev) throw new Error("Revisão não encontrada");
+  const projectTitle = project?.title ?? song.projectId;
 
   return {
     songId,

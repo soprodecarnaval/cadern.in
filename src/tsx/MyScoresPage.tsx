@@ -7,30 +7,9 @@ import {
   Table,
 } from "react-bootstrap";
 import { Link } from "react-router-dom";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-} from "firebase/firestore";
-import { db } from "../firebase";
 import { useAuth } from "../auth";
-import { zSongDoc, zRevisionDoc } from "../../firestore-types";
-import { softDeleteSong } from "../lib/uploadScore";
-
-interface MyRevision {
-  id: string;
-  revisionNumber: number;
-  uploadedAt: any;
-}
-
-interface MySong {
-  id: string;
-  title: string;
-  composer: string;
-  createdAt: any;
-  latestRevisionId: string;
-}
+import { getUserSongs, getSongRevisions, softDeleteSong, type WithId } from "../lib/db";
+import type { SongDoc, RevisionDoc } from "../../firestore-types";
 
 function formatDate(timestamp: any): string {
   if (!timestamp?.toDate) return "—";
@@ -42,24 +21,18 @@ function SongRow({
   deleting,
   onDelete,
 }: {
-  song: MySong;
+  song: WithId<SongDoc>;
   deleting: boolean;
   onDelete: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [revisions, setRevisions] = useState<MyRevision[] | null>(null);
+  const [revisions, setRevisions] = useState<WithId<RevisionDoc>[] | null>(null);
   const [loadingRevisions, setLoadingRevisions] = useState(false);
 
   const handleToggle = async () => {
     if (!expanded && revisions === null) {
       setLoadingRevisions(true);
-      const snap = await getDocs(collection(db, "songs", song.id, "revisions"));
-      const loaded: MyRevision[] = snap.docs.map((d) => {
-        const data = zRevisionDoc.parse(d.data());
-        return { id: d.id, revisionNumber: data.revisionNumber, uploadedAt: data.uploadedAt };
-      });
-      loaded.sort((a, b) => b.revisionNumber - a.revisionNumber);
-      setRevisions(loaded);
+      setRevisions(await getSongRevisions(song.id));
       setLoadingRevisions(false);
     }
     setExpanded((v) => !v);
@@ -131,29 +104,13 @@ function SongRow({
 
 export function MyScoresPage() {
   const { currentUser } = useAuth();
-  const [songs, setSongs] = useState<MySong[]>([]);
+  const [songs, setSongs] = useState<WithId<SongDoc>[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentUser) return;
-    const q = query(
-      collection(db, "songs"),
-      where("uploadedBy", "==", currentUser.uid),
-    );
-    getDocs(q).then((snap) => {
-      const results: MySong[] = [];
-      for (const d of snap.docs) {
-        const data = zSongDoc.parse(d.data());
-        if (data.deletedAt) continue;
-        results.push({
-          id: d.id,
-          title: data.title,
-          composer: data.composer,
-          createdAt: data.createdAt,
-          latestRevisionId: data.latestRevisionId,
-        });
-      }
+    getUserSongs(currentUser.uid).then((results) => {
       setSongs(results);
       setLoading(false);
     });
