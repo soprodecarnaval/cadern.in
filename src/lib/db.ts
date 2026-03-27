@@ -1,5 +1,6 @@
 import {
   collection,
+  collectionGroup,
   doc,
   getDocs,
   getDoc,
@@ -79,6 +80,27 @@ export async function getUserProjects(uid: string): Promise<WithId<ProjectDoc>[]
       seen.set(d.id, { id: d.id, ...zProjectDoc.parse(d.data()) });
   }
   return Array.from(seen.values());
+}
+
+export async function getAllProjects(): Promise<WithId<ProjectDoc>[]> {
+  const snap = await getDocs(collection(db, "projects"));
+  return snap.docs.map((d) => ({ id: d.id, ...zProjectDoc.parse(d.data()) }));
+}
+
+export async function getAllSongs(): Promise<WithId<SongDoc>[]> {
+  const snap = await getDocs(collection(db, "songs"));
+  return snap.docs.map((d) => ({ id: d.id, ...zSongDoc.parse(d.data()) }));
+}
+
+export async function getLatestRevisions(): Promise<(WithId<RevisionDoc> & { songId: string })[]> {
+  const snap = await getDocs(
+    query(collectionGroup(db, "revisions"), where("isLatest", "==", true)),
+  );
+  return snap.docs.map((d) => ({
+    id: d.id,
+    songId: d.ref.parent.parent!.id,
+    ...zRevisionDoc.parse(d.data()),
+  }));
 }
 
 // -- Writes --
