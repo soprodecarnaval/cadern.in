@@ -1,5 +1,14 @@
 /// <reference types="vite/client" />
 
+declare namespace JSX {
+  interface IntrinsicElements {
+    "midi-player": React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+      src?: string;
+      "sound-font"?: string;
+    };
+  }
+}
+
 interface ImportMetaEnv {
   readonly VITE_FIREBASE_API_KEY: string;
   readonly VITE_FIREBASE_AUTH_DOMAIN: string;

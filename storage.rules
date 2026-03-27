@@ -1,12 +1,22 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
-    match /songs/{allPaths=**} {
+    function canWriteSong(songId) {
+      let song = firestore.get(/databases/(default)/documents/songs/$(songId)).data;
+      let project = firestore.get(/databases/(default)/documents/projects/$(song.projectId)).data;
+      return request.auth.uid == song.uploadedBy
+        || request.auth.uid == project.ownerId
+        || request.auth.uid in project.collaboratorIds;
+    }
+
+
+    match /songs/{songId}/{allPaths=**} {
       allow read: if true;
+      allow write: if request.auth != null && (
+        !firestore.exists(/databases/(default)/documents/songs/$(songId)) ||
+        canWriteSong(songId)
+      );
     }
     match /avatars/{userId} {
       allow read: if true;

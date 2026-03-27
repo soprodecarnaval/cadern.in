@@ -40,6 +40,7 @@ async function loadCollection(): Promise<Collection> {
 
   for (const songDoc of songsSnap.docs) {
     const song = zSongDoc.parse(songDoc.data());
+    if (song.deletedAt) continue;
     const revision = revisionsBySongId.get(songDoc.id);
     if (!revision) continue;
 

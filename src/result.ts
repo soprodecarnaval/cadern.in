@@ -1,6 +1,8 @@
+import type { WarningCode } from "./lib/warningMessages";
+
 export type Warning = {
-  message: string;
-  meta: any;
+  code: WarningCode;
+  meta: Record<string, unknown>;
 };
 
 export type Ok<T> = {
@@ -16,11 +18,9 @@ export type Err = {
 
 export type Result<T> = Ok<T> | Err;
 
-export function warning(message: string, meta: any = {}): Warning {
-  console.warn("⚠️⚠️⚠️⚠️⚠️⚠️  WARNING  ⚠️⚠️⚠️⚠️⚠️⚠️");
-  console.warn(message);
-  console.warn(meta);
-  return { message, meta };
+export function warning(code: WarningCode, meta: Record<string, unknown> = {}): Warning {
+  console.warn("⚠️⚠️⚠️⚠️⚠️⚠️  WARNING  ⚠️⚠️⚠️⚠️⚠️⚠️", code, meta);
+  return { code, meta };
 }
 
 export function ok<T>(value: T, warnings: Warning[] = []): Ok<T> {

@@ -28,6 +28,7 @@ export const zSongDoc = z.object({
   uploadedBy: z.string(),
   latestRevisionId: z.string(),
   createdAt: zTimestamp,
+  deletedAt: zTimestamp.nullable().optional(),
 });
 export type SongDoc = z.infer<typeof zSongDoc>;
 
