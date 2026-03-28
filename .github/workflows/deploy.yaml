@@ -17,7 +17,7 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-      VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
       VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
       VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
       VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
@@ -36,7 +36,5 @@ jobs:
         run: npm ci
       - name: Install functions dependencies
         run: npm ci --prefix functions
-      - name: Check env
-        run: env | grep VITE
       - name: Deploy
         run: npm run deploy
