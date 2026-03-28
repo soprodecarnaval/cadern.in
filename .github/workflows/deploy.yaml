@@ -28,7 +28,7 @@ jobs:
       - name: Install functions dependencies
         run: npm ci --prefix functions
       - name: Check env
-        run: env | grep VITE`
+        run: env | grep VITE
       - name: Deploy
         run: npm run deploy
         env:
