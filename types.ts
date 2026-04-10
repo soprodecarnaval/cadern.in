@@ -24,7 +24,7 @@ export const zPart = z.object({
 });
 export type Part = z.infer<typeof zPart>;
 
-export const zScore = z.object({
+export const zLegacyScore = z.object({
   id: z.string(),
   title: z.string(),
   composer: z.string(),
@@ -36,28 +36,28 @@ export const zScore = z.object({
   tags: z.array(z.string()),
   projectTitle: z.string(),
 });
-export type Score = z.infer<typeof zScore>;
+export type LegacyScore = z.infer<typeof zLegacyScore>;
 
 export interface Project {
   title: string;
-  scores: Score[];
+  scores: LegacyScore[];
 }
 
-export const zCollection = z.object({
-  projects: z.array(z.object({ title: z.string(), scores: z.array(zScore) })),
+export const zLegacyCollection = z.object({
+  projects: z.array(z.object({ title: z.string(), scores: z.array(zLegacyScore) })),
   version: z.literal(3),
 });
 
-export type Collection = z.infer<typeof zCollection>;
+export type LegacyCollection = z.infer<typeof zLegacyCollection>;
 
 export type PlayingPart = {
-  score: Score;
+  score: LegacyScore;
   part: Part;
 };
 
 export type SongBookScore = {
   type: "score";
-  score: Score;
+  score: LegacyScore;
 };
 
 export type SongBookSection = {
@@ -74,7 +74,7 @@ export type SongBook = {
 export const isSongBookSection = (row: SongBookItem): row is SongBookSection =>
   row.type === "section";
 
-export const songBookScore = (score: Score): SongBookScore => ({
+export const songBookScore = (score: LegacyScore): SongBookScore => ({
   type: "score",
   score: score,
 });

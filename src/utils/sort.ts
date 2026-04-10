@@ -1,4 +1,4 @@
-import { Score } from "../../types";
+import { LegacyScore } from "../../types";
 
 export const carnivalSectionOrder = [
   "marchinha",
@@ -30,11 +30,11 @@ export type SortColumn = "title" | "projectTitle" | "style" | "carnivalStyle";
 export type SortDirection = "asc" | "desc";
 
 export const sortByColumn = (
-  arrayToSort: Score[],
+  arrayToSort: LegacyScore[],
   columnToSort: SortColumn,
   directionToSort: SortDirection,
-): Score[] => {
-  let sorted: Score[] = arrayToSort.sort((a: Score, b: Score) => {
+): LegacyScore[] => {
+  let sorted: LegacyScore[] = arrayToSort.sort((a: LegacyScore, b: LegacyScore) => {
     if (columnToSort === "title") {
       return a.title.localeCompare(b.title);
     } else if (columnToSort === "projectTitle") {

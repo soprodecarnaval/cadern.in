@@ -3,7 +3,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import fs from "fs";
 import path from "path";
-import type { Collection, Score } from "../../types";
+import type { LegacyCollection, LegacyScore } from "../../types";
 import { zProjectDoc, zSongDoc, zRevisionDoc } from "../../firestore-types";
 import type { z } from "zod";
 
@@ -66,7 +66,7 @@ async function uploadScore(
   db: FirebaseFirestore.Firestore,
   bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>,
   collectionBase: string,
-  score: Score,
+  score: LegacyScore,
   projectId: string,
   uid: string
 ): Promise<void> {
@@ -182,7 +182,7 @@ async function cleanOrphans(
  */
 export async function seedToFirebase(
   collectionBase: string,
-  collection: Collection,
+  collection: LegacyCollection,
   config: FirebaseConfig,
   opts: SeedOptions
 ): Promise<void> {

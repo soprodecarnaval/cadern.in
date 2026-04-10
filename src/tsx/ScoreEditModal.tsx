@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Modal, Button, Form, ListGroup } from "react-bootstrap";
-import { Score, Part } from "../../types";
+import { LegacyScore, Part } from "../../types";
 
 interface ScoreEditModalProps {
   show: boolean;
-  score: Score;
+  score: LegacyScore;
   onHide: () => void;
-  onSave: (updatedScore: Score) => void;
+  onSave: (updatedScore: LegacyScore) => void;
 }
 
 const ScoreEditModal = ({ show, score, onHide, onSave }: ScoreEditModalProps) => {
@@ -25,7 +25,7 @@ const ScoreEditModal = ({ show, score, onHide, onSave }: ScoreEditModalProps) =>
   };
 
   const handleSave = () => {
-    const updatedScore: Score = {
+    const updatedScore: LegacyScore = {
       ...score,
       title,
       composer,

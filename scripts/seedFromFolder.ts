@@ -32,7 +32,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { Collection } from "../types";
+import { LegacyCollection } from "../types";
 import { detectMscore, exportCollectionAssets, ExportOptions } from "./lib/mscz";
 import { indexCollection } from "./lib/indexCollection";
 import { seedToFirebase } from "./lib/firebase";
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
 
   console.log("--- Step 3/3: Uploading to Firebase ---");
   const collectionJson = fs.readFileSync(path.join(output, "collection.json"), "utf-8");
-  const collection = JSON.parse(collectionJson) as Collection;
+  const collection = JSON.parse(collectionJson) as LegacyCollection;
   await seedToFirebase(output, collection, { uid, storageBucket }, { clean });
   console.log("\nStep 3 complete.\n");
 

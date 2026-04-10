@@ -1,5 +1,5 @@
 import SVGtoPDF from "svg-to-pdfkit";
-import { Instrument, Part, Score } from "../types";
+import { Instrument, Part, LegacyScore } from "../types";
 import { Section } from "./tsx/PdfGenerator";
 import { extractPartLabel } from "./instrument";
 
@@ -289,7 +289,7 @@ const loadFonts = async (doc: any) => {
 
 const addSongPage = async (
   doc: any,
-  song: Score,
+  song: LegacyScore,
   part: Part,
   currentPage: number,
   songPageIndex: number,
@@ -614,7 +614,7 @@ const addIndexPage = (
     ];
   };
   let [currentX, currentY] = nextCursorPosition();
-  const reorderedSongs: Score[] = [];
+  const reorderedSongs: LegacyScore[] = [];
 
   doc.addPage();
   pageCount++;

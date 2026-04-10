@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { Collection, Instrument, Project, Score, zScore } from "../../types";
+import { LegacyCollection, Instrument, Project, LegacyScore, zLegacyScore } from "../../types";
 import { Ok, Result, Warning, err, ok, warning } from "../../src/result";
 import { parseInstrument } from "../../src/instrument";
 
@@ -122,8 +122,8 @@ function scrapeMetaJson(
 
 const indexScore = (
   scoreDirectory: ScoreDirectory,
-  previousCollection?: Collection
-): Result<Score> => {
+  previousCollection?: LegacyCollection
+): Result<LegacyScore> => {
   let draft: any = {
     id: path.join(scoreDirectory.projectTitle, scoreDirectory.songTitle),
     title: normalizeSongTitle(scoreDirectory.songTitle),
@@ -157,7 +157,7 @@ const indexScore = (
     if (previousSong) draft.tags = previousSong.tags;
   }
 
-  const result = zScore.safeParse(draft);
+  const result = zLegacyScore.safeParse(draft);
   if (result.success) return ok(result.data, scrapeAssetErrors);
   return err(
     result.error.errors.map((e) =>
@@ -168,7 +168,7 @@ const indexScore = (
 
 const indexProjects = (
   songDirectories: ScoreDirectory[],
-  previousCollection?: Collection
+  previousCollection?: LegacyCollection
 ): Ok<Project[]> => {
   const projects: Project[] = [];
   const warnings: Warning[] = [];
@@ -205,7 +205,7 @@ function copyAsset<K extends string>(
   return ok(undefined);
 }
 
-function copySongAssets(song: Score, inputPath: string, outputPath: string): Result<void> {
+function copySongAssets(song: LegacyScore, inputPath: string, outputPath: string): Result<void> {
   const warnings: Warning[] = [];
   for (const asset of ["mscz" as const, "metajson" as const, "midi" as const]) {
     const result = copyAsset(song, asset, inputPath, outputPath);
@@ -232,8 +232,8 @@ function writeCollection(
   projects: Project[],
   inputDir: string,
   outputDir: string
-): Ok<Collection> {
-  const collection: Collection = { projects, version: 3 };
+): Ok<LegacyCollection> {
+  const collection: LegacyCollection = { projects, version: 3 };
   const warnings: Warning[] = [];
   for (const project of projects) {
     for (const song of project.scores) {
@@ -254,7 +254,7 @@ function writeCollection(
 export function indexCollection(
   inputDir: string,
   outputDir: string,
-  previousCollection?: Collection
+  previousCollection?: LegacyCollection
 ): Warning[] {
   const scoreDirectories = listScoreDirectories(inputDir);
   const { value: projects, warnings: indexWarnings } = indexProjects(

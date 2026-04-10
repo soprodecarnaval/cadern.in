@@ -1,14 +1,14 @@
 import { Table } from "react-bootstrap";
 
-import type { Score, PlayingPart } from "../../types";
+import type { LegacyScore, PlayingPart } from "../../types";
 
 import { ArrangementItem } from "./ScoreSearchResultRow";
 import { PaginationBar } from "./PaginationBar";
 import { useState } from "react";
 
 interface ScoreSearchResultTableProps {
-  songs: Score[];
-  handleSelect: (score: Score, checked: boolean) => void;
+  songs: LegacyScore[];
+  handleSelect: (score: LegacyScore, checked: boolean) => void;
   onSetPlayingPart: (info: PlayingPart) => void;
 }
 

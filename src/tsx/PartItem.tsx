@@ -3,7 +3,7 @@ import { useState } from "react";
 import { BsFillPauseCircleFill, BsPlayCircleFill } from "react-icons/bs";
 
 import { PreviewModal } from "./PreviewModal";
-import { Part, PlayingPart, Score } from "../../types";
+import { Part, PlayingPart, LegacyScore } from "../../types";
 
 import "../css/PartItem.css";
 import { Col, Row } from "react-bootstrap";
@@ -11,7 +11,7 @@ import { SiMidi } from "react-icons/si";
 import { midiPlayer, playMidiPart } from "../utils/playMidi";
 
 interface PartItemProps {
-  score: Score;
+  score: LegacyScore;
   part: Part;
   handlePlayingSong: (info: PlayingPart) => void;
 }

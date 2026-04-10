@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, ReactNode } from "react";
 import Fuse, { IFuseOptions } from "fuse.js";
 import { storagePathToUrl } from "./storage";
 import { getAllProjects, getAllSongs, getLatestRevisions } from "./lib/db";
-import type { Collection, Score, Part } from "../types";
+import type { LegacyCollection, LegacyScore, Part } from "../types";
 import { FEATURE_FLAG_AUTH_ENABLED } from "./featureFlags";
 import {
   CollectionContext,
@@ -11,7 +11,7 @@ import {
 
 const CADERN_IN_UID = import.meta.env.VITE_CADERN_IN_UID as string | undefined;
 
-async function loadCollection(): Promise<Collection> {
+async function loadCollection(): Promise<LegacyCollection> {
   const [projectDocs, songDocs, revisionDocs] = await Promise.all([
     getAllProjects(),
     getAllSongs(),
@@ -28,7 +28,7 @@ async function loadCollection(): Promise<Collection> {
 
   const revisionsBySongId = new Map(revisionDocs.map((r) => [r.songId, r]));
 
-  const scoresByProject = new Map<string, Score[]>();
+  const scoresByProject = new Map<string, LegacyScore[]>();
 
   for (const song of songDocs) {
     if (song.deletedAt) continue;
@@ -41,7 +41,7 @@ async function loadCollection(): Promise<Collection> {
       midi: storagePathToUrl(p.midi),
     }));
 
-    const score: Score = {
+    const score: LegacyScore = {
       id: song.id,
       title: song.title,
       composer: song.composer,
@@ -69,7 +69,7 @@ async function loadCollection(): Promise<Collection> {
   return { projects, version: 3 };
 }
 
-const fuseOptions: IFuseOptions<Score> = {
+const fuseOptions: IFuseOptions<LegacyScore> = {
   keys: ["title", "composer", "tags", "projectTitle"],
   includeScore: true,
   shouldSort: true,
@@ -79,21 +79,21 @@ const fuseOptions: IFuseOptions<Score> = {
   ignoreLocation: true,
 };
 
-function buildFuse(scores: Score[]): Fuse<Score> {
+function buildFuse(scores: LegacyScore[]): Fuse<LegacyScore> {
   const index = Fuse.createIndex(fuseOptions.keys as string[], scores);
   return new Fuse(scores, fuseOptions, index);
 }
 
 export function CollectionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<CollectionStatus>("loading");
-  const [allScores, setAllScores] = useState<Score[]>([]);
-  const [fuse, setFuse] = useState<Fuse<Score> | null>(null);
+  const [allLegacyScores, setAllLegacyScores] = useState<LegacyScore[]>([]);
+  const [fuse, setFuse] = useState<Fuse<LegacyScore> | null>(null);
 
   useEffect(() => {
     loadCollection()
       .then((col) => {
         const scores = col.projects.flatMap((p) => p.scores);
-        setAllScores(scores);
+        setAllLegacyScores(scores);
         setFuse(buildFuse(scores));
         setStatus("ready");
       })
@@ -101,15 +101,15 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const search = useCallback(
-    (query: string): Score[] => {
-      if (!fuse || query === "") return allScores;
+    (query: string): LegacyScore[] => {
+      if (!fuse || query === "") return allLegacyScores;
       return fuse.search(query).map((r) => r.item);
     },
-    [fuse, allScores],
+    [fuse, allLegacyScores],
   );
 
   return (
-    <CollectionContext.Provider value={{ status, allScores, search }}>
+    <CollectionContext.Provider value={{ status, allLegacyScores, search }}>
       {children}
     </CollectionContext.Provider>
   );

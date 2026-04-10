@@ -1,12 +1,12 @@
 import { createContext, useContext } from "react";
-import type { Score } from "../types";
+import type { LegacyScore } from "../types";
 
 export type CollectionStatus = "loading" | "ready" | "error";
 
 export interface CollectionContextValue {
   status: CollectionStatus;
-  allScores: Score[];
-  search: (query: string) => Score[];
+  allLegacyScores: LegacyScore[];
+  search: (query: string) => LegacyScore[];
 }
 
 export const CollectionContext = createContext<CollectionContextValue | null>(null);

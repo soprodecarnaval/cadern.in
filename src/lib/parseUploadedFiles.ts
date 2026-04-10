@@ -1,4 +1,4 @@
-import { Instrument, Part, zScore } from "../../types";
+import { Instrument, Part, zLegacyScore } from "../../types";
 import { parseInstrument } from "../instrument";
 import type { Warning } from "../result";
 
@@ -194,7 +194,7 @@ export function validateParsedScore(parsed: ParsedScore): Warning[] {
     projectTitle: "placeholder",
   };
 
-  const result = zScore.safeParse(draft);
+  const result = zLegacyScore.safeParse(draft);
   if (result.success) return [];
 
   return result.error.errors.map((e) => ({

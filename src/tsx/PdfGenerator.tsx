@@ -13,7 +13,7 @@ import React, { useState, useMemo } from "react";
 import {
   Instrument,
   isSongBookSection,
-  Score,
+  LegacyScore,
   SongBook,
   SongBookItem,
   SongBookScore,
@@ -44,7 +44,7 @@ interface PdfGeneratorProps {
 
 export type Section = {
   title: string;
-  songs: Score[];
+  songs: LegacyScore[];
 };
 
 const CarnivalModeTooltip = (
