@@ -4,7 +4,8 @@ import { getStorage } from "firebase-admin/storage";
 import fs from "fs";
 import path from "path";
 import type { LegacyCollection, LegacyScore } from "../../types";
-import { zProjectDoc, zSongDoc, zRevisionDoc } from "../../firestore-types";
+import { zProjectDoc, zScoreDoc, zRevisionDoc } from "../../firestore-types";
+import { SCORES_COLLECTION } from "../../constants";
 import type { z } from "zod";
 
 export interface FirebaseConfig {
@@ -70,9 +71,9 @@ async function uploadScore(
   projectId: string,
   uid: string
 ): Promise<void> {
-  const songId = slugify(score.id);
+  const scoreId = slugify(score.id);
   const revId = "1";
-  const storageBase = `songs/${songId}/${revId}`;
+  const storageBase = `songs/${scoreId}/${revId}`;
 
   const migratedParts = [];
   const fileUploads: [string, string][] = [
@@ -93,9 +94,9 @@ async function uploadScore(
     migratedParts.push({ ...part, svg: svgStoragePaths, midi: midiDest });
   }
 
-  console.log(`  song: ${score.title} (${songId})`);
+  console.log(`  song: ${score.title} (${scoreId})`);
 
-  const songRef = db.collection("songs").doc(songId);
+  const songRef = db.collection(SCORES_COLLECTION).doc(scoreId);
   const existing = await songRef.collection("revisions").doc(revId).get();
   if (existing.exists) {
     const existingRev = zRevisionDoc.parse(existing.data());
@@ -111,9 +112,9 @@ async function uploadScore(
     await uploadFile(bucket, path.join(collectionBase, relPath), storagePath);
   }
 
-  console.log(`  writing firestore: songs/${songId}`);
+  console.log(`  writing firestore: songs/${scoreId}`);
   await songRef.set(
-    zSongDoc.parse({
+    zScoreDoc.parse({
       title: score.title,
       composer: score.composer,
       sub: score.sub,
@@ -125,7 +126,7 @@ async function uploadScore(
     })
   );
 
-  console.log(`  writing firestore: songs/${songId}/revisions/${revId}`);
+  console.log(`  writing firestore: songs/${scoreId}/revisions/${revId}`);
   await songRef.collection("revisions").doc(revId).set(
     zRevisionDoc.parse({
       revisionNumber: 1,
@@ -152,7 +153,7 @@ async function cleanOrphans(
   console.log("\nCleaning orphaned docs...");
 
   const [songsSnap, projectsSnap] = await Promise.all([
-    db.collection("songs").get(),
+    db.collection(SCORES_COLLECTION).get(),
     db.collection("projects").get(),
   ]);
 

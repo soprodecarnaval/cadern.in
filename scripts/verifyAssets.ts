@@ -29,7 +29,7 @@ async function main(): Promise<void> {
   let missingTotal = 0;
 
   for (const doc of snap.docs) {
-    const songId = doc.ref.parent.parent!.id;
+    const scoreId = doc.ref.parent.parent!.id;
     const revision = zRevisionDoc.parse(doc.data());
 
     const paths = [
@@ -45,11 +45,11 @@ async function main(): Promise<void> {
 
     const missing = results.filter((r) => !r.exists);
     if (missing.length > 0) {
-      console.log(`✗ ${songId} / rev ${revision.revisionNumber}`);
+      console.log(`✗ ${scoreId} / rev ${revision.revisionNumber}`);
       for (const m of missing) console.log(`    missing: ${m.path}`);
       missingTotal += missing.length;
     } else {
-      console.log(`✓ ${songId} / rev ${revision.revisionNumber}`);
+      console.log(`✓ ${scoreId} / rev ${revision.revisionNumber}`);
     }
   }
 

@@ -6,11 +6,11 @@ import type { User } from "firebase/auth";
 import {
   createProject,
   createRevision,
-  createSong,
-  getSongRevisions,
+  createScore,
+  getScoreRevisions,
   getProject,
   updateRevision,
-  updateSong,
+  updateScore,
 } from "./db";
 
 const DEFAULT_PROJECT_PREFIX = "Acervo @";
@@ -46,14 +46,14 @@ export async function uploadScore(
   projectId: string,
   user: User,
   onProgress?: OnProgress,
-  existingSongId?: string,
+  existingScoreId?: string,
 ): Promise<string> {
-  const songId = existingSongId ?? `${projectId}-${slugify(parsed.title)}`;
-  const revisionNumber = existingSongId
-    ? (await getSongRevisions(songId)).length + 1
+  const scoreId = existingScoreId ?? `${projectId}-${slugify(parsed.title)}`;
+  const revisionNumber = existingScoreId
+    ? (await getScoreRevisions(scoreId)).length + 1
     : 1;
   const revId = String(revisionNumber);
-  const storageBase = `songs/${songId}/${revId}`;
+  const storageBase = `songs/${scoreId}/${revId}`;
 
   const filesTotal = parsed.fileMap.size;
   let filesUploaded = 0;
@@ -92,11 +92,11 @@ export async function uploadScore(
     midi: storagePaths.get(`parts/${part.name}.midi`) ?? part.midi,
   }));
 
-  if (existingSongId && revisionNumber > 1) {
-    await updateRevision(songId, String(revisionNumber - 1), { isLatest: false });
+  if (existingScoreId && revisionNumber > 1) {
+    await updateRevision(scoreId, String(revisionNumber - 1), { isLatest: false });
   }
 
-  await createRevision(songId, revId, {
+  await createRevision(scoreId, revId, {
     revisionNumber,
     uploadedBy: user.uid,
     mscz: storagePaths.get("mscz") ?? "",
@@ -107,10 +107,10 @@ export async function uploadScore(
     isLatest: true,
   });
 
-  if (existingSongId) {
-    await updateSong(songId, { latestRevisionId: revId });
+  if (existingScoreId) {
+    await updateScore(scoreId, { latestRevisionId: revId });
   } else {
-    await createSong(songId, {
+    await createScore(scoreId, {
       title: parsed.title,
       composer: parsed.composer,
       sub: parsed.sub,
@@ -122,5 +122,5 @@ export async function uploadScore(
   }
 
   onProgress?.({ stage: "done", filesUploaded: filesTotal, filesTotal });
-  return songId;
+  return scoreId;
 }

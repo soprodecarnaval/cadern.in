@@ -21,7 +21,7 @@ export const zProjectDoc = zProjectData.extend({ createdAt: zTimestamp });
 export type ProjectData = z.infer<typeof zProjectData>;
 export type ProjectDoc = z.infer<typeof zProjectDoc>;
 
-export const zSongData = z.object({
+export const zScoreData = z.object({
   title: z.string(),
   composer: z.string(),
   sub: z.string(),
@@ -30,12 +30,12 @@ export const zSongData = z.object({
   uploadedBy: z.string(),
   latestRevisionId: z.string(),
 });
-export const zSongDoc = zSongData.extend({
+export const zScoreDoc = zScoreData.extend({
   createdAt: zTimestamp,
   deletedAt: zTimestamp.nullable().optional(),
 });
-export type SongData = z.infer<typeof zSongData>;
-export type SongDoc = z.infer<typeof zSongDoc>;
+export type ScoreData = z.infer<typeof zScoreData>;
+export type ScoreDoc = z.infer<typeof zScoreDoc>;
 
 export const zRevisionData = z.object({
   revisionNumber: z.number().int().positive(),
@@ -52,7 +52,7 @@ export type RevisionData = z.infer<typeof zRevisionData>;
 export type RevisionDoc = z.infer<typeof zRevisionDoc>;
 
 export const zSongbookEntry = z.object({
-  songId: z.string(),
+  scoreId: z.string(),
   revisionId: z.string(),
   order: z.number().int(),
   instruments: z.array(zInstrument),

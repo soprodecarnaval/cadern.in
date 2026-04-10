@@ -193,10 +193,10 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/upload" element={<UploadPage />} />
-        <Route path="/upload/:songId" element={<UploadPage />} />
+        <Route path="/upload/:scoreId" element={<UploadPage />} />
         <Route path="/my-scores" element={<MyScoresPage />} />
-        <Route path="/score/:songId" element={<ScorePage />} />
-        <Route path="/score/:songId/:revisionId" element={<ScorePage />} />
+        <Route path="/score/:scoreId" element={<ScorePage />} />
+        <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
       </Routes>
 
       <AuthModal show={showAuthModal} onHide={() => setShowAuthModal(false)} />

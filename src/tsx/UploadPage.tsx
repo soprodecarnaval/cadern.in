@@ -54,7 +54,7 @@ type Step = "idle" | "uploading" | "done";
 export function UploadPage() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const { songId: existingSongId } = useParams<{ songId: string }>();
+  const { scoreId: existingScoreId } = useParams<{ scoreId: string }>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<Step>("idle");
@@ -102,7 +102,7 @@ export function UploadPage() {
     setStep("uploading");
     try {
       const onProgress: OnProgress = (p) => setProgress(p);
-      await uploadScore(parsed, selectedProjectId, currentUser, onProgress, existingSongId);
+      await uploadScore(parsed, selectedProjectId, currentUser, onProgress, existingScoreId);
       setStep("done");
     } catch (err: any) {
       setError(err.message ?? "Erro ao enviar partitura");
@@ -125,7 +125,7 @@ export function UploadPage() {
   if (step === "uploading") {
     return (
       <Container className="mt-4">
-        <h2>{existingSongId ? "Nova revisão" : "Enviar partitura"}</h2>
+        <h2>{existingScoreId ? "Nova revisão" : "Enviar partitura"}</h2>
         <Card>
           <Card.Body>
             <p>
@@ -196,7 +196,7 @@ export function UploadPage() {
 
   return (
     <Container className="mt-4">
-      <h2>{existingSongId ? "Nova revisão" : "Enviar partitura"}</h2>
+      <h2>{existingScoreId ? "Nova revisão" : "Enviar partitura"}</h2>
 
       <Card className="mb-3">
         <Card.Body>
@@ -309,7 +309,7 @@ export function UploadPage() {
               disabled={hasErrors || parsed.parts.length === 0}
               onClick={() => void handlePublish()}
             >
-              {existingSongId ? "Enviar revisão" : "Publicar"}
+              {existingScoreId ? "Enviar revisão" : "Publicar"}
             </Button>
           </div>
         </>

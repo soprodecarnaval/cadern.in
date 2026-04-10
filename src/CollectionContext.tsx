@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, ReactNode } from "react";
 import Fuse, { IFuseOptions } from "fuse.js";
 import { storagePathToUrl } from "./storage";
-import { getAllProjects, getAllSongs, getLatestRevisions } from "./lib/db";
+import { getAllProjects, getAllScores, getLatestRevisions } from "./lib/db";
 import type { LegacyCollection, LegacyScore, Part } from "../types";
 import { FEATURE_FLAG_AUTH_ENABLED } from "./featureFlags";
 import {
@@ -14,7 +14,7 @@ const CADERN_IN_UID = import.meta.env.VITE_CADERN_IN_UID as string | undefined;
 async function loadCollection(): Promise<LegacyCollection> {
   const [projectDocs, songDocs, revisionDocs] = await Promise.all([
     getAllProjects(),
-    getAllSongs(),
+    getAllScores(),
     getLatestRevisions(),
   ]);
 
@@ -26,13 +26,13 @@ async function loadCollection(): Promise<LegacyCollection> {
     filteredProjectDocs.map((p) => [p.id, p.title]),
   );
 
-  const revisionsBySongId = new Map(revisionDocs.map((r) => [r.songId, r]));
+  const revisionsByScoreId = new Map(revisionDocs.map((r) => [r.scoreId, r]));
 
   const scoresByProject = new Map<string, LegacyScore[]>();
 
   for (const song of songDocs) {
     if (song.deletedAt) continue;
-    const revision = revisionsBySongId.get(song.id);
+    const revision = revisionsByScoreId.get(song.id);
     if (!revision) continue;
 
     const parts: Part[] = revision.parts.map((p) => ({
