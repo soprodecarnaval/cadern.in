@@ -32,7 +32,7 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { LegacyCollection } from "../types";
+import { LegacyCollection } from "./lib/legacyCollectionTypes";
 import { detectMscore, exportCollectionAssets, ExportOptions } from "./lib/mscz";
 import { indexCollection } from "./lib/indexCollection";
 import { seedToFirebase } from "./lib/firebase";

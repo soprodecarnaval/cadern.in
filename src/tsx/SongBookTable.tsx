@@ -15,7 +15,7 @@ import {
   PlayingPart,
   SongBookItem,
   SongBookScore,
-  LegacyScore,
+  ScoreViewModel,
 } from "../../types";
 
 import { SongBookScoreRow } from "./SongBookScoreRow";
@@ -34,7 +34,7 @@ import { carnivalSectionOrder } from "../utils/sort";
 interface SongBookTableProps {
   rows: SongBookItem[];
   setItems: (rows: SongBookItem[]) => void;
-  handleSelect: (song: LegacyScore, checked: boolean) => void;
+  handleSelect: (song: ScoreViewModel, checked: boolean) => void;
   onSetPlayingPart: (song: PlayingPart) => void;
   handleClear: () => void;
 }
@@ -78,7 +78,7 @@ const SongBookTable = ({
     </Tooltip>
   );
 
-  const handleUpdateScore = (idx: number, updatedScore: LegacyScore) => {
+  const handleUpdateScore = (idx: number, updatedScore: ScoreViewModel) => {
     const newRows = [...rows];
     newRows[idx] = { type: "score", score: updatedScore } as SongBookScore;
     setRows(newRows);

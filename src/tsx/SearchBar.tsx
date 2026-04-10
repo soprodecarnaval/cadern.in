@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Row, Col, Form } from "react-bootstrap";
 
-import { LegacyScore } from "../../types";
+import { ScoreViewModel } from "../../types";
 import { useCollectionContext } from "../useCollectionContext";
 
 interface SearchBarProps {
-  handleResults: (results: LegacyScore[]) => void;
+  handleResults: (results: ScoreViewModel[]) => void;
 }
 
 const SearchBar = ({ handleResults }: SearchBarProps) => {

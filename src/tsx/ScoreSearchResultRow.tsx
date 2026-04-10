@@ -5,12 +5,12 @@ import { PartItem } from "./PartItem";
 
 import "../css/ScoreRow.css";
 import { SiMidi, SiMusescore } from "react-icons/si";
-import { LegacyScore, PlayingPart } from "../../types";
+import { ScoreViewModel, PlayingPart } from "../../types";
 
 interface ScoreSearchResultRowProps {
-  handleSelect: (score: LegacyScore, checked: boolean) => void;
+  handleSelect: (score: ScoreViewModel, checked: boolean) => void;
   handlePlayingSong: (score: PlayingPart) => void;
-  score: LegacyScore;
+  score: ScoreViewModel;
 }
 
 const ScoreSearchResultRow = ({

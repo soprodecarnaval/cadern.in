@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 
-import { LegacyCollection, Instrument, Project, LegacyScore, zLegacyScore } from "../../types";
+import { Instrument } from "../../types";
+import { LegacyCollection, Project, LegacyScore, zLegacyScore } from "./legacyCollectionTypes";
 import { Ok, Result, Warning, err, ok, warning } from "../../src/result";
 import { parseInstrument } from "../../src/instrument";
 

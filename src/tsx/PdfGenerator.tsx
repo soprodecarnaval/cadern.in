@@ -13,7 +13,7 @@ import React, { useState, useMemo } from "react";
 import {
   Instrument,
   isSongBookSection,
-  LegacyScore,
+  ScoreViewModel,
   SongBook,
   SongBookItem,
   SongBookScore,
@@ -44,7 +44,7 @@ interface PdfGeneratorProps {
 
 export type Section = {
   title: string;
-  songs: LegacyScore[];
+  scores: ScoreViewModel[];
 };
 
 const CarnivalModeTooltip = (
@@ -221,18 +221,18 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
         if (isSongBookSection(item)) {
           currentSection = {
             title: item.title,
-            songs: [],
+            scores: [],
           };
           sections.push(currentSection);
         } else {
           if (!currentSection) {
             currentSection = {
               title: "",
-              songs: [],
+              scores: [],
             };
             sections.push(currentSection);
           }
-          currentSection.songs.push(item.score);
+          currentSection.scores.push(item.score);
         }
       }
 

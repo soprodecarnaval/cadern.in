@@ -1,4 +1,5 @@
-import { Instrument, Part, zLegacyScore } from "../../types";
+import z from "zod";
+import { Instrument, Part, zPart } from "../../types";
 import { parseInstrument } from "../instrument";
 import type { Warning } from "../result";
 
@@ -180,21 +181,22 @@ export async function parseUploadedFiles(
   };
 }
 
+const zParsedScoreValidation = z.object({
+  title: z.string(),
+  composer: z.string(),
+  sub: z.string(),
+  tags: z.array(z.string()),
+  parts: z.array(zPart),
+});
+
 export function validateParsedScore(parsed: ParsedScore): Warning[] {
-  const draft = {
-    id: "validation-draft",
+  const result = zParsedScoreValidation.safeParse({
     title: parsed.title,
     composer: parsed.composer,
     sub: parsed.sub,
-    mscz: "placeholder",
-    metajson: "placeholder",
-    midi: "placeholder",
-    parts: parsed.parts,
     tags: parsed.tags,
-    projectTitle: "placeholder",
-  };
-
-  const result = zLegacyScore.safeParse(draft);
+    parts: parsed.parts,
+  });
   if (result.success) return [];
 
   return result.error.errors.map((e) => ({

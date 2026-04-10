@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, ReactNode } from "react";
 import Fuse, { IFuseOptions } from "fuse.js";
 import { storagePathToUrl } from "./storage";
 import { getAllProjects, getAllScores, getLatestRevisions } from "./lib/db";
-import type { LegacyCollection, LegacyScore, Part } from "../types";
+import type { ScoreViewModel } from "../types";
 import { FEATURE_FLAG_AUTH_ENABLED } from "./featureFlags";
 import {
   CollectionContext,
@@ -11,7 +11,7 @@ import {
 
 const CADERN_IN_UID = import.meta.env.VITE_CADERN_IN_UID as string | undefined;
 
-async function loadCollection(): Promise<LegacyCollection> {
+async function loadCollection(): Promise<ScoreViewModel[]> {
   const [projectDocs, songDocs, revisionDocs] = await Promise.all([
     getAllProjects(),
     getAllScores(),
@@ -28,20 +28,14 @@ async function loadCollection(): Promise<LegacyCollection> {
 
   const revisionsByScoreId = new Map(revisionDocs.map((r) => [r.scoreId, r]));
 
-  const scoresByProject = new Map<string, LegacyScore[]>();
+  const scores: ScoreViewModel[] = [];
 
   for (const song of songDocs) {
     if (song.deletedAt) continue;
     const revision = revisionsByScoreId.get(song.id);
     if (!revision) continue;
 
-    const parts: Part[] = revision.parts.map((p) => ({
-      ...p,
-      svg: p.svg.map(storagePathToUrl),
-      midi: storagePathToUrl(p.midi),
-    }));
-
-    const score: LegacyScore = {
+    scores.push({
       id: song.id,
       title: song.title,
       composer: song.composer,
@@ -51,25 +45,18 @@ async function loadCollection(): Promise<LegacyCollection> {
       mscz: storagePathToUrl(revision.mscz),
       metajson: storagePathToUrl(revision.metajson),
       midi: storagePathToUrl(revision.midi),
-      parts,
-    };
-
-    const existing = scoresByProject.get(song.projectId) ?? [];
-    existing.push(score);
-    scoresByProject.set(song.projectId, existing);
+      parts: revision.parts.map((p) => ({
+        ...p,
+        svg: p.svg.map(storagePathToUrl),
+        midi: storagePathToUrl(p.midi),
+      })),
+    });
   }
 
-  const projects = Array.from(scoresByProject.entries()).map(
-    ([projectId, scores]) => ({
-      title: projectTitles.get(projectId) ?? projectId,
-      scores,
-    }),
-  );
-
-  return { projects, version: 3 };
+  return scores;
 }
 
-const fuseOptions: IFuseOptions<LegacyScore> = {
+const fuseOptions: IFuseOptions<ScoreViewModel> = {
   keys: ["title", "composer", "tags", "projectTitle"],
   includeScore: true,
   shouldSort: true,
@@ -79,21 +66,20 @@ const fuseOptions: IFuseOptions<LegacyScore> = {
   ignoreLocation: true,
 };
 
-function buildFuse(scores: LegacyScore[]): Fuse<LegacyScore> {
+function buildFuse(scores: ScoreViewModel[]): Fuse<ScoreViewModel> {
   const index = Fuse.createIndex(fuseOptions.keys as string[], scores);
   return new Fuse(scores, fuseOptions, index);
 }
 
 export function CollectionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<CollectionStatus>("loading");
-  const [allLegacyScores, setAllLegacyScores] = useState<LegacyScore[]>([]);
-  const [fuse, setFuse] = useState<Fuse<LegacyScore> | null>(null);
+  const [allScores, setAllScores] = useState<ScoreViewModel[]>([]);
+  const [fuse, setFuse] = useState<Fuse<ScoreViewModel> | null>(null);
 
   useEffect(() => {
     loadCollection()
-      .then((col) => {
-        const scores = col.projects.flatMap((p) => p.scores);
-        setAllLegacyScores(scores);
+      .then((scores) => {
+        setAllScores(scores);
         setFuse(buildFuse(scores));
         setStatus("ready");
       })
@@ -101,15 +87,15 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const search = useCallback(
-    (query: string): LegacyScore[] => {
-      if (!fuse || query === "") return allLegacyScores;
+    (query: string): ScoreViewModel[] => {
+      if (!fuse || query === "") return allScores;
       return fuse.search(query).map((r) => r.item);
     },
-    [fuse, allLegacyScores],
+    [fuse, allScores],
   );
 
   return (
-    <CollectionContext.Provider value={{ status, allLegacyScores, search }}>
+    <CollectionContext.Provider value={{ status, allScores, search }}>
       {children}
     </CollectionContext.Provider>
   );

@@ -3,7 +3,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import fs from "fs";
 import path from "path";
-import type { LegacyCollection, LegacyScore } from "../../types";
+import type { LegacyCollection, LegacyScore } from "./legacyCollectionTypes";
 import { zProjectDoc, zScoreDoc, zRevisionDoc } from "../../firestore-types";
 import { SCORES_COLLECTION } from "../../constants";
 import type { z } from "zod";

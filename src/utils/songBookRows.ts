@@ -1,5 +1,5 @@
 import {
-  LegacyScore,
+  ScoreViewModel,
   SongBookItem,
   isSongBookSection,
   songBookSection,
@@ -39,7 +39,7 @@ export const sortSongsWithinSections = (
 ) => {
   // sort slices of songs delimited by sections
   const sorted: SongBookItem[] = [];
-  let slice: LegacyScore[] = [];
+  let slice: ScoreViewModel[] = [];
   for (const row of rows) {
     if (isSongBookSection(row)) {
       if (slice.length > 0) {
@@ -104,7 +104,7 @@ export const generateCarnivalSections = (rows: SongBookItem[]) => {
 
   // pick only carnival sections, keeping their order
   // ignore sections not in the order
-  const allSongs: Map<string, LegacyScore> = new Map();
+  const allSongs: Map<string, ScoreViewModel> = new Map();
   for (const row of rows) {
     if (row.type == "score") {
       allSongs.set(row.score.title, row.score);
@@ -126,7 +126,7 @@ export const generateCarnivalSections = (rows: SongBookItem[]) => {
     newRows.push(rows[idx]);
 
     // add all songs in section
-    const slice: LegacyScore[] = [];
+    const slice: ScoreViewModel[] = [];
     for (let i = idx + 1; i < rows.length; i++) {
       const row = rows[i];
       if (isSongBookSection(row)) {

@@ -8,18 +8,18 @@ import {
 } from "react-icons/bs";
 import { SiMidi, SiMusescore } from "react-icons/si";
 
-import type { Part, LegacyScore, PlayingPart } from "../../types";
+import type { Part, ScoreViewModel, PlayingPart } from "../../types";
 import { PartItem } from "./PartItem";
 import { ScoreEditModal } from "./ScoreEditModal";
 
 import "../css/ScoreRow.css";
 
 interface Props {
-  handleDelete: (score: LegacyScore, checked: boolean) => void;
+  handleDelete: (score: ScoreViewModel, checked: boolean) => void;
   handlePlayingSong: (score: PlayingPart) => void;
   handleMove: (steps: number) => void;
-  handleUpdateScore: (updatedScore: LegacyScore) => void;
-  score: LegacyScore;
+  handleUpdateScore: (updatedScore: ScoreViewModel) => void;
+  score: ScoreViewModel;
 }
 
 const SongBookScoreRow = ({

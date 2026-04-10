@@ -14,7 +14,7 @@ import { BsFillSave2Fill } from "react-icons/bs";
 
 import {
   isSongBookSection,
-  LegacyScore,
+  ScoreViewModel,
   SongBook,
   songBookScore,
   PlayingPart,
@@ -32,11 +32,11 @@ import { MyScoresPage } from "./MyScoresPage";
 import { ScorePage } from "./ScorePage";
 
 function HomePage() {
-  const [results, setResults] = useState<LegacyScore[]>([]);
+  const [results, setResults] = useState<ScoreViewModel[]>([]);
   const [items, setItems] = useState<SongBookItem[]>([]);
   const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
   const [playingPart, setPlayingPart] = useState<PlayingPart | null>(null);
-  const handleSelectSong = (song: LegacyScore, checked: boolean) => {
+  const handleSelectSong = (song: ScoreViewModel, checked: boolean) => {
     checked ? handleAddScore(song) : handleRemoveScore(song);
   };
 
@@ -44,14 +44,14 @@ function HomePage() {
     setItems([]);
   };
 
-  const handleAddScore = (score: LegacyScore) => {
+  const handleAddScore = (score: ScoreViewModel) => {
     setItems([...items, songBookScore(score)]);
     const updatedRes = results.filter((r) => r.id !== score.id);
 
     setResults(updatedRes);
   };
 
-  const handleRemoveScore = (score: LegacyScore) => {
+  const handleRemoveScore = (score: ScoreViewModel) => {
     const updatedRes = items.filter(
       (r) => isSongBookSection(r) || r.score.id !== score.id,
     );
