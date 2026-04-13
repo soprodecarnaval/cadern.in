@@ -1,9 +1,13 @@
-import type { ScoreViewModel } from "./viewModels";
+import type { ScoreViewModel, RevisionViewModel } from "./viewModels";
 
 export type SongBookScore = {
   type: "score";
   score: ScoreViewModel;
+  revision?: RevisionViewModel;
 };
+
+export const getRevision = (item: SongBookScore): RevisionViewModel =>
+  item.revision ?? item.score.latestRevision;
 
 export type SongBookSection = {
   type: "section";

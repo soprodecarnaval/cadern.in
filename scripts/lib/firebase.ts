@@ -73,7 +73,7 @@ async function uploadScore(
 ): Promise<void> {
   const scoreId = slugify(score.id);
   const revId = "1";
-  const storageBase = `songs/${scoreId}/${revId}`;
+  const storageBase = `scores/${scoreId}/${revId}`;
 
   const migratedParts = [];
   const fileUploads: [string, string][] = [
@@ -112,7 +112,7 @@ async function uploadScore(
     await uploadFile(bucket, path.join(collectionBase, relPath), storagePath);
   }
 
-  console.log(`  writing firestore: songs/${scoreId}`);
+  console.log(`  writing firestore: scores/${scoreId}`);
   await songRef.set(
     zScoreDoc.parse({
       title: score.title,
@@ -126,7 +126,7 @@ async function uploadScore(
     })
   );
 
-  console.log(`  writing firestore: songs/${scoreId}/revisions/${revId}`);
+  console.log(`  writing firestore: scores/${scoreId}/revisions/${revId}`);
   await songRef.collection("revisions").doc(revId).set(
     zRevisionDoc.parse({
       revisionNumber: 1,
@@ -161,9 +161,9 @@ async function cleanOrphans(
   const orphanedProjects = projectsSnap.docs.filter((d) => !expectedProjectIds.has(d.id));
 
   for (const doc of orphanedSongs) {
-    console.log(`  deleting storage: songs/${doc.id}/`);
-    await bucket.deleteFiles({ prefix: `songs/${doc.id}/` });
-    console.log(`  deleting firestore: songs/${doc.id}`);
+    console.log(`  deleting storage: scores/${doc.id}/`);
+    await bucket.deleteFiles({ prefix: `scores/${doc.id}/` });
+    console.log(`  deleting firestore: scores/${doc.id}`);
     const revisions = await doc.ref.collection("revisions").get();
     await Promise.all(revisions.docs.map((r) => r.ref.delete()));
     await doc.ref.delete();

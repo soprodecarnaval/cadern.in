@@ -16,7 +16,7 @@ service cloud.firestore {
       );
     }
 
-    match /songs/{songId} {
+    match /scores/{songId} {
       allow read: if true;
       allow create: if request.auth != null;
       allow update: if request.auth != null && (

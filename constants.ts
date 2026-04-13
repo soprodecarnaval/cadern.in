@@ -1,1 +1,1 @@
-export const SCORES_COLLECTION = "songs";
+export const SCORES_COLLECTION = "scores";

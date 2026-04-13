@@ -3,7 +3,7 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function canWriteSong(songId) {
-      let song = firestore.get(/databases/(default)/documents/songs/$(songId)).data;
+      let song = firestore.get(/databases/(default)/documents/scores/$(songId)).data;
       let project = firestore.get(/databases/(default)/documents/projects/$(song.projectId)).data;
       return request.auth.uid == song.uploadedBy
         || request.auth.uid == project.ownerId
@@ -11,10 +11,10 @@ service firebase.storage {
     }
 
 
-    match /songs/{songId}/{allPaths=**} {
+    match /scores/{songId}/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null && (
-        !firestore.exists(/databases/(default)/documents/songs/$(songId)) ||
+        !firestore.exists(/databases/(default)/documents/scores/$(songId)) ||
         canWriteSong(songId)
       );
     }

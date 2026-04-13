@@ -143,14 +143,14 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
     let topItem = outline.addItem(title.toUpperCase());
     sectionTitleOutlines.set(title, topItem);
 
-    for (const score of scores) {
+    for (const { score, revision } of scores) {
       // Get all parts for the current instrument, with optional fallback
       let partsForInstrument =
-        score.latestRevision.parts?.filter((p) => p.instrument === instrument) ?? [];
+        revision.parts?.filter((p) => p.instrument === instrument) ?? [];
 
       if (partsForInstrument.length === 0 && opts.fallbackInstrument) {
         partsForInstrument =
-          score.latestRevision.parts?.filter((p) => p.instrument === opts.fallbackInstrument) ??
+          revision.parts?.filter((p) => p.instrument === opts.fallbackInstrument) ??
           [];
       }
 
@@ -615,7 +615,6 @@ const addIndexPage = (
     ];
   };
   let [currentX, currentY] = nextCursorPosition();
-  const reorderedScores: ScoreViewModel[] = [];
 
   doc.addPage();
   pageCount++;
@@ -650,8 +649,7 @@ const addIndexPage = (
       }
     }
 
-    scores.forEach((score, scoreIdx) => {
-      reorderedScores.push(score);
+    scores.forEach(({ score, revision }, scoreIdx) => {
       if (scoreIdx == 0) {
         if (currentLine == maxLinesPerColumn) {
           [currentX, currentY] = nextCursorPosition();
@@ -667,10 +665,10 @@ const addIndexPage = (
       }
 
       let partsForInstrument =
-        score.latestRevision.parts?.filter((p) => p.instrument === instrument) ?? [];
+        revision.parts?.filter((p) => p.instrument === instrument) ?? [];
       if (partsForInstrument.length === 0 && fallbackInstrument) {
         partsForInstrument =
-          score.latestRevision.parts?.filter((p) => p.instrument === fallbackInstrument) ?? [];
+          revision.parts?.filter((p) => p.instrument === fallbackInstrument) ?? [];
       }
       const hasInstrument = partsForInstrument.length > 0;
       const isMultiPart = partsForInstrument.length > 1;
