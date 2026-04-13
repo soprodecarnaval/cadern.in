@@ -8,9 +8,9 @@ import {
 } from "react-icons/bs";
 import { SiMidi, SiMusescore } from "react-icons/si";
 
-import type { Part, ScoreViewModel, PlayingPart } from "../../types";
+import type { ScoreViewModel, PlayingPart, PartViewModel } from "../../types/viewModels";
 import { PartItem } from "./PartItem";
-import { ScoreEditModal } from "./ScoreEditModal";
+import { ScoreEditModal, type ScoreEditUpdate } from "./ScoreEditModal";
 
 import "../css/ScoreRow.css";
 
@@ -18,7 +18,7 @@ interface Props {
   handleDelete: (score: ScoreViewModel, checked: boolean) => void;
   handlePlayingSong: (score: PlayingPart) => void;
   handleMove: (steps: number) => void;
-  handleUpdateScore: (updatedScore: ScoreViewModel) => void;
+  handleUpdateScore: (update: ScoreEditUpdate) => void;
   score: ScoreViewModel;
 }
 
@@ -61,15 +61,15 @@ const SongBookScoreRow = ({
           <BsPencilFill onClick={() => setShowEditModal(true)} />
         </td>
         <td>
-          {score.midi != "" && (
-            <a href={score.midi} target="_blank">
+          {score.latestRevision.midi != "" && (
+            <a href={score.latestRevision.midi} target="_blank">
               <SiMidi />
             </a>
           )}
         </td>
         <td>
-          {score.mscz && (
-            <a href={score.mscz} target="_blank">
+          {score.latestRevision.mscz && (
+            <a href={score.latestRevision.mscz} target="_blank">
               <SiMusescore />
             </a>
           )}
@@ -82,10 +82,10 @@ const SongBookScoreRow = ({
             <td colSpan={9} className="text-muted" style={{ fontSize: "0.85em" }}>
               <strong>Compositor:</strong> {score.composer || "(vazio)"} |{" "}
               <strong>Subtitulo:</strong> {score.sub || "(vazio)"} |{" "}
-              <strong>Partes:</strong> {score.parts.length}
+              <strong>Partes:</strong> {score.latestRevision.parts.length}
             </td>
           </tr>
-          {score.parts.map((part: Part) => (
+          {score.latestRevision.parts.map((part: PartViewModel) => (
             <PartItem
               score={score}
               part={part}

@@ -5,7 +5,7 @@ import { PartItem } from "./PartItem";
 
 import "../css/ScoreRow.css";
 import { SiMidi, SiMusescore } from "react-icons/si";
-import { ScoreViewModel, PlayingPart } from "../../types";
+import type { ScoreViewModel, PlayingPart } from "../../types/viewModels";
 
 interface ScoreSearchResultRowProps {
   handleSelect: (score: ScoreViewModel, checked: boolean) => void;
@@ -39,22 +39,22 @@ const ScoreSearchResultRow = ({
         <td onClick={handleOnChange}>{score.projectTitle}</td>
         <td onClick={handleOnChange}>{score.tags}</td>
         <td>
-          {score.midi != "" && (
-            <a href={score.midi} target="_blank">
+          {score.latestRevision.midi != "" && (
+            <a href={score.latestRevision.midi} target="_blank">
               <SiMidi />
             </a>
           )}
         </td>
         <td>
-          {score.mscz != "" && (
-            <a href={score.mscz} target="_blank">
+          {score.latestRevision.mscz != "" && (
+            <a href={score.latestRevision.mscz} target="_blank">
               <SiMusescore />
             </a>
           )}
         </td>
       </tr>
       {expand &&
-        score.parts.map((part) => (
+        score.latestRevision.parts.map((part) => (
           <PartItem
             score={score}
             part={part}

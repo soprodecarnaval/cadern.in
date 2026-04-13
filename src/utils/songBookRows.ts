@@ -1,10 +1,6 @@
-import {
-  ScoreViewModel,
-  SongBookItem,
-  isSongBookSection,
-  songBookSection,
-  songBookScore,
-} from "../../types";
+import type { ScoreViewModel } from "../../types/viewModels";
+import type { SongBookItem } from "../../types/songbook";
+import { isSongBookSection, songBookSection, songBookScore } from "../../types/songbook";
 import {
   SortColumn,
   sortByColumn,

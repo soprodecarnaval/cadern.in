@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { ScoreViewModel } from "../types";
+import type { ScoreViewModel } from "../types/viewModels";
 
 export type CollectionStatus = "loading" | "ready" | "error";
 

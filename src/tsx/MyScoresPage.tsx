@@ -9,7 +9,7 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth";
 import { getUserScores, getScoreRevisions, softDeleteScore, type WithId } from "../lib/db";
-import type { ScoreDoc, RevisionDoc } from "../../firestore-types";
+import type { ScoreDoc, RevisionDoc } from "../../types/docs";
 
 function formatDate(timestamp: any): string {
   if (!timestamp?.toDate) return "—";

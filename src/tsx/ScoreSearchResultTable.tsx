@@ -1,6 +1,6 @@
 import { Table } from "react-bootstrap";
 
-import type { ScoreViewModel, PlayingPart } from "../../types";
+import type { ScoreViewModel, PlayingPart } from "../../types/viewModels";
 
 import { ArrangementItem } from "./ScoreSearchResultRow";
 import { PaginationBar } from "./PaginationBar";

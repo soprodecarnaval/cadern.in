@@ -12,14 +12,9 @@ import { sortByColumn, SortColumn, SortDirection } from "../utils/sort";
 import { SongBar } from "./PlayerBar";
 import { BsFillSave2Fill } from "react-icons/bs";
 
-import {
-  isSongBookSection,
-  ScoreViewModel,
-  SongBook,
-  songBookScore,
-  PlayingPart,
-  SongBookItem,
-} from "../../types";
+import type { PlayingPart, ScoreViewModel } from "../../types/viewModels";
+import type { SongBook, SongBookItem } from "../../types/songbook";
+import { isSongBookSection, songBookScore } from "../../types/songbook";
 
 import "bootstrap/dist/css/bootstrap.css";
 import "../css/App.css";

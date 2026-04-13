@@ -10,14 +10,10 @@ import {
   Spinner,
 } from "react-bootstrap";
 import React, { useState, useMemo } from "react";
-import {
-  Instrument,
-  isSongBookSection,
-  ScoreViewModel,
-  SongBook,
-  SongBookItem,
-  SongBookScore,
-} from "../../types";
+import type { Instrument } from "../../types/instrument";
+import type { ScoreViewModel } from "../../types/viewModels";
+import type { SongBook, SongBookItem, SongBookScore } from "../../types/songbook";
+import { isSongBookSection } from "../../types/songbook";
 import { createSongBook } from "../createSongBook";
 
 const allInstruments: Instrument[] = [
@@ -128,7 +124,7 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
 
     for (const instrument of allInstruments) {
       const count = scores.filter((s) =>
-        s.score.parts?.some((p) => p.instrument === instrument),
+        s.score.latestRevision.parts?.some((p) => p.instrument === instrument),
       ).length;
 
       const fallback = instrumentFallbacks[instrument];
@@ -136,8 +132,8 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
       if (fallback) {
         countWithFallback = scores.filter(
           (s) =>
-            s.score.parts?.some((p) => p.instrument === instrument) ||
-            s.score.parts?.some((p) => p.instrument === fallback),
+            s.score.latestRevision.parts?.some((p) => p.instrument === instrument) ||
+            s.score.latestRevision.parts?.some((p) => p.instrument === fallback),
         ).length;
       }
 

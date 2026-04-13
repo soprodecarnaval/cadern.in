@@ -1,12 +1,20 @@
 import { useState } from "react";
 import { Modal, Button, Form, ListGroup } from "react-bootstrap";
-import { ScoreViewModel, Part } from "../../types";
+import type { ScoreViewModel, PartViewModel } from "../../types/viewModels";
+
+export type ScoreEditUpdate = {
+  title: string;
+  composer: string;
+  sub: string;
+  tags: string[];
+  parts: Pick<PartViewModel, "name">[];
+};
 
 interface ScoreEditModalProps {
   show: boolean;
   score: ScoreViewModel;
   onHide: () => void;
-  onSave: (updatedScore: ScoreViewModel) => void;
+  onSave: (update: ScoreEditUpdate) => void;
 }
 
 const ScoreEditModal = ({ show, score, onHide, onSave }: ScoreEditModalProps) => {
@@ -14,7 +22,7 @@ const ScoreEditModal = ({ show, score, onHide, onSave }: ScoreEditModalProps) =>
   const [composer, setComposer] = useState(score.composer);
   const [sub, setSub] = useState(score.sub);
   const [tags, setTags] = useState(score.tags.join(", "));
-  const [parts, setParts] = useState<Part[]>([...score.parts]);
+  const [parts, setParts] = useState<PartViewModel[]>([...score.latestRevision.parts]);
 
   const handlePartNameChange = (index: number, name: string) => {
     setParts((prev) => {
@@ -25,25 +33,22 @@ const ScoreEditModal = ({ show, score, onHide, onSave }: ScoreEditModalProps) =>
   };
 
   const handleSave = () => {
-    const updatedScore: ScoreViewModel = {
-      ...score,
+    onSave({
       title,
       composer,
       sub,
       tags: tags.split(",").map((t) => t.trim()).filter((t) => t),
-      parts,
-    };
-    onSave(updatedScore);
+      parts: parts.map((p) => ({ name: p.name })),
+    });
     onHide();
   };
 
   const handleCancel = () => {
-    // Reset to original values
     setTitle(score.title);
     setComposer(score.composer);
     setSub(score.sub);
     setTags(score.tags.join(", "));
-    setParts([...score.parts]);
+    setParts([...score.latestRevision.parts]);
     onHide();
   };
 

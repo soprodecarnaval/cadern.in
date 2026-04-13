@@ -1,5 +1,6 @@
 import SVGtoPDF from "svg-to-pdfkit";
-import { Instrument, Part, ScoreViewModel } from "../types";
+import type { Instrument } from "../types/instrument";
+import type { ScoreViewModel, PartViewModel } from "../types/viewModels";
 import { Section } from "./tsx/PdfGenerator";
 import { extractPartLabel } from "./instrument";
 
@@ -145,11 +146,11 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
     for (const score of scores) {
       // Get all parts for the current instrument, with optional fallback
       let partsForInstrument =
-        score.parts?.filter((p) => p.instrument === instrument) ?? [];
+        score.latestRevision.parts?.filter((p) => p.instrument === instrument) ?? [];
 
       if (partsForInstrument.length === 0 && opts.fallbackInstrument) {
         partsForInstrument =
-          score.parts?.filter((p) => p.instrument === opts.fallbackInstrument) ??
+          score.latestRevision.parts?.filter((p) => p.instrument === opts.fallbackInstrument) ??
           [];
       }
 
@@ -290,7 +291,7 @@ const loadFonts = async (doc: any) => {
 const addSongPage = async (
   doc: any,
   score: ScoreViewModel,
-  part: Part,
+  part: PartViewModel,
   currentPage: number,
   songPageIndex: number,
   displayNumber: string,
@@ -666,10 +667,10 @@ const addIndexPage = (
       }
 
       let partsForInstrument =
-        score.parts?.filter((p) => p.instrument === instrument) ?? [];
+        score.latestRevision.parts?.filter((p) => p.instrument === instrument) ?? [];
       if (partsForInstrument.length === 0 && fallbackInstrument) {
         partsForInstrument =
-          score.parts?.filter((p) => p.instrument === fallbackInstrument) ?? [];
+          score.latestRevision.parts?.filter((p) => p.instrument === fallbackInstrument) ?? [];
       }
       const hasInstrument = partsForInstrument.length > 0;
       const isMultiPart = partsForInstrument.length > 1;

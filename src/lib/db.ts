@@ -24,7 +24,7 @@ import {
   type RevisionData,
   type ProjectDoc,
   type ProjectData,
-} from "../../firestore-types";
+} from "../../types/docs";
 import { SCORES_COLLECTION } from "../../constants";
 
 export type WithId<T> = T & { id: string };

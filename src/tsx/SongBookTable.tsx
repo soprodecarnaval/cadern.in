@@ -9,14 +9,10 @@ import {
   Tooltip,
 } from "react-bootstrap";
 
-import {
-  isSongBookSection,
-  songBookSection,
-  PlayingPart,
-  SongBookItem,
-  SongBookScore,
-  ScoreViewModel,
-} from "../../types";
+import type { ScoreViewModel, PlayingPart } from "../../types/viewModels";
+import type { SongBookItem, SongBookScore } from "../../types/songbook";
+import { isSongBookSection, songBookSection } from "../../types/songbook";
+import type { ScoreEditUpdate } from "./ScoreEditModal";
 
 import { SongBookScoreRow } from "./SongBookScoreRow";
 import { SongBookSectionRow } from "./SongBookSectionRow";
@@ -78,9 +74,24 @@ const SongBookTable = ({
     </Tooltip>
   );
 
-  const handleUpdateScore = (idx: number, updatedScore: ScoreViewModel) => {
+  const handleUpdateScore = (idx: number, update: ScoreEditUpdate) => {
     const newRows = [...rows];
-    newRows[idx] = { type: "score", score: updatedScore } as SongBookScore;
+    const existing = newRows[idx] as SongBookScore;
+    const updatedScore: ScoreViewModel = {
+      ...existing.score,
+      title: update.title,
+      composer: update.composer,
+      sub: update.sub,
+      tags: update.tags,
+      latestRevision: {
+        ...existing.score.latestRevision,
+        parts: existing.score.latestRevision.parts.map((p, i) => ({
+          ...p,
+          name: update.parts[i]?.name ?? p.name,
+        })),
+      },
+    };
+    newRows[idx] = { type: "score", score: updatedScore };
     setRows(newRows);
   };
 
@@ -101,7 +112,7 @@ const SongBookTable = ({
         key={row.score.id}
         handlePlayingSong={handlePlayingSong}
         handleMove={(steps) => setRows(moveRow(rows, idx, steps))}
-        handleUpdateScore={(updatedScore) => handleUpdateScore(idx, updatedScore)}
+        handleUpdateScore={(update) => handleUpdateScore(idx, update)}
       />
     );
   };

@@ -1,8 +1,15 @@
 import z from "zod";
-import { zInstrument, zPart } from "./types.js";
+import { zInstrument } from "./instrument";
 
-// Firestore Timestamps (serverTimestamp() on write, Timestamp on read)
 const zTimestamp = z.any();
+
+export const zPartData = z.object({
+  name: z.string(),
+  instrument: zInstrument,
+  svg: z.array(z.string()),
+  midi: z.string(),
+});
+export type PartData = z.infer<typeof zPartData>;
 
 export const zUserData = z.object({
   displayName: z.string(),
@@ -43,7 +50,7 @@ export const zRevisionData = z.object({
   mscz: z.string(),
   metajson: z.string(),
   midi: z.string(),
-  parts: z.array(zPart),
+  parts: z.array(zPartData),
   notes: z.string(),
   isLatest: z.boolean(),
 });

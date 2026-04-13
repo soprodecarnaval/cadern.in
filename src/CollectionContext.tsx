@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, ReactNode } from "react";
 import Fuse, { IFuseOptions } from "fuse.js";
 import { storagePathToUrl } from "./storage";
 import { getAllProjects, getAllScores, getLatestRevisions } from "./lib/db";
-import type { ScoreViewModel } from "../types";
+import type { ScoreViewModel, RevisionViewModel, PartViewModel } from "../types/viewModels";
 import { FEATURE_FLAG_AUTH_ENABLED } from "./featureFlags";
 import {
   CollectionContext,
@@ -35,6 +35,25 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
     const revision = revisionsByScoreId.get(song.id);
     if (!revision) continue;
 
+    const parts: PartViewModel[] = revision.parts.map((p) => ({
+      ...p,
+      svg: p.svg.map(storagePathToUrl),
+      midi: storagePathToUrl(p.midi),
+    }));
+
+    const latestRevision: RevisionViewModel = {
+      id: revision.id,
+      revisionNumber: revision.revisionNumber,
+      uploadedBy: revision.uploadedBy,
+      uploadedAt: revision.uploadedAt,
+      mscz: storagePathToUrl(revision.mscz),
+      metajson: storagePathToUrl(revision.metajson),
+      midi: storagePathToUrl(revision.midi),
+      parts,
+      notes: revision.notes,
+      isLatest: revision.isLatest,
+    };
+
     scores.push({
       id: song.id,
       title: song.title,
@@ -42,14 +61,7 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
       sub: song.sub,
       tags: song.tags,
       projectTitle: projectTitles.get(song.projectId) ?? song.projectId,
-      mscz: storagePathToUrl(revision.mscz),
-      metajson: storagePathToUrl(revision.metajson),
-      midi: storagePathToUrl(revision.midi),
-      parts: revision.parts.map((p) => ({
-        ...p,
-        svg: p.svg.map(storagePathToUrl),
-        midi: storagePathToUrl(p.midi),
-      })),
+      latestRevision,
     });
   }
 

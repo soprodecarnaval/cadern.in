@@ -1,4 +1,4 @@
-import { ScoreViewModel } from "../../types";
+import type { ScoreViewModel } from "../../types/viewModels";
 
 export const carnivalSectionOrder = [
   "marchinha",

@@ -1,7 +1,7 @@
 import { initializeApp, applicationDefault } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { zRevisionDoc } from "../firestore-types.js";
+import { zRevisionDoc } from "../types/docs.js";
 
 const STORAGE_BUCKET =
   process.env.STORAGE_BUCKET ??

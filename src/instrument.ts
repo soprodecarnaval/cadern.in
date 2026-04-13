@@ -1,4 +1,4 @@
-import { Instrument } from "../types";
+import type { Instrument } from "../types/instrument";
 const instrumentAliases: [string, Instrument][] = [
   // bombardino
   ["bombardino", "bombardino"],

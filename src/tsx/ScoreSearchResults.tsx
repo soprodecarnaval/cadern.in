@@ -1,6 +1,6 @@
 import { Spinner, Row, Col } from "react-bootstrap";
 import { useCollectionContext } from "../useCollectionContext";
-import type { ScoreViewModel, PlayingPart } from "../../types";
+import type { ScoreViewModel, PlayingPart } from "../../types/viewModels";
 import { Sort } from "./Sort";
 import { AddAllSongsButton } from "./AddAllScoresButton";
 import { ScoreSearchResultTable } from "./ScoreSearchResultTable";

@@ -4,7 +4,7 @@ import { getStorage } from "firebase-admin/storage";
 import fs from "fs";
 import path from "path";
 import type { LegacyCollection, LegacyScore } from "./legacyCollectionTypes";
-import { zProjectDoc, zScoreDoc, zRevisionDoc } from "../../firestore-types";
+import { zProjectDoc, zScoreDoc, zRevisionDoc } from "../../types/docs.js";
 import { SCORES_COLLECTION } from "../../constants";
 import type { z } from "zod";
 

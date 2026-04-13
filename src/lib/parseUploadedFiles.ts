@@ -1,5 +1,6 @@
 import z from "zod";
-import { Instrument, Part, zPart } from "../../types";
+import type { Instrument } from "../../types/instrument";
+import { zPartData, type PartData } from "../../types/docs";
 import { parseInstrument } from "../instrument";
 import type { Warning } from "../result";
 
@@ -15,7 +16,7 @@ export interface ParsedScore {
   composer: string;
   sub: string;
   tags: string[];
-  parts: Part[];
+  parts: PartData[];
   fileMap: Map<string, File>;
   warnings: Warning[];
 }
@@ -147,7 +148,7 @@ export async function parseUploadedFiles(
   }
 
   // Build parts array
-  const parts: Part[] = [];
+  const parts: PartData[] = [];
   for (const [, draft] of partDrafts) {
     draft.svg.sort((a, b) => a.page - b.page);
     const svgPaths = draft.svg.map(
@@ -186,7 +187,7 @@ const zParsedScoreValidation = z.object({
   composer: z.string(),
   sub: z.string(),
   tags: z.array(z.string()),
-  parts: z.array(zPart),
+  parts: z.array(zPartData),
 });
 
 export function validateParsedScore(parsed: ParsedScore): Warning[] {

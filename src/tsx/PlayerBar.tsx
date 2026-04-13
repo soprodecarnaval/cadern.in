@@ -4,7 +4,7 @@ import "../css/SongBar.css";
 import RangeSlider from "react-bootstrap-range-slider";
 import { BsFillPauseCircleFill, BsPlayCircleFill } from "react-icons/bs";
 import { useState } from "react";
-import { PlayingPart } from "../../types";
+import type { PlayingPart } from "../../types/viewModels";
 import { midiPlayer } from "../utils/playMidi";
 
 interface PlayerBarProps {
