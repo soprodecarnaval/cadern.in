@@ -12,8 +12,8 @@ import {
 import React, { useState, useMemo } from "react";
 import type { Instrument } from "../../types/instrument";
 import type { ScoreViewModel, RevisionViewModel } from "../../types/viewModels";
-import type { SongBook, SongBookItem, SongBookScore } from "../../types/songbook";
-import { isSongBookSection, getRevision } from "../../types/songbook";
+import type { SongbookViewModel, SongbookItemViewModel, SongbookScoreViewModel } from "../../types/viewModels";
+import { isSongbookSection, getRevision } from "../../types/viewModels";
 import { createSongBook } from "../createSongBook";
 
 const allInstruments: Instrument[] = [
@@ -35,7 +35,7 @@ const instrumentFallbacks: Partial<Record<Instrument, Instrument>> = {
 };
 
 interface PdfGeneratorProps {
-  songBook: SongBook;
+  songBook: SongbookViewModel;
 }
 
 export type SectionScore = {
@@ -76,8 +76,8 @@ const HelpIcon = ({ tooltip }: { tooltip: JSX.Element }) => (
 
 const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
   const scores = songBook.items.filter(
-    (r: SongBookItem) => !isSongBookSection(r),
-  ) as SongBookScore[];
+    (r: SongbookItemViewModel) => !isSongbookSection(r),
+  ) as SongbookScoreViewModel[];
 
   const [songbookTitle, setTitle] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -219,7 +219,7 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
       let currentSection: Section | null = null;
 
       for (const item of songBook.items) {
-        if (isSongBookSection(item)) {
+        if (isSongbookSection(item)) {
           currentSection = {
             title: item.title,
             scores: [],

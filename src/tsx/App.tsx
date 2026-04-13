@@ -10,15 +10,12 @@ import { SongBookTable } from "./SongBookTable";
 import { PDFGenerator } from "./PdfGenerator";
 import { sortByColumn, SortColumn, SortDirection } from "../utils/sort";
 import { SongBar } from "./PlayerBar";
-import { BsFillSave2Fill } from "react-icons/bs";
 
-import type { PlayingPart, ScoreViewModel } from "../../types/viewModels";
-import type { SongBook, SongBookItem } from "../../types/songbook";
-import { isSongBookSection, songBookScore } from "../../types/songbook";
+import type { PlayingPart, ScoreViewModel, SongbookViewModel, SongbookItemViewModel } from "../../types/viewModels";
+import { isSongbookSection, songbookScore } from "../../types/viewModels";
 
 import "bootstrap/dist/css/bootstrap.css";
 import "../css/App.css";
-import SaveLoadModal from "./SaveLoadModal";
 import { AuthButton } from "./AuthButton";
 import { FEATURE_FLAG_AUTH_ENABLED } from "../featureFlags";
 import { useAuth } from "../auth";
@@ -28,9 +25,9 @@ import { ScorePage } from "./ScorePage";
 
 function HomePage() {
   const [results, setResults] = useState<ScoreViewModel[]>([]);
-  const [items, setItems] = useState<SongBookItem[]>([]);
-  const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
+  const [items, setItems] = useState<SongbookItemViewModel[]>([]);
   const [playingPart, setPlayingPart] = useState<PlayingPart | null>(null);
+
   const handleSelectSong = (song: ScoreViewModel, checked: boolean) => {
     checked ? handleAddScore(song) : handleRemoveScore(song);
   };
@@ -40,58 +37,30 @@ function HomePage() {
   };
 
   const handleAddScore = (score: ScoreViewModel) => {
-    setItems([...items, songBookScore(score)]);
-    const updatedRes = results.filter((r) => r.id !== score.id);
-
-    setResults(updatedRes);
+    setItems([...items, songbookScore(score)]);
+    setResults(results.filter((r) => r.id !== score.id));
   };
 
   const handleRemoveScore = (score: ScoreViewModel) => {
-    const updatedRes = items.filter(
-      (r) => isSongBookSection(r) || r.score.id !== score.id,
-    );
-
+    setItems(items.filter((r) => isSongbookSection(r) || r.score.id !== score.id));
     setResults([score, ...results]);
-    setItems(updatedRes);
   };
 
-  const handleResultsSortBy = (
-    column: SortColumn,
-    direction: SortDirection,
-  ) => {
-    const sorted = sortByColumn(results, column, direction);
-    setResults(sorted.slice());
+  const handleResultsSortBy = (column: SortColumn, direction: SortDirection) => {
+    setResults(sortByColumn(results, column, direction).slice());
   };
 
   const handleAddAllSongs = () => {
-    const newSongBookItems: SongBookItem[] = [
-      ...items,
-      ...results.map(songBookScore),
-    ];
-    const newUniqueSelectedResults = newSongBookItems.filter((row, index) => {
-      return (
-        // include sections
-        isSongBookSection(row) ||
-        // include first occurrence of song
-        index ===
-          newSongBookItems.findIndex(
-            (o) => !isSongBookSection(o) && row.score.id === o.score.id,
-          )
-      );
-    });
-    setItems(newUniqueSelectedResults);
+    const merged: SongbookItemViewModel[] = [...items, ...results.map(songbookScore)];
+    const deduped = merged.filter((row, index) =>
+      isSongbookSection(row) ||
+      index === merged.findIndex((o) => !isSongbookSection(o) && row.score.id === o.score.id),
+    );
+    setItems(deduped);
     setResults([]);
   };
 
-  // TODO: load all songbook fields (title, etc) instead of just rows
-  const loadSongBook = (songBook: SongBook) => {
-    // TODO: how to handle errors?
-    // TODO: reset results from search bar?
-    setItems(songBook.items);
-    return true;
-  };
-
-  const songBook: SongBook = { items };
+  const songBook: SongbookViewModel = { items };
 
   return (
     <>
@@ -116,28 +85,17 @@ function HomePage() {
             />
           </Col>
           <Col sm={6}>
-            <>
-              <h3 className="results">
-                Caderninho
-                <BsFillSave2Fill onClick={() => setShowSaveLoadModal(true)} />
-              </h3>
-              <SongBookTable
-                rows={items}
-                setItems={setItems}
-                onSetPlayingPart={setPlayingPart}
-                handleSelect={handleSelectSong}
-                handleClear={clearSelected}
-              />
-            </>
+            <h3 className="results">Caderninho</h3>
+            <SongBookTable
+              rows={items}
+              setItems={setItems}
+              onSetPlayingPart={setPlayingPart}
+              handleSelect={handleSelectSong}
+              handleClear={clearSelected}
+            />
           </Col>
         </Row>
       </Container>
-      <SaveLoadModal
-        songBook={songBook}
-        onLoad={loadSongBook}
-        onHide={() => setShowSaveLoadModal(false)}
-        show={showSaveLoadModal}
-      />
     </>
   );
 }

@@ -1,5 +1,38 @@
 import type { Instrument } from "./instrument";
 
+export type SongbookScoreViewModel = {
+  type: "score";
+  score: ScoreViewModel;
+  revision?: RevisionViewModel;
+};
+
+export type SongbookSectionViewModel = {
+  type: "section";
+  title: string;
+};
+
+export type SongbookItemViewModel = SongbookScoreViewModel | SongbookSectionViewModel;
+
+export type SongbookViewModel = {
+  items: SongbookItemViewModel[];
+};
+
+export const isSongbookSection = (item: SongbookItemViewModel): item is SongbookSectionViewModel =>
+  item.type === "section";
+
+export const songbookScore = (score: ScoreViewModel): SongbookScoreViewModel => ({
+  type: "score",
+  score,
+});
+
+export const songbookSection = (title: string): SongbookSectionViewModel => ({
+  type: "section",
+  title,
+});
+
+export const getRevision = (item: SongbookScoreViewModel): RevisionViewModel =>
+  item.revision ?? item.score.latestRevision;
+
 export type PartViewModel = {
   name: string;
   instrument: Instrument;

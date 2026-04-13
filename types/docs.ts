@@ -58,24 +58,3 @@ export const zRevisionDoc = zRevisionData.extend({ uploadedAt: zTimestamp });
 export type RevisionData = z.infer<typeof zRevisionData>;
 export type RevisionDoc = z.infer<typeof zRevisionDoc>;
 
-export const zSongbookEntry = z.object({
-  scoreId: z.string(),
-  revisionId: z.string(),
-  order: z.number().int(),
-  instruments: z.array(zInstrument),
-});
-export type SongbookEntry = z.infer<typeof zSongbookEntry>;
-
-export const zSongbookData = z.object({
-  title: z.string(),
-  ownerId: z.string(),
-  slug: z.string(),
-  isPublished: z.boolean(),
-  entries: z.array(zSongbookEntry),
-});
-export const zSongbookDoc = zSongbookData.extend({
-  createdAt: zTimestamp,
-  updatedAt: zTimestamp,
-});
-export type SongbookData = z.infer<typeof zSongbookData>;
-export type SongbookDoc = z.infer<typeof zSongbookDoc>;

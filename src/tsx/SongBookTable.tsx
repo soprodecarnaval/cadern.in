@@ -10,8 +10,8 @@ import {
 } from "react-bootstrap";
 
 import type { ScoreViewModel, PlayingPart } from "../../types/viewModels";
-import type { SongBookItem, SongBookScore } from "../../types/songbook";
-import { isSongBookSection, songBookSection } from "../../types/songbook";
+import type { SongbookItemViewModel, SongbookScoreViewModel } from "../../types/viewModels";
+import { isSongbookSection, songbookSection } from "../../types/viewModels";
 import type { ScoreEditUpdate } from "./ScoreEditModal";
 
 import { SongBookScoreRow } from "./SongBookScoreRow";
@@ -28,15 +28,15 @@ import {
 import { carnivalSectionOrder } from "../utils/sort";
 
 interface SongBookTableProps {
-  rows: SongBookItem[];
-  setItems: (rows: SongBookItem[]) => void;
+  rows: SongbookItemViewModel[];
+  setItems: (rows: SongbookItemViewModel[]) => void;
   handleSelect: (song: ScoreViewModel, checked: boolean) => void;
   onSetPlayingPart: (song: PlayingPart) => void;
   handleClear: () => void;
 }
 
 interface SongBookTableRowProps {
-  row: SongBookItem;
+  row: SongbookItemViewModel;
   idx: number;
 }
 
@@ -58,7 +58,7 @@ const SongBookTable = ({
   };
 
   const createNewSection = () => {
-    const newRows = [...rows, songBookSection(newSection)];
+    const newRows = [...rows, songbookSection(newSection)];
     setRows(newRows);
     setNewSection("");
   };
@@ -76,7 +76,7 @@ const SongBookTable = ({
 
   const handleUpdateScore = (idx: number, update: ScoreEditUpdate) => {
     const newRows = [...rows];
-    const existing = newRows[idx] as SongBookScore;
+    const existing = newRows[idx] as SongbookScoreViewModel;
     const updatedScore: ScoreViewModel = {
       ...existing.score,
       title: update.title,
@@ -96,7 +96,7 @@ const SongBookTable = ({
   };
 
   const SongBookTableRow = ({ row, idx }: SongBookTableRowProps) => {
-    if (isSongBookSection(row)) {
+    if (isSongbookSection(row)) {
       return (
         <SongBookSectionRow
           handleDelete={() => setRows(deleteRow(rows, idx))}
@@ -161,8 +161,8 @@ const SongBookTable = ({
       <Row className="mt-4">
         <Col>
           <p>
-            {rows.filter(isSongBookSection).length} seções e{" "}
-            {rows.filter((r: any) => !isSongBookSection(r)).length} músicas
+            {rows.filter(isSongbookSection).length} seções e{" "}
+            {rows.filter((r: any) => !isSongbookSection(r)).length} músicas
           </p>
         </Col>
         <Col>
