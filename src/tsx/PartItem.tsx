@@ -3,7 +3,7 @@ import { useState } from "react";
 import { BsFillPauseCircleFill, BsPlayCircleFill } from "react-icons/bs";
 
 import { PreviewModal } from "./PreviewModal";
-import type { ScoreViewModel, PlayingPart, PartViewModel } from "../../types/viewModels";
+import type { ScoreViewModel, PlayingPartViewModel, PartViewModel } from "../../types/viewModels";
 
 import "../css/PartItem.css";
 import { Col, Row } from "react-bootstrap";
@@ -13,7 +13,7 @@ import { midiPlayer, playMidiPart } from "../utils/playMidi";
 interface PartItemProps {
   score: ScoreViewModel;
   part: PartViewModel;
-  handlePlayingSong: (info: PlayingPart) => void;
+  handlePlayingSong: (info: PlayingPartViewModel) => void;
 }
 
 const PartItem = ({ score, part, handlePlayingSong }: PartItemProps) => {

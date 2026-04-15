@@ -13,7 +13,7 @@ import React, { useState, useMemo } from "react";
 import type { Instrument } from "../../types/instrument";
 import type { ScoreViewModel, RevisionViewModel } from "../../types/viewModels";
 import type { SongbookViewModel, SongbookItemViewModel, SongbookScoreViewModel } from "../../types/viewModels";
-import { isSongbookSection, getRevision } from "../../types/viewModels";
+import { isSongbookSection, getRevision } from "../lib/songbook";
 import { createSongBook } from "../createSongBook";
 
 const allInstruments: Instrument[] = [

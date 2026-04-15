@@ -16,7 +16,6 @@ export const zUserData = z.object({
   email: z.string().email(),
 });
 export const zUserDoc = zUserData.extend({ createdAt: zTimestamp });
-export type UserData = z.infer<typeof zUserData>;
 export type UserDoc = z.infer<typeof zUserDoc>;
 
 export const zProjectData = z.object({
@@ -25,7 +24,6 @@ export const zProjectData = z.object({
   collaboratorIds: z.array(z.string()),
 });
 export const zProjectDoc = zProjectData.extend({ createdAt: zTimestamp });
-export type ProjectData = z.infer<typeof zProjectData>;
 export type ProjectDoc = z.infer<typeof zProjectDoc>;
 
 export const zScoreData = z.object({
@@ -41,7 +39,6 @@ export const zScoreDoc = zScoreData.extend({
   createdAt: zTimestamp,
   deletedAt: zTimestamp.nullable().optional(),
 });
-export type ScoreData = z.infer<typeof zScoreData>;
 export type ScoreDoc = z.infer<typeof zScoreDoc>;
 
 export const zRevisionData = z.object({
@@ -55,6 +52,38 @@ export const zRevisionData = z.object({
   isLatest: z.boolean(),
 });
 export const zRevisionDoc = zRevisionData.extend({ uploadedAt: zTimestamp });
-export type RevisionData = z.infer<typeof zRevisionData>;
 export type RevisionDoc = z.infer<typeof zRevisionDoc>;
 
+export const zSongbookScoreRef = z.object({
+  type: z.literal("score"),
+  scoreId: z.string(),
+  revisionId: z.string(),
+  order: z.number().int(),
+});
+export type SongbookScoreRef = z.infer<typeof zSongbookScoreRef>;
+
+export const zSongbookSectionEntry = z.object({
+  type: z.literal("section"),
+  title: z.string(),
+  order: z.number().int(),
+});
+export type SongbookSectionEntry = z.infer<typeof zSongbookSectionEntry>;
+
+export const zSongbookEntry = z.discriminatedUnion("type", [
+  zSongbookScoreRef,
+  zSongbookSectionEntry,
+]);
+export type SongbookEntry = z.infer<typeof zSongbookEntry>;
+
+export const zSongbookData = z.object({
+  title: z.string(),
+  ownerId: z.string(),
+  slug: z.string(),
+  isPublished: z.boolean(),
+  entries: z.array(zSongbookEntry),
+});
+export const zSongbookDoc = zSongbookData.extend({
+  createdAt: zTimestamp,
+  updatedAt: zTimestamp,
+});
+export type SongbookDoc = z.infer<typeof zSongbookDoc>;

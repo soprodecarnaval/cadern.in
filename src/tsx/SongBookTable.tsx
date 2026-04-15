@@ -9,9 +9,8 @@ import {
   Tooltip,
 } from "react-bootstrap";
 
-import type { ScoreViewModel, PlayingPart } from "../../types/viewModels";
-import type { SongbookItemViewModel, SongbookScoreViewModel } from "../../types/viewModels";
-import { isSongbookSection, songbookSection } from "../../types/viewModels";
+import type { ScoreViewModel, PlayingPartViewModel, SongbookItemViewModel, SongbookScoreViewModel } from "../../types/viewModels";
+import { isSongbookSection, songbookSection } from "../lib/songbook";
 import type { ScoreEditUpdate } from "./ScoreEditModal";
 
 import { SongBookScoreRow } from "./SongBookScoreRow";
@@ -31,7 +30,7 @@ interface SongBookTableProps {
   rows: SongbookItemViewModel[];
   setItems: (rows: SongbookItemViewModel[]) => void;
   handleSelect: (song: ScoreViewModel, checked: boolean) => void;
-  onSetPlayingPart: (song: PlayingPart) => void;
+  onSetPlayingPart: (song: PlayingPartViewModel) => void;
   handleClear: () => void;
 }
 

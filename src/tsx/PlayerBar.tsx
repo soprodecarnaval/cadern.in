@@ -4,11 +4,11 @@ import "../css/SongBar.css";
 import RangeSlider from "react-bootstrap-range-slider";
 import { BsFillPauseCircleFill, BsPlayCircleFill } from "react-icons/bs";
 import { useState } from "react";
-import type { PlayingPart } from "../../types/viewModels";
+import type { PlayingPartViewModel } from "../../types/viewModels";
 import { midiPlayer } from "../utils/playMidi";
 
 interface PlayerBarProps {
-  info: PlayingPart | null;
+  info: PlayingPartViewModel | null;
 }
 
 const PlayerBar = ({ info }: PlayerBarProps) => {

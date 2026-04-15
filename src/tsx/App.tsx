@@ -11,8 +11,8 @@ import { PDFGenerator } from "./PdfGenerator";
 import { sortByColumn, SortColumn, SortDirection } from "../utils/sort";
 import { SongBar } from "./PlayerBar";
 
-import type { PlayingPart, ScoreViewModel, SongbookViewModel, SongbookItemViewModel } from "../../types/viewModels";
-import { isSongbookSection, songbookScore } from "../../types/viewModels";
+import type { PlayingPartViewModel, ScoreViewModel, SongbookViewModel, SongbookItemViewModel } from "../../types/viewModels";
+import { isSongbookSection, songbookScore } from "../lib/songbook";
 
 import "bootstrap/dist/css/bootstrap.css";
 import "../css/App.css";
@@ -26,7 +26,7 @@ import { ScorePage } from "./ScorePage";
 function HomePage() {
   const [results, setResults] = useState<ScoreViewModel[]>([]);
   const [items, setItems] = useState<SongbookItemViewModel[]>([]);
-  const [playingPart, setPlayingPart] = useState<PlayingPart | null>(null);
+  const [playingPart, setPlayingPart] = useState<PlayingPartViewModel | null>(null);
 
   const handleSelectSong = (song: ScoreViewModel, checked: boolean) => {
     checked ? handleAddScore(song) : handleRemoveScore(song);

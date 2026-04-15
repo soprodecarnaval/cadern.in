@@ -8,7 +8,7 @@ import {
 } from "react-icons/bs";
 import { SiMidi, SiMusescore } from "react-icons/si";
 
-import type { ScoreViewModel, PlayingPart, PartViewModel } from "../../types/viewModels";
+import type { ScoreViewModel, PlayingPartViewModel, PartViewModel } from "../../types/viewModels";
 import { PartItem } from "./PartItem";
 import { ScoreEditModal, type ScoreEditUpdate } from "./ScoreEditModal";
 
@@ -16,7 +16,7 @@ import "../css/ScoreRow.css";
 
 interface Props {
   handleDelete: (score: ScoreViewModel, checked: boolean) => void;
-  handlePlayingSong: (score: PlayingPart) => void;
+  handlePlayingSong: (score: PlayingPartViewModel) => void;
   handleMove: (steps: number) => void;
   handleUpdateScore: (update: ScoreEditUpdate) => void;
   score: ScoreViewModel;

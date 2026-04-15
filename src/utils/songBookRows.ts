@@ -1,6 +1,6 @@
 import type { ScoreViewModel } from "../../types/viewModels";
 import type { SongbookItemViewModel } from "../../types/viewModels";
-import { isSongbookSection, songbookSection, songbookScore } from "../../types/viewModels";
+import { isSongbookSection, songbookSection, songbookScore } from "../lib/songbook";
 import {
   SortColumn,
   sortByColumn,

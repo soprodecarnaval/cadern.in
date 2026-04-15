@@ -19,12 +19,14 @@ import {
   zProjectDoc,
   zProjectData,
   type ScoreDoc,
-  type ScoreData,
   type RevisionDoc,
-  type RevisionData,
   type ProjectDoc,
-  type ProjectData,
 } from "../../types/docs";
+import type z from "zod";
+
+type ScoreData = z.infer<typeof zScoreData>;
+type RevisionData = z.infer<typeof zRevisionData>;
+type ProjectData = z.infer<typeof zProjectData>;
 import { SCORES_COLLECTION } from "../../constants";
 
 export type WithId<T> = T & { id: string };

@@ -1,6 +1,6 @@
 import { Table } from "react-bootstrap";
 
-import type { ScoreViewModel, PlayingPart } from "../../types/viewModels";
+import type { ScoreViewModel, PlayingPartViewModel } from "../../types/viewModels";
 
 import { ArrangementItem } from "./ScoreSearchResultRow";
 import { PaginationBar } from "./PaginationBar";
@@ -9,7 +9,7 @@ import { useState } from "react";
 interface ScoreSearchResultTableProps {
   scores: ScoreViewModel[];
   handleSelect: (score: ScoreViewModel, checked: boolean) => void;
-  onSetPlayingPart: (info: PlayingPart) => void;
+  onSetPlayingPart: (info: PlayingPartViewModel) => void;
 }
 
 const ScoreSearchResultTable = ({

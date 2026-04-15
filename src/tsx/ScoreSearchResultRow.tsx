@@ -5,11 +5,11 @@ import { PartItem } from "./PartItem";
 
 import "../css/ScoreRow.css";
 import { SiMidi, SiMusescore } from "react-icons/si";
-import type { ScoreViewModel, PlayingPart } from "../../types/viewModels";
+import type { ScoreViewModel, PlayingPartViewModel } from "../../types/viewModels";
 
 interface ScoreSearchResultRowProps {
   handleSelect: (score: ScoreViewModel, checked: boolean) => void;
-  handlePlayingSong: (score: PlayingPart) => void;
+  handlePlayingSong: (score: PlayingPartViewModel) => void;
   score: ScoreViewModel;
 }
 
