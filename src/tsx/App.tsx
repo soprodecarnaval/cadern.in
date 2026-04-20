@@ -11,7 +11,12 @@ import { PDFGenerator } from "./PdfGenerator";
 import { sortByColumn, SortColumn, SortDirection } from "../utils/sort";
 import { SongBar } from "./PlayerBar";
 
-import type { PlayingPartViewModel, ScoreViewModel, SongbookViewModel, SongbookItemViewModel } from "../../types/viewModels";
+import type {
+  PlayingPartViewModel,
+  ScoreViewModel,
+  SongbookViewModel,
+  SongbookItemViewModel,
+} from "../../types/viewModels";
 import { isSongbookSection, songbookScore } from "../lib/songbook";
 
 import "bootstrap/dist/css/bootstrap.css";
@@ -26,7 +31,9 @@ import { ScorePage } from "./ScorePage";
 function HomePage() {
   const [results, setResults] = useState<ScoreViewModel[]>([]);
   const [items, setItems] = useState<SongbookItemViewModel[]>([]);
-  const [playingPart, setPlayingPart] = useState<PlayingPartViewModel | null>(null);
+  const [playingPart, setPlayingPart] = useState<PlayingPartViewModel | null>(
+    null,
+  );
 
   const handleSelectSong = (song: ScoreViewModel, checked: boolean) => {
     checked ? handleAddScore(song) : handleRemoveScore(song);
@@ -42,19 +49,31 @@ function HomePage() {
   };
 
   const handleRemoveScore = (score: ScoreViewModel) => {
-    setItems(items.filter((r) => isSongbookSection(r) || r.score.id !== score.id));
+    setItems(
+      items.filter((r) => isSongbookSection(r) || r.score.id !== score.id),
+    );
     setResults([score, ...results]);
   };
 
-  const handleResultsSortBy = (column: SortColumn, direction: SortDirection) => {
+  const handleResultsSortBy = (
+    column: SortColumn,
+    direction: SortDirection,
+  ) => {
     setResults(sortByColumn(results, column, direction).slice());
   };
 
   const handleAddAllSongs = () => {
-    const merged: SongbookItemViewModel[] = [...items, ...results.map(songbookScore)];
-    const deduped = merged.filter((row, index) =>
-      isSongbookSection(row) ||
-      index === merged.findIndex((o) => !isSongbookSection(o) && row.score.id === o.score.id),
+    const merged: SongbookItemViewModel[] = [
+      ...items,
+      ...results.map(songbookScore),
+    ];
+    const deduped = merged.filter(
+      (row, index) =>
+        isSongbookSection(row) ||
+        index ===
+          merged.findIndex(
+            (o) => !isSongbookSection(o) && row.score.id === o.score.id,
+          ),
     );
     setItems(deduped);
     setResults([]);
@@ -101,8 +120,7 @@ function HomePage() {
 }
 
 function App() {
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
   const { currentUser } = useAuth();
 
   return (
@@ -137,7 +155,7 @@ function App() {
                   </Nav.Link>
                 </>
               )}
-              <AuthButton onOpenAuthModal={() => setShowAuthModal(true)} />
+              <AuthButton onOpenUserModal={() => setShowUserModal(true)} />
             </Nav>
           )}
         </Container>
@@ -152,11 +170,14 @@ function App() {
         <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
       </Routes>
 
-      <AuthModal show={showAuthModal} onHide={() => setShowAuthModal(false)} />
-      <ProfileModal
-        show={showProfileModal}
-        onHide={() => setShowProfileModal(false)}
-      />
+      {currentUser ? (
+        <ProfileModal
+          show={showUserModal}
+          onHide={() => setShowUserModal(false)}
+        />
+      ) : (
+        <AuthModal show={showUserModal} onHide={() => setShowUserModal(false)} />
+      )}
     </>
   );
 }

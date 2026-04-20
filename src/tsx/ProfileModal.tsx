@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Modal, Tab, Tabs } from "react-bootstrap";
+import { Button, Modal, Tab, Tabs } from "react-bootstrap";
 import { useAuth } from "../auth";
 import { resizeImage } from "../utils/image";
 
@@ -9,7 +9,7 @@ interface ProfileModalProps {
 }
 
 export function ProfileModal({ show, onHide }: ProfileModalProps) {
-  const { currentUser, updateDisplayName, updateAvatar, changePassword } = useAuth();
+  const { currentUser, updateDisplayName, updateAvatar, changePassword, logout } = useAuth();
   const [tab, setTab] = useState("profile");
 
   const [displayName, setDisplayName] = useState(currentUser?.displayName ?? "");
@@ -207,6 +207,11 @@ export function ProfileModal({ show, onHide }: ProfileModalProps) {
           </Tab>
         </Tabs>
       </Modal.Body>
+      <Modal.Footer>
+        <Button variant="outline-danger" onClick={() => void logout()}>
+          Sair
+        </Button>
+      </Modal.Footer>
     </Modal>
   );
 }

@@ -6,6 +6,8 @@ import {
   Card,
   Container,
   Form,
+  FormControl,
+  FormControlProps,
   ProgressBar,
   Table,
 } from "react-bootstrap";
@@ -27,15 +29,25 @@ import { translateWarning } from "../lib/warningMessages";
 import type { Warning } from "../result";
 import { ScoreDisplay, type ScoreDisplayPart } from "./ScoreDisplay";
 
+// Create a file map containing object URLs and revokes them after unmounting
 function useFileUrls(fileMap: Map<string, File> | null): Map<string, string> {
   const [urlMap, setUrlMap] = useState<Map<string, string>>(new Map());
+
   useEffect(() => {
-    if (!fileMap) { setUrlMap(new Map()); return; }
+    if (!fileMap) {
+      setUrlMap(new Map());
+      return;
+    }
+
     const urls = new Map<string, string>();
-    for (const [key, file] of fileMap) urls.set(key, URL.createObjectURL(file));
+    fileMap.forEach((file, key) => urls.set(key, URL.createObjectURL(file)));
     setUrlMap(urls);
-    return () => { for (const url of urls.values()) URL.revokeObjectURL(url); };
+
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
   }, [fileMap]);
+
   return urlMap;
 }
 
@@ -44,7 +56,8 @@ const FIELD_HELP = [
   { field: "composer", description: "nome do(s) compositor(es)" },
   {
     field: "lyricist",
-    description: "tags separadas por vírgula; a primeira tag é o estilo da música",
+    description:
+      "tags separadas por vírgula; a primeira tag é o estilo da música",
   },
   { field: "source", description: "verso referência (sub)" },
 ];
@@ -66,17 +79,28 @@ export function UploadPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      return;
+    }
+
     Promise.all([
       getUserProjects(currentUser.uid),
       getOrCreateDefaultProject(currentUser),
-    ]).then(([userProjects, defaultProjectId]) => {
-      setProjects(userProjects);
-      if (!selectedProjectId) {
-        setSelectedProjectId(defaultProjectId);
-      }
-    });
+    ])
+      .then(([userProjects, defaultProjectId]) => {
+        setProjects(userProjects);
+        if (!selectedProjectId) {
+          setSelectedProjectId(defaultProjectId);
+        }
+      })
+      .catch((_e) => {
+        console.error("failed to select project");
+      });
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
+
+  const fileUrls = useFileUrls(parsed?.fileMap ?? null);
 
   if (!currentUser) {
     return (
@@ -87,7 +111,10 @@ export function UploadPage() {
   }
 
   const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {
+      return;
+    }
+
     setError("");
     const fileArray = Array.from(files);
     const result = await parseUploadedFiles(fileArray);
@@ -97,24 +124,35 @@ export function UploadPage() {
   };
 
   const handlePublish = async () => {
-    if (!parsed || !currentUser) return;
+    if (!parsed || !currentUser) {
+      return;
+    }
+
     setError("");
     setStep("uploading");
+
     try {
       const onProgress: OnProgress = (p) => setProgress(p);
-      await uploadScore(parsed, selectedProjectId, currentUser, onProgress, existingScoreId);
+      await uploadScore(
+        parsed,
+        selectedProjectId,
+        currentUser,
+        onProgress,
+        existingScoreId,
+      );
       setStep("done");
-    } catch (err: any) {
-      setError(err.message ?? "Erro ao enviar partitura");
+    } catch (e) {
+      console.error(String(e));
+      setError("Erro ao enviar partitura");
       setStep("idle");
     }
   };
 
-  const fileUrls = useFileUrls(parsed?.fileMap ?? null);
-
   const allWarnings = [...(parsed?.warnings ?? []), ...validationWarnings];
   const hasErrors = validationWarnings.length > 0;
-  const globalWarnings = allWarnings.filter((w) => !w.meta?.file && !w.meta?.partName);
+  const globalWarnings = allWarnings.filter(
+    (w) => !w.meta?.file && !w.meta?.partName,
+  );
 
   const warningsForFile = (file: File) =>
     allWarnings.filter((w) => w.meta?.file === file.name);
@@ -130,7 +168,8 @@ export function UploadPage() {
           <Card.Body>
             <p>
               {progress?.stage === "uploading" && "Enviando arquivos..."}
-              {progress?.stage === "writing-firestore" && "Salvando metadados..."}
+              {progress?.stage === "writing-firestore" &&
+                "Salvando metadados..."}
             </p>
             <ProgressBar
               now={
@@ -138,7 +177,11 @@ export function UploadPage() {
                   ? (progress.filesUploaded / progress.filesTotal) * 100
                   : 0
               }
-              label={progress ? `${progress.filesUploaded}/${progress.filesTotal}` : ""}
+              label={
+                progress
+                  ? `${progress.filesUploaded}/${progress.filesTotal}`
+                  : ""
+              }
             />
           </Card.Body>
         </Card>
@@ -152,10 +195,13 @@ export function UploadPage() {
         <Alert variant="success">
           <p>Partitura publicada com sucesso!</p>
           <div className="d-flex gap-2">
-            <Button variant="primary" onClick={() => navigate("/")}>
+            <Button variant="primary" onClick={() => void navigate("/")}>
               Ir para o acervo
             </Button>
-            <Button variant="outline-primary" onClick={() => navigate("/my-scores")}>
+            <Button
+              variant="outline-primary"
+              onClick={() => void navigate("/my-scores")}
+            >
               Minhas partituras
             </Button>
           </div>
@@ -182,12 +228,14 @@ export function UploadPage() {
             sub={parsed.sub}
             tags={parsed.tags}
             arrangementMidiUrl={fileUrls.get("midi") ?? null}
-            parts={parsed.parts.map((part): ScoreDisplayPart => ({
-              name: part.name,
-              instrument: part.instrument,
-              svgUrls: part.svg.map((key) => fileUrls.get(key) ?? ""),
-              midiUrl: fileUrls.get(`parts/${part.name}.midi`) ?? null,
-            }))}
+            parts={parsed.parts.map(
+              (part): ScoreDisplayPart => ({
+                name: part.name,
+                instrument: part.instrument,
+                svgUrls: part.svg.map((key) => fileUrls.get(key) ?? ""),
+                midiUrl: fileUrls.get(`parts/${part.name}.midi`) ?? null,
+              }),
+            )}
           />
         )}
       </Container>
@@ -211,7 +259,9 @@ export function UploadPage() {
             <tbody>
               {FIELD_HELP.map((f) => (
                 <tr key={f.field}>
-                  <td><code>{f.field}</code></td>
+                  <td>
+                    <code>{f.field}</code>
+                  </td>
                   <td>{f.description}</td>
                 </tr>
               ))}
@@ -224,8 +274,8 @@ export function UploadPage() {
         <Card.Body>
           <p>
             Selecione a pasta exportada pelo plugin do MuseScore contendo os
-            arquivos <code>.mscz</code>, <code>.svg</code>,{" "}
-            <code>.midi</code> e <code>.metajson</code>.
+            arquivos <code>.mscz</code>, <code>.svg</code>, <code>.midi</code> e{" "}
+            <code>.metajson</code>.
           </p>
           <Form.Control
             ref={fileInputRef}
@@ -234,7 +284,7 @@ export function UploadPage() {
             webkitdirectory=""
             directory=""
             multiple
-            onChange={(e) => handleFiles((e.target as HTMLInputElement).files)}
+            onChange={void handleFiles(fileInputRef.current?.files ?? null)}
           />
         </Card.Body>
       </Card>
@@ -258,10 +308,15 @@ export function UploadPage() {
                 {Array.from(parsed.fileMap.entries()).map(([key, file]) => {
                   const fw = warningsForFile(file);
                   return (
-                    <li key={key} className="d-flex align-items-center gap-2 py-1">
+                    <li
+                      key={key}
+                      className="d-flex align-items-center gap-2 py-1"
+                    >
                       <code>{key}</code>
                       {fw.map((w, i) => (
-                        <Badge bg="warning" text="dark" key={i}>{translateWarning(w.code, w.meta)}</Badge>
+                        <Badge bg="warning" text="dark" key={i}>
+                          {translateWarning(w.code, w.meta)}
+                        </Badge>
                       ))}
                     </li>
                   );
@@ -276,25 +331,33 @@ export function UploadPage() {
             sub={parsed.sub}
             tags={parsed.tags}
             arrangementMidiUrl={fileUrls.get("midi") ?? null}
-            parts={parsed.parts.map((part): ScoreDisplayPart => ({
-              name: part.name,
-              instrument: part.instrument,
-              svgUrls: part.svg.map((key) => fileUrls.get(key) ?? ""),
-              midiUrl: fileUrls.get(`parts/${part.name}.midi`) ?? null,
-              warnings: warningsForPart(part.name).map((w) => translateWarning(w.code, w.meta)),
-            }))}
+            parts={parsed.parts.map(
+              (part): ScoreDisplayPart => ({
+                name: part.name,
+                instrument: part.instrument,
+                svgUrls: part.svg.map((key) => fileUrls.get(key) ?? ""),
+                midiUrl: fileUrls.get(`parts/${part.name}.midi`) ?? null,
+                warnings: warningsForPart(part.name).map((w) =>
+                  translateWarning(w.code, w.meta),
+                ),
+              }),
+            )}
           />
 
           <Card className="mb-3">
             <Card.Body>
               <Form.Group>
-                <Form.Label><strong>Projeto</strong></Form.Label>
+                <Form.Label>
+                  <strong>Projeto</strong>
+                </Form.Label>
                 <Form.Select
                   value={selectedProjectId}
                   onChange={(e) => setSelectedProjectId(e.target.value)}
                 >
                   {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.title}</option>
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
                   ))}
                 </Form.Select>
               </Form.Group>

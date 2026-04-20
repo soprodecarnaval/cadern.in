@@ -77,13 +77,19 @@ export async function uploadScore(
     storagePaths.set(key, storagePath);
     const storageRef = ref(storage, storagePath);
     const buffer = await file.arrayBuffer();
-    await uploadBytes(storageRef, buffer, { contentType: file.type || "application/octet-stream" });
+    await uploadBytes(storageRef, buffer, {
+      contentType: file.type || "application/octet-stream",
+    });
 
     filesUploaded++;
     onProgress?.({ stage: "uploading", filesUploaded, filesTotal });
   }
 
-  onProgress?.({ stage: "writing-firestore", filesUploaded: filesTotal, filesTotal });
+  onProgress?.({
+    stage: "writing-firestore",
+    filesUploaded: filesTotal,
+    filesTotal,
+  });
 
   const revisionParts = parsed.parts.map((part) => ({
     name: part.name,
@@ -93,7 +99,9 @@ export async function uploadScore(
   }));
 
   if (existingScoreId && revisionNumber > 1) {
-    await updateRevision(scoreId, String(revisionNumber - 1), { isLatest: false });
+    await updateRevision(scoreId, String(revisionNumber - 1), {
+      isLatest: false,
+    });
   }
 
   await createRevision(scoreId, revId, {
