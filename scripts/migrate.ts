@@ -4,24 +4,20 @@
  *   tsx --env-file=.env.local scripts/migrate.ts cleanup [--execute]
  *
  * Required environment variables:
- *   STORAGE_BUCKET   Cloud Storage bucket name
+ *   FIREBASE_STORAGE_BUCKET   Cloud Storage bucket name
  */
 
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { migrations } from "./migrations/index";
-import {
-  getSchema,
-  setVersion,
-  setCleanedVersion,
-} from "./lib/migration";
+import { getSchema, setVersion, setCleanedVersion } from "./lib/migration";
 import type { MigrationContext } from "./lib/migration";
 
-const STORAGE_BUCKET =
-  process.env.STORAGE_BUCKET ??
+const FIREBASE_STORAGE_BUCKET =
+  process.env.FIREBASE_STORAGE_BUCKET ??
   (() => {
-    throw new Error("STORAGE_BUCKET not set");
+    throw new Error("FIREBASE_STORAGE_BUCKET not set");
   })();
 
 const rawArgs = process.argv.slice(2);
@@ -34,7 +30,7 @@ const targetId = toIdx !== -1 ? args[toIdx + 1] : null;
 async function runMigrations(
   ctx: MigrationContext,
   currentVersion: string | null,
-  targetId: string | null
+  targetId: string | null,
 ): Promise<void> {
   const { db, dryRun } = ctx;
 
@@ -79,7 +75,7 @@ async function runMigrations(
 async function runCleanup(
   ctx: MigrationContext,
   currentVersion: string | null,
-  cleanedVersion: string | null
+  cleanedVersion: string | null,
 ): Promise<void> {
   const { db, dryRun } = ctx;
 
@@ -111,7 +107,7 @@ async function runCleanup(
 }
 
 async function main() {
-  initializeApp({ storageBucket: STORAGE_BUCKET });
+  initializeApp({ storageBucket: FIREBASE_STORAGE_BUCKET });
   const db = getFirestore();
   const bucket = getStorage().bucket();
   const dryRun = !execute;

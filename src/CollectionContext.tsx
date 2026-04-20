@@ -2,14 +2,18 @@ import { useCallback, useEffect, useState, ReactNode } from "react";
 import Fuse, { IFuseOptions } from "fuse.js";
 import { storagePathToUrl } from "./storage";
 import { getAllProjects, getAllScores, getLatestRevisions } from "./lib/db";
-import type { ScoreViewModel, RevisionViewModel, PartViewModel } from "../types/viewModels";
+import type {
+  ScoreViewModel,
+  RevisionViewModel,
+  PartViewModel,
+} from "../types/viewModels";
 import { FEATURE_FLAG_AUTH_ENABLED } from "./featureFlags";
 import {
   CollectionContext,
   type CollectionStatus,
 } from "./useCollectionContext";
 
-const CADERN_IN_UID = import.meta.env.VITE_CADERN_IN_UID as string | undefined;
+const CADERNIN_UID = import.meta.env.CADERNIN_UID as string | undefined;
 
 async function loadCollection(): Promise<ScoreViewModel[]> {
   const [projectDocs, songDocs, revisionDocs] = await Promise.all([
@@ -20,7 +24,7 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
 
   const filteredProjectDocs = FEATURE_FLAG_AUTH_ENABLED
     ? projectDocs
-    : projectDocs.filter((p) => p.ownerId === CADERN_IN_UID);
+    : projectDocs.filter((p) => p.ownerId === CADERNIN_UID);
 
   const projectTitles = new Map(
     filteredProjectDocs.map((p) => [p.id, p.title]),

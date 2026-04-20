@@ -25,15 +25,19 @@
  *   --clean            Remove orphaned Firebase docs and storage files at the end
  *
  * Required environment variables (via .env.local):
- *   CADERN_IN_UID    Firebase UID of the user responsible for the upload
- *   STORAGE_BUCKET   Cloud Storage bucket name
+ *   CADERNIN_UID    Firebase UID of the user responsible for the upload
+ *   FIREBASE_STORAGE_BUCKET   Cloud Storage bucket name
  */
 
 import fs from "fs";
 import path from "path";
 import os from "os";
 import { LegacyCollection } from "./lib/legacyCollectionTypes";
-import { detectMscore, exportCollectionAssets, ExportOptions } from "./lib/mscz";
+import {
+  detectMscore,
+  exportCollectionAssets,
+  ExportOptions,
+} from "./lib/mscz";
 import { indexCollection } from "./lib/indexCollection";
 import { seedToFirebase } from "./lib/firebase";
 
@@ -75,7 +79,7 @@ function parseArgs(argv: string[]): SeedArgs {
 
   if (!input) {
     console.error(
-      "Usage: tsx --env-file=.env.local scripts/seedFromFolder.ts --input <folder> [--output <folder>] [--force] [--clean]"
+      "Usage: tsx --env-file=.env.local scripts/seedFromFolder.ts --input <folder> [--output <folder>] [--force] [--clean]",
     );
     process.exit(1);
   }
@@ -96,8 +100,8 @@ function parseArgs(argv: string[]): SeedArgs {
 // --- Pipeline ---
 
 async function main(): Promise<void> {
-  const uid = requireEnv("CADERN_IN_UID");
-  const storageBucket = requireEnv("STORAGE_BUCKET");
+  const uid = requireEnv("CADERNIN_UID");
+  const storageBucket = requireEnv("FIREBASE_STORAGE_BUCKET");
 
   const { input, output, force, clean } = parseArgs(process.argv);
 
@@ -128,7 +132,9 @@ async function main(): Promise<void> {
   const warnings = indexCollection(input, output);
   if (warnings.length > 0) {
     const warningsPath = path.join(output, "warnings.json");
-    console.warn(`\n${warnings.length} warning(s) found. Written to: ${warningsPath}`);
+    console.warn(
+      `\n${warnings.length} warning(s) found. Written to: ${warningsPath}`,
+    );
     fs.writeFileSync(warningsPath, JSON.stringify(warnings, null, 2));
   }
   console.log("\nStep 2 complete.\n");
@@ -136,7 +142,10 @@ async function main(): Promise<void> {
   // --- Etapa 3: upload para Firebase ---
 
   console.log("--- Step 3/3: Uploading to Firebase ---");
-  const collectionJson = fs.readFileSync(path.join(output, "collection.json"), "utf-8");
+  const collectionJson = fs.readFileSync(
+    path.join(output, "collection.json"),
+    "utf-8",
+  );
   const collection = JSON.parse(collectionJson) as LegacyCollection;
   await seedToFirebase(output, collection, { uid, storageBucket }, { clean });
   console.log("\nStep 3 complete.\n");
