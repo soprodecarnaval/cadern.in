@@ -1,6 +1,6 @@
 import { Modal, Image, Carousel } from "react-bootstrap";
 import { useEffect, useState } from "react";
-import { Part } from "../../types";
+import type { PartViewModel } from "../../types/viewModels";
 
 import "../css/PreviewModal.css";
 import RangeSlider from "react-bootstrap-range-slider";
@@ -10,7 +10,7 @@ import { midiPlayer, playMidiPart, removeToastPlayer } from "../utils/playMidi";
 interface PreviewModalProps {
   show: boolean;
   handleShow: (show: boolean) => void;
-  part: Part;
+  part: PartViewModel;
 }
 
 interface SvgCarouselProps {

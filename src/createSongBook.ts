@@ -1,5 +1,6 @@
 import SVGtoPDF from "svg-to-pdfkit";
-import { Instrument, Part, Score } from "../types";
+import type { Instrument } from "../types/instrument";
+import type { ScoreViewModel, PartViewModel } from "../types/viewModels";
 import { Section } from "./tsx/PdfGenerator";
 import { extractPartLabel } from "./instrument";
 
@@ -138,18 +139,18 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
   const { outline } = doc;
 
   let songPageIndex = 1;
-  for (const { title, songs } of sections) {
+  for (const { title, scores } of sections) {
     let topItem = outline.addItem(title.toUpperCase());
     sectionTitleOutlines.set(title, topItem);
 
-    for (const song of songs) {
+    for (const { score, revision } of scores) {
       // Get all parts for the current instrument, with optional fallback
       let partsForInstrument =
-        song.parts?.filter((p) => p.instrument === instrument) ?? [];
+        revision.parts?.filter((p) => p.instrument === instrument) ?? [];
 
       if (partsForInstrument.length === 0 && opts.fallbackInstrument) {
         partsForInstrument =
-          song.parts?.filter((p) => p.instrument === opts.fallbackInstrument) ??
+          revision.parts?.filter((p) => p.instrument === opts.fallbackInstrument) ??
           [];
       }
 
@@ -161,18 +162,18 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
           const partLabel = isMultiPart
             ? extractPartLabel(
                 part.name,
-                song.title,
+                score.title,
                 opts.stripInstrumentFromPartLabel,
               )
             : undefined;
           const displayNumber = isMultiPart
             ? `${songPageIndex}.${partIdx + 1}`
             : `${songPageIndex}`;
-          const destId = isMultiPart ? `${song.id}_${partIdx}` : song.id;
+          const destId = isMultiPart ? `${score.id}_${partIdx}` : score.id;
 
           const [pageCount, addSongPagePromises] = await addSongPage(
             doc,
-            song,
+            score,
             part,
             pageNumber,
             songPageIndex,
@@ -289,8 +290,8 @@ const loadFonts = async (doc: any) => {
 
 const addSongPage = async (
   doc: any,
-  song: Score,
-  part: Part,
+  score: ScoreViewModel,
+  part: PartViewModel,
   currentPage: number,
   songPageIndex: number,
   displayNumber: string,
@@ -308,8 +309,8 @@ const addSongPage = async (
 
   // Title with optional part label
   const displayTitle = partLabel
-    ? `${song.title}: ${partLabel}`.toUpperCase()
-    : song.title.toUpperCase();
+    ? `${score.title}: ${partLabel}`.toUpperCase()
+    : score.title.toUpperCase();
 
   const hasSponsor = true;
 
@@ -335,7 +336,7 @@ const addSongPage = async (
       doc
         .font("Roboto-Medium")
         .fontSize(1 * cm2pt)
-        .text(song.title.toUpperCase(), 8 * cm2pt, 3 * cm2pt + titleSpacing, {
+        .text(score.title.toUpperCase(), 8 * cm2pt, 3 * cm2pt + titleSpacing, {
           align: "center",
           width: 8 * cm2pt,
           height: 5 * cm2pt,
@@ -352,7 +353,7 @@ const addSongPage = async (
       doc
         .font("Roboto-Medium")
         .fontSize(1 * cm2pt)
-        .text(song.title.toUpperCase(), 1 * cm2pt, 4 * cm2pt + titleSpacing, {
+        .text(score.title.toUpperCase(), 1 * cm2pt, 4 * cm2pt + titleSpacing, {
           align: "center",
           width: 16 * cm2pt,
           height: 9 * cm2pt,
@@ -440,7 +441,7 @@ const addSongPage = async (
       totalWidth * 0.7 - subPadding - (subX - 0.44 * cm2pt);
 
     // Fit composer to max 30%
-    const composerText = song.composer.toUpperCase();
+    const composerText = score.composer.toUpperCase();
     const composerFontSize = fitText(
       doc,
       composerText,
@@ -454,7 +455,7 @@ const addSongPage = async (
     const composerHeight = doc.currentLineHeight();
 
     // Fit sub to available space
-    const subText = song.sub.toUpperCase();
+    const subText = score.sub.toUpperCase();
     const subFontSize = fitText(
       doc,
       subText,
@@ -551,7 +552,7 @@ const addIndexPage = (
 
   // Count total lines (one per song, same layout for all instruments)
   const totalSongCount = sections.reduce(
-    (acc, { songs }) => acc + songs.length,
+    (acc, { scores }) => acc + scores.length,
     0,
   );
   const sectionCount = sections.length;
@@ -614,7 +615,6 @@ const addIndexPage = (
     ];
   };
   let [currentX, currentY] = nextCursorPosition();
-  const reorderedSongs: Score[] = [];
 
   doc.addPage();
   pageCount++;
@@ -623,11 +623,11 @@ const addIndexPage = (
   // .font("Roboto-Bold")
   // .text("ÍNDICE", currentX + 0.3 * cm2pt, 1.2 * cm2pt);
 
-  sections.forEach(({ title, songs }, styleIdx) => {
+  sections.forEach(({ title, scores }, styleIdx) => {
     if (carnivalMode) {
       if (
         firstPage &&
-        songCount + (styleIdx + 1) * 2 + songs.length + 2 > totalLineCount
+        songCount + (styleIdx + 1) * 2 + scores.length + 2 > totalLineCount
       ) {
         firstPage = false;
         resetCursorPosition();
@@ -649,9 +649,8 @@ const addIndexPage = (
       }
     }
 
-    songs.forEach((song, songIdx) => {
-      reorderedSongs.push(song);
-      if (songIdx == 0) {
+    scores.forEach(({ score, revision }, scoreIdx) => {
+      if (scoreIdx == 0) {
         if (currentLine == maxLinesPerColumn) {
           [currentX, currentY] = nextCursorPosition();
         }
@@ -666,16 +665,16 @@ const addIndexPage = (
       }
 
       let partsForInstrument =
-        song.parts?.filter((p) => p.instrument === instrument) ?? [];
+        revision.parts?.filter((p) => p.instrument === instrument) ?? [];
       if (partsForInstrument.length === 0 && fallbackInstrument) {
         partsForInstrument =
-          song.parts?.filter((p) => p.instrument === fallbackInstrument) ?? [];
+          revision.parts?.filter((p) => p.instrument === fallbackInstrument) ?? [];
       }
       const hasInstrument = partsForInstrument.length > 0;
       const isMultiPart = partsForInstrument.length > 1;
       const songNumber = 1 + songCount++;
-      // Link to first part for multi-part, or song.id for single part
-      const destId = isMultiPart ? `${song.id}_0` : song.id;
+      // Link to first part for multi-part, or score.id for single part
+      const destId = isMultiPart ? `${score.id}_0` : score.id;
 
       doc
         .font("Roboto-Bold")
@@ -691,7 +690,7 @@ const addIndexPage = (
           .font("Roboto-Medium")
           .fillColor("black")
           .text(
-            `${song.title.toUpperCase()}`,
+            `${score.title.toUpperCase()}`,
             currentX + 0.3 * cm2pt,
             currentY,
             {
@@ -706,7 +705,7 @@ const addIndexPage = (
           .font("Roboto-Medium")
           .fillColor("gray")
           .text(
-            `${song.title.toUpperCase()}`,
+            `${score.title.toUpperCase()}`,
             currentX + 0.3 * cm2pt,
             currentY,
             {

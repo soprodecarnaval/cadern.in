@@ -1,4 +1,6 @@
-import { Instrument, Part, zScore } from "../../types";
+import z from "zod";
+import type { Instrument } from "../../types/instrument";
+import { zPartData, type PartData } from "../../types/docs";
 import { parseInstrument } from "../instrument";
 import type { Warning } from "../result";
 
@@ -14,7 +16,7 @@ export interface ParsedScore {
   composer: string;
   sub: string;
   tags: string[];
-  parts: Part[];
+  parts: PartData[];
   fileMap: Map<string, File>;
   warnings: Warning[];
 }
@@ -146,7 +148,7 @@ export async function parseUploadedFiles(
   }
 
   // Build parts array
-  const parts: Part[] = [];
+  const parts: PartData[] = [];
   for (const [, draft] of partDrafts) {
     draft.svg.sort((a, b) => a.page - b.page);
     const svgPaths = draft.svg.map(
@@ -180,21 +182,22 @@ export async function parseUploadedFiles(
   };
 }
 
+const zParsedScoreValidation = z.object({
+  title: z.string(),
+  composer: z.string(),
+  sub: z.string(),
+  tags: z.array(z.string()),
+  parts: z.array(zPartData),
+});
+
 export function validateParsedScore(parsed: ParsedScore): Warning[] {
-  const draft = {
-    id: "validation-draft",
+  const result = zParsedScoreValidation.safeParse({
     title: parsed.title,
     composer: parsed.composer,
     sub: parsed.sub,
-    mscz: "placeholder",
-    metajson: "placeholder",
-    midi: "placeholder",
-    parts: parsed.parts,
     tags: parsed.tags,
-    projectTitle: "placeholder",
-  };
-
-  const result = zScore.safeParse(draft);
+    parts: parsed.parts,
+  });
   if (result.success) return [];
 
   return result.error.errors.map((e) => ({

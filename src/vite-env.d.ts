@@ -2,7 +2,10 @@
 
 declare namespace JSX {
   interface IntrinsicElements {
-    "midi-player": React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+    "midi-player": React.DetailedHTMLProps<
+      React.HTMLAttributes<HTMLElement>,
+      HTMLElement
+    > & {
       src?: string;
       "sound-font"?: string;
     };
@@ -17,7 +20,7 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_MESSAGING_SENDER_ID: string;
   readonly VITE_FIREBASE_APP_ID: string;
   readonly VITE_FIREBASE_MEASUREMENT_ID: string;
-  readonly VITE_CADERN_IN_UID: string;
+  readonly VITE_CADERNIN_UID: string;
 }
 
 interface ImportMeta {

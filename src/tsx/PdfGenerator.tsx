@@ -10,14 +10,10 @@ import {
   Spinner,
 } from "react-bootstrap";
 import React, { useState, useMemo } from "react";
-import {
-  Instrument,
-  isSongBookSection,
-  Score,
-  SongBook,
-  SongBookItem,
-  SongBookScore,
-} from "../../types";
+import type { Instrument } from "../../types/instrument";
+import type { ScoreViewModel, RevisionViewModel } from "../../types/viewModels";
+import type { SongbookViewModel, SongbookItemViewModel, SongbookScoreViewModel } from "../../types/viewModels";
+import { isSongbookSection, getRevision } from "../lib/songbook";
 import { createSongBook } from "../createSongBook";
 
 const allInstruments: Instrument[] = [
@@ -39,12 +35,17 @@ const instrumentFallbacks: Partial<Record<Instrument, Instrument>> = {
 };
 
 interface PdfGeneratorProps {
-  songBook: SongBook;
+  songBook: SongbookViewModel;
 }
+
+export type SectionScore = {
+  score: ScoreViewModel;
+  revision: RevisionViewModel;
+};
 
 export type Section = {
   title: string;
-  songs: Score[];
+  scores: SectionScore[];
 };
 
 const CarnivalModeTooltip = (
@@ -75,8 +76,8 @@ const HelpIcon = ({ tooltip }: { tooltip: JSX.Element }) => (
 
 const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
   const scores = songBook.items.filter(
-    (r: SongBookItem) => !isSongBookSection(r),
-  ) as SongBookScore[];
+    (r: SongbookItemViewModel) => !isSongbookSection(r),
+  ) as SongbookScoreViewModel[];
 
   const [songbookTitle, setTitle] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -128,7 +129,7 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
 
     for (const instrument of allInstruments) {
       const count = scores.filter((s) =>
-        s.score.parts?.some((p) => p.instrument === instrument),
+        getRevision(s).parts?.some((p) => p.instrument === instrument),
       ).length;
 
       const fallback = instrumentFallbacks[instrument];
@@ -136,8 +137,8 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
       if (fallback) {
         countWithFallback = scores.filter(
           (s) =>
-            s.score.parts?.some((p) => p.instrument === instrument) ||
-            s.score.parts?.some((p) => p.instrument === fallback),
+            getRevision(s).parts?.some((p) => p.instrument === instrument) ||
+            getRevision(s).parts?.some((p) => p.instrument === fallback),
         ).length;
       }
 
@@ -218,21 +219,24 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
       let currentSection: Section | null = null;
 
       for (const item of songBook.items) {
-        if (isSongBookSection(item)) {
+        if (isSongbookSection(item)) {
           currentSection = {
             title: item.title,
-            songs: [],
+            scores: [],
           };
           sections.push(currentSection);
         } else {
           if (!currentSection) {
             currentSection = {
               title: "",
-              songs: [],
+              scores: [],
             };
             sections.push(currentSection);
           }
-          currentSection.songs.push(item.score);
+          currentSection.scores.push({
+            score: item.score,
+            revision: getRevision(item),
+          });
         }
       }
 

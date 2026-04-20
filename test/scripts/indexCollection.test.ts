@@ -2,7 +2,7 @@ import fs from "fs";
 import fsp from "fs/promises";
 import crypto from "crypto";
 import path from "path";
-import { Collection } from "../../types";
+import { LegacyCollection } from "../../types";
 import indexCollection from "../../scripts/indexCollection";
 import { describe, it, expect } from "vitest";
 
@@ -49,7 +49,7 @@ const expectEqualDirs = (dir1: string, dir2: string, skip: Set<string>) => {
 // - sort parts by name
 // - sort tags
 // - set sortedAt to the same value
-const makeCollectionComparable = (inputCollection: Collection) => {
+const makeCollectionComparable = (inputCollection: LegacyCollection) => {
   inputCollection.projects.sort((a, b) => a.title.localeCompare(b.title));
   inputCollection.projects.forEach((project) => {
     project.scores.sort((a, b) => a.title.localeCompare(b.title));
@@ -61,8 +61,8 @@ const makeCollectionComparable = (inputCollection: Collection) => {
 };
 
 const assertCollectionEquality = (
-  inputCollection: Collection,
-  outputCollection: Collection,
+  inputCollection: LegacyCollection,
+  outputCollection: LegacyCollection,
 ) => {
   makeCollectionComparable(inputCollection);
   makeCollectionComparable(outputCollection);
@@ -107,10 +107,10 @@ const compareCollections = (inputDir: string, outputDir: string) => {
 
   const inputCollection = JSON.parse(
     fs.readFileSync(inputCollectionPath, "utf-8"),
-  ) as Collection;
+  ) as LegacyCollection;
   const outputCollection = JSON.parse(
     fs.readFileSync(outputCollectionPath, "utf-8"),
-  ) as Collection;
+  ) as LegacyCollection;
 
   assertCollectionEquality(inputCollection, outputCollection);
 };

@@ -12,43 +12,46 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import {
-  zSongDoc,
-  zSongData,
+  zScoreDoc,
+  zScoreData,
   zRevisionDoc,
   zRevisionData,
   zProjectDoc,
   zProjectData,
-  type SongDoc,
-  type SongData,
+  type ScoreDoc,
   type RevisionDoc,
-  type RevisionData,
   type ProjectDoc,
-  type ProjectData,
-} from "../../firestore-types";
+} from "../../types/docs";
+import type z from "zod";
+
+type ScoreData = z.infer<typeof zScoreData>;
+type RevisionData = z.infer<typeof zRevisionData>;
+type ProjectData = z.infer<typeof zProjectData>;
+import { SCORES_COLLECTION } from "../../constants";
 
 export type WithId<T> = T & { id: string };
 
 // -- Reads --
 
-export async function getSong(id: string): Promise<WithId<SongDoc> | null> {
-  const snap = await getDoc(doc(db, "songs", id));
+export async function getScore(id: string): Promise<WithId<ScoreDoc> | null> {
+  const snap = await getDoc(doc(db, SCORES_COLLECTION, id));
   if (!snap.exists()) return null;
-  return { id: snap.id, ...zSongDoc.parse(snap.data()) };
+  return { id: snap.id, ...zScoreDoc.parse(snap.data()) };
 }
 
 export async function getRevision(
-  songId: string,
+  scoreId: string,
   revisionId: string,
 ): Promise<WithId<RevisionDoc> | null> {
-  const snap = await getDoc(doc(db, "songs", songId, "revisions", revisionId));
+  const snap = await getDoc(doc(db, SCORES_COLLECTION, scoreId, "revisions", revisionId));
   if (!snap.exists()) return null;
   return { id: snap.id, ...zRevisionDoc.parse(snap.data()) };
 }
 
-export async function getSongRevisions(
-  songId: string,
+export async function getScoreRevisions(
+  scoreId: string,
 ): Promise<WithId<RevisionDoc>[]> {
-  const snap = await getDocs(collection(db, "songs", songId, "revisions"));
+  const snap = await getDocs(collection(db, SCORES_COLLECTION, scoreId, "revisions"));
   return snap.docs
     .map((d) => ({ id: d.id, ...zRevisionDoc.parse(d.data()) }))
     .sort((a, b) => b.revisionNumber - a.revisionNumber);
@@ -62,12 +65,12 @@ export async function getProject(
   return { id: snap.id, ...zProjectDoc.parse(snap.data()) };
 }
 
-export async function getUserSongs(uid: string): Promise<WithId<SongDoc>[]> {
+export async function getUserScores(uid: string): Promise<WithId<ScoreDoc>[]> {
   const snap = await getDocs(
-    query(collection(db, "songs"), where("uploadedBy", "==", uid)),
+    query(collection(db, SCORES_COLLECTION), where("uploadedBy", "==", uid)),
   );
   return snap.docs
-    .map((d) => ({ id: d.id, ...zSongDoc.parse(d.data()) }))
+    .map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }))
     .filter((s) => !s.deletedAt);
 }
 
@@ -96,62 +99,62 @@ export async function getAllProjects(): Promise<WithId<ProjectDoc>[]> {
   return snap.docs.map((d) => ({ id: d.id, ...zProjectDoc.parse(d.data()) }));
 }
 
-export async function getAllSongs(): Promise<WithId<SongDoc>[]> {
-  const snap = await getDocs(collection(db, "songs"));
-  return snap.docs.map((d) => ({ id: d.id, ...zSongDoc.parse(d.data()) }));
+export async function getAllScores(): Promise<WithId<ScoreDoc>[]> {
+  const snap = await getDocs(collection(db, SCORES_COLLECTION));
+  return snap.docs.map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }));
 }
 
 export async function getLatestRevisions(): Promise<
-  (WithId<RevisionDoc> & { songId: string })[]
+  (WithId<RevisionDoc> & { scoreId: string })[]
 > {
   const snap = await getDocs(
     query(collectionGroup(db, "revisions"), where("isLatest", "==", true)),
   );
   return snap.docs.map((d) => ({
     id: d.id,
-    songId: d.ref.parent.parent!.id,
+    scoreId: d.ref.parent.parent!.id,
     ...zRevisionDoc.parse(d.data()),
   }));
 }
 
 // -- Writes --
 
-export async function createSong(id: string, data: SongData): Promise<void> {
-  await setDoc(doc(db, "songs", id), {
-    ...zSongData.parse(data),
+export async function createScore(id: string, data: ScoreData): Promise<void> {
+  await setDoc(doc(db, SCORES_COLLECTION, id), {
+    ...zScoreData.parse(data),
     createdAt: serverTimestamp(),
     deletedAt: null,
   });
 }
 
-export async function updateSong(
+export async function updateScore(
   id: string,
-  data: Partial<SongData>,
+  data: Partial<ScoreData>,
 ): Promise<void> {
-  await updateDoc(doc(db, "songs", id), data);
+  await updateDoc(doc(db, SCORES_COLLECTION, id), data);
 }
 
-export async function softDeleteSong(id: string): Promise<void> {
-  await updateDoc(doc(db, "songs", id), { deletedAt: serverTimestamp() });
+export async function softDeleteScore(id: string): Promise<void> {
+  await updateDoc(doc(db, SCORES_COLLECTION, id), { deletedAt: serverTimestamp() });
 }
 
 export async function createRevision(
-  songId: string,
+  scoreId: string,
   revisionId: string,
   data: RevisionData,
 ): Promise<void> {
-  await setDoc(doc(db, "songs", songId, "revisions", revisionId), {
+  await setDoc(doc(db, SCORES_COLLECTION, scoreId, "revisions", revisionId), {
     ...zRevisionData.parse(data),
     uploadedAt: serverTimestamp(),
   });
 }
 
 export async function updateRevision(
-  songId: string,
+  scoreId: string,
   revisionId: string,
   data: Partial<RevisionData>,
 ): Promise<void> {
-  await updateDoc(doc(db, "songs", songId, "revisions", revisionId), data);
+  await updateDoc(doc(db, SCORES_COLLECTION, scoreId, "revisions", revisionId), data);
 }
 
 export async function createProject(

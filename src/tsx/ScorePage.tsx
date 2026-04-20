@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Container, Spinner } from "react-bootstrap";
 import { useParams } from "react-router-dom";
-import { getSong, getRevision, getProject } from "../lib/db";
+import { getScore, getRevision, getProject } from "../lib/db";
 import { storagePathToUrl } from "../storage";
 import { ScoreDisplay, type ScoreDisplayPart } from "./ScoreDisplay";
 
 interface LoadedScore {
-  songId: string;
+  scoreId: string;
   revisionId: string;
   revisionNumber: number;
   title: string;
@@ -19,20 +19,20 @@ interface LoadedScore {
   parts: ScoreDisplayPart[];
 }
 
-async function loadScore(songId: string, revisionId?: string): Promise<LoadedScore> {
-  const song = await getSong(songId);
+async function loadScore(scoreId: string, revisionId?: string): Promise<LoadedScore> {
+  const song = await getScore(scoreId);
   if (!song || song.deletedAt) throw new Error("Partitura não encontrada");
 
   const resolvedRevisionId = revisionId ?? song.latestRevisionId;
   const [rev, project] = await Promise.all([
-    getRevision(songId, resolvedRevisionId),
+    getRevision(scoreId, resolvedRevisionId),
     getProject(song.projectId),
   ]);
   if (!rev) throw new Error("Revisão não encontrada");
   const projectTitle = project?.title ?? song.projectId;
 
   return {
-    songId,
+    scoreId,
     revisionId: resolvedRevisionId,
     revisionNumber: rev.revisionNumber,
     title: song.title,
@@ -52,16 +52,16 @@ async function loadScore(songId: string, revisionId?: string): Promise<LoadedSco
 }
 
 export function ScorePage() {
-  const { songId, revisionId } = useParams<{ songId: string; revisionId?: string }>();
+  const { scoreId, revisionId } = useParams<{ scoreId: string; revisionId?: string }>();
   const [score, setScore] = useState<LoadedScore | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!songId) return;
+    if (!scoreId) return;
     setScore(null);
     setError("");
-    loadScore(songId, revisionId).then(setScore).catch((e) => setError(e.message));
-  }, [songId, revisionId]);
+    loadScore(scoreId, revisionId).then(setScore).catch((e) => setError(e.message));
+  }, [scoreId, revisionId]);
 
   if (error) {
     return (

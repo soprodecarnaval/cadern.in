@@ -1,25 +1,25 @@
 import { Table } from "react-bootstrap";
 
-import type { Score, PlayingPart } from "../../types";
+import type { ScoreViewModel, PlayingPartViewModel } from "../../types/viewModels";
 
 import { ArrangementItem } from "./ScoreSearchResultRow";
 import { PaginationBar } from "./PaginationBar";
 import { useState } from "react";
 
 interface ScoreSearchResultTableProps {
-  songs: Score[];
-  handleSelect: (score: Score, checked: boolean) => void;
-  onSetPlayingPart: (info: PlayingPart) => void;
+  scores: ScoreViewModel[];
+  handleSelect: (score: ScoreViewModel, checked: boolean) => void;
+  onSetPlayingPart: (info: PlayingPartViewModel) => void;
 }
 
 const ScoreSearchResultTable = ({
-  songs,
+  scores,
   handleSelect,
   onSetPlayingPart: handlePlayingSong,
 }: ScoreSearchResultTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
 
-  const maxNumberPages = Math.round(songs.length / 10) + 1;
+  const maxNumberPages = Math.round(scores.length / 10) + 1;
 
   const handlePageChange = (pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -37,7 +37,7 @@ const ScoreSearchResultTable = ({
           </tr>
         </thead>
         <tbody>
-          {songs.slice((currentPage - 1) * 10, currentPage * 10).map((song) => (
+          {scores.slice((currentPage - 1) * 10, currentPage * 10).map((song) => (
             <ArrangementItem
               handleSelect={handleSelect}
               score={song}

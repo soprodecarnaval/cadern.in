@@ -12,8 +12,8 @@ Script para popular o banco de dados e o storage do cadern.in a partir de uma pa
   Alternativamente, defina `GOOGLE_APPLICATION_CREDENTIALS` apontando para um arquivo de chave de conta de serviço.
 - Arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
   ```
-  CADERN_IN_UID=<uid do usuário no Firebase>
-  STORAGE_BUCKET=<nome do bucket no Cloud Storage>
+  SCRIPTS_CADERNIN_UID=<uid do usuário no Firebase>
+  SCRIPTS_FIREBASE_STORAGE_BUCKET=<nome do bucket no Cloud Storage>
   ```
 
 ## Estrutura de pastas esperada

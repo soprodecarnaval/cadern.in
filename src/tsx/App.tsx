@@ -10,20 +10,17 @@ import { SongBookTable } from "./SongBookTable";
 import { PDFGenerator } from "./PdfGenerator";
 import { sortByColumn, SortColumn, SortDirection } from "../utils/sort";
 import { SongBar } from "./PlayerBar";
-import { BsFillSave2Fill } from "react-icons/bs";
 
-import {
-  isSongBookSection,
-  Score,
-  SongBook,
-  songBookScore,
-  PlayingPart,
-  SongBookItem,
-} from "../../types";
+import type {
+  PlayingPartViewModel,
+  ScoreViewModel,
+  SongbookViewModel,
+  SongbookItemViewModel,
+} from "../../types/viewModels";
+import { isSongbookSection, songbookScore } from "../lib/songbook";
 
 import "bootstrap/dist/css/bootstrap.css";
 import "../css/App.css";
-import SaveLoadModal from "./SaveLoadModal";
 import { AuthButton } from "./AuthButton";
 import { FEATURE_FLAG_AUTH_ENABLED } from "../featureFlags";
 import { useAuth } from "../auth";
@@ -32,11 +29,13 @@ import { MyScoresPage } from "./MyScoresPage";
 import { ScorePage } from "./ScorePage";
 
 function HomePage() {
-  const [results, setResults] = useState<Score[]>([]);
-  const [items, setItems] = useState<SongBookItem[]>([]);
-  const [showSaveLoadModal, setShowSaveLoadModal] = useState(false);
-  const [playingPart, setPlayingPart] = useState<PlayingPart | null>(null);
-  const handleSelectSong = (song: Score, checked: boolean) => {
+  const [results, setResults] = useState<ScoreViewModel[]>([]);
+  const [items, setItems] = useState<SongbookItemViewModel[]>([]);
+  const [playingPart, setPlayingPart] = useState<PlayingPartViewModel | null>(
+    null,
+  );
+
+  const handleSelectSong = (song: ScoreViewModel, checked: boolean) => {
     checked ? handleAddScore(song) : handleRemoveScore(song);
   };
 
@@ -44,59 +43,43 @@ function HomePage() {
     setItems([]);
   };
 
-  const handleAddScore = (score: Score) => {
-    setItems([...items, songBookScore(score)]);
-    const updatedRes = results.filter((r) => r.id !== score.id);
-
-    setResults(updatedRes);
+  const handleAddScore = (score: ScoreViewModel) => {
+    setItems([...items, songbookScore(score)]);
+    setResults(results.filter((r) => r.id !== score.id));
   };
 
-  const handleRemoveScore = (score: Score) => {
-    const updatedRes = items.filter(
-      (r) => isSongBookSection(r) || r.score.id !== score.id,
+  const handleRemoveScore = (score: ScoreViewModel) => {
+    setItems(
+      items.filter((r) => isSongbookSection(r) || r.score.id !== score.id),
     );
-
     setResults([score, ...results]);
-    setItems(updatedRes);
   };
 
   const handleResultsSortBy = (
     column: SortColumn,
     direction: SortDirection,
   ) => {
-    const sorted = sortByColumn(results, column, direction);
-    setResults(sorted.slice());
+    setResults(sortByColumn(results, column, direction).slice());
   };
 
   const handleAddAllSongs = () => {
-    const newSongBookItems: SongBookItem[] = [
+    const merged: SongbookItemViewModel[] = [
       ...items,
-      ...results.map(songBookScore),
+      ...results.map(songbookScore),
     ];
-    const newUniqueSelectedResults = newSongBookItems.filter((row, index) => {
-      return (
-        // include sections
-        isSongBookSection(row) ||
-        // include first occurrence of song
+    const deduped = merged.filter(
+      (row, index) =>
+        isSongbookSection(row) ||
         index ===
-          newSongBookItems.findIndex(
-            (o) => !isSongBookSection(o) && row.score.id === o.score.id,
-          )
-      );
-    });
-    setItems(newUniqueSelectedResults);
+          merged.findIndex(
+            (o) => !isSongbookSection(o) && row.score.id === o.score.id,
+          ),
+    );
+    setItems(deduped);
     setResults([]);
   };
 
-  // TODO: load all songbook fields (title, etc) instead of just rows
-  const loadSongBook = (songBook: SongBook) => {
-    // TODO: how to handle errors?
-    // TODO: reset results from search bar?
-    setItems(songBook.items);
-    return true;
-  };
-
-  const songBook: SongBook = { items };
+  const songBook: SongbookViewModel = { items };
 
   return (
     <>
@@ -121,35 +104,23 @@ function HomePage() {
             />
           </Col>
           <Col sm={6}>
-            <>
-              <h3 className="results">
-                Caderninho
-                <BsFillSave2Fill onClick={() => setShowSaveLoadModal(true)} />
-              </h3>
-              <SongBookTable
-                rows={items}
-                setItems={setItems}
-                onSetPlayingPart={setPlayingPart}
-                handleSelect={handleSelectSong}
-                handleClear={clearSelected}
-              />
-            </>
+            <h3 className="results">Caderninho</h3>
+            <SongBookTable
+              rows={items}
+              setItems={setItems}
+              onSetPlayingPart={setPlayingPart}
+              handleSelect={handleSelectSong}
+              handleClear={clearSelected}
+            />
           </Col>
         </Row>
       </Container>
-      <SaveLoadModal
-        songBook={songBook}
-        onLoad={loadSongBook}
-        onHide={() => setShowSaveLoadModal(false)}
-        show={showSaveLoadModal}
-      />
     </>
   );
 }
 
 function App() {
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
   const { currentUser } = useAuth();
 
   return (
@@ -184,7 +155,7 @@ function App() {
                   </Nav.Link>
                 </>
               )}
-              <AuthButton onOpenAuthModal={() => setShowAuthModal(true)} />
+              <AuthButton onOpenUserModal={() => setShowUserModal(true)} />
             </Nav>
           )}
         </Container>
@@ -193,17 +164,23 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/upload" element={<UploadPage />} />
-        <Route path="/upload/:songId" element={<UploadPage />} />
+        <Route path="/upload/:scoreId" element={<UploadPage />} />
         <Route path="/my-scores" element={<MyScoresPage />} />
-        <Route path="/score/:songId" element={<ScorePage />} />
-        <Route path="/score/:songId/:revisionId" element={<ScorePage />} />
+        <Route path="/score/:scoreId" element={<ScorePage />} />
+        <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
       </Routes>
 
-      <AuthModal show={showAuthModal} onHide={() => setShowAuthModal(false)} />
-      <ProfileModal
-        show={showProfileModal}
-        onHide={() => setShowProfileModal(false)}
-      />
+      {currentUser ? (
+        <ProfileModal
+          show={showUserModal}
+          onHide={() => setShowUserModal(false)}
+        />
+      ) : (
+        <AuthModal
+          show={showUserModal}
+          onHide={() => setShowUserModal(false)}
+        />
+      )}
     </>
   );
 }

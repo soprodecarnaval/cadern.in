@@ -1,6 +1,6 @@
 import MidiPlayer from "midi-player-js";
 import Soundfont from "soundfont-player";
-import { Instrument } from "../../types";
+import type { Instrument } from "../../types/instrument";
 
 let player: MidiPlayer.Player | null = null;
 const AudioContext = window.AudioContext || window.webkitAudioContext || false;

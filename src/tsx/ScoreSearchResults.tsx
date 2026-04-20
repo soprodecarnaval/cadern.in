@@ -1,17 +1,17 @@
 import { Spinner, Row, Col } from "react-bootstrap";
 import { useCollectionContext } from "../useCollectionContext";
-import type { Score, PlayingPart } from "../../types";
+import type { ScoreViewModel, PlayingPartViewModel } from "../../types/viewModels";
 import { Sort } from "./Sort";
 import { AddAllSongsButton } from "./AddAllScoresButton";
 import { ScoreSearchResultTable } from "./ScoreSearchResultTable";
 import type { SortColumn, SortDirection } from "../utils/sort";
 
 interface ScoreSearchResultsProps {
-  results: Score[];
+  results: ScoreViewModel[];
   onSortBy: (column: SortColumn, direction: SortDirection) => void;
   onAddAll: () => void;
-  onSelectSong: (song: Score, checked: boolean) => void;
-  onSetPlayingPart: (info: PlayingPart) => void;
+  onSelectSong: (song: ScoreViewModel, checked: boolean) => void;
+  onSetPlayingPart: (info: PlayingPartViewModel) => void;
 }
 
 const ScoreSearchResults = ({
@@ -42,7 +42,7 @@ const ScoreSearchResults = ({
         </Col>
       </Row>
       <ScoreSearchResultTable
-        songs={results}
+        scores={results}
         onSetPlayingPart={onSetPlayingPart}
         handleSelect={onSelectSong}
       />

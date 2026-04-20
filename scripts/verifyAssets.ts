@@ -1,17 +1,17 @@
 import { initializeApp, applicationDefault } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { zRevisionDoc } from "../firestore-types.js";
+import { zRevisionDoc } from "../types/docs.js";
 
-const STORAGE_BUCKET =
-  process.env.STORAGE_BUCKET ??
+const SCRIPTS_FIREBASE_STORAGE_BUCKET =
+  process.env.SCRIPTS_FIREBASE_STORAGE_BUCKET ??
   (() => {
-    throw new Error("STORAGE_BUCKET not set");
+    throw new Error("VITE_FIREBASE_STORAGE_BUCKET not set");
   })();
 
 initializeApp({
   credential: applicationDefault(),
-  storageBucket: STORAGE_BUCKET,
+  storageBucket: SCRIPTS_FIREBASE_STORAGE_BUCKET,
 });
 
 const db = getFirestore();
@@ -29,7 +29,7 @@ async function main(): Promise<void> {
   let missingTotal = 0;
 
   for (const doc of snap.docs) {
-    const songId = doc.ref.parent.parent!.id;
+    const scoreId = doc.ref.parent.parent!.id;
     const revision = zRevisionDoc.parse(doc.data());
 
     const paths = [
@@ -45,11 +45,11 @@ async function main(): Promise<void> {
 
     const missing = results.filter((r) => !r.exists);
     if (missing.length > 0) {
-      console.log(`✗ ${songId} / rev ${revision.revisionNumber}`);
+      console.log(`✗ ${scoreId} / rev ${revision.revisionNumber}`);
       for (const m of missing) console.log(`    missing: ${m.path}`);
       missingTotal += missing.length;
     } else {
-      console.log(`✓ ${songId} / rev ${revision.revisionNumber}`);
+      console.log(`✓ ${scoreId} / rev ${revision.revisionNumber}`);
     }
   }
 

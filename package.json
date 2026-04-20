@@ -12,6 +12,10 @@
     "seed": "tsx --env-file=.env.local scripts/seedFromFolder.ts",
     "export:mscz": "tsx scripts/exportMscz.ts",
     "verify:assets": "tsx --env-file=.env.local scripts/verifyAssets.ts",
+    "migrate": "tsx --env-file=.env.local scripts/migrate.ts",
+    "migrate:up": "npm run migrate -- --execute",
+    "migrate:down": "npm run migrate -- --to",
+    "migrate:cleanup": "npm run migrate -- cleanup --execute",
     "deploy": "npm run build && npx firebase-tools deploy",
     "test": "vitest"
   },

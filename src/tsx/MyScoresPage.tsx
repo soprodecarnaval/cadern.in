@@ -8,8 +8,8 @@ import {
 } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth";
-import { getUserSongs, getSongRevisions, softDeleteSong, type WithId } from "../lib/db";
-import type { SongDoc, RevisionDoc } from "../../firestore-types";
+import { getUserScores, getScoreRevisions, softDeleteScore, type WithId } from "../lib/db";
+import type { ScoreDoc, RevisionDoc } from "../../types/docs";
 
 function formatDate(timestamp: any): string {
   if (!timestamp?.toDate) return "—";
@@ -21,7 +21,7 @@ function SongRow({
   deleting,
   onDelete,
 }: {
-  song: WithId<SongDoc>;
+  song: WithId<ScoreDoc>;
   deleting: boolean;
   onDelete: () => void;
 }) {
@@ -32,7 +32,7 @@ function SongRow({
   const handleToggle = async () => {
     if (!expanded && revisions === null) {
       setLoadingRevisions(true);
-      setRevisions(await getSongRevisions(song.id));
+      setRevisions(await getScoreRevisions(song.id));
       setLoadingRevisions(false);
     }
     setExpanded((v) => !v);
@@ -104,13 +104,13 @@ function SongRow({
 
 export function MyScoresPage() {
   const { currentUser } = useAuth();
-  const [songs, setSongs] = useState<WithId<SongDoc>[]>([]);
+  const [songs, setSongs] = useState<WithId<ScoreDoc>[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentUser) return;
-    getUserSongs(currentUser.uid).then((results) => {
+    getUserScores(currentUser.uid).then((results) => {
       setSongs(results);
       setLoading(false);
     });
@@ -124,12 +124,12 @@ export function MyScoresPage() {
     );
   }
 
-  const handleDelete = async (songId: string) => {
+  const handleDelete = async (scoreId: string) => {
     if (!confirm("Tem certeza que deseja excluir esta partitura?")) return;
-    setDeleting(songId);
+    setDeleting(scoreId);
     try {
-      await softDeleteSong(songId);
-      setSongs((prev) => prev.filter((s) => s.id !== songId));
+      await softDeleteScore(scoreId);
+      setSongs((prev) => prev.filter((s) => s.id !== scoreId));
     } finally {
       setDeleting(null);
     }
@@ -166,6 +166,7 @@ export function MyScoresPage() {
                 song={song}
                 deleting={deleting === song.id}
                 onDelete={() => void handleDelete(song.id)}
+
               />
             ))}
           </tbody>

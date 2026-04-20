@@ -1,75 +1,78 @@
 import { useCallback, useEffect, useState, ReactNode } from "react";
 import Fuse, { IFuseOptions } from "fuse.js";
 import { storagePathToUrl } from "./storage";
-import { getAllProjects, getAllSongs, getLatestRevisions } from "./lib/db";
-import type { Collection, Score, Part } from "../types";
+import { getAllProjects, getAllScores, getLatestRevisions } from "./lib/db";
+import type {
+  ScoreViewModel,
+  RevisionViewModel,
+  PartViewModel,
+} from "../types/viewModels";
 import { FEATURE_FLAG_AUTH_ENABLED } from "./featureFlags";
 import {
   CollectionContext,
   type CollectionStatus,
 } from "./useCollectionContext";
 
-const CADERN_IN_UID = import.meta.env.VITE_CADERN_IN_UID as string | undefined;
+const CADERNIN_UID = import.meta.env.VITE_CADERNIN_UID as string | undefined;
 
-async function loadCollection(): Promise<Collection> {
+async function loadCollection(): Promise<ScoreViewModel[]> {
   const [projectDocs, songDocs, revisionDocs] = await Promise.all([
     getAllProjects(),
-    getAllSongs(),
+    getAllScores(),
     getLatestRevisions(),
   ]);
 
   const filteredProjectDocs = FEATURE_FLAG_AUTH_ENABLED
     ? projectDocs
-    : projectDocs.filter((p) => p.ownerId === CADERN_IN_UID);
+    : projectDocs.filter((p) => p.ownerId === CADERNIN_UID);
 
   const projectTitles = new Map(
     filteredProjectDocs.map((p) => [p.id, p.title]),
   );
 
-  const revisionsBySongId = new Map(revisionDocs.map((r) => [r.songId, r]));
+  const revisionsByScoreId = new Map(revisionDocs.map((r) => [r.scoreId, r]));
 
-  const scoresByProject = new Map<string, Score[]>();
+  const scores: ScoreViewModel[] = [];
 
   for (const song of songDocs) {
     if (song.deletedAt) continue;
-    const revision = revisionsBySongId.get(song.id);
+    const revision = revisionsByScoreId.get(song.id);
     if (!revision) continue;
 
-    const parts: Part[] = revision.parts.map((p) => ({
+    const parts: PartViewModel[] = revision.parts.map((p) => ({
       ...p,
       svg: p.svg.map(storagePathToUrl),
       midi: storagePathToUrl(p.midi),
     }));
 
-    const score: Score = {
+    const latestRevision: RevisionViewModel = {
+      id: revision.id,
+      revisionNumber: revision.revisionNumber,
+      uploadedBy: revision.uploadedBy,
+      uploadedAt: revision.uploadedAt,
+      mscz: storagePathToUrl(revision.mscz),
+      metajson: storagePathToUrl(revision.metajson),
+      midi: storagePathToUrl(revision.midi),
+      parts,
+      notes: revision.notes,
+      isLatest: revision.isLatest,
+    };
+
+    scores.push({
       id: song.id,
       title: song.title,
       composer: song.composer,
       sub: song.sub,
       tags: song.tags,
       projectTitle: projectTitles.get(song.projectId) ?? song.projectId,
-      mscz: storagePathToUrl(revision.mscz),
-      metajson: storagePathToUrl(revision.metajson),
-      midi: storagePathToUrl(revision.midi),
-      parts,
-    };
-
-    const existing = scoresByProject.get(song.projectId) ?? [];
-    existing.push(score);
-    scoresByProject.set(song.projectId, existing);
+      latestRevision,
+    });
   }
 
-  const projects = Array.from(scoresByProject.entries()).map(
-    ([projectId, scores]) => ({
-      title: projectTitles.get(projectId) ?? projectId,
-      scores,
-    }),
-  );
-
-  return { projects, version: 3 };
+  return scores;
 }
 
-const fuseOptions: IFuseOptions<Score> = {
+const fuseOptions: IFuseOptions<ScoreViewModel> = {
   keys: ["title", "composer", "tags", "projectTitle"],
   includeScore: true,
   shouldSort: true,
@@ -79,20 +82,19 @@ const fuseOptions: IFuseOptions<Score> = {
   ignoreLocation: true,
 };
 
-function buildFuse(scores: Score[]): Fuse<Score> {
+function buildFuse(scores: ScoreViewModel[]): Fuse<ScoreViewModel> {
   const index = Fuse.createIndex(fuseOptions.keys as string[], scores);
   return new Fuse(scores, fuseOptions, index);
 }
 
 export function CollectionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<CollectionStatus>("loading");
-  const [allScores, setAllScores] = useState<Score[]>([]);
-  const [fuse, setFuse] = useState<Fuse<Score> | null>(null);
+  const [allScores, setAllScores] = useState<ScoreViewModel[]>([]);
+  const [fuse, setFuse] = useState<Fuse<ScoreViewModel> | null>(null);
 
   useEffect(() => {
     loadCollection()
-      .then((col) => {
-        const scores = col.projects.flatMap((p) => p.scores);
+      .then((scores) => {
         setAllScores(scores);
         setFuse(buildFuse(scores));
         setStatus("ready");
@@ -101,7 +103,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const search = useCallback(
-    (query: string): Score[] => {
+    (query: string): ScoreViewModel[] => {
       if (!fuse || query === "") return allScores;
       return fuse.search(query).map((r) => r.item);
     },

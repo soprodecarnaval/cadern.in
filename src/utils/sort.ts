@@ -1,4 +1,4 @@
-import { Score } from "../../types";
+import type { ScoreViewModel } from "../../types/viewModels";
 
 export const carnivalSectionOrder = [
   "marchinha",
@@ -30,11 +30,11 @@ export type SortColumn = "title" | "projectTitle" | "style" | "carnivalStyle";
 export type SortDirection = "asc" | "desc";
 
 export const sortByColumn = (
-  arrayToSort: Score[],
+  arrayToSort: ScoreViewModel[],
   columnToSort: SortColumn,
   directionToSort: SortDirection,
-): Score[] => {
-  let sorted: Score[] = arrayToSort.sort((a: Score, b: Score) => {
+): ScoreViewModel[] => {
+  let sorted: ScoreViewModel[] = arrayToSort.sort((a: ScoreViewModel, b: ScoreViewModel) => {
     if (columnToSort === "title") {
       return a.title.localeCompare(b.title);
     } else if (columnToSort === "projectTitle") {

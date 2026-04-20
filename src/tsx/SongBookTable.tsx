@@ -9,14 +9,9 @@ import {
   Tooltip,
 } from "react-bootstrap";
 
-import {
-  isSongBookSection,
-  songBookSection,
-  PlayingPart,
-  SongBookItem,
-  SongBookScore,
-  Score,
-} from "../../types";
+import type { ScoreViewModel, PlayingPartViewModel, SongbookItemViewModel, SongbookScoreViewModel } from "../../types/viewModels";
+import { isSongbookSection, songbookSection } from "../lib/songbook";
+import type { ScoreEditUpdate } from "./ScoreEditModal";
 
 import { SongBookScoreRow } from "./SongBookScoreRow";
 import { SongBookSectionRow } from "./SongBookSectionRow";
@@ -32,15 +27,15 @@ import {
 import { carnivalSectionOrder } from "../utils/sort";
 
 interface SongBookTableProps {
-  rows: SongBookItem[];
-  setItems: (rows: SongBookItem[]) => void;
-  handleSelect: (song: Score, checked: boolean) => void;
-  onSetPlayingPart: (song: PlayingPart) => void;
+  rows: SongbookItemViewModel[];
+  setItems: (rows: SongbookItemViewModel[]) => void;
+  handleSelect: (song: ScoreViewModel, checked: boolean) => void;
+  onSetPlayingPart: (song: PlayingPartViewModel) => void;
   handleClear: () => void;
 }
 
 interface SongBookTableRowProps {
-  row: SongBookItem;
+  row: SongbookItemViewModel;
   idx: number;
 }
 
@@ -62,7 +57,7 @@ const SongBookTable = ({
   };
 
   const createNewSection = () => {
-    const newRows = [...rows, songBookSection(newSection)];
+    const newRows = [...rows, songbookSection(newSection)];
     setRows(newRows);
     setNewSection("");
   };
@@ -78,14 +73,29 @@ const SongBookTable = ({
     </Tooltip>
   );
 
-  const handleUpdateScore = (idx: number, updatedScore: Score) => {
+  const handleUpdateScore = (idx: number, update: ScoreEditUpdate) => {
     const newRows = [...rows];
-    newRows[idx] = { type: "score", score: updatedScore } as SongBookScore;
+    const existing = newRows[idx] as SongbookScoreViewModel;
+    const updatedScore: ScoreViewModel = {
+      ...existing.score,
+      title: update.title,
+      composer: update.composer,
+      sub: update.sub,
+      tags: update.tags,
+      latestRevision: {
+        ...existing.score.latestRevision,
+        parts: existing.score.latestRevision.parts.map((p, i) => ({
+          ...p,
+          name: update.parts[i]?.name ?? p.name,
+        })),
+      },
+    };
+    newRows[idx] = { type: "score", score: updatedScore };
     setRows(newRows);
   };
 
   const SongBookTableRow = ({ row, idx }: SongBookTableRowProps) => {
-    if (isSongBookSection(row)) {
+    if (isSongbookSection(row)) {
       return (
         <SongBookSectionRow
           handleDelete={() => setRows(deleteRow(rows, idx))}
@@ -101,7 +111,7 @@ const SongBookTable = ({
         key={row.score.id}
         handlePlayingSong={handlePlayingSong}
         handleMove={(steps) => setRows(moveRow(rows, idx, steps))}
-        handleUpdateScore={(updatedScore) => handleUpdateScore(idx, updatedScore)}
+        handleUpdateScore={(update) => handleUpdateScore(idx, update)}
       />
     );
   };
@@ -150,8 +160,8 @@ const SongBookTable = ({
       <Row className="mt-4">
         <Col>
           <p>
-            {rows.filter(isSongBookSection).length} seções e{" "}
-            {rows.filter((r: any) => !isSongBookSection(r)).length} músicas
+            {rows.filter(isSongbookSection).length} seções e{" "}
+            {rows.filter((r: any) => !isSongbookSection(r)).length} músicas
           </p>
         </Col>
         <Col>

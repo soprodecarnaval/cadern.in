@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Row, Col, Form } from "react-bootstrap";
 
-import { Score } from "../../types";
+import type { ScoreViewModel } from "../../types/viewModels";
 import { useCollectionContext } from "../useCollectionContext";
 
 interface SearchBarProps {
-  handleResults: (results: Score[]) => void;
+  handleResults: (results: ScoreViewModel[]) => void;
 }
 
 const SearchBar = ({ handleResults }: SearchBarProps) => {

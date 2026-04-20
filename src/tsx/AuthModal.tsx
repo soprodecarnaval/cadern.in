@@ -20,7 +20,9 @@ export function AuthModal({ show, onHide }: AuthModalProps) {
   const [tab, setTab] = useState<string>("login");
 
   useEffect(() => {
-    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
   }, []);
 
   const handleHide = () => {
@@ -94,9 +96,16 @@ export function AuthModal({ show, onHide }: AuthModalProps) {
         <Modal.Title>Conta</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <Tabs activeKey={tab} onSelect={(k) => { setTab(k ?? "login"); setError(""); }} className="mb-3">
+        <Tabs
+          activeKey={tab}
+          onSelect={(k) => {
+            setTab(k ?? "login");
+            setError("");
+          }}
+          className="mb-3"
+        >
           <Tab eventKey="login" title="Entrar">
-            <form onSubmit={handleLogin}>
+            <form onSubmit={(val) => void handleLogin(val)}>
               <div className="mb-3">
                 <label className="form-label">Email</label>
                 <input
@@ -118,14 +127,18 @@ export function AuthModal({ show, onHide }: AuthModalProps) {
                 />
               </div>
               <div className="d-flex align-items-center gap-3">
-                <button type="submit" className="btn btn-primary">Entrar</button>
+                <button type="submit" className="btn btn-primary">
+                  Entrar
+                </button>
                 <button
                   type="button"
                   className="btn btn-link p-0"
                   onClick={() => void handleResetPassword()}
                   disabled={resetPending || resetCountdown > 0}
                 >
-                  {resetCountdown > 0 ? `Esqueci a senha (${resetCountdown}s)` : "Esqueci a senha"}
+                  {resetCountdown > 0
+                    ? `Esqueci a senha (${resetCountdown}s)`
+                    : "Esqueci a senha"}
                 </button>
               </div>
               {resetSent && (
@@ -136,7 +149,7 @@ export function AuthModal({ show, onHide }: AuthModalProps) {
             </form>
           </Tab>
           <Tab eventKey="register" title="Criar conta">
-            <form onSubmit={handleRegister}>
+            <form onSubmit={(val) => void handleRegister(val)}>
               <div className="mb-3">
                 <label className="form-label">Nome</label>
                 <input
@@ -167,7 +180,9 @@ export function AuthModal({ show, onHide }: AuthModalProps) {
                   required
                 />
               </div>
-              <button type="submit" className="btn btn-primary">Criar conta</button>
+              <button type="submit" className="btn btn-primary">
+                Criar conta
+              </button>
             </form>
           </Tab>
         </Tabs>
