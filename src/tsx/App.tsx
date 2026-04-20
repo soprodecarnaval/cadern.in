@@ -176,7 +176,10 @@ function App() {
           onHide={() => setShowUserModal(false)}
         />
       ) : (
-        <AuthModal show={showUserModal} onHide={() => setShowUserModal(false)} />
+        <AuthModal
+          show={showUserModal}
+          onHide={() => setShowUserModal(false)}
+        />
       )}
     </>
   );

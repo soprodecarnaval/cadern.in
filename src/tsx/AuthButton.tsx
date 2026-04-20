@@ -10,7 +10,7 @@ export function AuthButton({ onOpenUserModal }: AuthButtonProps) {
 
   if (currentUser) {
     return (
-      <button
+      <Button
         type="button"
         className="btn btn-link p-0 d-flex align-items-center gap-2 text-light text-decoration-none"
         onClick={(_e) => onOpenUserModal()}
@@ -44,7 +44,7 @@ export function AuthButton({ onOpenUserModal }: AuthButtonProps) {
           </div>
         )}
         <span>{currentUser.displayName}</span>
-      </button>
+      </Button>
     );
   }
   return (
