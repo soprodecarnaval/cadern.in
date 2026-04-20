@@ -13,7 +13,7 @@ import {
   type CollectionStatus,
 } from "./useCollectionContext";
 
-const CADERNIN_UID = import.meta.env.CADERNIN_UID as string | undefined;
+const CADERNIN_UID = import.meta.env.VITE_CADERNIN_UID as string | undefined;
 
 async function loadCollection(): Promise<ScoreViewModel[]> {
   const [projectDocs, songDocs, revisionDocs] = await Promise.all([

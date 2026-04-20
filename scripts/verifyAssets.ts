@@ -3,15 +3,15 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { zRevisionDoc } from "../types/docs.js";
 
-const FIREBASE_STORAGE_BUCKET =
-  process.env.FIREBASE_STORAGE_BUCKET ??
+const SCRIPTS_FIREBASE_STORAGE_BUCKET =
+  process.env.SCRIPTS_FIREBASE_STORAGE_BUCKET ??
   (() => {
-    throw new Error("FIREBASE_STORAGE_BUCKET not set");
+    throw new Error("VITE_FIREBASE_STORAGE_BUCKET not set");
   })();
 
 initializeApp({
   credential: applicationDefault(),
-  storageBucket: FIREBASE_STORAGE_BUCKET,
+  storageBucket: SCRIPTS_FIREBASE_STORAGE_BUCKET,
 });
 
 const db = getFirestore();

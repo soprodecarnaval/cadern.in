@@ -4,7 +4,7 @@
  *   tsx --env-file=.env.local scripts/migrate.ts cleanup [--execute]
  *
  * Required environment variables:
- *   FIREBASE_STORAGE_BUCKET   Cloud Storage bucket name
+ *   VITE_FIREBASE_STORAGE_BUCKET   Cloud Storage bucket name
  */
 
 import { initializeApp } from "firebase-admin/app";
@@ -14,10 +14,10 @@ import { migrations } from "./migrations/index";
 import { getSchema, setVersion, setCleanedVersion } from "./lib/migration";
 import type { MigrationContext } from "./lib/migration";
 
-const FIREBASE_STORAGE_BUCKET =
-  process.env.FIREBASE_STORAGE_BUCKET ??
+const SCRIPTS_FIREBASE_STORAGE_BUCKET =
+  process.env.SCRIPTS_FIREBASE_STORAGE_BUCKET ??
   (() => {
-    throw new Error("FIREBASE_STORAGE_BUCKET not set");
+    throw new Error("VITE_FIREBASE_STORAGE_BUCKET not set");
   })();
 
 const rawArgs = process.argv.slice(2);
@@ -107,7 +107,7 @@ async function runCleanup(
 }
 
 async function main() {
-  initializeApp({ storageBucket: FIREBASE_STORAGE_BUCKET });
+  initializeApp({ storageBucket: SCRIPTS_FIREBASE_STORAGE_BUCKET });
   const db = getFirestore();
   const bucket = getStorage().bucket();
   const dryRun = !execute;

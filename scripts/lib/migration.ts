@@ -14,9 +14,9 @@ export interface MigrationContext {
 export interface Migration {
   id: string;
   description: string;
-  up(ctx: MigrationContext): Promise<void>;
-  down(ctx: MigrationContext): Promise<void>;
-  cleanup?(ctx: MigrationContext): Promise<void>;
+  up(this: void, ctx: MigrationContext): Promise<void>;
+  down(this: void, ctx: MigrationContext): Promise<void>;
+  cleanup?(this: void, ctx: MigrationContext): Promise<void>;
 }
 
 const zSchemaDoc = z.object({

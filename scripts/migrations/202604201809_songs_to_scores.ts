@@ -76,63 +76,65 @@ async function copyCollection(
       .collection("revisions")
       .get();
 
-    for (const revDoc of revisionsSnap.docs) {
-      const revId = revDoc.id;
-      const rev: RevisionDoc = zRevisionDoc.parse(revDoc.data());
-      const rw = (p: string) => rewritePath(p, src, dest);
+    const batch = db.batch();
 
-      const newMscz = rw(rev.mscz);
-      const newMetajson = rw(rev.metajson);
-      const newMidi = rw(rev.midi);
-      const newParts = rev.parts.map((p) => ({
-        ...p,
-        svg: p.svg.map(rw),
-        midi: rw(p.midi),
-      }));
+    await Promise.all(
+      revisionsSnap.docs.map(async (revDoc) => {
+        const revId = revDoc.id;
+        const rev: RevisionDoc = zRevisionDoc.parse(revDoc.data());
+        const rw = (p: string) => rewritePath(p, src, dest);
 
-      const srcPaths = [
-        rev.mscz,
-        rev.metajson,
-        rev.midi,
-        ...rev.parts.flatMap((p) => [...p.svg, p.midi]),
-      ];
-      const destPaths = [
-        newMscz,
-        newMetajson,
-        newMidi,
-        ...newParts.flatMap((p) => [...p.svg, p.midi]),
-      ];
+        const newMscz = rw(rev.mscz);
+        const newMetajson = rw(rev.metajson);
+        const newMidi = rw(rev.midi);
+        const newParts = rev.parts.map((p) => ({
+          ...p,
+          svg: p.svg.map(rw),
+          midi: rw(p.midi),
+        }));
 
-      console.log(`  revision: ${revId} (${srcPaths.length} files)`);
+        const srcPaths = [
+          rev.mscz,
+          rev.metajson,
+          rev.midi,
+          ...rev.parts.flatMap((p) => [...p.svg, p.midi]),
+        ];
+        const destPaths = [
+          newMscz,
+          newMetajson,
+          newMidi,
+          ...newParts.flatMap((p) => [...p.svg, p.midi]),
+        ];
 
-      for (let i = 0; i < srcPaths.length; i++) {
-        await copyStorageFile(ctx, srcPaths[i], destPaths[i]);
-      }
+        console.log(`  revision: ${revId} (${srcPaths.length} files)`);
 
-      if (dryRun) {
-        console.log(
-          `  [dry] write firestore: ${dest}/${id}/revisions/${revId}`,
+        await Promise.all(
+          srcPaths.map((src, i) => copyStorageFile(ctx, src, destPaths[i])),
         );
-      } else {
-        await destRef
-          .collection("revisions")
-          .doc(revId)
-          .set({
+
+        if (dryRun) {
+          console.log(
+            `  [dry] write firestore: ${dest}/${id}/revisions/${revId}`,
+          );
+        } else {
+          batch.set(destRef.collection("revisions").doc(revId), {
             ...rev,
             mscz: newMscz,
             metajson: newMetajson,
             midi: newMidi,
             parts: newParts,
           });
-        console.log(`  wrote firestore: ${dest}/${id}/revisions/${revId}`);
-      }
-    }
+          console.log(`  queued firestore: ${dest}/${id}/revisions/${revId}`);
+        }
+      }),
+    );
 
     if (dryRun) {
       console.log(`  [dry] write firestore: ${dest}/${id}`);
     } else {
-      await destRef.set(zScoreDoc.parse(scoreDoc.data()));
-      console.log(`  wrote firestore: ${dest}/${id}`);
+      batch.set(destRef, zScoreDoc.parse(scoreDoc.data()));
+      await batch.commit();
+      console.log(`  wrote firestore: ${dest}/${id} (+ revisions batch)`);
     }
 
     console.log("");
@@ -153,26 +155,27 @@ async function deleteCollection(
       .collection("revisions")
       .get();
 
-    for (const rev of revisionsSnap.docs) {
-      if (dryRun) {
+    if (dryRun) {
+      for (const rev of revisionsSnap.docs) {
         console.log(
           `  [dry] delete firestore: ${collectionName}/${doc.id}/revisions/${rev.id}`,
         );
-      } else {
-        await rev.ref.delete();
-        console.log(
-          `  deleted firestore: ${collectionName}/${doc.id}/revisions/${rev.id}`,
-        );
       }
-    }
-
-    if (dryRun) {
       console.log(`  [dry] delete firestore: ${collectionName}/${doc.id}`);
       console.log(`  [dry] delete storage: ${collectionName}/${doc.id}/`);
     } else {
-      await doc.ref.delete();
-      console.log(`  deleted firestore: ${collectionName}/${doc.id}`);
-      await bucket.deleteFiles({ prefix: `${collectionName}/${doc.id}/` });
+      const batch = db.batch();
+      for (const rev of revisionsSnap.docs) {
+        batch.delete(rev.ref);
+      }
+      batch.delete(doc.ref);
+      await Promise.all([
+        batch.commit(),
+        bucket.deleteFiles({ prefix: `${collectionName}/${doc.id}/` }),
+      ]);
+      console.log(
+        `  deleted firestore: ${collectionName}/${doc.id} (+ revisions batch)`,
+      );
       console.log(`  deleted storage: ${collectionName}/${doc.id}/`);
     }
   }

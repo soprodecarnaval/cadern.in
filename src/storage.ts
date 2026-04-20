@@ -1,4 +1,4 @@
-const BUCKET = import.meta.env.FIREBASE_STORAGE_BUCKET;
+const BUCKET = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET;
 
 export function storagePathToUrl(storagePath: string): string {
   const encoded = encodeURIComponent(storagePath).replace(/%2F/g, "%2F");

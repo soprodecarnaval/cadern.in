@@ -25,8 +25,8 @@
  *   --clean            Remove orphaned Firebase docs and storage files at the end
  *
  * Required environment variables (via .env.local):
- *   CADERNIN_UID    Firebase UID of the user responsible for the upload
- *   FIREBASE_STORAGE_BUCKET   Cloud Storage bucket name
+ *   SCRIPTS_CADERNIN_UID    Firebase UID of the user responsible for the upload
+ *   SCRIPTS_FIREBASE_STORAGE_BUCKET   Cloud Storage bucket name
  */
 
 import fs from "fs";
@@ -100,8 +100,8 @@ function parseArgs(argv: string[]): SeedArgs {
 // --- Pipeline ---
 
 async function main(): Promise<void> {
-  const uid = requireEnv("CADERNIN_UID");
-  const storageBucket = requireEnv("FIREBASE_STORAGE_BUCKET");
+  const uid = requireEnv("SCRIPTS_CADERNIN_UID");
+  const storageBucket = requireEnv("VITE_FIREBASE_STORAGE_BUCKET");
 
   const { input, output, force, clean } = parseArgs(process.argv);
 
