@@ -3,6 +3,30 @@ rules_version='2'
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function projectData(projectId) {
+      return get(/databases/$(database)/documents/projects/$(projectId)).data;
+    }
+
+    function memberRole(projectId) {
+      return projectData(projectId).members[request.auth.uid];
+    }
+
+    function isReviewer(projectId) {
+      return memberRole(projectId) in ['owner', 'admin', 'editor', 'reviewer'];
+    }
+
+    function isEditor(projectId) {
+      return memberRole(projectId) in ['owner', 'admin', 'editor'];
+    }
+
+    function isAdmin(projectId) {
+      return memberRole(projectId) in ['owner', 'admin'];
+    }
+
+    function isOwner(projectId) {
+      return memberRole(projectId) == 'owner';
+    }
+
     match /users/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if request.auth != null && request.auth.uid == uid;
@@ -10,23 +34,36 @@ service cloud.firestore {
 
     match /projects/{projectId} {
       allow read: if true;
-      allow create: if request.auth != null;
+      allow create: if request.auth != null &&
+        // Creator must set themselves as owner
+        request.resource.data.members[request.auth.uid] == 'owner' &&
+        request.auth.uid in request.resource.data.memberIds;
       allow update: if request.auth != null && (
-        isProjectMember(resource.data.projectId)
+        // Editors+ can update title and score-related fields
+        (isEditor(projectId) && onlyUpdatingFields(['title'])) ||
+        // Admins+ can add/update members
+        (isAdmin(projectId) && onlyUpdatingFields(['members', 'memberIds', 'title'])) ||
+        // Owners can do anything
+        isOwner(projectId)
       );
+      allow delete: if request.auth != null && isOwner(projectId);
     }
 
-    match /scores/{songId} {
+    match /scores/{scoreId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && (
-        isProjectMember(resource.data.projectId)
-      );
+      allow create: if request.auth != null &&
+        isEditor(request.resource.data.projectId);
+      allow update: if request.auth != null &&
+        isEditor(resource.data.projectId);
+      allow delete: if request.auth != null &&
+        isAdmin(resource.data.projectId);
 
       match /revisions/{revisionId} {
         allow read: if true;
-        allow create: if request.auth != null;
-        allow update: if request.auth != null;
+        allow create: if request.auth != null &&
+          isEditor(get(/databases/$(database)/documents/scores/$(scoreId)).data.projectId);
+        allow update: if request.auth != null &&
+          isEditor(get(/databases/$(database)/documents/scores/$(scoreId)).data.projectId);
       }
     }
 
@@ -37,17 +74,36 @@ service cloud.firestore {
 
     match /songbooks/{songbookId} {
       allow read: if resource.data.isPublished == true || (
-        request.auth != null && resource.data.ownerId == request.auth.uid
+        request.auth != null &&
+        isReviewer(resource.data.projectId)
       );
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null &&
-        resource.data.ownerId == request.auth.uid;
+      allow create: if request.auth != null &&
+        isEditor(request.resource.data.projectId);
+      allow update: if request.auth != null &&
+        isEditor(resource.data.projectId);
+      allow delete: if request.auth != null &&
+        isAdmin(resource.data.projectId);
     }
 
-    function isProjectMember(projectId) {
-      let project = get(/databases/$(database)/documents/projects/$(projectId)).data;
-      return request.auth.uid == project.ownerId ||
-        request.auth.uid in project.collaboratorIds;
+    match /invitations/{invitationId} {
+      // Recipient can read their own invitations; admins can read project invitations
+      allow read: if request.auth != null && (
+        resource.data.toUserId == request.auth.uid ||
+        isAdmin(resource.data.projectId)
+      );
+      // Admins+ can send invitations
+      allow create: if request.auth != null &&
+        isAdmin(request.resource.data.projectId) &&
+        request.resource.data.fromUserId == request.auth.uid;
+      // Recipient can accept/deny; admins can cancel (set deletedAt)
+      allow update: if request.auth != null && (
+        resource.data.toUserId == request.auth.uid ||
+        isAdmin(resource.data.projectId)
+      );
+    }
+
+    function onlyUpdatingFields(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
   }
 }

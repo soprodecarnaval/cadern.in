@@ -29,16 +29,15 @@ export type OnProgress = (progress: UploadProgress) => void;
 
 export async function getOrCreateDefaultProject(user: User): Promise<string> {
   const title = defaultProjectTitle(user.displayName ?? user.email ?? "user");
-  const projectId = slugify(title);
-  const existing = await getProject(projectId);
+  const slug = slugify(title);
+  const existing = await getProject(slug);
   if (!existing) {
-    await createProject(projectId, {
+    await createProject(slug, {
       title,
-      ownerId: user.uid,
-      collaboratorIds: [],
+      members: { [user.uid]: "owner" },
     });
   }
-  return projectId;
+  return slug;
 }
 
 export async function uploadScore(

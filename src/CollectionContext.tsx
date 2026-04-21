@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, ReactNode } from "react";
 import Fuse, { IFuseOptions } from "fuse.js";
 import { storagePathToUrl } from "./storage";
 import { getAllProjects, getAllScores, getLatestRevisions } from "./lib/db";
+import { isOwner } from "./lib/roles";
 import type {
   ScoreViewModel,
   RevisionViewModel,
@@ -24,7 +25,7 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
 
   const filteredProjectDocs = FEATURE_FLAG_AUTH_ENABLED
     ? projectDocs
-    : projectDocs.filter((p) => p.ownerId === CADERNIN_UID);
+    : projectDocs.filter((p) => CADERNIN_UID && isOwner(p, CADERNIN_UID));
 
   const projectTitles = new Map(
     filteredProjectDocs.map((p) => [p.id, p.title]),
