@@ -6,8 +6,6 @@ import {
   Card,
   Container,
   Form,
-  FormControl,
-  FormControlProps,
   ProgressBar,
   Table,
 } from "react-bootstrap";
