@@ -5,8 +5,8 @@ import fs from "fs";
 import path from "path";
 import type { LegacyCollection, LegacyScore } from "./legacyCollectionTypes";
 import { zProjectDoc, zScoreDoc, zRevisionDoc } from "../../types/docs.js";
-import { SCORES_COLLECTION } from "../../constants";
 import type { z } from "zod";
+import { FIRESTORE_DATABASE_ID } from "./env";
 
 export interface FirebaseConfig {
   uid: string;
@@ -44,7 +44,7 @@ function revisionStoragePaths(rev: z.infer<typeof zRevisionDoc>): string[] {
 
 async function allAssetsExist(
   bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>,
-  paths: string[]
+  paths: string[],
 ): Promise<boolean> {
   const results = await Promise.all(paths.map((p) => bucket.file(p).exists()));
   return results.every(([exists]) => exists);
@@ -53,7 +53,7 @@ async function allAssetsExist(
 async function uploadFile(
   bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>,
   localPath: string,
-  storagePath: string
+  storagePath: string,
 ): Promise<void> {
   if (!fs.existsSync(localPath)) {
     console.warn(`    ! not found, skipping: ${localPath}`);
@@ -69,7 +69,7 @@ async function uploadScore(
   collectionBase: string,
   score: LegacyScore,
   projectId: string,
-  uid: string
+  uid: string,
 ): Promise<void> {
   const scoreId = slugify(score.id);
   const revId = "1";
@@ -96,7 +96,7 @@ async function uploadScore(
 
   console.log(`  song: ${score.title} (${scoreId})`);
 
-  const songRef = db.collection(SCORES_COLLECTION).doc(scoreId);
+  const songRef = db.collection("scores").doc(scoreId);
   const existing = await songRef.collection("revisions").doc(revId).get();
   if (existing.exists) {
     const existingRev = zRevisionDoc.parse(existing.data());
@@ -123,23 +123,26 @@ async function uploadScore(
       uploadedBy: uid,
       latestRevisionId: revId,
       createdAt: FieldValue.serverTimestamp(),
-    })
+    }),
   );
 
   console.log(`  writing firestore: scores/${scoreId}/revisions/${revId}`);
-  await songRef.collection("revisions").doc(revId).set(
-    zRevisionDoc.parse({
-      revisionNumber: 1,
-      uploadedBy: uid,
-      uploadedAt: FieldValue.serverTimestamp(),
-      mscz: `${storageBase}/score.mscz`,
-      metajson: `${storageBase}/score.metajson`,
-      midi: `${storageBase}/score.midi`,
-      parts: migratedParts,
-      notes: "",
-      isLatest: true,
-    })
-  );
+  await songRef
+    .collection("revisions")
+    .doc(revId)
+    .set(
+      zRevisionDoc.parse({
+        revisionNumber: 1,
+        uploadedBy: uid,
+        uploadedAt: FieldValue.serverTimestamp(),
+        mscz: `${storageBase}/score.mscz`,
+        metajson: `${storageBase}/score.metajson`,
+        midi: `${storageBase}/score.midi`,
+        parts: migratedParts,
+        notes: "",
+        isLatest: true,
+      }),
+    );
 
   console.log(`  done\n`);
 }
@@ -148,17 +151,21 @@ async function cleanOrphans(
   db: FirebaseFirestore.Firestore,
   bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>,
   expectedSongIds: Set<string>,
-  expectedProjectIds: Set<string>
+  expectedProjectIds: Set<string>,
 ): Promise<void> {
   console.log("\nCleaning orphaned docs...");
 
   const [songsSnap, projectsSnap] = await Promise.all([
-    db.collection(SCORES_COLLECTION).get(),
+    db.collection("scores").get(),
     db.collection("projects").get(),
   ]);
 
-  const orphanedSongs = songsSnap.docs.filter((d) => !expectedSongIds.has(d.id));
-  const orphanedProjects = projectsSnap.docs.filter((d) => !expectedProjectIds.has(d.id));
+  const orphanedSongs = songsSnap.docs.filter(
+    (d) => !expectedSongIds.has(d.id),
+  );
+  const orphanedProjects = projectsSnap.docs.filter(
+    (d) => !expectedProjectIds.has(d.id),
+  );
 
   for (const doc of orphanedSongs) {
     console.log(`  deleting storage: scores/${doc.id}/`);
@@ -174,7 +181,9 @@ async function cleanOrphans(
     await doc.ref.delete();
   }
 
-  console.log(`  removed ${orphanedSongs.length} song(s), ${orphanedProjects.length} project(s)\n`);
+  console.log(
+    `  removed ${orphanedSongs.length} song(s), ${orphanedProjects.length} project(s)\n`,
+  );
 }
 
 /**
@@ -185,20 +194,22 @@ export async function seedToFirebase(
   collectionBase: string,
   collection: LegacyCollection,
   config: FirebaseConfig,
-  opts: SeedOptions
+  opts: SeedOptions,
 ): Promise<void> {
   // Uses Application Default Credentials (ADC). Before running, authenticate via:
   //   gcloud auth application-default login
   // Or set the GOOGLE_APPLICATION_CREDENTIALS env var to a service account key file.
   initializeApp({ credential: undefined, storageBucket: config.storageBucket });
 
-  const db = getFirestore();
+  const db = getFirestore(FIRESTORE_DATABASE_ID);
   const bucket = getStorage().bucket();
 
   const expectedSongIds = new Set(
-    collection.projects.flatMap((p) => p.scores.map((s) => slugify(s.id)))
+    collection.projects.flatMap((p) => p.scores.map((s) => slugify(s.id))),
   );
-  const expectedProjectIds = new Set(collection.projects.map((p) => slugify(p.title)));
+  const expectedProjectIds = new Set(
+    collection.projects.map((p) => slugify(p.title)),
+  );
 
   if (opts.clean) {
     await cleanOrphans(db, bucket, expectedSongIds, expectedProjectIds);
@@ -208,16 +219,26 @@ export async function seedToFirebase(
     const projectId = slugify(project.title);
     console.log(`\nproject: ${project.title} (${projectId})`);
     console.log(`writing firestore: projects/${projectId}`);
-    await db.collection("projects").doc(projectId).set(
-      zProjectDoc.parse({
-        title: project.title,
-        ownerId: config.uid,
-        collaboratorIds: [],
-        createdAt: FieldValue.serverTimestamp(),
-      })
-    );
+    await db
+      .collection("projects")
+      .doc(projectId)
+      .set(
+        zProjectDoc.parse({
+          title: project.title,
+          ownerId: config.uid,
+          collaboratorIds: [],
+          createdAt: FieldValue.serverTimestamp(),
+        }),
+      );
     for (const score of project.scores) {
-      await uploadScore(db, bucket, collectionBase, score, projectId, config.uid);
+      await uploadScore(
+        db,
+        bucket,
+        collectionBase,
+        score,
+        projectId,
+        config.uid,
+      );
     }
   }
 }

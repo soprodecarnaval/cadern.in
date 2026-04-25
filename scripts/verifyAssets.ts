@@ -2,19 +2,14 @@ import { initializeApp, applicationDefault } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { zRevisionDoc } from "../types/docs.js";
-
-const SCRIPTS_FIREBASE_STORAGE_BUCKET =
-  process.env.SCRIPTS_FIREBASE_STORAGE_BUCKET ??
-  (() => {
-    throw new Error("VITE_FIREBASE_STORAGE_BUCKET not set");
-  })();
+import { FIREBASE_STORAGE_BUCKET, FIRESTORE_DATABASE_ID } from "./lib/env";
 
 initializeApp({
   credential: applicationDefault(),
-  storageBucket: SCRIPTS_FIREBASE_STORAGE_BUCKET,
+  storageBucket: FIREBASE_STORAGE_BUCKET,
 });
 
-const db = getFirestore();
+const db = getFirestore(FIRESTORE_DATABASE_ID);
 const bucket = getStorage().bucket();
 
 async function fileExists(storagePath: string): Promise<boolean> {

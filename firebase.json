@@ -1,11 +1,7 @@
 {
   "hosting": {
     "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "**",
@@ -14,7 +10,7 @@
     ]
   },
   "firestore": {
-    "database": "(default)",
+    "database": "cadernin-2026-04-22",
     "location": "southamerica-east1",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"

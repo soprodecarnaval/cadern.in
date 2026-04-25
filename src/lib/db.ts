@@ -38,14 +38,13 @@ import type z from "zod";
 type ScoreData = z.infer<typeof zScoreData>;
 type RevisionData = z.infer<typeof zRevisionData>;
 type UserProjectInvitationData = z.infer<typeof zUserProjectInvitationData>;
-import { SCORES_COLLECTION } from "../../constants";
 
 export type WithId<T> = T & { id: string };
 
 // -- Scores --
 
 export async function getScore(id: string): Promise<WithId<ScoreDoc> | null> {
-  const snap = await getDoc(doc(db, SCORES_COLLECTION, id));
+  const snap = await getDoc(doc(db, "scores", id));
   if (!snap.exists()) return null;
   return { id: snap.id, ...zScoreDoc.parse(snap.data()) };
 }
@@ -55,7 +54,7 @@ export async function getRevision(
   revisionId: string,
 ): Promise<WithId<RevisionDoc> | null> {
   const snap = await getDoc(
-    doc(db, SCORES_COLLECTION, scoreId, "revisions", revisionId),
+    doc(db, "scores", scoreId, "revisions", revisionId),
   );
   if (!snap.exists()) return null;
   return { id: snap.id, ...zRevisionDoc.parse(snap.data()) };
@@ -64,9 +63,7 @@ export async function getRevision(
 export async function getScoreRevisions(
   scoreId: string,
 ): Promise<WithId<RevisionDoc>[]> {
-  const snap = await getDocs(
-    collection(db, SCORES_COLLECTION, scoreId, "revisions"),
-  );
+  const snap = await getDocs(collection(db, "scores", scoreId, "revisions"));
   return snap.docs
     .map((d) => ({ id: d.id, ...zRevisionDoc.parse(d.data()) }))
     .sort((a, b) => b.revisionNumber - a.revisionNumber);
@@ -76,10 +73,7 @@ export async function getProjectScores(
   projectId: string,
 ): Promise<WithId<ScoreDoc>[]> {
   const snap = await getDocs(
-    query(
-      collection(db, SCORES_COLLECTION),
-      where("projectId", "==", projectId),
-    ),
+    query(collection(db, "scores"), where("projectId", "==", projectId)),
   );
   return snap.docs
     .map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }))
@@ -88,7 +82,7 @@ export async function getProjectScores(
 
 export async function getUserScores(uid: string): Promise<WithId<ScoreDoc>[]> {
   const snap = await getDocs(
-    query(collection(db, SCORES_COLLECTION), where("uploadedBy", "==", uid)),
+    query(collection(db, "scores"), where("uploadedBy", "==", uid)),
   );
   return snap.docs
     .map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }))
@@ -96,7 +90,7 @@ export async function getUserScores(uid: string): Promise<WithId<ScoreDoc>[]> {
 }
 
 export async function getAllScores(): Promise<WithId<ScoreDoc>[]> {
-  const snap = await getDocs(collection(db, SCORES_COLLECTION));
+  const snap = await getDocs(collection(db, "scores"));
   return snap.docs.map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }));
 }
 
@@ -114,7 +108,7 @@ export async function getLatestRevisions(): Promise<
 }
 
 export async function createScore(id: string, data: ScoreData): Promise<void> {
-  await setDoc(doc(db, SCORES_COLLECTION, id), {
+  await setDoc(doc(db, "scores", id), {
     ...zScoreData.parse(data),
     createdAt: serverTimestamp(),
     deletedAt: null,
@@ -125,11 +119,11 @@ export async function updateScore(
   id: string,
   data: Partial<ScoreData>,
 ): Promise<void> {
-  await updateDoc(doc(db, SCORES_COLLECTION, id), data);
+  await updateDoc(doc(db, "scores", id), data);
 }
 
 export async function softDeleteScore(id: string): Promise<void> {
-  await updateDoc(doc(db, SCORES_COLLECTION, id), {
+  await updateDoc(doc(db, "scores", id), {
     deletedAt: serverTimestamp(),
   });
 }
@@ -139,7 +133,7 @@ export async function createRevision(
   revisionId: string,
   data: RevisionData,
 ): Promise<void> {
-  await setDoc(doc(db, SCORES_COLLECTION, scoreId, "revisions", revisionId), {
+  await setDoc(doc(db, "scores", scoreId, "revisions", revisionId), {
     ...zRevisionData.parse(data),
     uploadedAt: serverTimestamp(),
   });
@@ -150,10 +144,7 @@ export async function updateRevision(
   revisionId: string,
   data: Partial<RevisionData>,
 ): Promise<void> {
-  await updateDoc(
-    doc(db, SCORES_COLLECTION, scoreId, "revisions", revisionId),
-    data,
-  );
+  await updateDoc(doc(db, "scores", scoreId, "revisions", revisionId), data);
 }
 
 // -- Projects --

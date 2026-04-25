@@ -40,14 +40,7 @@ import {
 } from "./lib/mscz";
 import { indexCollection } from "./lib/indexCollection";
 import { seedToFirebase } from "./lib/firebase";
-
-// --- Validação de variáveis de ambiente ---
-
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required environment variable: ${name}`);
-  return value;
-}
+import { CADERNIN_UID, FIREBASE_STORAGE_BUCKET } from "./lib/env";
 
 // --- Parsing de argumentos ---
 
@@ -100,8 +93,8 @@ function parseArgs(argv: string[]): SeedArgs {
 // --- Pipeline ---
 
 async function main(): Promise<void> {
-  const uid = requireEnv("SCRIPTS_CADERNIN_UID");
-  const storageBucket = requireEnv("VITE_FIREBASE_STORAGE_BUCKET");
+  const uid = CADERNIN_UID;
+  const storageBucket = FIREBASE_STORAGE_BUCKET;
 
   const { input, output, force, clean } = parseArgs(process.argv);
 

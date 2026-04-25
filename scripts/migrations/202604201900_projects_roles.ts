@@ -1,13 +1,6 @@
 import { z } from "zod";
 import type { Migration, MigrationContext } from "../lib/migration";
 
-const zLegacyProjectDoc = z.object({
-  title: z.string(),
-  ownerId: z.string(),
-  collaboratorIds: z.array(z.string()),
-  createdAt: z.unknown(),
-});
-
 function slugify(title: string): string {
   return title
     .toLowerCase()
@@ -31,6 +24,13 @@ const migration: Migration = {
   description: "projects: collaboratorIds → members/memberIds, slug as doc ID",
 
   async up(ctx: MigrationContext) {
+    const zLegacyProjectDoc = z.object({
+      title: z.string(),
+      ownerId: z.string(),
+      collaboratorIds: z.array(z.string()),
+      createdAt: z.unknown(),
+    });
+
     const { db, dryRun } = ctx;
     const snap = await db.collection("projects").get();
     console.log(`Found ${snap.size} projects\n`);
@@ -57,12 +57,11 @@ const migration: Migration = {
       if (dryRun) {
         console.log(`  [dry] create projects/${slug}`);
         console.log(`  [dry] update scores where projectId == ${oldId}`);
-        console.log(`  [dry] delete projects/${oldId}`);
+        if (oldId !== slug) console.log(`  [dry] delete projects/${oldId}`);
         console.log("");
         continue;
       }
 
-      // Find all scores referencing the old project ID
       const scoresSnap = await db
         .collection("scores")
         .where("projectId", "==", oldId)
@@ -70,7 +69,6 @@ const migration: Migration = {
 
       const batch = db.batch();
 
-      // Create new project doc with slug as ID
       batch.set(db.collection("projects").doc(slug), {
         title: data.title,
         slug,
@@ -79,33 +77,40 @@ const migration: Migration = {
         createdAt: data.createdAt,
       });
 
-      // Update each score's projectId
       for (const scoreDoc of scoresSnap.docs) {
         batch.update(scoreDoc.ref, { projectId: slug });
       }
 
-      // Delete old project doc
-      batch.delete(docSnap.ref);
+      if (oldId !== slug) {
+        batch.delete(docSnap.ref);
+      }
 
       await batch.commit();
       console.log(
-        `  migrated: projects/${slug}, updated ${scoresSnap.size} scores, deleted projects/${oldId}`,
+        `  migrated: projects/${slug}, updated ${scoresSnap.size} scores${oldId !== slug ? `, deleted projects/${oldId}` : ""}`,
       );
       console.log("");
     }
   },
 
   async down(ctx: MigrationContext) {
+    const zNewProjectDoc = z.object({
+      title: z.string(),
+      slug: z.string(),
+      members: z.record(z.string(), z.string()),
+      memberIds: z.array(z.string()),
+      createdAt: z.unknown(),
+    });
+
     const { db, dryRun } = ctx;
     const snap = await db.collection("projects").get();
     console.log(`Found ${snap.size} projects\n`);
 
     for (const docSnap of snap.docs) {
-      const data = docSnap.data();
-      const members: Record<string, string> = data.members ?? {};
+      const data = zNewProjectDoc.parse(docSnap.data());
       const ownerId =
-        Object.entries(members).find(([, role]) => role === "owner")?.[0] ?? "";
-      const collaboratorIds = Object.entries(members)
+        Object.entries(data.members).find(([, role]) => role === "owner")?.[0] ?? "";
+      const collaboratorIds = Object.entries(data.members)
         .filter(([, role]) => role !== "owner")
         .map(([uid]) => uid);
 
@@ -138,7 +143,10 @@ const migration: Migration = {
         batch.update(scoreDoc.ref, { projectId: newRef.id });
       }
 
-      batch.delete(docSnap.ref);
+      if (newRef.id !== slug) {
+        batch.delete(docSnap.ref);
+      }
+
       await batch.commit();
       console.log(
         `  rolled back: projects/${newRef.id}, updated ${scoresSnap.size} scores`,
