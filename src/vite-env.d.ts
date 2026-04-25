@@ -20,7 +20,7 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_MESSAGING_SENDER_ID: string;
   readonly VITE_FIREBASE_APP_ID: string;
   readonly VITE_FIREBASE_MEASUREMENT_ID: string | undefined;
-  readonly VITE_FIRESTORE_DATABASE_ID: string | undefined;
+  readonly VITE_FIRESTORE_DATABASE_ID: string;
   readonly VITE_CADERNIN_UID: string | undefined;
   readonly VITE_FEATURE_FLAG_AUTH_ENABLED: string | undefined;
 }
