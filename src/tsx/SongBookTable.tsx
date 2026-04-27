@@ -161,7 +161,7 @@ const SongBookTable = ({
         <Col>
           <p>
             {rows.filter(isSongbookSection).length} seções e{" "}
-            {rows.filter((r: any) => !isSongbookSection(r)).length} músicas
+            {rows.filter((r) => !isSongbookSection(r)).length} músicas
           </p>
         </Col>
         <Col>

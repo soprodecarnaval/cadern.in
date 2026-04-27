@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { Alert, Badge, Button, Container, Spinner, Table } from "react-bootstrap";
+import {
+  Alert,
+  Badge,
+  Button,
+  Container,
+  Spinner,
+  Table,
+} from "react-bootstrap";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import { getProjectBySlug, getProjectScores, type WithId } from "../lib/db";
@@ -24,18 +31,24 @@ export function PublicProjectPage() {
   const { slug } = useParams<{ slug: string }>();
   const { currentUser } = useAuth();
 
-  const [project, setProject] = useState<WithId<ProjectDoc> | null | "loading">("loading");
+  const [project, setProject] = useState<WithId<ProjectDoc> | null | "loading">(
+    "loading",
+  );
   const [scores, setScores] = useState<WithId<ScoreDoc>[]>([]);
   const [scoresLoading, setScoresLoading] = useState(true);
 
   useEffect(() => {
-    if (!slug) return;
-    getProjectBySlug(slug).then(setProject);
+    if (!slug) {
+      return;
+    }
+    void getProjectBySlug(slug).then(setProject);
   }, [slug]);
 
   useEffect(() => {
-    if (!slug || project === "loading" || project === null) return;
-    getProjectScores(slug).then((s) => {
+    if (!slug || project === "loading" || project === null) {
+      return;
+    }
+    void getProjectScores(slug).then((s) => {
       setScores(s);
       setScoresLoading(false);
     });
@@ -57,9 +70,7 @@ export function PublicProjectPage() {
     );
   }
 
-  const myRole = currentUser
-    ? memberRole(project, currentUser.uid)
-    : undefined;
+  const myRole = currentUser ? memberRole(project, currentUser.uid) : undefined;
   const canManage = currentUser ? isAdmin(project, currentUser.uid) : false;
 
   return (
@@ -68,10 +79,12 @@ export function PublicProjectPage() {
         <h2>{project.title}</h2>
         <div className="d-flex gap-2 align-items-center">
           {myRole && (
-            <Badge bg={ROLE_BADGE_VARIANTS[myRole]}>{ROLE_LABELS[myRole]}</Badge>
+            <Badge bg={ROLE_BADGE_VARIANTS[myRole]}>
+              {ROLE_LABELS[myRole]}
+            </Badge>
           )}
           {canManage && (
-            <Link to={`/projects/${slug}/settings`}>
+            <Link to={`/projects/${slug ?? ""}/settings`}>
               <Button size="sm" variant="outline-primary">
                 Configurações
               </Button>

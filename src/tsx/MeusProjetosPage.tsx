@@ -1,8 +1,21 @@
 import { useEffect, useState } from "react";
-import { Alert, Badge, Button, Card, Col, Container, Row, Spinner } from "react-bootstrap";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Col,
+  Container,
+  Row,
+  Spinner,
+} from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth";
-import { getUserMemberProjects, getProjectScores, type WithId } from "../lib/db";
+import {
+  getUserMemberProjects,
+  getProjectScores,
+  type WithId,
+} from "../lib/db";
 import { memberRole, isAdmin } from "../lib/roles";
 import type { ProjectDoc, UserProjectRole } from "../../types/docs";
 
@@ -32,7 +45,9 @@ function ProjectCard({
   const [scoreCount, setScoreCount] = useState<number | null>(null);
 
   useEffect(() => {
-    getProjectScores(project.id).then((scores) => setScoreCount(scores.length));
+    void getProjectScores(project.id).then((scores) =>
+      setScoreCount(scores.length),
+    );
   }, [project.id]);
 
   return (
@@ -77,8 +92,10 @@ export function MeusProjetosPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) return;
-    getUserMemberProjects(currentUser.uid).then((results) => {
+    if (!currentUser) {
+      return;
+    }
+    void getUserMemberProjects(currentUser.uid).then((results) => {
       setProjects(results);
       setLoading(false);
     });
@@ -104,11 +121,16 @@ export function MeusProjetosPage() {
       {loading ? (
         <Spinner animation="border" />
       ) : projects.length === 0 ? (
-        <Alert variant="info">Você ainda não participa de nenhum projeto.</Alert>
+        <Alert variant="info">
+          Você ainda não participa de nenhum projeto.
+        </Alert>
       ) : (
         <Row xs={1} sm={2} lg={3} className="g-3">
           {projects.map((project) => {
-            const myRole = memberRole(project, currentUser.uid) as UserProjectRole;
+            const myRole = memberRole(
+              project,
+              currentUser.uid,
+            ) as UserProjectRole;
             return (
               <Col key={project.id}>
                 <ProjectCard

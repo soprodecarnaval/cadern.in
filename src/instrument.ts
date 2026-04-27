@@ -68,7 +68,7 @@ export const parseInstrument = (raw: string): Instrument | undefined => {
 export const extractPartLabel = (
   partName: string,
   songTitle: string,
-  stripInstrument: boolean = false,
+  stripInstrument = false,
 ): string | undefined => {
   // Normalize: replace separators with spaces, lowercase
   let normalized = partName.replace(/[_\-.]/g, " ").toLowerCase();

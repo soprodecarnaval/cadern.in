@@ -30,7 +30,11 @@ interface MetajsonFields {
 async function readMetajson(file: File): Promise<MetajsonFields | null> {
   try {
     const text = await file.text();
-    const data = JSON.parse(text);
+    const data = JSON.parse(text) as {
+      composer?: string;
+      previousSource?: string;
+      poet?: string;
+    };
     return {
       composer: data.composer ?? "",
       sub: data.previousSource ?? "",
@@ -59,9 +63,7 @@ function getExtension(filename: string): string {
   return dotIdx > 0 ? filename.substring(dotIdx) : "";
 }
 
-export async function parseUploadedFiles(
-  files: File[],
-): Promise<ParsedScore> {
+export async function parseUploadedFiles(files: File[]): Promise<ParsedScore> {
   const warnings: Warning[] = [];
   const fileMap = new Map<string, File>();
 
@@ -76,7 +78,10 @@ export async function parseUploadedFiles(
     msczFile = msczFiles[0];
     title = removeExtension(msczFile.name);
   } else if (msczFiles.length > 1) {
-    warnings.push({ code: "MULTIPLE_MSCZ", meta: { files: msczFiles.map((f) => f.name) } });
+    warnings.push({
+      code: "MULTIPLE_MSCZ",
+      meta: { files: msczFiles.map((f) => f.name) },
+    });
     msczFile = msczFiles[0];
     title = removeExtension(msczFile.name);
   } else {
@@ -93,7 +98,10 @@ export async function parseUploadedFiles(
         meta = parsed;
         fileMap.set("metajson", file);
       } else {
-        warnings.push({ code: "METAJSON_PARSE_FAILED", meta: { file: file.name } });
+        warnings.push({
+          code: "METAJSON_PARSE_FAILED",
+          meta: { file: file.name },
+        });
       }
       continue;
     }
@@ -105,7 +113,9 @@ export async function parseUploadedFiles(
       continue;
     }
 
-    if (ext !== ".svg" && ext !== ".midi") continue;
+    if (ext !== ".svg" && ext !== ".midi") {
+      continue;
+    }
 
     // Parse instrument from filename (remove song title first)
     const withoutTitle = basename.replace(title, "");
@@ -115,7 +125,10 @@ export async function parseUploadedFiles(
       if (ext === ".midi" && !fileMap.has("midi")) {
         fileMap.set("midi", file);
       } else {
-        warnings.push({ code: "INSTRUMENT_NOT_DETECTED", meta: { file: file.name } });
+        warnings.push({
+          code: "INSTRUMENT_NOT_DETECTED",
+          meta: { file: file.name },
+        });
       }
       continue;
     }
@@ -151,9 +164,7 @@ export async function parseUploadedFiles(
   const parts: PartData[] = [];
   for (const [, draft] of partDrafts) {
     draft.svg.sort((a, b) => a.page - b.page);
-    const svgPaths = draft.svg.map(
-      (s) => `parts/${draft.name}-${s.page}.svg`,
-    );
+    const svgPaths = draft.svg.map((s) => `parts/${draft.name}-${s.page}.svg`);
     const midiPath = `parts/${draft.name}.midi`;
 
     if (svgPaths.length === 0) {
@@ -198,7 +209,9 @@ export function validateParsedScore(parsed: ParsedScore): Warning[] {
     tags: parsed.tags,
     parts: parsed.parts,
   });
-  if (result.success) return [];
+  if (result.success) {
+    return [];
+  }
 
   return result.error.errors.map((e) => ({
     code: "VALIDATION_ERROR" as const,

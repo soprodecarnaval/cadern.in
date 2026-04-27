@@ -45,9 +45,13 @@ const ROLE_BADGE_VARIANTS: Record<UserProjectRole, string> = {
 };
 
 function formatDate(timestamp: unknown): string {
-  if (!timestamp || typeof timestamp !== "object") return "—";
+  if (!timestamp || typeof timestamp !== "object") {
+    return "—";
+  }
   const ts = timestamp as { toDate?: () => Date };
-  if (!ts.toDate) return "—";
+  if (!ts.toDate) {
+    return "—";
+  }
   return ts.toDate().toLocaleDateString("pt-BR");
 }
 
@@ -55,8 +59,12 @@ export function ProjectSettingsPage() {
   const { slug } = useParams<{ slug: string }>();
   const { currentUser } = useAuth();
 
-  const [project, setProject] = useState<WithId<ProjectDoc> | null | "loading">("loading");
-  const [invitations, setInvitations] = useState<WithId<UserProjectInvitationDoc>[]>([]);
+  const [project, setProject] = useState<WithId<ProjectDoc> | null | "loading">(
+    "loading",
+  );
+  const [invitations, setInvitations] = useState<
+    WithId<UserProjectInvitationDoc>[]
+  >([]);
 
   const [titleInput, setTitleInput] = useState("");
   const [titlePending, setTitlePending] = useState(false);
@@ -72,12 +80,16 @@ export function ProjectSettingsPage() {
   const [cancellingInvite, setCancellingInvite] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!slug) return;
-    getProjectBySlug(slug).then((p) => {
+    if (!slug) {
+      return;
+    }
+    void getProjectBySlug(slug).then((p) => {
       setProject(p);
-      if (p) setTitleInput(p.title);
+      if (p) {
+        setTitleInput(p.title);
+      }
     });
-    getProjectUserProjectInvitations(slug).then(setInvitations);
+    void getProjectUserProjectInvitations(slug).then(setInvitations);
   }, [slug]);
 
   if (project === "loading") {
@@ -107,7 +119,9 @@ export function ProjectSettingsPage() {
 
   const handleSaveTitle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!slug) return;
+    if (!slug) {
+      return;
+    }
     setTitleError("");
     setTitleSuccess("");
     setTitlePending(true);
@@ -124,7 +138,9 @@ export function ProjectSettingsPage() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!slug || !currentUser) return;
+    if (!slug || !currentUser) {
+      return;
+    }
     setInvitePending(true);
     setInviteMessage("");
     try {
@@ -153,7 +169,9 @@ export function ProjectSettingsPage() {
   };
 
   const handleRoleChange = async (uid: string, role: UserProjectRole) => {
-    if (!slug) return;
+    if (!slug) {
+      return;
+    }
     await updateProjectMemberRole(slug, uid, role);
     setProject({
       ...project,
@@ -162,7 +180,9 @@ export function ProjectSettingsPage() {
   };
 
   const handleRemoveMember = async (uid: string) => {
-    if (!slug || !confirm("Remover este membro do projeto?")) return;
+    if (!slug || !confirm("Remover este membro do projeto?")) {
+      return;
+    }
     setRemovingMember(uid);
     try {
       await removeProjectMember(slug, uid);
@@ -175,7 +195,9 @@ export function ProjectSettingsPage() {
   };
 
   const handleCancelInvitation = async (id: string) => {
-    if (!confirm("Cancelar este convite?")) return;
+    if (!confirm("Cancelar este convite?")) {
+      return;
+    }
     setCancellingInvite(id);
     try {
       await cancelUserProjectInvitation(id);
@@ -185,7 +207,7 @@ export function ProjectSettingsPage() {
     }
   };
 
-  const members = Object.entries(project.members) as [string, UserProjectRole][];
+  const members = Object.entries(project.members);
   const pendingInvitations = invitations.filter((inv) => inv.accepted === null);
 
   return (
@@ -210,7 +232,9 @@ export function ProjectSettingsPage() {
           <Button type="submit" size="sm" disabled={titlePending}>
             {titlePending ? <Spinner animation="border" size="sm" /> : "Salvar"}
           </Button>
-          {titleSuccess && <span className="ms-2 text-success">{titleSuccess}</span>}
+          {titleSuccess && (
+            <span className="ms-2 text-success">{titleSuccess}</span>
+          )}
           {titleError && <span className="ms-2 text-danger">{titleError}</span>}
         </Form>
       </section>
@@ -242,7 +266,10 @@ export function ProjectSettingsPage() {
                       size="sm"
                       value={role}
                       onChange={(e) =>
-                        void handleRoleChange(uid, e.target.value as UserProjectRole)
+                        void handleRoleChange(
+                          uid,
+                          e.target.value as UserProjectRole,
+                        )
                       }
                       style={{ width: "auto" }}
                     >
@@ -281,7 +308,10 @@ export function ProjectSettingsPage() {
       {/* Invite */}
       <section className="mb-5">
         <h5>Convidar</h5>
-        <Form onSubmit={(e) => void handleInvite(e)} className="d-flex gap-2 align-items-end flex-wrap">
+        <Form
+          onSubmit={(e) => void handleInvite(e)}
+          className="d-flex gap-2 align-items-end flex-wrap"
+        >
           <Form.Group>
             <Form.Label>Email</Form.Label>
             <Form.Control
@@ -308,7 +338,11 @@ export function ProjectSettingsPage() {
             </Form.Select>
           </Form.Group>
           <Button type="submit" disabled={invitePending}>
-            {invitePending ? <Spinner animation="border" size="sm" /> : "Convidar"}
+            {invitePending ? (
+              <Spinner animation="border" size="sm" />
+            ) : (
+              "Convidar"
+            )}
           </Button>
           {inviteMessage && (
             <span className="text-success align-self-end">{inviteMessage}</span>

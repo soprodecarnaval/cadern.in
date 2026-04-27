@@ -24,6 +24,7 @@ module.exports = {
     ],
     "@typescript-eslint/no-non-null-assertion": "off",
     "object-curly-spacing": "off",
+    curly: "error",
     "no-unused-vars": "off",
     "@typescript-eslint/no-unused-vars": [
       "warn", // or "error"

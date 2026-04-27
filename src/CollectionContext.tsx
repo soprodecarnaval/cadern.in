@@ -39,9 +39,13 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
   const scores: ScoreViewModel[] = [];
 
   for (const song of songDocs) {
-    if (song.deletedAt) continue;
+    if (song.deletedAt) {
+      continue;
+    }
     const revision = revisionsByScoreId.get(song.id);
-    if (!revision) continue;
+    if (!revision) {
+      continue;
+    }
 
     const parts: PartViewModel[] = revision.parts.map((p) => ({
       ...p,
@@ -111,7 +115,7 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
 
   const search = useCallback(
     (query: string): ScoreViewModel[] => {
-      if (!fuse || query === "") return allScores;
+      if (!fuse || query === "") {return allScores;}
       return fuse.search(query).map((r) => r.item);
     },
     [fuse, allScores],

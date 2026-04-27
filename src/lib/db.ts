@@ -45,7 +45,9 @@ export type WithId<T> = T & { id: string };
 
 export async function getScore(id: string): Promise<WithId<ScoreDoc> | null> {
   const snap = await getDoc(doc(db, "scores", id));
-  if (!snap.exists()) return null;
+  if (!snap.exists()) {
+    return null;
+  }
   return { id: snap.id, ...zScoreDoc.parse(snap.data()) };
 }
 
@@ -56,7 +58,9 @@ export async function getRevision(
   const snap = await getDoc(
     doc(db, "scores", scoreId, "revisions", revisionId),
   );
-  if (!snap.exists()) return null;
+  if (!snap.exists()) {
+    return null;
+  }
   return { id: snap.id, ...zRevisionDoc.parse(snap.data()) };
 }
 
@@ -164,7 +168,9 @@ export async function getProjectBySlug(
   slug: string,
 ): Promise<WithId<ProjectDoc> | null> {
   const snap = await getDoc(projectRef(slug));
-  if (!snap.exists()) return null;
+  if (!snap.exists()) {
+    return null;
+  }
   return parseProject(snap);
 }
 
@@ -293,7 +299,9 @@ export async function getProjectUserProjectInvitations(
 
 export async function acceptUserProjectInvitation(id: string): Promise<void> {
   const snap = await getDoc(doc(invitationsCol(), id));
-  if (!snap.exists()) throw new Error(`Invitation ${id} not found`);
+  if (!snap.exists()) {
+    throw new Error(`Invitation ${id} not found`);
+  }
   const inv = zUserProjectInvitationDoc.parse(snap.data());
 
   const batch = writeBatch(db);
@@ -330,7 +338,9 @@ export async function getUserByEmail(
   const snap = await getDocs(
     query(collection(db, "users"), where("email", "==", email)),
   );
-  if (snap.empty) return null;
+  if (snap.empty) {
+    return null;
+  }
   const d = snap.docs[0];
   return {
     id: d.id,

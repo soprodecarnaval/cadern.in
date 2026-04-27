@@ -43,19 +43,28 @@ export function ProfileModal({
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!currentUser || tab !== "inbox") return;
+    if (!currentUser || tab !== "inbox") {
+      return;
+    }
     setInboxLoading(true);
-    getPendingUserProjectInvitations(currentUser.uid).then(async (invs) => {
-      setInvitations(invs);
-      const projectEntries = await Promise.all(
-        invs.map(async (inv) => [
-          inv.projectId,
-          await getProjectBySlug(inv.projectId),
-        ]),
-      );
-      setInviteProjects(Object.fromEntries(projectEntries));
-      setInboxLoading(false);
-    });
+    void getPendingUserProjectInvitations(currentUser.uid).then(
+      async (invs) => {
+        setInvitations(invs);
+        const projectEntries = await Promise.all(
+          invs.map(async (inv) => [
+            inv.projectId,
+            await getProjectBySlug(inv.projectId),
+          ]),
+        );
+        setInviteProjects(
+          Object.fromEntries(projectEntries) as Record<
+            string,
+            WithId<ProjectDoc> | null
+          >,
+        );
+        setInboxLoading(false);
+      },
+    );
   }, [currentUser, tab]);
 
   const handleAccept = async (id: string) => {
@@ -105,8 +114,10 @@ export function ProfileModal({
     try {
       await updateDisplayName(displayName);
       setProfileSuccess("Nome atualizado!");
-    } catch (err: any) {
-      setProfileError(err.message ?? "Erro ao atualizar nome");
+    } catch (err: unknown) {
+      setProfileError(
+        err instanceof Error ? err.message : "Erro ao atualizar nome",
+      );
     } finally {
       setProfilePending(false);
     }
@@ -114,7 +125,9 @@ export function ProfileModal({
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
     setProfileError("");
     setProfileSuccess("");
     setProfilePending(true);
@@ -122,11 +135,15 @@ export function ProfileModal({
       const blob = await resizeImage(file);
       await updateAvatar(blob);
       setProfileSuccess("Avatar atualizado!");
-    } catch (err: any) {
-      setProfileError(err.message ?? "Erro ao atualizar avatar");
+    } catch (err: unknown) {
+      setProfileError(
+        err instanceof Error ? err.message : "Erro ao atualizar avatar",
+      );
     } finally {
       setProfilePending(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -145,8 +162,10 @@ export function ProfileModal({
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (err: any) {
-      setPasswordError(err.message ?? "Erro ao alterar senha");
+    } catch (err: unknown) {
+      setPasswordError(
+        err instanceof Error ? err.message : "Erro ao alterar senha",
+      );
     } finally {
       setPasswordPending(false);
     }

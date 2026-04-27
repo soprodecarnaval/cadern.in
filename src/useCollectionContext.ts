@@ -9,11 +9,16 @@ export interface CollectionContextValue {
   search: (query: string) => ScoreViewModel[];
 }
 
-export const CollectionContext = createContext<CollectionContextValue | null>(null);
+export const CollectionContext = createContext<CollectionContextValue | null>(
+  null,
+);
 
 export function useCollectionContext(): CollectionContextValue {
   const ctx = useContext(CollectionContext);
-  if (!ctx)
-    throw new Error("useCollectionContext must be used within CollectionProvider");
+  if (!ctx) {
+    throw new Error(
+      "useCollectionContext must be used within CollectionProvider",
+    );
+  }
   return ctx;
 }

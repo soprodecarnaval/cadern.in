@@ -22,7 +22,7 @@ const PlayerBar = ({ info }: PlayerBarProps) => {
     midiPlayer?.pause();
   };
 
-  const handleChange = (event: any) => {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setValue(event.currentTarget.valueAsNumber);
     midiPlayer?.skipToPercent(event.currentTarget.valueAsNumber);
     midiPlayer?.play();

@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Button,
-  Container,
-  Spinner,
-  Table,
-} from "react-bootstrap";
+import { Alert, Button, Container, Spinner, Table } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import type { Timestamp } from "firebase/firestore";
 import { useAuth } from "../auth";
-import { getUserScores, getScoreRevisions, softDeleteScore, type WithId } from "../lib/db";
+import {
+  getUserScores,
+  getScoreRevisions,
+  softDeleteScore,
+  type WithId,
+} from "../lib/db";
 import type { ScoreDoc, RevisionDoc } from "../../types/docs";
 
-function formatDate(timestamp: any): string {
-  if (!timestamp?.toDate) return "—";
+function formatDate(timestamp: Timestamp | null | undefined): string {
+  if (!timestamp) {
+    return "—";
+  }
   return timestamp.toDate().toLocaleDateString("pt-BR");
 }
 
@@ -26,7 +28,9 @@ function SongRow({
   onDelete: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [revisions, setRevisions] = useState<WithId<RevisionDoc>[] | null>(null);
+  const [revisions, setRevisions] = useState<WithId<RevisionDoc>[] | null>(
+    null,
+  );
   const [loadingRevisions, setLoadingRevisions] = useState(false);
 
   const handleToggle = async () => {
@@ -57,10 +61,14 @@ function SongRow({
         <td>
           <div className="d-flex gap-2">
             <Link to={`/score/${encodeURIComponent(song.id)}`}>
-              <Button size="sm" variant="outline-secondary">Ver</Button>
+              <Button size="sm" variant="outline-secondary">
+                Ver
+              </Button>
             </Link>
             <Link to={`/upload/${encodeURIComponent(song.id)}`}>
-              <Button size="sm" variant="outline-primary">Nova revisão</Button>
+              <Button size="sm" variant="outline-primary">
+                Nova revisão
+              </Button>
             </Link>
             <Button
               size="sm"
@@ -77,17 +85,27 @@ function SongRow({
         <tr>
           <td colSpan={5} className="p-0">
             {loadingRevisions ? (
-              <div className="p-2"><Spinner animation="border" size="sm" /></div>
+              <div className="p-2">
+                <Spinner animation="border" size="sm" />
+              </div>
             ) : (
               <Table size="sm" className="mb-0" borderless>
                 <tbody>
                   {revisions?.map((rev) => (
                     <tr key={rev.id} className="border-top">
-                      <td className="ps-4 text-muted">Revisão #{rev.revisionNumber}</td>
-                      <td className="text-muted">{formatDate(rev.uploadedAt)}</td>
+                      <td className="ps-4 text-muted">
+                        Revisão #{rev.revisionNumber}
+                      </td>
+                      <td className="text-muted">
+                        {formatDate(rev.uploadedAt)}
+                      </td>
                       <td>
-                        <Link to={`/score/${encodeURIComponent(song.id)}/${rev.id}`}>
-                          <Button size="sm" variant="outline-secondary">Ver</Button>
+                        <Link
+                          to={`/score/${encodeURIComponent(song.id)}/${rev.id}`}
+                        >
+                          <Button size="sm" variant="outline-secondary">
+                            Ver
+                          </Button>
                         </Link>
                       </td>
                     </tr>
@@ -109,8 +127,10 @@ export function MyScoresPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!currentUser) return;
-    getUserScores(currentUser.uid).then((results) => {
+    if (!currentUser) {
+      return;
+    }
+    void getUserScores(currentUser.uid).then((results) => {
       setSongs(results);
       setLoading(false);
     });
@@ -125,7 +145,9 @@ export function MyScoresPage() {
   }
 
   const handleDelete = async (scoreId: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta partitura?")) return;
+    if (!confirm("Tem certeza que deseja excluir esta partitura?")) {
+      return;
+    }
     setDeleting(scoreId);
     try {
       await softDeleteScore(scoreId);
@@ -166,7 +188,6 @@ export function MyScoresPage() {
                 song={song}
                 deleting={deleting === song.id}
                 onDelete={() => void handleDelete(song.id)}
-
               />
             ))}
           </tbody>

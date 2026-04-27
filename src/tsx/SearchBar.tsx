@@ -13,7 +13,9 @@ const SearchBar = ({ handleResults }: SearchBarProps) => {
   const [searchInput, setSearchInput] = useState("");
 
   useEffect(() => {
-    if (status !== "ready") return;
+    if (status !== "ready") {
+      return;
+    }
     handleResults(search(searchInput));
   }, [searchInput, status, handleResults, search]);
 

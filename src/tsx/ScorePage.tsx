@@ -19,16 +19,23 @@ interface LoadedScore {
   parts: ScoreDisplayPart[];
 }
 
-async function loadScore(scoreId: string, revisionId?: string): Promise<LoadedScore> {
+async function loadScore(
+  scoreId: string,
+  revisionId?: string,
+): Promise<LoadedScore> {
   const song = await getScore(scoreId);
-  if (!song || song.deletedAt) throw new Error("Partitura não encontrada");
+  if (!song || song.deletedAt) {
+    throw new Error("Partitura não encontrada");
+  }
 
   const resolvedRevisionId = revisionId ?? song.latestRevisionId;
   const [rev, project] = await Promise.all([
     getRevision(scoreId, resolvedRevisionId),
     getProject(song.projectId),
   ]);
-  if (!rev) throw new Error("Revisão não encontrada");
+  if (!rev) {
+    throw new Error("Revisão não encontrada");
+  }
   const projectTitle = project?.title ?? song.projectId;
 
   return {
@@ -52,15 +59,22 @@ async function loadScore(scoreId: string, revisionId?: string): Promise<LoadedSc
 }
 
 export function ScorePage() {
-  const { scoreId, revisionId } = useParams<{ scoreId: string; revisionId?: string }>();
+  const { scoreId, revisionId } = useParams<{
+    scoreId: string;
+    revisionId?: string;
+  }>();
   const [score, setScore] = useState<LoadedScore | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!scoreId) return;
+    if (!scoreId) {
+      return;
+    }
     setScore(null);
     setError("");
-    loadScore(scoreId, revisionId).then(setScore).catch((e) => setError(e.message));
+    loadScore(scoreId, revisionId)
+      .then(setScore)
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : "Erro"));
   }, [scoreId, revisionId]);
 
   if (error) {

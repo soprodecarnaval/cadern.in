@@ -134,7 +134,7 @@ function App() {
       setInboxCount(0);
       return;
     }
-    getPendingUserProjectInvitations(currentUser.uid).then((invs) =>
+    void getPendingUserProjectInvitations(currentUser.uid).then((invs) =>
       setInboxCount(invs.length),
     );
   }, [currentUser]);

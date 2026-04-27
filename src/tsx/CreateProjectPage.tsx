@@ -17,7 +17,9 @@ export function CreateProjectPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser || !slug) return;
+    if (!currentUser || !slug) {
+      return;
+    }
 
     setError("");
     setPending(true);

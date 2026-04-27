@@ -27,7 +27,7 @@ const ScoreSearchResults = ({
     return <Spinner animation="border" className="mt-4" />;
   }
 
-  if (results.length === 0) return null;
+  if (results.length === 0) {return null;}
 
   return (
     <>

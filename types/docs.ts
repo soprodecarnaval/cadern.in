@@ -1,7 +1,8 @@
 import z from "zod";
+import { Timestamp } from "firebase/firestore";
 import { zInstrument } from "./instrument";
 
-const zTimestamp = z.any();
+const zTimestamp = z.custom<Timestamp>();
 
 export const zPartData = z.object({
   name: z.string(),

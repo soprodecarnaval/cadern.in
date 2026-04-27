@@ -21,7 +21,7 @@ export function AuthModal({ show, onHide }: AuthModalProps) {
 
   useEffect(() => {
     return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
+      if (countdownRef.current) {clearInterval(countdownRef.current);}
     };
   }, []);
 
@@ -32,7 +32,7 @@ export function AuthModal({ show, onHide }: AuthModalProps) {
     setDisplayName("");
     setResetSent(false);
     setResetCountdown(0);
-    if (countdownRef.current) clearInterval(countdownRef.current);
+    if (countdownRef.current) {clearInterval(countdownRef.current);}
     onHide();
   };
 
@@ -61,8 +61,8 @@ export function AuthModal({ show, onHide }: AuthModalProps) {
       await resetPassword(email);
       setResetSent(true);
       startCountdown();
-    } catch (err: any) {
-      setError(err.message ?? "Erro ao enviar email");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erro ao enviar email");
     } finally {
       setResetPending(false);
     }
@@ -74,8 +74,8 @@ export function AuthModal({ show, onHide }: AuthModalProps) {
     try {
       await login(email, password);
       handleHide();
-    } catch (err: any) {
-      setError(err.message ?? "Erro ao entrar");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erro ao entrar");
     }
   };
 
@@ -85,8 +85,8 @@ export function AuthModal({ show, onHide }: AuthModalProps) {
     try {
       await register(email, password, displayName);
       handleHide();
-    } catch (err: any) {
-      setError(err.message ?? "Erro ao criar conta");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erro ao criar conta");
     }
   };
 

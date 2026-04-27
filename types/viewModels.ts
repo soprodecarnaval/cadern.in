@@ -1,3 +1,4 @@
+import type { Timestamp } from "firebase/firestore";
 import type { Instrument } from "./instrument";
 
 export type PartViewModel = {
@@ -11,7 +12,7 @@ export type RevisionViewModel = {
   id: string;
   revisionNumber: number;
   uploadedBy: string;
-  uploadedAt: any;
+  uploadedAt: Timestamp;
   mscz: string;
   metajson: string;
   midi: string;

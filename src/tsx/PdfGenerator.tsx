@@ -12,7 +12,11 @@ import {
 import React, { useState, useMemo } from "react";
 import type { Instrument } from "../../types/instrument";
 import type { ScoreViewModel, RevisionViewModel } from "../../types/viewModels";
-import type { SongbookViewModel, SongbookItemViewModel, SongbookScoreViewModel } from "../../types/viewModels";
+import type {
+  SongbookViewModel,
+  SongbookItemViewModel,
+  SongbookScoreViewModel,
+} from "../../types/viewModels";
 import { isSongbookSection, getRevision } from "../lib/songbook";
 import { createSongBook } from "../createSongBook";
 
@@ -99,7 +103,9 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
     new Set(),
   );
 
-  const onInputSongbookTitle = ({ target: { value } }: any) => setTitle(value);
+  const onInputSongbookTitle = ({
+    target: { value },
+  }: React.ChangeEvent<HTMLInputElement>) => setTitle(value);
 
   const [carnivalMode, setCarnivalMode] = useState(false);
   const [backSheetPageNumber, setBackSheetPageNumber] = useState(false);
@@ -175,7 +181,7 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
     setSelectedInstruments(new Set());
   };
 
-  const openModal = (e: any) => {
+  const openModal = (e: React.MouseEvent) => {
     e.preventDefault();
     if (scores.length < 1) {
       alert("Selecione ao menos uma música!");
@@ -405,8 +411,10 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
                             type="file"
                             hidden
                             accept="image/png,image/jpeg"
-                            onChange={(e: any) => {
-                              const file = e.target.files?.[0] || null;
+                            onChange={(
+                              e: React.ChangeEvent<HTMLInputElement>,
+                            ) => {
+                              const file = e.target.files?.[0] ?? null;
                               setInstrumentCover(instrument, file);
                             }}
                             onClick={(e) => e.stopPropagation()}
@@ -425,7 +433,7 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
                         <Form.Check
                           type="checkbox"
                           id={`fallback-${instrument}`}
-                          label={`Usar ${fallback} como fallback (+${countWithFallback! - count})`}
+                          label={`Usar ${fallback} como fallback (+${countWithFallback - count})`}
                           checked={fallbackEnabled}
                           onChange={() => {
                             setEnabledFallbacks((prev) => {
@@ -517,7 +525,9 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
               </Button>
               <Button
                 variant="primary"
-                onClick={onGeneratePdfs}
+                onClick={() => {
+                  void onGeneratePdfs();
+                }}
                 disabled={selectedInstruments.size === 0}
               >
                 Gerar {selectedInstruments.size} caderninho
