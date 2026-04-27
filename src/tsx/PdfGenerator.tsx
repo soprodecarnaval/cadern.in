@@ -181,7 +181,7 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
     setSelectedInstruments(new Set());
   };
 
-  const openModal = (e: React.MouseEvent) => {
+  const openModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (scores.length < 1) {
       alert("Selecione ao menos uma música!");
