@@ -4,11 +4,17 @@ import { zInstrument } from "./instrument";
 
 const zTimestamp = z.custom<Timestamp>();
 
+export const zStorageFile = z.object({
+  path: z.string(),
+  url: z.string(),
+});
+export type StorageFile = z.infer<typeof zStorageFile>;
+
 export const zPartData = z.object({
   name: z.string(),
   instrument: zInstrument,
-  svg: z.array(z.string()),
-  midi: z.string(),
+  svg: z.array(zStorageFile),
+  midi: zStorageFile,
 });
 export type PartData = z.infer<typeof zPartData>;
 
@@ -55,9 +61,9 @@ export type ScoreDoc = z.infer<typeof zScoreDoc>;
 export const zRevisionData = z.object({
   revisionNumber: z.number().int().positive(),
   uploadedBy: z.string(),
-  mscz: z.string(),
-  metajson: z.string(),
-  midi: z.string(),
+  mscz: zStorageFile,
+  metajson: zStorageFile,
+  midi: zStorageFile,
   parts: z.array(zPartData),
   notes: z.string(),
   isLatest: z.boolean(),

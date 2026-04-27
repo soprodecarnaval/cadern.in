@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, ReactNode } from "react";
 import Fuse, { IFuseOptions } from "fuse.js";
-import { storagePathToUrl } from "./storage";
 import { getAllProjects, getAllScores, getLatestRevisions } from "./lib/db";
 import { isOwner } from "./lib/roles";
 import type {
@@ -49,8 +48,8 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
 
     const parts: PartViewModel[] = revision.parts.map((p) => ({
       ...p,
-      svg: p.svg.map(storagePathToUrl),
-      midi: storagePathToUrl(p.midi),
+      svg: p.svg.map((f) => f.url),
+      midi: p.midi.url,
     }));
 
     const latestRevision: RevisionViewModel = {
@@ -58,9 +57,9 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
       revisionNumber: revision.revisionNumber,
       uploadedBy: revision.uploadedBy,
       uploadedAt: revision.uploadedAt,
-      mscz: storagePathToUrl(revision.mscz),
-      metajson: storagePathToUrl(revision.metajson),
-      midi: storagePathToUrl(revision.midi),
+      mscz: revision.mscz.url,
+      metajson: revision.metajson.url,
+      midi: revision.midi.url,
       parts,
       notes: revision.notes,
       isLatest: revision.isLatest,

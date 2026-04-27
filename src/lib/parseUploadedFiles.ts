@@ -1,6 +1,5 @@
 import z from "zod";
 import type { Instrument } from "../../types/instrument";
-import { zPartData, type PartData } from "../../types/docs";
 import { parseInstrument } from "../instrument";
 import type { Warning } from "../result";
 
@@ -11,12 +10,19 @@ interface FileDraft {
   midiFile?: File;
 }
 
+export interface ParsedPart {
+  name: string;
+  instrument: Instrument;
+  svg: string[];
+  midi: string;
+}
+
 export interface ParsedScore {
   title: string;
   composer: string;
   sub: string;
   tags: string[];
-  parts: PartData[];
+  parts: ParsedPart[];
   fileMap: Map<string, File>;
   warnings: Warning[];
 }
@@ -161,7 +167,7 @@ export async function parseUploadedFiles(files: File[]): Promise<ParsedScore> {
   }
 
   // Build parts array
-  const parts: PartData[] = [];
+  const parts: ParsedPart[] = [];
   for (const [, draft] of partDrafts) {
     draft.svg.sort((a, b) => a.page - b.page);
     const svgPaths = draft.svg.map((s) => `parts/${draft.name}-${s.page}.svg`);
@@ -198,7 +204,14 @@ const zParsedScoreValidation = z.object({
   composer: z.string(),
   sub: z.string(),
   tags: z.array(z.string()),
-  parts: z.array(zPartData),
+  parts: z.array(
+    z.object({
+      name: z.string(),
+      instrument: z.string(),
+      svg: z.array(z.string()),
+      midi: z.string(),
+    }),
+  ),
 });
 
 export function validateParsedScore(parsed: ParsedScore): Warning[] {

@@ -1,4 +1,4 @@
-import { ref, uploadBytes } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 import { slugify } from "./slugify";
 import type { ParsedScore } from "./parseUploadedFiles";
@@ -59,7 +59,7 @@ export async function uploadScore(
 
   onProgress?.({ stage: "uploading", filesUploaded: 0, filesTotal });
 
-  const storagePaths = new Map<string, string>();
+  const storageFiles = new Map<string, { path: string; url: string }>();
 
   for (const [key, file] of parsed.fileMap) {
     let storagePath: string;
@@ -73,12 +73,13 @@ export async function uploadScore(
       storagePath = `${storageBase}/${key}`;
     }
 
-    storagePaths.set(key, storagePath);
     const storageRef = ref(storage, storagePath);
     const buffer = await file.arrayBuffer();
     await uploadBytes(storageRef, buffer, {
       contentType: file.type || "application/octet-stream",
     });
+    const url = await getDownloadURL(storageRef);
+    storageFiles.set(key, { path: storagePath, url });
 
     filesUploaded++;
     onProgress?.({ stage: "uploading", filesUploaded, filesTotal });
@@ -90,11 +91,13 @@ export async function uploadScore(
     filesTotal,
   });
 
+  const missing = (key: string) => ({ path: key, url: "" });
+
   const revisionParts = parsed.parts.map((part) => ({
     name: part.name,
     instrument: part.instrument,
-    svg: part.svg.map((svgKey) => storagePaths.get(svgKey) ?? svgKey),
-    midi: storagePaths.get(`parts/${part.name}.midi`) ?? part.midi,
+    svg: part.svg.map((svgKey) => storageFiles.get(svgKey) ?? missing(svgKey)),
+    midi: storageFiles.get(`parts/${part.name}.midi`) ?? missing(part.midi),
   }));
 
   if (existingScoreId && revisionNumber > 1) {
@@ -106,9 +109,9 @@ export async function uploadScore(
   await createRevision(scoreId, revId, {
     revisionNumber,
     uploadedBy: user.uid,
-    mscz: storagePaths.get("mscz") ?? "",
-    metajson: storagePaths.get("metajson") ?? "",
-    midi: storagePaths.get("midi") ?? "",
+    mscz: storageFiles.get("mscz") ?? missing("mscz"),
+    metajson: storageFiles.get("metajson") ?? missing("metajson"),
+    midi: storageFiles.get("midi") ?? missing("midi"),
     parts: revisionParts,
     notes: "",
     isLatest: true,

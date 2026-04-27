@@ -28,10 +28,10 @@ async function main(): Promise<void> {
     const revision = zRevisionDoc.parse(doc.data());
 
     const paths = [
-      revision.mscz,
-      revision.metajson,
-      revision.midi,
-      ...revision.parts.flatMap((p) => [...p.svg, p.midi]),
+      revision.mscz.path,
+      revision.metajson.path,
+      revision.midi.path,
+      ...revision.parts.flatMap((p) => [...p.svg.map((f) => f.path), p.midi.path]),
     ];
 
     const results = await Promise.all(

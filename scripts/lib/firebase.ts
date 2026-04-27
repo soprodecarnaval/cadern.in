@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { getStorage } from "firebase-admin/storage";
+import { getStorage, getDownloadURL } from "firebase-admin/storage";
 import fs from "fs";
 import path from "path";
 import type { LegacyCollection, LegacyScore } from "./legacyCollectionTypes";
@@ -35,10 +35,10 @@ function slugifyFilename(filename: string): string {
 
 function revisionStoragePaths(rev: z.infer<typeof zRevisionDoc>): string[] {
   return [
-    rev.mscz,
-    rev.metajson,
-    rev.midi,
-    ...rev.parts.flatMap((p) => [...p.svg, p.midi]),
+    rev.mscz.path,
+    rev.metajson.path,
+    rev.midi.path,
+    ...rev.parts.flatMap((p) => [...p.svg.map((f) => f.path), p.midi.path]),
   ];
 }
 
@@ -54,13 +54,15 @@ async function uploadFile(
   bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>,
   localPath: string,
   storagePath: string,
-): Promise<void> {
+): Promise<{ path: string; url: string }> {
   if (!fs.existsSync(localPath)) {
     console.warn(`    ! not found, skipping: ${localPath}`);
-    return;
+  } else {
+    console.log(`    ^ storage: ${storagePath}`);
+    await bucket.upload(localPath, { destination: storagePath });
   }
-  console.log(`    ^ storage: ${storagePath}`);
-  await bucket.upload(localPath, { destination: storagePath });
+  const url = await getDownloadURL(bucket.file(storagePath));
+  return { path: storagePath, url };
 }
 
 async function uploadScore(
@@ -75,23 +77,23 @@ async function uploadScore(
   const revId = "1";
   const storageBase = `scores/${scoreId}/${revId}`;
 
-  const migratedParts = [];
   const fileUploads: [string, string][] = [
     [score.mscz, `${storageBase}/score.mscz`],
     [score.metajson, `${storageBase}/score.metajson`],
     [score.midi, `${storageBase}/score.midi`],
   ];
+  const partUploads: { partIdx: number; svgIdx?: number; dest: string }[] = [];
 
-  for (const part of score.parts) {
-    const svgStoragePaths: string[] = [];
-    for (const svg of part.svg) {
-      const dest = `${storageBase}/parts/${slugifyFilename(path.basename(svg))}`;
-      fileUploads.push([svg, dest]);
-      svgStoragePaths.push(dest);
+  for (let i = 0; i < score.parts.length; i++) {
+    const part = score.parts[i];
+    for (let j = 0; j < part.svg.length; j++) {
+      const dest = `${storageBase}/parts/${slugifyFilename(path.basename(part.svg[j]))}`;
+      fileUploads.push([part.svg[j], dest]);
+      partUploads.push({ partIdx: i, svgIdx: j, dest });
     }
     const midiDest = `${storageBase}/parts/${slugifyFilename(path.basename(part.midi))}`;
     fileUploads.push([part.midi, midiDest]);
-    migratedParts.push({ ...part, svg: svgStoragePaths, midi: midiDest });
+    partUploads.push({ partIdx: i, dest: midiDest });
   }
 
   console.log(`  song: ${score.title} (${scoreId})`);
@@ -108,9 +110,24 @@ async function uploadScore(
   }
 
   console.log(`  uploading ${fileUploads.length} files...`);
-  for (const [relPath, storagePath] of fileUploads) {
-    await uploadFile(bucket, path.join(collectionBase, relPath), storagePath);
-  }
+  const uploadedFiles = await Promise.all(
+    fileUploads.map(([relPath, storagePath]) =>
+      uploadFile(bucket, path.join(collectionBase, relPath), storagePath),
+    ),
+  );
+
+  const fileByDest = new Map(uploadedFiles.map((f) => [f.path, f]));
+
+  const migratedParts = score.parts.map((part, i) => {
+    const svgUploads = partUploads.filter((u) => u.partIdx === i && u.svgIdx !== undefined);
+    const midiUpload = partUploads.find((u) => u.partIdx === i && u.svgIdx === undefined);
+    return {
+      name: part.name,
+      instrument: part.instrument,
+      svg: svgUploads.map((u) => fileByDest.get(u.dest) ?? { path: u.dest, url: "" }),
+      midi: fileByDest.get(midiUpload!.dest) ?? { path: midiUpload!.dest, url: "" },
+    };
+  });
 
   console.log(`  writing firestore: scores/${scoreId}`);
   await songRef.set(
@@ -135,9 +152,9 @@ async function uploadScore(
         revisionNumber: 1,
         uploadedBy: uid,
         uploadedAt: FieldValue.serverTimestamp(),
-        mscz: `${storageBase}/score.mscz`,
-        metajson: `${storageBase}/score.metajson`,
-        midi: `${storageBase}/score.midi`,
+        mscz: fileByDest.get(`${storageBase}/score.mscz`) ?? { path: `${storageBase}/score.mscz`, url: "" },
+        metajson: fileByDest.get(`${storageBase}/score.metajson`) ?? { path: `${storageBase}/score.metajson`, url: "" },
+        midi: fileByDest.get(`${storageBase}/score.midi`) ?? { path: `${storageBase}/score.midi`, url: "" },
         parts: migratedParts,
         notes: "",
         isLatest: true,
