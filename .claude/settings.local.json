@@ -7,7 +7,11 @@
       "Bash(npm install:*)",
       "Bash(npx vite:*)",
       "Bash(npm run:*)",
-      "Bash(find /Users/beise/soprodecarnaval/cadern.in/functions -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))"
+      "Bash(npx eslint *)",
+      "Bash(awk '/^\\\\/Users/{file=$0} /error/{if\\(file && index\\(file,\"createSongBook\"\\)==0\\) print file\": \"$0; file=\"\"}')",
+      "Bash(awk 'BEGIN{f=\"\"} /^\\\\/Users/{f=$0; next} /error|warning/{if\\(f!=\"\"\\) print f\": \"$0}')",
+      "Bash(grep -v \"✖\\\\|problems\\\\|warnings\\\\|warning\\\\|^$\")",
+      "Bash(grep -v \"npm notice\\\\|^$\\\\|> musicoteca\")"
     ]
   }
 }

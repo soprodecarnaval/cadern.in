@@ -13,12 +13,7 @@ import { getStorage } from "firebase-admin/storage";
 import { migrations } from "./migrations/index";
 import { getSchema, setVersion, setCleanedVersion } from "./lib/migration";
 import type { MigrationContext } from "./lib/migration";
-
-const SCRIPTS_FIREBASE_STORAGE_BUCKET =
-  process.env.SCRIPTS_FIREBASE_STORAGE_BUCKET ??
-  (() => {
-    throw new Error("VITE_FIREBASE_STORAGE_BUCKET not set");
-  })();
+import { FIRESTORE_DATABASE_ID, FIREBASE_STORAGE_BUCKET } from "./lib/env";
 
 const rawArgs = process.argv.slice(2);
 const isCleanup = rawArgs[0] === "cleanup";
@@ -107,8 +102,8 @@ async function runCleanup(
 }
 
 async function main() {
-  initializeApp({ storageBucket: SCRIPTS_FIREBASE_STORAGE_BUCKET });
-  const db = getFirestore();
+  initializeApp({ storageBucket: FIREBASE_STORAGE_BUCKET });
+  const db = getFirestore(FIRESTORE_DATABASE_ID);
   const bucket = getStorage().bucket();
   const dryRun = !execute;
   const ctx: MigrationContext = { db, bucket, dryRun };

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, ReactNode } from "react";
 import Fuse, { IFuseOptions } from "fuse.js";
 import { storagePathToUrl } from "./storage";
 import { getAllProjects, getAllScores, getLatestRevisions } from "./lib/db";
+import { isOwner } from "./lib/roles";
 import type {
   ScoreViewModel,
   RevisionViewModel,
@@ -13,18 +14,21 @@ import {
   type CollectionStatus,
 } from "./useCollectionContext";
 
-const CADERNIN_UID = import.meta.env.VITE_CADERNIN_UID as string | undefined;
+const CADERNIN_UID = import.meta.env.VITE_CADERNIN_UID;
 
 async function loadCollection(): Promise<ScoreViewModel[]> {
+  console.log(">>>> loadCollection");
   const [projectDocs, songDocs, revisionDocs] = await Promise.all([
     getAllProjects(),
     getAllScores(),
     getLatestRevisions(),
   ]);
 
+  console.log(songDocs.length);
+
   const filteredProjectDocs = FEATURE_FLAG_AUTH_ENABLED
     ? projectDocs
-    : projectDocs.filter((p) => p.ownerId === CADERNIN_UID);
+    : projectDocs.filter((p) => CADERNIN_UID && isOwner(p, CADERNIN_UID));
 
   const projectTitles = new Map(
     filteredProjectDocs.map((p) => [p.id, p.title]),
@@ -35,9 +39,13 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
   const scores: ScoreViewModel[] = [];
 
   for (const song of songDocs) {
-    if (song.deletedAt) continue;
+    if (song.deletedAt) {
+      continue;
+    }
     const revision = revisionsByScoreId.get(song.id);
-    if (!revision) continue;
+    if (!revision) {
+      continue;
+    }
 
     const parts: PartViewModel[] = revision.parts.map((p) => ({
       ...p,
@@ -99,12 +107,15 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
         setFuse(buildFuse(scores));
         setStatus("ready");
       })
-      .catch(() => setStatus("error"));
+      .catch((err) => {
+        console.error("loadCollection failed", err);
+        setStatus("error");
+      });
   }, []);
 
   const search = useCallback(
     (query: string): ScoreViewModel[] => {
-      if (!fuse || query === "") return allScores;
+      if (!fuse || query === "") {return allScores;}
       return fuse.search(query).map((r) => r.item);
     },
     [fuse, allScores],

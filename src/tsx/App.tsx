@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Col, Container, Nav, Navbar, Row } from "react-bootstrap";
 import { Link, Route, Routes } from "react-router-dom";
 import { AuthModal } from "./AuthModal";
@@ -27,6 +27,11 @@ import { useAuth } from "../auth";
 import { UploadPage } from "./UploadPage";
 import { MyScoresPage } from "./MyScoresPage";
 import { ScorePage } from "./ScorePage";
+import { MeusProjetosPage } from "./MeusProjetosPage";
+import { CreateProjectPage } from "./CreateProjectPage";
+import { PublicProjectPage } from "./PublicProjectPage";
+import { ProjectSettingsPage } from "./ProjectSettingsPage";
+import { getPendingUserProjectInvitations } from "../lib/db";
 
 function HomePage() {
   const [results, setResults] = useState<ScoreViewModel[]>([]);
@@ -121,7 +126,18 @@ function HomePage() {
 
 function App() {
   const [showUserModal, setShowUserModal] = useState(false);
+  const [inboxCount, setInboxCount] = useState(0);
   const { currentUser } = useAuth();
+
+  useEffect(() => {
+    if (!currentUser) {
+      setInboxCount(0);
+      return;
+    }
+    void getPendingUserProjectInvitations(currentUser.uid).then((invs) =>
+      setInboxCount(invs.length),
+    );
+  }, [currentUser]);
 
   return (
     <>
@@ -153,9 +169,15 @@ function App() {
                   <Nav.Link as={Link} to="/my-scores">
                     Minhas partituras
                   </Nav.Link>
+                  <Nav.Link as={Link} to="/projects">
+                    Meus projetos
+                  </Nav.Link>
                 </>
               )}
-              <AuthButton onOpenUserModal={() => setShowUserModal(true)} />
+              <AuthButton
+                onOpenUserModal={() => setShowUserModal(true)}
+                inboxCount={inboxCount}
+              />
             </Nav>
           )}
         </Container>
@@ -168,12 +190,18 @@ function App() {
         <Route path="/my-scores" element={<MyScoresPage />} />
         <Route path="/score/:scoreId" element={<ScorePage />} />
         <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
+        <Route path="/projects" element={<MeusProjetosPage />} />
+        <Route path="/projects/new" element={<CreateProjectPage />} />
+        <Route path="/projects/:slug" element={<PublicProjectPage />} />
+        <Route path="/projects/:slug/settings" element={<ProjectSettingsPage />} />
       </Routes>
 
       {currentUser ? (
         <ProfileModal
           show={showUserModal}
           onHide={() => setShowUserModal(false)}
+          inboxCount={inboxCount}
+          onInboxCountChange={setInboxCount}
         />
       ) : (
         <AuthModal

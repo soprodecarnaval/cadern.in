@@ -22,5 +22,5 @@ const messages: Record<WarningCode, string> = {
 };
 
 export function translateWarning(code: WarningCode, meta: Record<string, unknown> = {}): string {
-  return messages[code].replace(/\{(\w+)\}/g, (_, key) => String(meta[key] ?? `{${key}}`));
+  return messages[code].replace(/\{(\w+)\}/g, (_: string, key: string) => String(meta[key] ?? `{${key}}`));
 }

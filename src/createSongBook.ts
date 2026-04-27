@@ -4,8 +4,15 @@ import type { ScoreViewModel, PartViewModel } from "../types/viewModels";
 import { Section } from "./tsx/PdfGenerator";
 import { extractPartLabel } from "./instrument";
 
-// Needed for calling PDFDocument from window variable
-declare const window: any;
+interface PDFBlobStream extends NodeJS.WritableStream {
+  toBlobURL(type: string): string;
+}
+
+declare const window: Window &
+  typeof globalThis & {
+    PDFDocument: new (options: PDFKit.DocumentOptions) => PDFKit.PDFDocument;
+    blobStream: () => PDFBlobStream;
+  };
 
 const cm2pt = 28.3465;
 
@@ -28,7 +35,7 @@ export interface CreateSongBookOptions {
 }
 
 const fitText = (
-  doc: any,
+  doc: PDFKit.PDFDocument,
   text: string,
   font: string,
   maxFontSize: number,
@@ -37,13 +44,13 @@ const fitText = (
 ): number => {
   for (let size = maxFontSize; size >= minFontSize; size--) {
     doc.font(font).fontSize(size);
-    if (doc.widthOfString(text) <= maxWidth) return size;
+    if (doc.widthOfString(text) <= maxWidth) {return size;}
   }
   return minFontSize;
 };
 
 const debugRect = (
-  doc: any,
+  doc: PDFKit.PDFDocument,
   x: number,
   y: number,
   w: number,
@@ -51,7 +58,7 @@ const debugRect = (
   color: string,
   debug: boolean,
 ) => {
-  if (!debug) return;
+  if (!debug) {return;}
   doc.save().rect(x, y, w, h).strokeColor(color).stroke().restore();
 };
 
@@ -61,7 +68,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
   const { title, instrument, sections, coverImageUrl, carnivalMode } = opts;
   let pageNumber = 0;
-  let promises: Promise<any>[] = [];
+  const promises: Promise<void>[] = [];
 
   if (coverImageUrl != "") {
     promises.push(drawImage(doc, coverImageUrl, 0));
@@ -140,7 +147,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
   let songPageIndex = 1;
   for (const { title, scores } of sections) {
-    let topItem = outline.addItem(title.toUpperCase());
+    const topItem = outline.addItem(title.toUpperCase());
     sectionTitleOutlines.set(title, topItem);
 
     for (const { score, revision } of scores) {
@@ -198,12 +205,12 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
   }
 };
 
-let sectionTitleOutlines = new Map();
+const sectionTitleOutlines = new Map<string, PDFKit.PDFOutline>();
 
 const a = document.createElement("a");
 document.body.appendChild(a);
 
-const download = (doc: any, file_name: string) => {
+const download = (doc: PDFKit.PDFDocument, file_name: string) => {
   const stream = doc.pipe(window.blobStream());
   stream.on("finish", function () {
     const url = stream.toBlobURL("application/pdf");
@@ -215,7 +222,7 @@ const download = (doc: any, file_name: string) => {
   doc.end();
 };
 
-const drawSvg = async (doc: any, url: string, page: number): Promise<void> => {
+const drawSvg = async (doc: PDFKit.PDFDocument, url: string, page: number): Promise<void> => {
   try {
     const resp = await fetch(url);
     const svg = await resp.text();
@@ -232,9 +239,9 @@ const drawSvg = async (doc: any, url: string, page: number): Promise<void> => {
   }
 };
 
-const loadImage = (url: string) => {
-  return new Promise((resolve, reject) => {
-    let img = new Image();
+const loadImage = (url: string): Promise<string> => {
+  return new Promise<string>((resolve, reject) => {
+    const img = new Image();
     img.crossOrigin = "Anonymous";
 
     img.onload = () => {
@@ -256,11 +263,11 @@ const loadImage = (url: string) => {
 };
 
 const drawImage = (
-  doc: any,
-  imageUrl: any,
+  doc: PDFKit.PDFDocument,
+  imageUrl: string,
   pageNumber: number,
 ): Promise<void> => {
-  return loadImage(imageUrl).then((img: any) => {
+  return loadImage(imageUrl).then((img) => {
     doc.switchToPage(pageNumber);
     doc.image(img, 0, 0, {
       fit: [pageWidth, pageHeight],
@@ -279,7 +286,7 @@ const createDoc = () => {
   });
 };
 
-const loadFonts = async (doc: any) => {
+const loadFonts = async (doc: PDFKit.PDFDocument) => {
   const fonts = ["Roboto-Medium", "Roboto-Bold"];
   for (const font of fonts) {
     const resp = await fetch(`${font}.ttf`);
@@ -289,7 +296,7 @@ const loadFonts = async (doc: any) => {
 };
 
 const addSongPage = async (
-  doc: any,
+  doc: PDFKit.PDFDocument,
   score: ScoreViewModel,
   part: PartViewModel,
   currentPage: number,
@@ -370,8 +377,9 @@ const addSongPage = async (
 
     // Only add outline and destination on first page
     if (svgPageIdx === 0) {
-      sectionTitleOutlines.get(sectionTitle).addItem(displayTitle);
-      doc.addNamedDestination(destId);
+      sectionTitleOutlines.get(sectionTitle)?.addItem(displayTitle);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      (doc as any).addNamedDestination(destId);
     }
 
     // Measure displayNumber width to calculate available title space
@@ -540,7 +548,7 @@ const createFileName = ({ title, instrument }: CreateSongBookOptions) => {
 };
 
 const addIndexPage = (
-  doc: any,
+  doc: PDFKit.PDFDocument,
   {
     sections,
     carnivalMode,
@@ -719,7 +727,7 @@ const addIndexPage = (
       }
       [currentX, currentY] = nextCursorPosition();
     });
-    if (currentLine != 0) [currentX, currentY] = nextCursorPosition();
+    if (currentLine != 0) {[currentX, currentY] = nextCursorPosition();}
   });
   if (carnivalMode) {
     doc.addPage();

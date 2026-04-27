@@ -6,8 +6,6 @@ import {
   Card,
   Container,
   Form,
-  FormControl,
-  FormControlProps,
   ProgressBar,
   Table,
 } from "react-bootstrap";
@@ -18,7 +16,7 @@ import {
   validateParsedScore,
   type ParsedScore,
 } from "../lib/parseUploadedFiles";
-import { getUserProjects } from "../lib/db";
+import { getUserMemberProjects } from "../lib/db";
 import {
   getOrCreateDefaultProject,
   uploadScore,
@@ -84,7 +82,7 @@ export function UploadPage() {
     }
 
     Promise.all([
-      getUserProjects(currentUser.uid),
+      getUserMemberProjects(currentUser.uid),
       getOrCreateDefaultProject(currentUser),
     ])
       .then(([userProjects, defaultProjectId]) => {

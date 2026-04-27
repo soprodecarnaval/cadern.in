@@ -18,7 +18,7 @@ const formatTime = (seconds: number) => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.round(seconds % 60);
-  const t = [h, m > 9 ? m : h ? "0" + m : m || "0", s > 9 ? s : "0" + s]
+  const t = [h, m > 9 ? m : h ? `0${m}` : m || "0", s > 9 ? s : `0${s}`]
     .filter(Boolean)
     .join(":");
   return t;
@@ -33,7 +33,7 @@ const initializeSfInstruments = async () => {
   instrumentPlayers = {};
   const loadInstrument = async (
     key: Instrument,
-    sfKey: Soundfont.InstrumentName
+    sfKey: Soundfont.InstrumentName,
   ) => {
     if (!instrumentPlayers) {
       return;
@@ -41,7 +41,7 @@ const initializeSfInstruments = async () => {
     instrumentPlayers[key] = await Soundfont.instrument(ac, sfKey);
   };
 
-  Promise.all([
+  await Promise.all([
     loadInstrument("sax tenor", "tenor_sax"),
     loadInstrument("sax alto", "alto_sax"),
     loadInstrument("sax soprano", "soprano_sax"),
@@ -62,13 +62,15 @@ const playMidiPart = async (midiUrl: string, instrument: Instrument) => {
 
   const file = await getFileFromUrl(midiUrl, instrument);
 
-  var reader = new FileReader();
-  if (file) reader.readAsArrayBuffer(file);
+  const reader = new FileReader();
+  if (file) {
+    reader.readAsArrayBuffer(file);
+  }
 
   reader.addEventListener(
     "load",
     () => {
-      player = new MidiPlayer.Player(function (event: any) {
+      player = new MidiPlayer.Player(function (event: MidiPlayer.Event) {
         if (!instrumentPlayers || !instrumentPlayers[instrument]) {
           console.warn("Instrument SoundFont not available:", instrument);
           return;
@@ -82,7 +84,7 @@ const playMidiPart = async (midiUrl: string, instrument: Instrument) => {
         const songTimeElement = document.getElementById(`song-time`);
         if (songTimeElement && player) {
           songTimeElement.innerHTML = formatTime(
-            player.getSongTime() - player.getSongTimeRemaining()
+            player.getSongTime() - player.getSongTimeRemaining(),
           );
         }
         document
@@ -125,14 +127,18 @@ const playMidiPart = async (midiUrl: string, instrument: Instrument) => {
         player.play();
       }
     },
-    false
+    false,
   );
 };
 
 const removeToastPlayer = () => {
-  if (player) player.stop();
+  if (player) {
+    player.stop();
+  }
   const el = document.getElementById(`play-bar-container`);
-  if (el) el.style.visibility = "hidden";
+  if (el) {
+    el.style.visibility = "hidden";
+  }
 };
 
 export { player as midiPlayer, playMidiPart, removeToastPlayer };

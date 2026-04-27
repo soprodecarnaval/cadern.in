@@ -1,7 +1,8 @@
 import z from "zod";
+import { Timestamp } from "firebase/firestore";
 import { zInstrument } from "./instrument";
 
-const zTimestamp = z.any();
+const zTimestamp = z.custom<Timestamp>();
 
 export const zPartData = z.object({
   name: z.string(),
@@ -18,10 +19,20 @@ export const zUserData = z.object({
 export const zUserDoc = zUserData.extend({ createdAt: zTimestamp });
 export type UserDoc = z.infer<typeof zUserDoc>;
 
+export const zUserProjectRole = z.enum(["owner", "admin", "editor", "reviewer"]);
+export type UserProjectRole = z.infer<typeof zUserProjectRole>;
+
+export const zProjectCreateData = z.object({
+  title: z.string(),
+  members: z.record(zUserProjectRole),
+});
+export type ProjectCreateData = z.infer<typeof zProjectCreateData>;
+
 export const zProjectData = z.object({
   title: z.string(),
-  ownerId: z.string(),
-  collaboratorIds: z.array(z.string()),
+  slug: z.string(),
+  members: z.record(zUserProjectRole),
+  memberIds: z.array(z.string()),
 });
 export const zProjectDoc = zProjectData.extend({ createdAt: zTimestamp });
 export type ProjectDoc = z.infer<typeof zProjectDoc>;
@@ -57,7 +68,7 @@ export type RevisionDoc = z.infer<typeof zRevisionDoc>;
 export const zSongbookScoreRef = z.object({
   type: z.literal("score"),
   scoreId: z.string(),
-  revisionId: z.string(),
+  revisionId: z.string(), // "latest" is a valid special value
   order: z.number().int(),
 });
 export type SongbookScoreRef = z.infer<typeof zSongbookScoreRef>;
@@ -77,7 +88,7 @@ export type SongbookEntry = z.infer<typeof zSongbookEntry>;
 
 export const zSongbookData = z.object({
   title: z.string(),
-  ownerId: z.string(),
+  projectId: z.string(),
   slug: z.string(),
   isPublished: z.boolean(),
   entries: z.array(zSongbookEntry),
@@ -87,3 +98,17 @@ export const zSongbookDoc = zSongbookData.extend({
   updatedAt: zTimestamp,
 });
 export type SongbookDoc = z.infer<typeof zSongbookDoc>;
+
+export const zUserProjectInvitationData = z.object({
+  fromUserId: z.string(),
+  toUserId: z.string(),
+  projectId: z.string(),
+  role: zUserProjectRole,
+  accepted: z.boolean().nullable(),
+});
+export const zUserProjectInvitationDoc = zUserProjectInvitationData.extend({
+  createdAt: zTimestamp,
+  updatedAt: zTimestamp,
+  deletedAt: zTimestamp.nullable(),
+});
+export type UserProjectInvitationDoc = z.infer<typeof zUserProjectInvitationDoc>;

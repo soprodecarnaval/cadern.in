@@ -17,7 +17,8 @@ export function MidiPlayer({ src, soundFont = "chrono_trigger" }: Props) {
   const ref = useRef<HTMLElement & { stop?: () => void }>(null);
 
   useEffect(() => {
-    return () => { ref.current?.stop?.(); };
+    const el = ref.current;
+    return () => { el?.stop?.(); };
   }, []);
 
   return <midi-player ref={ref} src={src} sound-font={SOUNDFONT_URLS[soundFont]} />;

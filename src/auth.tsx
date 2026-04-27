@@ -85,20 +85,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const changePassword = async (current: string, newPass: string) => {
-    const credential = EmailAuthProvider.credential(auth.currentUser!.email!, current);
+    const credential = EmailAuthProvider.credential(
+      auth.currentUser!.email!,
+      current,
+    );
     await reauthenticateWithCredential(auth.currentUser!, credential);
     await firebaseUpdatePassword(auth.currentUser!, newPass);
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout, resetPassword, register, updateDisplayName, updateAvatar, changePassword }}>
+    <AuthContext.Provider
+      value={{
+        currentUser,
+        login,
+        logout,
+        resetPassword,
+        register,
+        updateDisplayName,
+        updateAvatar,
+        changePassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  if (!ctx) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
   return ctx;
 }

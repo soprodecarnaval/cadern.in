@@ -34,28 +34,32 @@ export const sortByColumn = (
   columnToSort: SortColumn,
   directionToSort: SortDirection,
 ): ScoreViewModel[] => {
-  let sorted: ScoreViewModel[] = arrayToSort.sort((a: ScoreViewModel, b: ScoreViewModel) => {
-    if (columnToSort === "title") {
-      return a.title.localeCompare(b.title);
-    } else if (columnToSort === "projectTitle") {
-      return a.projectTitle.localeCompare(b.projectTitle);
-    } else if (columnToSort === "style") {
-      if (a.tags[0] === b.tags[0]) {
-        return a.tags[0].localeCompare(b.tags[0]);
+  let sorted: ScoreViewModel[] = arrayToSort.sort(
+    (a: ScoreViewModel, b: ScoreViewModel) => {
+      if (columnToSort === "title") {
+        return a.title.localeCompare(b.title);
+      } else if (columnToSort === "projectTitle") {
+        return a.projectTitle.localeCompare(b.projectTitle);
+      } else if (columnToSort === "style") {
+        if (a.tags[0] === b.tags[0]) {
+          return a.tags[0].localeCompare(b.tags[0]);
+        }
+      } else if (columnToSort === "carnivalStyle") {
+        if (a.tags[0] === b.tags[0]) {
+          return a.tags[0].localeCompare(b.tags[0]);
+        }
+        const cmpSection =
+          carnivalSectionOrder.indexOf(a.tags[0]) -
+          carnivalSectionOrder.indexOf(b.tags[0]);
+        return cmpSection == 0 ? a.title.localeCompare(b.title) : cmpSection;
       }
-    } else if (columnToSort === "carnivalStyle") {
-      if (a.tags[0] === b.tags[0]) {
-        return a.tags[0].localeCompare(b.tags[0]);
-      }
-      const cmpSection =
-        carnivalSectionOrder.indexOf(a.tags[0]) -
-        carnivalSectionOrder.indexOf(b.tags[0]);
-      return cmpSection == 0 ? a.title.localeCompare(b.title) : cmpSection;
-    }
-    return 0;
-  });
+      return 0;
+    },
+  );
 
-  if (directionToSort === "desc") sorted = sorted.reverse();
+  if (directionToSort === "desc") {
+    sorted = sorted.reverse();
+  }
 
   return sorted;
 };
