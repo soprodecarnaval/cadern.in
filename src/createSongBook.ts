@@ -10,7 +10,7 @@ interface PDFBlobStream extends NodeJS.WritableStream {
 
 declare const window: Window &
   typeof globalThis & {
-    PDFDocument: new (options: PDFKit.DocumentOptions) => PDFKit.PDFDocument;
+    PDFDocument: new (options: PDFKit.PDFDocumentOptions) => PDFKit.PDFDocument;
     blobStream: () => PDFBlobStream;
   };
 
@@ -335,7 +335,7 @@ const addSongPage = async (
       doc
         .font("Roboto-Bold")
         .fontSize(fontSize)
-        .text(songPageIndex, 4 * cm2pt, 1.5 * cm2pt + numberSpacing, {
+        .text(String(songPageIndex), 4 * cm2pt, 1.5 * cm2pt + numberSpacing, {
           align: "center",
           width: 15 * cm2pt,
           height: fontSize,
@@ -352,7 +352,7 @@ const addSongPage = async (
       doc
         .font("Roboto-Bold")
         .fontSize(fontSize)
-        .text(songPageIndex, 1 * cm2pt, 0.5 * cm2pt + numberSpacing, {
+        .text(String(songPageIndex), 1 * cm2pt, 0.5 * cm2pt + numberSpacing, {
           align: "center",
           width: 16 * cm2pt,
           height: fontSize,
@@ -687,7 +687,7 @@ const addIndexPage = (
       doc
         .font("Roboto-Bold")
         .fontSize(fontSize - 2)
-        .text(songNumber, currentX - 0.5 * cm2pt, currentY, {
+        .text(String(songNumber), currentX - 0.5 * cm2pt, currentY, {
           align: "right",
           width: 0.6 * cm2pt,
           goTo: hasInstrument ? destId : undefined,

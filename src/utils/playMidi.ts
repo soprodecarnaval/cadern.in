@@ -75,9 +75,9 @@ const playMidiPart = async (midiUrl: string, instrument: Instrument) => {
           console.warn("Instrument SoundFont not available:", instrument);
           return;
         }
-        if (event.name == "Note on") {
+        if (event.name == "Note on" && event.noteName) {
           instrumentPlayers[instrument]?.play(event.noteName, ac.currentTime, {
-            gain: event.velocity / 100,
+            gain: (event.velocity ?? 0) / 100,
           });
         }
 
