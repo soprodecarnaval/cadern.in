@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Alert, Button, Container, Spinner } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import { getScore, getRevision, getProject } from "../lib/db";
-import { storagePathToUrl } from "../storage";
 import { ScoreDisplay, type ScoreDisplayPart } from "./ScoreDisplay";
 
 interface LoadedScore {
@@ -47,13 +46,13 @@ async function loadScore(
     sub: song.sub,
     tags: song.tags,
     projectTitle,
-    msczUrl: storagePathToUrl(rev.mscz),
-    arrangementMidiUrl: rev.midi ? storagePathToUrl(rev.midi) : null,
+    msczUrl: rev.mscz.url,
+    arrangementMidiUrl: rev.midi.url || null,
     parts: rev.parts.map((part) => ({
       name: part.name,
       instrument: part.instrument,
-      svgUrls: part.svg.map(storagePathToUrl),
-      midiUrl: part.midi ? storagePathToUrl(part.midi) : null,
+      svgUrls: part.svg.map((f) => f.url),
+      midiUrl: part.midi.url || null,
     })),
   };
 }

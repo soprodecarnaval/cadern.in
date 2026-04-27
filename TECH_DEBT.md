@@ -33,5 +33,8 @@ Create a script that permanently deletes soft-deleted songs (Firestore docs + St
 ## Refresh CollectionContext after upload
 Currently `CollectionContext` loads data once on mount. After a user uploads a new score, the collection is stale until page reload.
 
+## Storage download URL regeneration on read
+Download URLs (with Firebase Storage tokens) are persisted in Firestore revision docs. If a token is ever revoked, stored URLs silently break. Mitigation: on a 404, fall back to `getDownloadURL` from the client SDK using the stored storage path, then write the fresh URL back to Firestore.
+
 ## Multi-instrument parts
 `Part.instrument` is currently a single `Instrument` value. In theory a part (e.g. a doubling part) could cover more than one instrument. The type should be changed to `instrument: Instrument | Instrument[]` and the instrument detection in `parseUploadedFiles` updated accordingly.

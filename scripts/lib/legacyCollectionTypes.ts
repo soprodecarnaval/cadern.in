@@ -1,5 +1,11 @@
 import z from "zod";
-import { zPartData } from "../../types/docs";
+
+const zLegacyPartData = z.object({
+  name: z.string(),
+  instrument: z.string(),
+  svg: z.array(z.string()),
+  midi: z.string(),
+});
 
 export const zLegacyScore = z.object({
   id: z.string(),
@@ -9,7 +15,7 @@ export const zLegacyScore = z.object({
   mscz: z.string(),
   metajson: z.string(),
   midi: z.string(),
-  parts: z.array(zPartData),
+  parts: z.array(zLegacyPartData),
   tags: z.array(z.string()),
   projectTitle: z.string(),
 });
