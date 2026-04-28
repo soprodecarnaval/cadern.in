@@ -16,7 +16,7 @@ jobs:
     environment: production
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      CI_FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
       VITE_CADERNIN_UID: ${{ vars.CADERNIN_UID }}
       VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
       VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
