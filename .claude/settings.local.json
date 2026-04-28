@@ -12,7 +12,9 @@
       "Bash(awk 'BEGIN{f=\"\"} /^\\\\/Users/{f=$0; next} /error|warning/{if\\(f!=\"\"\\) print f\": \"$0}')",
       "Bash(grep -v \"✖\\\\|problems\\\\|warnings\\\\|warning\\\\|^$\")",
       "Bash(grep -v \"npm notice\\\\|^$\\\\|> musicoteca\")",
-      "Bash(node -e \"const a = require\\('/Users/beise/soprodecarnaval/cadern.in/node_modules/firebase-admin/lib/storage/storage.js'\\); console.log\\(Object.keys\\(a\\)\\)\")"
+      "Bash(node -e \"const a = require\\('/Users/beise/soprodecarnaval/cadern.in/node_modules/firebase-admin/lib/storage/storage.js'\\); console.log\\(Object.keys\\(a\\)\\)\")",
+      "Bash(xargs -I {} sh -c 'echo \"=== {} ===\" && grep -n \"LegacyCollection\\\\|legacy\\\\|old.*format\\\\|format.*version\" \"{}\"')",
+      "Bash(xargs ls *)"
     ]
   }
 }
