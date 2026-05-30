@@ -1,13 +1,13 @@
-name: Deploy to Firebase
+name: Deploy to Firebase (production)
 
 on:
   push:
     branches:
-      - main
+      - production
   workflow_dispatch:
 
 concurrency:
-  group: "firebase-deploy"
+  group: "firebase-deploy-production"
   cancel-in-progress: true
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-      VITE_CADERNIN_UID: ${{ vars.CADERNIN_UID }}
+      FIREBASE_PROJECT_ALIAS: ${{ vars.FIREBASE_PROJECT_ALIAS }}
       VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
       VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
       VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
@@ -25,6 +25,9 @@ jobs:
       VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
       VITE_FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
       VITE_FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
+      VITE_CADERNIN_UID: ${{ vars.CADERNIN_UID }}
+      VITE_APP_TITLE: ${{ vars.APP_TITLE}}
+      VITE_FEATURE_FLAG_AUTH_ENABLED: ${{ vars.FEATURE_FLAG_AUTH_ENABLED}}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,4 +41,4 @@ jobs:
       - name: Install functions dependencies
         run: npm ci --prefix functions
       - name: Deploy
-        run: npm run deploy
+        run: npm run deploy -- --project $VITE_FIREBASE_PROJECT_ID

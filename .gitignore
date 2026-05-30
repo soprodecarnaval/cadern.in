@@ -38,3 +38,7 @@ test/scripts/indexCollectionTestOutput
 
 service-account.json
 .firebase
+
+.env.production
+.env.staging
+.firebaserc

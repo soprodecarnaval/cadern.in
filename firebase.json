@@ -10,7 +10,7 @@
     ]
   },
   "firestore": {
-    "database": "cadernin-2026-04-22",
+    "database": "(default)",
     "location": "southamerica-east1",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
