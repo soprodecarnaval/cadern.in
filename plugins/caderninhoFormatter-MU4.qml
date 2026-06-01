@@ -25,7 +25,7 @@ MuseScore {
     property variant multiNoteOffset: -2.3
     property variant pitchOffsetScale: -5.0
     property var textColor: ui.theme.isDark ? "#FFFFFF" : "#000000"
-    property var instrumentList: ["Trumpet Bb", "Trumpet C", "Trombone", "Tuba", "Tuba Eb", "Euphonium", "Sax Soprano", "Sax Alto", "Sax Tenor", "Sax Baritone",]
+    property var instrumentList: ["Trumpet Bb", "Trumpet C", "Trombone", "Tuba", "Tuba Eb", "Euphonium"]
     property var valInstrument: "Trumpet Bb"
     property bool debugMode: false
     property string logText: ""
@@ -1102,94 +1102,6 @@ MuseScore {
         }
     }
 
-    function griff_sax(midi) {
-        switch (midi) {
-        case 54:
-            return "4,\n4'";
-            break;
-        case 55:
-            return "4-\n4";
-            break;
-        case 56:
-            return "3\n4";
-            break;
-        case 57:
-            return "4¬\n4";
-            break;
-        case 58:
-            return "3\n3";
-            break;
-        case 59:
-            return "3\n4''";
-            break;
-        case 60:
-            return "3\n2";
-            break;
-        case 61:
-            return "3\n1";
-            break;
-        case 62:
-            return "3\n1*";
-            break;
-        case 63:
-            return "3\n0";
-            break;
-        case 64:
-            return "4'\n0";
-            break;
-        case 65:
-            return "2\n0";
-            break;
-        case 66:
-            return "2\n1-";
-            break;
-        case 67:
-            return "1\n0";
-            break;
-        case 68:
-            return "1*\n0";
-            break;
-        case 69:
-            return "0\n0";
-            break;
-        case 70:
-            return "3\u0361\n3";
-            break;
-        case 71:
-            return "3\u0361\n4'";
-            break;
-        case 72:
-            return "3\u0361\n2";
-            break;
-        case 73:
-            return "3\u0361\n1";
-            break;
-        case 74:
-            return "3\u0361\n1*";
-            break;
-        case 75:
-            return "3\u0361\n0";
-            break;
-        case 76:
-            return "4\u0361'\n0";
-            break;
-        case 77:
-            return "2\u0361\n0";
-            break;
-        case 78:
-            return "2\u0361\n1-";
-            break;
-        case 79:
-            return "1\u0361\n0";
-            break;
-        case 80:
-            return "1\u0361*\n0";
-            break;
-        default:
-            return "";
-        }
-    }
-
     function griff(midi, oneChar) {
         midi = midi - 20 + noteShift;
         switch (valInstrument) {
@@ -1205,14 +1117,6 @@ MuseScore {
             return oneChar ? griff_tuba_onechar(midi - 3) : griff_tuba(midi - 3);
         case "Euphonium":
             return oneChar ? griff_euphonium_onechar(midi + 2) : griff_euphonium(midi + 2);
-        case "Sax Soprano":
-            return griff_sax(midi + 18);
-        case "Sax Alto":
-            return griff_sax(midi + 25);
-        case "Sax Tenor":
-            return griff_sax(midi + 30);
-        case "Sax Baritone":
-            return griff_sax(midi + 37);
         default:
             return "";
         }
@@ -1294,7 +1198,6 @@ MuseScore {
 
             for (var j = 0; j < (endTrack - startTrack) / 4; j++) {
                 var staffIdx = startTrack / 4 + j;
-                var isSax = false;
                 var onechar = oneCharFingeringCheckbox.checked;
                 switch (instrumentId) {
                 case "brass.trombone":
@@ -1326,31 +1229,11 @@ MuseScore {
                 case "c-trumpet":
                     valInstrument = "Trumpet C";
                     break;
-                case "wind.reed.saxophone.soprano":
-                    valInstrument = "Sax Soprano";
-                    isSax = true;
-                    break;
-                case "wind.reed.saxophone.alto":
-                    valInstrument = "Sax Alto";
-                    isSax = true;
-                    break;
-                case "wind.reed.saxophone.tenor":
-                    valInstrument = "Sax Tenor";
-                    isSax = true;
-                    break;
-                case "wind.reed.saxophone.baritone":
-                    valInstrument = "Sax Baritone";
-                    isSax = true;
-                    break;
                 default:
                     continue;
                 }
                 log("valInstrument: " + valInstrument + "; oneChar: " + onechar);
-                if (isSax && optAll.checked) {
-                    console.log("Not adding sax fingering");
-                } else {
-                    addFingering(score, staffIdx, onechar);
-                }
+                addFingering(score, staffIdx, onechar);
             }
         }
     }
