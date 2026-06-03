@@ -1,0 +1,70 @@
+.pragma library
+
+var _data = {
+    "en": {
+        "applyAllParts": "Apply to all parts",
+        "basicFormat": "Basic format:",
+        "cleanFingering": "Clean fingering",
+        "cleanTextBoxes": "Clean text boxes",
+        "setStyle": "Set style",
+        "adjustScale": "Adjust Scale",
+        "leadingSpace": "Leading space",
+        "addFingering": "Add fingering",
+        "fingeringSize": "Fingering size",
+        "manualAdjust": "Manual adjust:",
+        "fingeringSizeLabel": "Fingering size:",
+        "spatium": "Spatium:",
+        "options": "Options:",
+        "oneCharFingering": "Use one char fingering",
+        "debugMode": "Debug log",
+        "export": "Export",
+        "exportWindowTitle": "Export to cadern.in",
+        "partsSection": "Parts:",
+        "metadataSection": "Metadata:",
+        "titleLabel": "Title (title)",
+        "composerLabel": "Composer (composer)",
+        "trechoLabel": "Trecho (sub)",
+        "tagsLabel": "Tags (tags)",
+        "exportBtn": "Export",
+        "exportSuccess": "Exported to:",
+        "exportVersionError": "Requires MuseScore 4.7+",
+        "noExcerptsWarning": "Create parts in MuseScore first (Add → Parts)",
+        "exportingPart": "Part",
+        "exporting": "Exporting..."
+    },
+    "pt-br": {
+        "applyAllParts": "Aplicar em todas as partes",
+        "basicFormat": "Formatação básica:",
+        "cleanFingering": "Limpar piratas",
+        "cleanTextBoxes": "Limpar caixas de texto",
+        "setStyle": "Estilo de página de caderninho",
+        "adjustScale": "Ajustar escala",
+        "leadingSpace": "Espaço inicial",
+        "addFingering": "Adicionar piratas",
+        "fingeringSize": "Tamanho dos piratas",
+        "manualAdjust": "Ajuste manual:",
+        "fingeringSizeLabel": "Tamanho dos piratas:",
+        "spatium": "Espaçamento:",
+        "options": "Opções:",
+        "oneCharFingering": "Pirata de número de posição",
+        "debugMode": "Mostrar logs",
+        "export": "Exportar",
+        "exportWindowTitle": "Exportar para cadern.in",
+        "partsSection": "Partes:",
+        "metadataSection": "Metadados:",
+        "titleLabel": "Título (title)",
+        "composerLabel": "Compositor (composer)",
+        "trechoLabel": "Trecho (sub)",
+        "tagsLabel": "Tags (tags)",
+        "exportBtn": "Exportar",
+        "exportSuccess": "Exportado em:",
+        "exportVersionError": "Requer MuseScore 4.7+",
+        "noExcerptsWarning": "Crie as partes no MuseScore primeiro (Adicionar → Partes)",
+        "exportingPart": "Parte",
+        "exporting": "Exportando..."
+    }
+};
+
+function t(locale, key) {
+    return (_data[locale] && _data[locale][key]) || _data["en"][key] || key;
+}
