@@ -297,18 +297,6 @@ MuseScore {
             }
         }
 
-        Button {
-            width: parent.width
-            Text {
-                anchors.fill: parent
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                color: textColor
-                text: t("export")
-            }
-            onClicked: exportWindow.visible = true
-        }
-
         Text {
             text: "v" + version
             color: textColor
@@ -334,13 +322,6 @@ MuseScore {
                 wrapMode: TextArea.Wrap
             }
         }
-    }
-
-    ExportWindow {
-        id: exportWindow
-        textColor: caderninhoFormatter.textColor
-        locale: caderninhoFormatter.locale
-        logFn: caderninhoFormatter.log
     }
 
     function log(msg) {

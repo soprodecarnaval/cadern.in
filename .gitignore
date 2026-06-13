@@ -42,3 +42,6 @@ service-account.json
 .env.production
 .env.staging
 .firebaserc
+
+# claude stuff
+.claude
