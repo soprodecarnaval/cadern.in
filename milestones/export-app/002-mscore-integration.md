@@ -114,12 +114,17 @@ Confirm `mscore -j` runs headless while the MuseScore GUI is open
   **SIGABRTs** on a non-existent path rather than erroring, so a bad/`~` path
   must be caught before invoking it.
 
-### Known issue (deferred)
+### MuseScore 3 files (resolved)
 
-Listing parts works for the first score, but **`List parts` fails after
-switching to a different score** within the same session. Cause not yet
-diagnosed (possibly a second synchronous mscore invocation under Electron, or
-stale state). To fix in a follow-up.
+The "fails after switching scores" report was actually a **MuseScore 3 file**:
+MS4's CLI SIGABRTs reading MS3-format scores headless (the migration step needs
+a GUI). Confirmed it reproduces outside Electron too — not our bug.
+
+Decision: **MS3 is unsupported.** New scores are MS4; old scores are already
+uploaded. Rather than ship a zip/XML parser to read MS3 directly, `readScoreMeta`
+now catches the SIGABRT and throws an actionable error ("open it in MuseScore 4
+and save it again"). For export (005), `mscore -j` will need `--force` (verified
+it rescues `-o`/`-j` on MS3, though `--score-meta` stays unsalvageable).
 
 Verified end-to-end against the real binary + `Olha pro Céu_pratica.mscz`:
 autolocate `/opt/homebrew/bin/mscore`, all parts mapped correctly (incl.

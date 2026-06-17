@@ -64,10 +64,27 @@ export const readScoreMeta = (
   if (!fs.existsSync(msczPath)) {
     throw new Error(`File not found: ${msczPath}`);
   }
-  const stdout = execFileSync(mscore, ["--score-meta", msczPath], {
-    encoding: "utf-8",
-    maxBuffer: 32 * 1024 * 1024,
-  });
+  // MuseScore 4 SIGABRTs reading MuseScore 3 files headless. Catch the crash
+  // and surface an actionable message instead of the raw abort dump.
+  let stdout: string;
+  try {
+    stdout = execFileSync(mscore, ["--score-meta", msczPath], {
+      encoding: "utf-8",
+      maxBuffer: 32 * 1024 * 1024,
+    });
+  } catch (e) {
+    const err = e as { signal?: string; stderr?: string };
+    const crashed =
+      err.signal === "SIGABRT" ||
+      (err.stderr ?? "").includes("mutex lock failed");
+    if (crashed) {
+      throw new Error(
+        "Could not read this score. If it was made in MuseScore 3, open it " +
+          "in MuseScore 4 and save it again, then retry.",
+      );
+    }
+    throw new Error("MuseScore failed to read this score's metadata.");
+  }
   const m = parseScoreMeta(stdout);
 
   const parts: ScorePart[] = (m.parts ?? []).map((p) => ({
