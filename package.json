@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "dev-docker": "vite --host",
@@ -10,6 +11,8 @@
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "export:mscz": "tsx scripts/exportMscz.ts",
+    "export-app:dev": "vite --config vite.electron.config.ts",
+    "export-app:build": "vite build --config vite.electron.config.ts",
     "verify:assets": "tsx --env-file=.env.local scripts/verifyAssets.ts",
     "migrate": "tsx --env-file=.env.local scripts/migrate.ts",
     "migrate:up": "npm run migrate -- --execute",
@@ -56,6 +59,7 @@
     "argparse": "^2.0.1",
     "d3": "^7.8.5",
     "d3-node": "^0.2.0",
+    "electron": "^42.4.1",
     "eslint": "^8.44.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.1",
@@ -66,6 +70,7 @@
     "tsx": "^4.7.0",
     "typescript": "^5.1.6",
     "vite": "^4.4.0",
+    "vite-plugin-electron": "^0.28.8",
     "vite-plugin-node-polyfills": "^0.15.0",
     "vitest": "^2.0.3"
   }
