@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { registerIpc } from "./ipc";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -27,7 +28,10 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  registerIpc();
+  createWindow();
+});
 
 app.on("window-all-closed", () => {
   win = null;

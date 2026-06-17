@@ -38,3 +38,6 @@ Download URLs (with Firebase Storage tokens) are persisted in Firestore revision
 
 ## Multi-instrument parts
 `Part.instrument` is currently a single `Instrument` value. In theory a part (e.g. a doubling part) could cover more than one instrument. The type should be changed to `instrument: Instrument | Instrument[]` and the instrument detection in `parseUploadedFiles` updated accordingly.
+
+## Align cadern.in instrument IDs with MuseScore 4 instrumentIds
+cadern.in uses its own internal instrument identifiers (`types/instrument.ts`: `bombardino`, `sax alto`, `tuba eb`, …), which differ from MuseScore 4 `instrumentId`s (`euphonium`, `alto-saxophone`, `bass-eb-tuba`, …). The export app bridges them with a hand-maintained map in `scripts/lib/scoreInstrument.ts`, which must be extended whenever a new MS4 id appears. If the cadern.in IDs were derived from / matched MS4 ids, this map would shrink or disappear and instrument detection would be far more robust. Caveat: cadern.in makes distinctions MS4 doesn't expose via `instrumentId` (e.g. `tuba` vs `tuba eb`, the `pirata` variants), so a full 1:1 match isn't possible — those would still need name/heuristic handling.

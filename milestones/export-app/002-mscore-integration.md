@@ -95,3 +95,35 @@ Confirm `mscore -j` runs headless while the MuseScore GUI is open
   works when cleared; the choice survives a restart.
 - A temporary dev call to `window.api.listParts(path)` logs the parts array with
   correct instrument labels and page counts for a known score.
+
+## Status: done
+
+- `scripts/lib/mscz.ts`: MS4-only `autolocateMscore()` (PATH + known per-OS
+  paths), `validateMscore()` (`--version`), `detectMscore()` throws (CLI compat).
+- `scripts/lib/scoreInstrument.ts`: `mapInstrumentId(id, name)` → cadern.in
+  `Instrument` (tuba/tuba-eb by name).
+- `scripts/lib/scoreMeta.ts`: `readScoreMeta()` / `listParts()` run
+  `--score-meta`, parse the `{ metadata }` wrapper (JSON-sliced for log noise).
+- `electron/settings.ts`: `get/setMscorePath` persisted in `userData`.
+- `electron/ipc.ts`: `mscore:get` (resolve = saved-if-valid else autolocate &
+  persist), `mscore:set`, `mscore:locate` (dialog), `score:listParts`. Wired in
+  `main.ts`; bridged in `preload.ts`; typed in `global.d.ts`.
+- `App.tsx`: temporary dev UI (mscore path + Locate + Choose .mscz + List parts).
+- Added `dialog:pickMscz` IPC (native picker → absolute path), `~` expansion for
+  typed paths, and a `fs.existsSync` guard in `readScoreMeta` — MuseScore
+  **SIGABRTs** on a non-existent path rather than erroring, so a bad/`~` path
+  must be caught before invoking it.
+
+### Known issue (deferred)
+
+Listing parts works for the first score, but **`List parts` fails after
+switching to a different score** within the same session. Cause not yet
+diagnosed (possibly a second synchronous mscore invocation under Electron, or
+stale state). To fix in a follow-up.
+
+Verified end-to-end against the real binary + `Olha pro Céu_pratica.mscz`:
+autolocate `/opt/homebrew/bin/mscore`, all parts mapped correctly (incl.
+`euphonium`→`bombardino` for Portuguese "Eufônio", percussion → incompatible,
+duplicate trumpet/trombone ids distinct). `build` + `tsc` (src/scripts) +
+`lint` + electron `tsc` all clean. **GUI flows (prefill display, Locate button,
+persistence across restart) to verify in the running app.**
