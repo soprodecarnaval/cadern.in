@@ -15,6 +15,7 @@
     "migrate:up": "npm run migrate -- --execute",
     "migrate:down": "npm run migrate -- --to",
     "migrate:cleanup": "npm run migrate -- cleanup --execute",
+    "plugin:zip": "bash scripts/zipPlugin.sh",
     "deploy": "npm run build && npx firebase-tools deploy",
     "test": "vitest"
   },

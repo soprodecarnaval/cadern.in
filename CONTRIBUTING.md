@@ -13,7 +13,7 @@
 ## Como contribuir com partituras
 
 ### 1. Formatando a partitura
-- Baixe a última versão do plugin [aqui](https://raw.githubusercontent.com/soprodecarnaval/musicoteca/refs/heads/main/plugins/caderninhoFormatter-MU3.qml) (use o MuseScore 3!).
+- Baixe a última versão do plugin [aqui](cadern.in/plugin).
 - Habilite o plugin e abra a partitura.
 - Se a partitura não tiver partes criadas (aparecem abas com o nome dos instrumentos), clique em `Arquivos -> Partes -> Todas as Partes -> Ok`
 - Com o plugin aberto, habilite `Apply to all parts`
