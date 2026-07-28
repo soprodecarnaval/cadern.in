@@ -8,7 +8,7 @@ import "musescoreInstruments.js" as MsInstruments
 
 MuseScore {
     id: caderninhoFormatter
-    version: "3.3.0"
+    version: "3.3.1"
     description: "Different options for formatting the score for carnival"
     pluginType: "dialog"
     dockArea: "left"
