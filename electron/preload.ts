@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 
 contextBridge.exposeInMainWorld("api", {
   getMscorePath: () => ipcRenderer.invoke("mscore:get"),
@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("mscore:set", mscorePath),
   locateMscore: () => ipcRenderer.invoke("mscore:locate"),
   pickMscz: () => ipcRenderer.invoke("dialog:pickMscz"),
+  getDroppedPath: (file: File) => webUtils.getPathForFile(file),
   listParts: (msczPath: string) =>
     ipcRenderer.invoke("score:listParts", msczPath),
 });

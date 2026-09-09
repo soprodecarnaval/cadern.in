@@ -1,0 +1,140 @@
+:root {
+  --fg: #1a1a1a;
+  --muted: #6b7280;
+  --border: #d1d5db;
+  --accent: #2563eb;
+  --danger: #c0392b;
+  --ok: #1e874b;
+  --bg-subtle: #f3f4f6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: var(--fg);
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0 0 16px;
+}
+
+.muted {
+  color: var(--muted);
+}
+.danger {
+  color: var(--danger);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+button {
+  font: inherit;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  background: var(--bg-subtle);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn-link {
+  border: none;
+  background: none;
+  color: var(--accent);
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.mscore-bar {
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.mscore-bar code {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 32px;
+  text-align: center;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.dropzone:hover,
+.dropzone.drag {
+  border-color: var(--accent);
+  background: #eff6ff;
+}
+.dropzone.disabled {
+  opacity: 0.5;
+  cursor: default;
+  border-color: var(--border);
+  background: transparent;
+}
+
+.score-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20px 0 4px;
+}
+
+.parts {
+  width: 100%;
+  border-collapse: collapse;
+}
+.parts th,
+.parts td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.parts th {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.parts tr.incompatible {
+  opacity: 0.45;
+}
+
+.badge {
+  font-size: 13px;
+  color: var(--ok);
+}
+.badge.no {
+  color: var(--danger);
+}
+
+.error {
+  color: var(--danger);
+  margin: 12px 0;
+}

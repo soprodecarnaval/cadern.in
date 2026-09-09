@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
 import type { ScorePart } from "../../scripts/lib/scoreMeta";
+import { FileDrop } from "./components/FileDrop";
+import { PartsTable } from "./components/PartsTable";
 
-// Temporary milestone-002 scaffold to exercise the IPC surface.
-// Replaced by the real file picker / parts table in 003.
 export function App() {
   const [mscorePath, setMscorePath] = useState<string | null>(null);
+  const [resolvingMscore, setResolvingMscore] = useState(true);
   const [msczPath, setMsczPath] = useState("");
   const [parts, setParts] = useState<ScorePart[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    void window.api.getMscorePath().then(setMscorePath);
+    void window.api
+      .getMscorePath()
+      .then(setMscorePath)
+      .finally(() => setResolvingMscore(false));
   }, []);
 
   const locate = async () => {
@@ -23,81 +29,94 @@ export function App() {
     }
   };
 
-  const pickMscz = async () => {
+  const loadScore = async (path: string) => {
     setError("");
-    const picked = await window.api.pickMscz();
-    if (picked) {
-      setMsczPath(picked);
+    setMsczPath(path);
+    setParts([]);
+    setSelected(new Set());
+    setLoading(true);
+    try {
+      const result = await window.api.listParts(path);
+      setParts(result);
+      setSelected(
+        new Set(result.filter((part) => part.instrument).map((part) => part.id)),
+      );
+      if (result.length === 0) {
+        setError("Nenhuma parte encontrada.");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
     }
   };
 
-  const listParts = async () => {
-    setError("");
-    setParts([]);
-    try {
-      const result = await window.api.listParts(msczPath);
-      console.log("[listParts]", result);
-      setParts(result);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
+  const togglePart = (id: string) => {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
   };
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", padding: 24 }}>
+    <main className="app">
       <h1>cadern.in — Exportador</h1>
 
-      <section style={{ marginBottom: 16 }}>
-        <strong>MuseScore 4:</strong>{" "}
-        {mscorePath ? (
+      <section className="row mscore-bar">
+        <strong>MuseScore 4:</strong>
+        {resolvingMscore ? (
+          <span className="muted">procurando…</span>
+        ) : mscorePath ? (
           <code>{mscorePath}</code>
         ) : (
-          <span style={{ color: "#c33" }}>not found</span>
-        )}{" "}
-        <button onClick={() => void locate()}>Locate…</button>
-      </section>
-
-      <section style={{ marginBottom: 16 }}>
-        <button onClick={() => void pickMscz()}>Choose .mscz…</button>{" "}
-        <input
-          style={{ width: 420 }}
-          placeholder="/path/to/score.mscz"
-          value={msczPath}
-          onChange={(e) => setMsczPath(e.target.value)}
-        />{" "}
-        <button onClick={() => void listParts()} disabled={!msczPath}>
-          List parts
+          <span className="danger">não encontrado</span>
+        )}
+        <button className="btn-link" onClick={() => void locate()}>
+          Localizar…
         </button>
       </section>
 
-      {error && <p style={{ color: "#c33" }}>{error}</p>}
+      <FileDrop
+        onPick={(path) => void loadScore(path)}
+        disabled={!mscorePath || loading}
+      />
+
+      {!resolvingMscore && !mscorePath && (
+        <p className="muted">
+          Localize o MuseScore 4 para selecionar uma partitura.
+        </p>
+      )}
+      {loading && <p className="muted">Lendo partitura…</p>}
+      {error && <p className="error">{error}</p>}
 
       {parts.length > 0 && (
-        <table cellPadding={6} style={{ borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th align="left">id</th>
-              <th align="left">name</th>
-              <th align="left">instrumentId</th>
-              <th align="left">cadern.in</th>
-            </tr>
-          </thead>
-          <tbody>
-            {parts.map((p) => (
-              <tr key={p.id}>
-                <td>{p.id}</td>
-                <td>{p.name}</td>
-                <td>
-                  <code>{p.instrumentId}</code>
-                </td>
-                <td style={{ color: p.instrument ? "#2a2" : "#c33" }}>
-                  {p.instrument ?? "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          <header className="score-head">
+            <strong>{msczPath.split(/[\\/]/).pop()}</strong>
+            <button
+              className="btn-link"
+              onClick={() => {
+                setMsczPath("");
+                setParts([]);
+                setSelected(new Set());
+                setError("");
+              }}
+            >
+              Trocar
+            </button>
+          </header>
+          <PartsTable
+            parts={parts}
+            selected={selected}
+            onToggle={togglePart}
+          />
+        </>
       )}
-    </div>
+    </main>
   );
 }

@@ -12,6 +12,7 @@ export interface ExportApi {
     error?: string;
   } | null>;
   pickMscz(): Promise<string | null>;
+  getDroppedPath(file: File): string;
   listParts(msczPath: string): Promise<ScorePart[]>;
 }
 

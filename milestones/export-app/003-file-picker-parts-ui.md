@@ -33,3 +33,10 @@ Selection is keyed by part `id` (names can repeat, e.g. two `Trumpet`).
 - Incompatible parts (e.g. percussion) are visibly disabled and uncheckable.
 - Same-named parts (two `Trumpet`) are independently selectable via `id`.
 - Selection state is read back correctly for export.
+
+## Status: done
+
+- Native picker and renderer drag/drop both load `.mscz` paths.
+- Loading, missing-MuseScore, empty-score, and read-error states are shown.
+- Compatible parts start selected; incompatible parts are disabled.
+- Selection is stored by part `id`, so duplicate names remain independent.
