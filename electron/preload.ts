@@ -7,6 +7,6 @@ contextBridge.exposeInMainWorld("api", {
   locateMscore: () => ipcRenderer.invoke("mscore:locate"),
   pickMscz: () => ipcRenderer.invoke("dialog:pickMscz"),
   getDroppedPath: (file: File) => webUtils.getPathForFile(file),
-  listParts: (msczPath: string) =>
-    ipcRenderer.invoke("score:listParts", msczPath),
+  readScoreMeta: (msczPath: string) =>
+    ipcRenderer.invoke("score:readMeta", msczPath),
 });

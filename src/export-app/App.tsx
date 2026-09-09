@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import type { ScorePart } from "../../scripts/lib/scoreMeta";
 import { FileDrop } from "./components/FileDrop";
+import {
+  MetadataForm,
+  type MetadataValues,
+} from "./components/MetadataForm";
 import { PartsTable } from "./components/PartsTable";
 
 export function App() {
@@ -9,6 +13,7 @@ export function App() {
   const [msczPath, setMsczPath] = useState("");
   const [parts, setParts] = useState<ScorePart[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [metadata, setMetadata] = useState<MetadataValues | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,14 +39,25 @@ export function App() {
     setMsczPath(path);
     setParts([]);
     setSelected(new Set());
+    setMetadata(null);
     setLoading(true);
     try {
-      const result = await window.api.listParts(path);
-      setParts(result);
+      const result = await window.api.readScoreMeta(path);
+      setParts(result.parts);
       setSelected(
-        new Set(result.filter((part) => part.instrument).map((part) => part.id)),
+        new Set(
+          result.parts
+            .filter((part) => part.instrument)
+            .map((part) => part.id),
+        ),
       );
-      if (result.length === 0) {
+      setMetadata({
+        title: result.title,
+        composer: result.composer,
+        previousSource: result.previousSource,
+        poet: result.poet,
+      });
+      if (result.parts.length === 0) {
         setError("Nenhuma parte encontrada.");
       }
     } catch (e) {
@@ -94,7 +110,7 @@ export function App() {
       {loading && <p className="muted">Lendo partitura…</p>}
       {error && <p className="error">{error}</p>}
 
-      {parts.length > 0 && (
+      {metadata && (
         <>
           <header className="score-head">
             <strong>{msczPath.split(/[\\/]/).pop()}</strong>
@@ -104,17 +120,21 @@ export function App() {
                 setMsczPath("");
                 setParts([]);
                 setSelected(new Set());
+                setMetadata(null);
                 setError("");
               }}
             >
               Trocar
             </button>
           </header>
-          <PartsTable
-            parts={parts}
-            selected={selected}
-            onToggle={togglePart}
-          />
+          {parts.length > 0 && (
+            <PartsTable
+              parts={parts}
+              selected={selected}
+              onToggle={togglePart}
+            />
+          )}
+          <MetadataForm value={metadata} onChange={setMetadata} />
         </>
       )}
     </main>

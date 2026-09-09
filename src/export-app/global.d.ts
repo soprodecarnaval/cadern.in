@@ -1,4 +1,4 @@
-import type { ScorePart } from "../../scripts/lib/scoreMeta";
+import type { ScoreMeta } from "../../scripts/lib/scoreMeta";
 
 // Bridge exposed by electron/preload.ts via contextBridge.
 export interface ExportApi {
@@ -13,7 +13,7 @@ export interface ExportApi {
   } | null>;
   pickMscz(): Promise<string | null>;
   getDroppedPath(file: File): string;
-  listParts(msczPath: string): Promise<ScorePart[]>;
+  readScoreMeta(msczPath: string): Promise<ScoreMeta>;
 }
 
 declare global {

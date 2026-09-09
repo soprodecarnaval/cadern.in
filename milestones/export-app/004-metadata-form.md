@@ -32,3 +32,9 @@ when uploading (007).
 
 - Opening a score pre-fills all four fields from its metadata.
 - Edits persist in state and are available to the export step.
+
+## Status: done
+
+- The existing `--score-meta` call returns metadata and parts together.
+- A controlled form pre-fills and retains the four cadern.in metadata values.
+- Loading another score or clearing the current score resets the form state.

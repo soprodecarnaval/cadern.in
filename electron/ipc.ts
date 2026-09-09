@@ -2,7 +2,7 @@ import { ipcMain, dialog } from "electron";
 import os from "node:os";
 import path from "node:path";
 import { autolocateMscore, validateMscore } from "../scripts/lib/mscz";
-import { listParts } from "../scripts/lib/scoreMeta";
+import { readScoreMeta } from "../scripts/lib/scoreMeta";
 import { getMscorePath, setMscorePath } from "./settings";
 
 // Expand a leading ~ from manually-typed paths (native pickers return absolute).
@@ -66,11 +66,11 @@ export function registerIpc(): void {
     return res.canceled ? null : (res.filePaths[0] ?? null);
   });
 
-  ipcMain.handle("score:listParts", (_e, msczPath: string) => {
+  ipcMain.handle("score:readMeta", (_e, msczPath: string) => {
     const mscore = resolveMscorePath();
     if (!mscore) {
       throw new Error("MuseScore path not set");
     }
-    return listParts(mscore, expandHome(msczPath));
+    return readScoreMeta(mscore, expandHome(msczPath));
   });
 }
