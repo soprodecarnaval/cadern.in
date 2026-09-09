@@ -2,6 +2,7 @@ import { execFileSync } from "child_process";
 import fs from "fs";
 import type { Instrument } from "../../types/instrument";
 import { mapInstrumentId } from "./scoreInstrument";
+import { withIsolatedMscoreEnvironment } from "./mscoreEnvironment";
 
 export interface ScorePart {
   id: string;
@@ -68,10 +69,13 @@ export const readScoreMeta = (
   // and surface an actionable message instead of the raw abort dump.
   let stdout: string;
   try {
-    stdout = execFileSync(mscore, ["--score-meta", msczPath], {
-      encoding: "utf-8",
-      maxBuffer: 32 * 1024 * 1024,
-    });
+    stdout = withIsolatedMscoreEnvironment((env) =>
+      execFileSync(mscore, ["--score-meta", msczPath], {
+        encoding: "utf-8",
+        env,
+        maxBuffer: 32 * 1024 * 1024,
+      }),
+    );
   } catch (e) {
     const err = e as { signal?: string; stderr?: string };
     const crashed =

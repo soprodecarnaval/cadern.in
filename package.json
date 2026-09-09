@@ -24,6 +24,8 @@
   },
   "dependencies": {
     "@types/node": "^20.4.1",
+    "@xmldom/xmldom": "^0.9.12",
+    "adm-zip": "^0.6.0",
     "blob-stream": "^0.1.3",
     "bootstrap": "^5.3.0",
     "brfs": "^2.0.2",
@@ -47,6 +49,7 @@
   "devDependencies": {
     "@swc/cli": "^0.1.63",
     "@swc/core": "^1.3.102",
+    "@types/adm-zip": "^0.5.8",
     "@types/argparse": "^2.0.11",
     "@types/blob-stream": "^0.1.31",
     "@types/d3": "^7.4.2",

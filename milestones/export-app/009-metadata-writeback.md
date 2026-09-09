@@ -49,3 +49,14 @@ The **source `.mscz` is never mutated.** Flow:
 
 This also removes the "file open in MuseScore" hazard, since we only touch our
 own copy.
+
+## Status: done
+
+- Copy-safe archive helper updates/inserts all four tags using an XML DOM.
+- Visible title/composer frame text is synchronized with those tags.
+- Other archive entries and the source `.mscz` are preserved in tests.
+- Typed IPC exposes only copy-and-update, never in-place source mutation.
+- Verified the rewritten repository fixture through MuseScore 4.7.2: all four
+  Unicode/special-character values round-trip through `--score-meta`.
+- MuseScore commands use isolated temporary config/data directories to avoid
+  the 4.7 concurrent-process `mutex lock failed` crash.

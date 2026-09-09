@@ -3,6 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { autolocateMscore, validateMscore } from "../scripts/lib/mscz";
 import { readScoreMeta } from "../scripts/lib/scoreMeta";
+import {
+  copyMsczWithMeta,
+  type MetadataTags,
+} from "../scripts/lib/msczMeta";
 import { getMscorePath, setMscorePath } from "./settings";
 
 // Expand a leading ~ from manually-typed paths (native pickers return absolute).
@@ -73,4 +77,14 @@ export function registerIpc(): void {
     }
     return readScoreMeta(mscore, expandHome(msczPath));
   });
+
+  ipcMain.handle(
+    "score:copyWithMeta",
+    (_e, sourcePath: string, destinationPath: string, tags: MetadataTags) =>
+      copyMsczWithMeta(
+        expandHome(sourcePath),
+        expandHome(destinationPath),
+        tags,
+      ),
+  );
 }

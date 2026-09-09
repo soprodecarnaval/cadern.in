@@ -9,4 +9,15 @@ contextBridge.exposeInMainWorld("api", {
   getDroppedPath: (file: File) => webUtils.getPathForFile(file),
   readScoreMeta: (msczPath: string) =>
     ipcRenderer.invoke("score:readMeta", msczPath),
+  copyMsczWithMeta: (
+    sourcePath: string,
+    destinationPath: string,
+    tags: import("../scripts/lib/msczMeta").MetadataTags,
+  ) =>
+    ipcRenderer.invoke(
+      "score:copyWithMeta",
+      sourcePath,
+      destinationPath,
+      tags,
+    ),
 });
