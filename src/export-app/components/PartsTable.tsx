@@ -13,7 +13,8 @@ export function PartsTable({ parts, selected, onToggle }: Props) {
         <tr>
           <th style={{ width: 32 }} />
           <th>Parte</th>
-          <th>Instrumento</th>
+          <th>MuseScore ID</th>
+          <th>cadern.in ID</th>
         </tr>
       </thead>
       <tbody>
@@ -31,8 +32,11 @@ export function PartsTable({ parts, selected, onToggle }: Props) {
               </td>
               <td>{p.name}</td>
               <td>
+                <code>{p.instrumentId}</code>
+              </td>
+              <td>
                 <span className={compatible ? "badge" : "badge no"}>
-                  {p.instrument ?? "incompatível"}
+                  {p.instrument ? <code>{p.instrument}</code> : "incompatível"}
                 </span>
               </td>
             </tr>

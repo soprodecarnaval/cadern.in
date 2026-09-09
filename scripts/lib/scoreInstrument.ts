@@ -8,6 +8,7 @@ const ID_MAP: Record<string, Instrument> = {
   "bb-clarinet": "clarinete",
   "eb-clarinet": "clarinete",
   "bb-trumpet": "trompete",
+  "trumpet": "trompete",
   "c-trumpet": "trompete",
   "alto-saxophone": "sax alto",
   "soprano-saxophone": "sax soprano",

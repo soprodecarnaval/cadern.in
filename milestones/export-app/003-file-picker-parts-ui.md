@@ -40,3 +40,4 @@ Selection is keyed by part `id` (names can repeat, e.g. two `Trumpet`).
 - Loading, missing-MuseScore, empty-score, and read-error states are shown.
 - Compatible parts start selected; incompatible parts are disabled.
 - Selection is stored by part `id`, so duplicate names remain independent.
+- The table shows each MuseScore instrument ID and its cadern.in match.
