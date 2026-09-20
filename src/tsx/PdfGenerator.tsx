@@ -26,6 +26,7 @@ const allInstruments: Instrument[] = [
   "sax alto",
   "sax soprano",
   "sax tenor",
+  "sax baritono",
   "flauta",
   "tuba",
   "tuba eb",

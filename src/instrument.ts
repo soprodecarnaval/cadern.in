@@ -16,6 +16,15 @@ const instrumentAliases: [string, Instrument][] = [
   ["sax alta", "sax alto"],
   ["saxophone alto", "sax alto"],
   ["alto sax", "sax alto"],
+  // sax baritono
+  ["sax baritono", "sax baritono"],
+  ["sax barítono", "sax baritono"],
+  ["baritone sax", "sax baritono"],
+  ["bari sax", "sax baritono"],
+  ["saxophone baritone", "sax baritono"],
+  ["baritono", "sax baritono"],
+  ["barítono", "sax baritono"],
+  ["baritone", "sax baritono"],
   // sax soprano
   ["soprano", "sax soprano"],
   ["sax soprano", "sax soprano"],
