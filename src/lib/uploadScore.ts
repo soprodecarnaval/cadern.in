@@ -52,7 +52,9 @@ export async function uploadScore(
     ? (await getScoreRevisions(scoreId)).length + 1
     : 1;
   const revId = String(revisionNumber);
-  const storageBase = `songs/${scoreId}/${revId}`;
+  // `scores/`, not `songs/`: the collection was renamed by migration
+  // 202604201809_songs_to_scores, which moved the objects too.
+  const storageBase = `scores/${scoreId}/${revId}`;
 
   const filesTotal = parsed.fileMap.size;
   let filesUploaded = 0;
