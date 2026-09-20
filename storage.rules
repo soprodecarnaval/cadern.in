@@ -23,16 +23,10 @@ service firebase.storage {
     match /scores/{scoreId}/{allPaths=**} {
       allow read: if true;
 
-      // The `!exists` branch is a hole: it lets any authenticated user write
-      // arbitrary bytes under a score id that has not been created yet, with
-      // no membership check at all. It cannot simply be removed — uploadScore
-      // writes every file before creating scores/{scoreId}, so on a first
-      // upload there is no document for canWriteScore to read. Removing it
-      // requires creating the score document first. See TECH_DEBT.md.
-      allow write: if request.auth != null && (
-        !firestore.exists(/databases/(default)/documents/scores/$(scoreId)) ||
-        canWriteScore(scoreId)
-      );
+      // uploadScore creates scores/{scoreId} before writing any file, so this
+      // always has a document to resolve the project from — including on a
+      // first upload.
+      allow write: if request.auth != null && canWriteScore(scoreId);
     }
 
     match /avatars/{userId} {

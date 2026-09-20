@@ -68,6 +68,19 @@ staging reported **1073 of 1073 revisions, 0 skipped, 0 emptied**.
 - [ ] Songbook PDF from a multi-part score: part labels read correctly
 - [ ] Collection browse + search still work (`sax baritono` was added to
       `zInstrument`; existing data is unaffected, the enum only grew)
+- [ ] **Upload a brand-new score** (one whose `scores/{id}` document does not
+      exist yet) and confirm it completes. This path was broken before — both
+      rule sets resolve the project by reading the score document, and
+      `uploadScore` used to create it last, so Storage fell through an
+      `!exists` escape hatch and the Firestore revision write was denied
+      outright. Verify on staging before production; there is no automated
+      coverage, since it is entirely Firestore/Storage interaction and the
+      emulator harness does not exist yet
+- [ ] Upload a **second revision** to that same score — the existing-score path
+      is unchanged but shares the reordered code
+- [ ] Confirm files landed under `scores/{id}/{rev}/…` and that the score opens
+- [ ] Force a failed upload if you can (kill the network partway) and confirm
+      the half-created score does not appear in the collection
 - [ ] Upload a folder exported by the export app — expect **zero** warnings
 - [ ] Upload a pre-v2 folder — expect it to succeed with a `METAJSON_LEGACY`
       deprecation warning, not a failure
@@ -77,21 +90,10 @@ staging reported **1073 of 1073 revisions, 0 skipped, 0 emptied**.
 None are regressions from this branch. Listed because they were confirmed while
 working on it, and the first one silently breaks uploads.
 
-- [ ] **Uploads write to a dead prefix.** `uploadScore.ts:55` builds
-      `songs/${scoreId}/${revId}`, but the collection was renamed by
-      `202604201809_songs_to_scores`, real files live under `scores/…`
-      (confirmed from `StorageFile.path` values in Firestore), and
-      `storage.rules` matches only `scores/{songId}/**`. Everything at `songs/…`
-      hits the catch-all `allow read, write: if false`.
-      Before fixing, check the bucket for orphans already written to `songs/` —
-      this needs a service account with `storage.objects.list`, which the
-      current one lacks.
-- [ ] **`storage.rules` reads removed fields.** `canWriteSong` tests
-      `project.ownerId` and `project.collaboratorIds`, both dropped by
-      `202604201900_projects_roles` in favour of `members`/`memberIds`.
-- [ ] **`storage.rules` has an open write hatch.** `!firestore.exists(...)` lets
-      any authenticated user write arbitrary bytes under a score id that does
-      not exist yet.
+> Three upload bugs listed here previously — the `songs/` prefix, `storage.rules`
+> reading removed fields, and the `!exists` write hatch — are **fixed on this
+> branch**. They are what the new-score upload check above exercises.
+
 - [ ] **Invitation acceptance is denied by the rules.** `acceptUserProjectInvitation`
       updates `projects/{id}.members` as the invitee, who has no role yet, so the
       `projects` update rule evaluates `null in ['owner','admin']`. Currently

@@ -90,20 +90,3 @@ element), and drop `hasEb` once nothing depends on the long form alone.
 Two tests in `scoreInstrument.test.ts` pin the current behaviour and will need
 updating: "keeps the Eb tuba distinction on treble-clef variants" and
 "disambiguates brass.tuba by part name".
-
-## Close the Storage write hole for not-yet-created scores
-`storage.rules` permits any authenticated user to write under
-`scores/{scoreId}/**` when no `scores/{scoreId}` document exists yet — the
-membership check is skipped, not failed. Anyone with an account can therefore
-park arbitrary files on an unused score id, or fill the bucket.
-
-It cannot be removed on its own: `uploadScore` writes every file before creating
-the score document, so on a first upload there is nothing for the rule to read.
-The fix is to reorder — create `scores/{scoreId}` with `latestRevisionId: ""`,
-upload, then write the revision and set the pointer.
-
-That moves where a failed upload leaves things. Today a partial upload leaves
-stray Storage objects and no document; afterwards it would leave a document with
-no files, i.e. a score that lists but will not open. So the reorder needs
-cleanup on failure, and is worth testing against the Firebase emulator rather
-than by inspection.
