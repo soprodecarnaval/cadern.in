@@ -1,15 +1,7 @@
 import z from "zod";
 import type { Instrument } from "../../types/instrument";
 import { zMetajson, type Metajson } from "../../types/metajson";
-import { parseInstrument } from "../instrument";
 import type { Warning } from "../result";
-
-interface FileDraft {
-  name: string;
-  instrument: Instrument;
-  svg: { page: number; file: File }[];
-  midiFile?: File;
-}
 
 export interface ParsedPart {
   /** Display name. Authored in MuseScore; arbitrary. */
@@ -71,22 +63,9 @@ async function readMetajson(file: File): Promise<ReadMetajson | null> {
   }
 }
 
-function extractPageNumber(basename: string): { name: string; page: number } {
-  const match = basename.match(/^(.+)-(\d+)$/);
-  if (match) {
-    return { name: match[1], page: parseInt(match[2], 10) };
-  }
-  return { name: basename, page: 1 };
-}
-
 function removeExtension(filename: string): string {
   const dotIdx = filename.lastIndexOf(".");
   return dotIdx > 0 ? filename.substring(0, dotIdx) : filename;
-}
-
-function getExtension(filename: string): string {
-  const dotIdx = filename.lastIndexOf(".");
-  return dotIdx > 0 ? filename.substring(dotIdx) : "";
 }
 
 export async function parseUploadedFiles(files: File[]): Promise<ParsedScore> {
@@ -97,7 +76,6 @@ export async function parseUploadedFiles(files: File[]): Promise<ParsedScore> {
   let meta: MetajsonFields = { composer: "", sub: "", tags: [] };
   let manifest: Metajson | null = null;
   let msczFile: File | undefined;
-  const partDrafts = new Map<string, FileDraft>();
 
   // Determine song title from the mscz filename
   const msczFiles = files.filter((f) => f.name.endsWith(".mscz"));
@@ -140,94 +118,15 @@ export async function parseUploadedFiles(files: File[]): Promise<ParsedScore> {
   }
   warnings.push({ code: "METAJSON_LEGACY", meta: {} });
 
-  for (const file of files) {
-    const ext = getExtension(file.name);
-    const basename = removeExtension(file.name);
-
-    if (ext === ".metajson") {
-      continue;
-    }
-
-    if (ext === ".mscz") {
-      continue;
-    }
-
-    if (ext !== ".svg" && ext !== ".midi") {
-      continue;
-    }
-
-    // Parse instrument from filename (remove song title first)
-    const withoutTitle = basename.replace(title, "");
-    const instrument = parseInstrument(withoutTitle);
-
-    if (!instrument) {
-      if (ext === ".midi" && !fileMap.has("midi")) {
-        fileMap.set("midi", file);
-      } else {
-        warnings.push({
-          code: "INSTRUMENT_NOT_DETECTED",
-          meta: { file: file.name },
-        });
-      }
-      continue;
-    }
-
-    if (ext === ".svg") {
-      const { name: partName, page } = extractPageNumber(basename);
-      if (!partDrafts.has(partName)) {
-        partDrafts.set(partName, {
-          name: partName,
-          instrument,
-          svg: [],
-        });
-      }
-      const draft = partDrafts.get(partName)!;
-      draft.svg.push({ page, file });
-      const svgKey = `parts/${partName}-${page}.svg`;
-      fileMap.set(svgKey, file);
-    } else if (ext === ".midi") {
-      const partName = basename;
-      if (!partDrafts.has(partName)) {
-        partDrafts.set(partName, {
-          name: partName,
-          instrument,
-          svg: [],
-        });
-      }
-      partDrafts.get(partName)!.midiFile = file;
-      fileMap.set(`parts/${partName}.midi`, file);
-    }
-  }
-
-  // Pre-v2: part names and instruments are inferred from filenames.
-  const parts: ParsedPart[] = [];
-  for (const [, draft] of partDrafts) {
-    draft.svg.sort((a, b) => a.page - b.page);
-    const svgPaths = draft.svg.map((s) => `parts/${draft.name}-${s.page}.svg`);
-    const midiPath = `parts/${draft.name}.midi`;
-
-    if (svgPaths.length === 0) {
-      warnings.push({ code: "PART_NO_SVG", meta: { partName: draft.name } });
-    }
-    if (!draft.midiFile) {
-      warnings.push({ code: "PART_NO_MIDI", meta: { partName: draft.name } });
-    }
-
-    parts.push({
-      name: draft.name,
-      basename: draft.name,
-      instrument: draft.instrument,
-      svg: svgPaths,
-      midi: midiPath,
-    });
-  }
-
+  // No manifest: nothing is inferred any more, so there is nothing to upload.
+  // UploadPage blocks on parts.length === 0, so this surfaces as a refusal.
+  warnings.push({ code: "METAJSON_LEGACY", meta: {} });
   return {
     title,
     composer: meta.composer,
     sub: meta.sub,
     tags: meta.tags,
-    parts,
+    parts: [],
     fileMap,
     warnings,
   };

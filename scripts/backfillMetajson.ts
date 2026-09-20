@@ -29,7 +29,7 @@ async function main(): Promise<void> {
     throw new Error(`Not a directory: ${folder}`);
   }
 
-  const metajson = await buildMetajson(folder);
+  const { metajson, warnings } = buildMetajson(folder);
   const existing = fs
     .readdirSync(folder)
     .find((name) => name.endsWith(".metajson"));
@@ -38,6 +38,9 @@ async function main(): Promise<void> {
   console.log(`${metajson.parts.length} parts:`);
   for (const part of metajson.parts) {
     console.log(`  ${part.instrument.padEnd(13)} ${JSON.stringify(part.name)}`);
+  }
+  for (const warning of warnings) {
+    console.warn(`  ! ${warning}`);
   }
 
   if (!write) {

@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe("buildMetajson", () => {
-  it("produces a valid v2 sidecar from an inferred folder", async () => {
+  it("produces a valid v2 sidecar from an inferred folder", () => {
     const folder = makeFolder({
       "Marcha.mscz": "z",
       "Marcha.midi": "m",
@@ -40,7 +40,7 @@ describe("buildMetajson", () => {
       "Marcha-trompete.midi": "m",
     });
 
-    const metajson = await buildMetajson(folder);
+    const { metajson } = buildMetajson(folder);
 
     expect(zMetajson.safeParse(metajson).success).toBe(true);
     expect(metajson.parts).toEqual([
@@ -54,7 +54,7 @@ describe("buildMetajson", () => {
     ]);
   });
 
-  it("round-trips the metadata fields, including poet/tags", async () => {
+  it("round-trips the metadata fields, including poet/tags", () => {
     const folder = makeFolder({
       "Marcha.mscz": "z",
       "Marcha.metajson": legacySidecar,
@@ -62,7 +62,7 @@ describe("buildMetajson", () => {
       "Marcha-flauta.midi": "m",
     });
 
-    const metajson = await buildMetajson(folder);
+    const { metajson } = buildMetajson(folder);
 
     expect(metajson.composer).toBe("Zé");
     expect(metajson.previousSource).toBe("Trecho 2");
@@ -70,7 +70,7 @@ describe("buildMetajson", () => {
     expect(metajson.poet).toBe("marcha, junina");
   });
 
-  it("keeps duplicate instruments distinct", async () => {
+  it("keeps duplicate instruments distinct", () => {
     const folder = makeFolder({
       "Marcha.mscz": "z",
       "Marcha.metajson": legacySidecar,
@@ -80,7 +80,7 @@ describe("buildMetajson", () => {
       "Marcha-trompete-b.midi": "m",
     });
 
-    const metajson = await buildMetajson(folder);
+    const { metajson } = buildMetajson(folder);
 
     expect(metajson.parts.map((p) => p.name).sort()).toEqual([
       "trompete a",
@@ -88,9 +88,29 @@ describe("buildMetajson", () => {
     ]);
   });
 
-  it("refuses a folder with nothing in it to parse", async () => {
+  it("refuses a folder with no score in it", () => {
     const folder = makeFolder({ "notes.txt": "hello" });
 
-    await expect(buildMetajson(folder)).rejects.toThrow(/No parts found/);
+    expect(() => buildMetajson(folder)).toThrow(/No \.mscz found/);
+  });
+
+  it("refuses a folder whose filenames yield no instruments", () => {
+    const folder = makeFolder({ "Marcha.mscz": "z", "Marcha.metajson": legacySidecar });
+
+    expect(() => buildMetajson(folder)).toThrow(/No parts found/);
+  });
+
+  it("reports what the inference could not work out", () => {
+    const folder = makeFolder({
+      "Marcha.mscz": "z",
+      "Marcha.metajson": legacySidecar,
+      "Marcha-flauta-1.svg": "s",
+      "Marcha-flauta.midi": "m",
+      "Marcha-kazoo-1.svg": "s",
+    });
+
+    const { warnings } = buildMetajson(folder);
+
+    expect(warnings.join(" ")).toMatch(/kazoo/);
   });
 });

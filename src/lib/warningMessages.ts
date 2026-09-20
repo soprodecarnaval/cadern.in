@@ -29,10 +29,10 @@ const messages: Record<WarningCode, string> = {
   METAJSON_MISSING: "Arquivo metajson não encontrado",
   METAJSON_PARSE_FAILED: "Falha ao ler o metajson",
   METAJSON_LEGACY:
-    "Formato antigo de metajson: os nomes das partes serão deduzidos dos " +
-    "nomes dos arquivos. Exporte novamente pelo app de exportação.",
+    "Formato antigo de metajson. Exporte novamente pelo app de exportação, " +
+    "ou atualize a pasta com o script backfill:metajson.",
   METAJSON_FILE_MISSING: 'Arquivo "{file}" listado no metajson não foi enviado',
-  INSTRUMENT_NOT_DETECTED: "Instrumento não reconhecido no nome do arquivo",
+  INSTRUMENT_NOT_DETECTED: 'Instrumento não reconhecido em "{file}"',
   PART_NAME_EMPTY: 'Nome da parte vazio para "{entryPath}"',
   PART_NO_SVG: 'Parte "{partName}" não tem arquivos SVG',
   PART_NO_MIDI: 'Parte "{partName}" não tem arquivo MIDI',

@@ -141,17 +141,16 @@ describe("parseUploadedFiles — metajson v2", () => {
     ]);
 
     expect(parsed.warnings.map((w) => w.code)).toContain("METAJSON_LEGACY");
-    expect(parsed.parts[0].name).toBe(`${TITLE}-trompete`);
+    expect(parsed.parts).toEqual([]);
   });
 });
 
 describe("parseUploadedFiles — pre-v2", () => {
-  it("still infers from filenames and flags the format", async () => {
+  it("refuses a folder with no manifest instead of guessing", async () => {
     const parsed = await parseUploadedFiles([
       file(`${TITLE}.mscz`),
       file(`${TITLE}.midi`),
       file(`${TITLE}-trompete-1.svg`),
-      file(`${TITLE}-trompete-2.svg`),
       file(`${TITLE}-trompete.midi`),
       file(
         `${TITLE}.metajson`,
@@ -159,17 +158,23 @@ describe("parseUploadedFiles — pre-v2", () => {
       ),
     ]);
 
+    // Filenames are no longer load-bearing: the parts are perfectly
+    // inferrable, and are deliberately not inferred.
+    expect(parsed.parts).toEqual([]);
     expect(parsed.warnings.map((w) => w.code)).toContain("METAJSON_LEGACY");
-    expect(parsed.parts).toHaveLength(1);
-    expect(parsed.parts[0].name).toBe(`${TITLE}-trompete`);
-    // name and basename coincide pre-v2, which is what keeps Storage paths
-    // byte-identical across the format change.
-    expect(parsed.parts[0].basename).toBe(parsed.parts[0].name);
-    expect(parsed.parts[0].svg).toEqual([
-      `parts/${TITLE}-trompete-1.svg`,
-      `parts/${TITLE}-trompete-2.svg`,
+    // UploadPage blocks on parts.length === 0, so this reads as a refusal.
+  });
+
+  it("still reports the metadata it can read, for the warning to make sense", async () => {
+    const parsed = await parseUploadedFiles([
+      file(`${TITLE}.mscz`),
+      file(
+        `${TITLE}.metajson`,
+        JSON.stringify({ composer: "Zé", previousSource: "", poet: "marcha" }),
+      ),
     ]);
+
+    expect(parsed.title).toBe(TITLE);
     expect(parsed.composer).toBe("Zé");
-    expect(parsed.tags).toEqual(["marcha"]);
   });
 });
