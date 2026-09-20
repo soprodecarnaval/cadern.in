@@ -1,11 +1,8 @@
 import { execFileSync } from "child_process";
-import fs from "fs";
 import type { Instrument } from "../../types/instrument";
 import { mapInstrumentId } from "./scoreInstrument";
-import {
-  isMscoreMutexCrash,
-  withIsolatedMscoreEnvironment,
-} from "./mscoreEnvironment";
+import { withIsolatedMscoreEnvironment } from "./mscoreEnvironment";
+import { assertSupportedMscz } from "./msczArchive";
 
 export interface ScorePart {
   id: string;
@@ -77,13 +74,10 @@ export const readScoreMeta = (
   mscore: string,
   msczPath: string,
 ): ScoreMeta => {
-  // MuseScore SIGABRTs (rather than erroring cleanly) when given a path that
-  // does not exist, so guard here.
-  if (!fs.existsSync(msczPath)) {
-    throw new Error(`File not found: ${msczPath}`);
-  }
-  // MuseScore 4 SIGABRTs reading MuseScore 3 files headless. Catch the crash
-  // and surface an actionable message instead of the raw abort dump.
+  // MuseScore SIGABRTs rather than erroring cleanly on a missing path or on a
+  // MuseScore 3 file, so both are rejected before it runs.
+  assertSupportedMscz(msczPath);
+
   let stdout: string;
   try {
     stdout = withIsolatedMscoreEnvironment((env) =>
@@ -94,18 +88,12 @@ export const readScoreMeta = (
       }),
     );
   } catch (e) {
+    // MuseScore 4 can print valid metadata and then crash on shutdown.
     const recovered = recoverScoreMetaStdout(e);
-    if (recovered) {
-      stdout = recovered;
-    } else {
-      if (isMscoreMutexCrash(e)) {
-        throw new Error(
-          "Could not read this score. If it was made in MuseScore 3, open it " +
-            "in MuseScore 4 and save it again, then retry.",
-        );
-      }
+    if (!recovered) {
       throw new Error("MuseScore failed to read this score's metadata.");
     }
+    stdout = recovered;
   }
   const m = parseScoreMeta(stdout);
 

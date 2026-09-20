@@ -8,6 +8,7 @@ import {
   withIsolatedMscoreEnvironment,
 } from "./mscoreEnvironment";
 import { copyMsczWithMeta, type MetadataTags } from "./msczMeta";
+import { assertSupportedMscz } from "./msczArchive";
 
 export interface SelectedPart {
   id: string;
@@ -161,6 +162,7 @@ export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
   if (options.selectedParts.length === 0) {
     throw new Error("Select at least one compatible part");
   }
+  assertSupportedMscz(options.msczPath);
   if (!fs.statSync(options.destinationDirectory).isDirectory()) {
     throw new Error("Export destination is not a directory");
   }

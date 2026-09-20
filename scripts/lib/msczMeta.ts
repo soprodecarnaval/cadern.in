@@ -3,6 +3,7 @@ import path from "node:path";
 import AdmZip from "adm-zip";
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import type { Node as XmlNode } from "@xmldom/xmldom";
+import { readScoreXml } from "./msczArchive";
 
 export interface MetadataTags {
   title: string;
@@ -25,18 +26,7 @@ const replaceText = (node: XmlNode, value: string): void => {
   node.appendChild(node.ownerDocument!.createTextNode(value));
 };
 
-const findScoreDocument = (zip: AdmZip): { name: string; xml: string } => {
-  const entries = zip
-    .getEntries()
-    .filter((entry) => !entry.isDirectory && entry.entryName.endsWith(".mscx"));
-  if (entries.length !== 1) {
-    throw new Error(`Expected one .mscx entry, found ${entries.length}`);
-  }
-  return {
-    name: entries[0].entryName,
-    xml: entries[0].getData().toString("utf8"),
-  };
-};
+const findScoreDocument = readScoreXml;
 
 const updateXml = (xml: string, tags: MetadataTags): string => {
   const document = new DOMParser().parseFromString(xml, "application/xml");
