@@ -90,3 +90,30 @@ element), and drop `hasEb` once nothing depends on the long form alone.
 Two tests in `scoreInstrument.test.ts` pin the current behaviour and will need
 updating: "keeps the Eb tuba distinction on treble-clef variants" and
 "disambiguates brass.tuba by part name".
+
+## No way to correct score metadata without re-uploading
+A score's displayed title, composer, sub and tags come from the `scores/{id}`
+document (`CollectionContext.tsx:70`). Revision documents carry no metadata
+fields at all, and the `.metajson` in Storage is never read back after upload.
+
+`uploadScore` writes metadata only when creating a score. On a re-upload it
+moves `latestRevisionId` and nothing else, so a corrected composer reaches
+Storage as a file and is then ignored — the site keeps showing the value from
+the first upload. Milestone 009 already writes corrections back into the local
+`.mscz`, so the file on disk is right; publishing the correction is what has no
+path.
+
+Two separable fixes:
+
+1. **Refresh metadata on re-upload.** Roughly one line — `parsed.composer` and
+   friends are already in hand. Do it carefully: if an admin corrected a
+   composer on the website and someone later re-uploads an older export,
+   last-write-wins resurrects the stale value. This is the case the
+   `metadataOverride` layer in `docs/milestones/collab-flow/PLAN.md` exists to
+   solve, so the two should be designed together.
+2. **A metadata-only edit that moves no files and creates no revision.** The
+   plumbing exists — `updateScore(scoreId, { composer })` in `db.ts`. What is
+   missing is UI. `ScoreEditModal` looks like it should do this but only edits a
+   songbook row in memory; nothing is persisted. Suggested home is the website's
+   score page: it reaches every score, including ones nobody still has the
+   `.mscz` for.

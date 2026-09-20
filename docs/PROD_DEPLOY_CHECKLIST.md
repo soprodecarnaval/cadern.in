@@ -133,10 +133,9 @@ working on it, and the first one silently breaks uploads.
 - The export app's success state names the score id but cannot link to it;
   that needs `shell.openExternal` and a base URL the app does not have.
 - Re-uploading an existing score does **not** refresh the score document's
-  title, composer or tags — only `latestRevisionId` moves. Pre-existing
-  `uploadScore` behaviour, but newly easy to hit now that re-upload is a
-  supported flow. Correcting a composer therefore requires editing the score
-  on the website as well.
+  title, composer or tags — only `latestRevisionId` moves, and there is no
+  metadata-only edit anywhere either. A correction currently has no way to
+  reach the site at all. Tracked in `TECH_DEBT.md`.
 
 ## Rollback
 
