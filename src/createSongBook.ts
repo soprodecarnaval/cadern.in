@@ -2,7 +2,6 @@ import SVGtoPDF from "svg-to-pdfkit";
 import type { Instrument } from "../types/instrument";
 import type { ScoreViewModel, PartViewModel } from "../types/viewModels";
 import { Section } from "./tsx/PdfGenerator";
-import { stripInstrumentFromPartName } from "./instrument";
 
 interface PDFBlobStream extends NodeJS.WritableStream {
   toBlobURL(type: string): string;
@@ -30,7 +29,6 @@ export interface CreateSongBookOptions {
   backSheetPageNumber: boolean;
   carnivalMode: boolean;
   antiAssedioPages: boolean;
-  stripInstrumentFromPartLabel: boolean;
   debugBoundingBoxes?: boolean;
 }
 
@@ -166,13 +164,9 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
         for (let partIdx = 0; partIdx < partsForInstrument.length; partIdx++) {
           const part = partsForInstrument[partIdx];
-          // part.name is the authored name; pre-v2 revisions were backfilled
-          // to match, so nothing has to be stripped out of it here.
-          const partLabel = isMultiPart
-            ? opts.stripInstrumentFromPartLabel
-              ? stripInstrumentFromPartName(part.name)
-              : part.name
-            : undefined;
+          // Rendered verbatim: MuseScore part names already carry the
+          // instrument, and pre-v2 revisions were backfilled to match.
+          const partLabel = isMultiPart ? part.name : undefined;
           const displayNumber = isMultiPart
             ? `${songPageIndex}.${partIdx + 1}`
             : `${songPageIndex}`;

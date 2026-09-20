@@ -265,7 +265,6 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
           carnivalMode,
           backSheetPageNumber,
           antiAssedioPages,
-          stripInstrumentFromPartLabel: false,
           debugBoundingBoxes,
         });
 
