@@ -81,10 +81,57 @@ This split is the substance of the milestone; everything else follows from it.
 
 ## Migration
 
-Nothing in Firestore needs backfilling — existing revisions already have their
-parts parsed into documents, and `parseUploadedFiles` only ever runs on files
-picked from disk. "Backfill" means exported folders on contributors' machines:
-re-export, or run the script from step 5.
+Three of the four surfaces need nothing. Verified, not assumed:
+
+**Firestore — nothing.** `PartData.name` changes meaning for new revisions
+(filename stem to authored name), but old revisions cannot be backfilled: the
+authored name was never stored, so it is unrecoverable. They do not need it —
+revisions are immutable historical records and both shapes render:
+
+```
+"cadern.in test-trompete-a"  ->  label "a"   (pre-v2)
+"Trompete 1"                 ->  label "1"   (v2)
+```
+
+The collection therefore carries mixed `name` semantics, by design.
+
+**Storage — nothing.** The key today is `parts/${part.name}.midi`, where
+`part.name` *is* the filename stem (`uploadScore.ts:100`). After the split it is
+`parts/${basename}.midi` — the same string. The split changes which field feeds
+the key, not its value.
+
+**Exported folders on disk — the only real surface.** Two producers of pre-v2
+sidecars:
+
+- `scripts/exportMscz.ts`, which does not write the sidecar itself: `mscz.ts`
+  asks MuseScore to emit `${basePath}.metajson`, so pre-v2 is *MuseScore's own*
+  metadata dump. That is why `readMetajson` reads only `composer`,
+  `previousSource` and `poet`.
+- The export app, which has never shipped — no `electron-builder.yml`, no tags,
+  `version: 0.0.0`. There are no installs in the wild producing pre-v2 output.
+
+So the CLI, not the export app, is what keeps generating folders a v2-only
+uploader would reject. **Decision: `scripts/exportMscz.ts` is phased out rather
+than upgraded**, once the export app replaces it. That makes step D below depend
+on 008 (packaging).
+
+### Why detection keys on `version`, not on `parts`
+
+MuseScore's own metajson may itself contain a `parts` array with a different
+shape. Treating "has a `parts` key" as the v2 signal would misread a MuseScore
+dump as ours, so `zMetajson` requires `version: 2` as a literal discriminator.
+
+### Sequencing
+
+| Phase | | Breaks |
+|---|---|---|
+| A | Exporter writes v2 | nothing |
+| B | Uploader accepts both: v2 uses the manifest, pre-v2 infers as today and warns | nothing |
+| C | `scripts/backfillMetajson.ts`; mark `exportMscz.ts` deprecated | nothing |
+| D | Remove inference and `exportMscz.ts`; pre-v2 becomes a hard error — **after 008** | pre-v2 folders, deliberately |
+
+B before D avoids a flag day: the new path lands while old folders still work, so
+the two can be verified independently.
 
 ## Acceptance
 
