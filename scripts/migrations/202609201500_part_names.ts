@@ -18,27 +18,85 @@ import type { Migration, MigrationContext } from "../lib/migration";
  * `name`, so this is display-only.
  */
 
-const zPart = z.object({
-  name: z.string(),
-  midi: z.object({ path: z.string() }).passthrough(),
-}).passthrough();
+const zPart = z.object({ name: z.string() }).passthrough();
 
 const zRevisionParts = z.object({ parts: z.array(zPart) }).passthrough();
 
-/** Strips an exact title prefix. A fuzzy match could silently corrupt a name. */
+/**
+ * Legacy part names embed the song title, in one of two families seen in the
+ * collection (5894 parts surveyed):
+ *
+ *   "olha pro céu - sax alto"     title + " - " + part      (2119)
+ *   "a_banda_BONE_COM_PIRATA"     slug(title) + "_" + PART  (3775)
+ *
+ * so the separator and the title's own punctuation both vary. Candidate
+ * prefixes are tried longest-first and compared case-insensitively.
+ *
+ * There is deliberately no empty separator among them: it would let a title
+ * eat into the following word ("a bandagem" -> "gem"), and the survey showed
+ * it was never needed.
+ */
 export function partNameFromStem(stem: string, title: string): string {
-  for (const prefix of [`${title}-`, `${title.replace(/\//g, "-")}-`]) {
-    if (stem.startsWith(prefix)) {
-      return stem.slice(prefix.length).replace(/-/g, " ");
+  const titleForms = new Set([
+    title,
+    title.replace(/\s+/g, "_"),
+    title.replace(/\s+/g, "-"),
+  ]);
+  const separators = [" - ", "-", "_", " "];
+
+  let matched = "";
+  for (const form of titleForms) {
+    for (const separator of separators) {
+      const prefix = `${form}${separator}`;
+      if (
+        prefix.length > matched.length &&
+        stem.toLowerCase().startsWith(prefix.toLowerCase())
+      ) {
+        matched = prefix;
+      }
     }
   }
-  return stem;
+  if (matched === "") {
+    return stem;
+  }
+
+  return stem
+    .slice(matched.length)
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
-/** The original stem survives in the Storage path, so `down` is exact. */
-export function stemFromMidiPath(midiPath: string): string | undefined {
-  const match = /\/parts\/(.+)\.midi$/.exec(midiPath);
-  return match?.[1];
+/**
+ * `down` reconstructs rather than restores. The original stem cannot be
+ * recovered from Storage paths — those are slugified independently of the name
+ * ("a hard days night - flauta" is stored at ".../a-hard-days-night-flauta.midi")
+ * — and the original separator was not recorded. Names come back in the " - "
+ * form, which renders identically but is not byte-for-byte the input.
+ */
+export function stemFromPartName(name: string, title: string): string {
+  return name.toLowerCase().startsWith(title.toLowerCase())
+    ? name
+    : `${title} - ${name}`;
+}
+
+/** Firestore caps a batch at 500 writes. */
+const BATCH_LIMIT = 400;
+
+async function commitInChunks(
+  db: MigrationContext["db"],
+  updates: { ref: FirebaseFirestore.DocumentReference; parts: unknown[] }[],
+): Promise<void> {
+  for (let i = 0; i < updates.length; i += BATCH_LIMIT) {
+    const chunk = updates.slice(i, i + BATCH_LIMIT);
+    const batch = db.batch();
+    for (const { ref, parts } of chunk) {
+      batch.update(ref, { parts });
+    }
+    await batch.commit();
+    console.log(`  committed ${i + chunk.length}/${updates.length}`);
+  }
 }
 
 const migration: Migration = {
@@ -47,81 +105,97 @@ const migration: Migration = {
 
   async up(ctx: MigrationContext) {
     const { db, dryRun } = ctx;
+
     const scores = await db.collection("scores").get();
-    console.log(`Found ${scores.size} scores\n`);
+    const titleById = new Map(
+      scores.docs.map((d) => [d.id, (d.data().title as string | undefined) ?? ""]),
+    );
+    console.log(`Found ${scores.size} scores`);
 
-    let revisions = 0;
-    let renamed = 0;
+    // One collection-group query rather than a subcollection fetch per score:
+    // at ~1k scores the latter is ~1k sequential round-trips.
+    const revs = await db.collectionGroup("revisions").get();
+    console.log(`Found ${revs.size} revisions\n`);
 
-    for (const scoreSnap of scores.docs) {
-      const title = (scoreSnap.data().title as string | undefined) ?? "";
+    const updates: { ref: FirebaseFirestore.DocumentReference; parts: unknown[] }[] = [];
+    let skipped = 0;
+
+    for (const revSnap of revs.docs) {
+      const scoreId = revSnap.ref.parent.parent?.id;
+      const title = scoreId ? titleById.get(scoreId) : undefined;
       if (!title) {
-        console.log(`  skip ${scoreSnap.id}: no title`);
+        skipped++;
         continue;
       }
 
-      const revs = await scoreSnap.ref.collection("revisions").get();
-      for (const revSnap of revs.docs) {
-        const parsed = zRevisionParts.safeParse(revSnap.data());
-        if (!parsed.success) {
-          console.log(`  skip ${scoreSnap.id}/${revSnap.id}: unexpected shape`);
-          continue;
-        }
-        revisions++;
+      const parsed = zRevisionParts.safeParse(revSnap.data());
+      if (!parsed.success) {
+        skipped++;
+        continue;
+      }
 
-        const parts = parsed.data.parts.map((part) => ({
-          ...part,
-          name: partNameFromStem(part.name, title),
-        }));
-        const changed = parts.some((part, i) => part.name !== parsed.data.parts[i].name);
-        if (!changed) {
-          continue;
-        }
-        renamed++;
+      const parts = parsed.data.parts.map((part) => ({
+        ...part,
+        name: partNameFromStem(part.name, title),
+      }));
+      if (!parts.some((part, i) => part.name !== parsed.data.parts[i].name)) {
+        continue;
+      }
 
+      if (dryRun) {
         const preview = parts
           .map((p, i) => `${parsed.data.parts[i].name} → ${p.name}`)
           .join(", ");
-        if (dryRun) {
-          console.log(`  [dry] ${scoreSnap.id}/${revSnap.id}: ${preview}`);
-          continue;
-        }
-        await revSnap.ref.update({ parts });
-        console.log(`  updated ${scoreSnap.id}/${revSnap.id}: ${preview}`);
+        console.log(`  [dry] ${scoreId}/${revSnap.id}: ${preview}`);
       }
+      updates.push({ ref: revSnap.ref, parts });
     }
 
-    console.log(`\n${renamed} of ${revisions} revisions renamed`);
+    console.log(
+      `\n${updates.length} of ${revs.size} revisions to rename` +
+        (skipped > 0 ? `, ${skipped} skipped (no title or unexpected shape)` : ""),
+    );
+    if (dryRun) {
+      return;
+    }
+
+    await commitInChunks(db, updates);
   },
 
   async down(ctx: MigrationContext) {
     const { db, dryRun } = ctx;
+
     const scores = await db.collection("scores").get();
+    const titleById = new Map(
+      scores.docs.map((d) => [d.id, (d.data().title as string | undefined) ?? ""]),
+    );
+    const revs = await db.collectionGroup("revisions").get();
 
-    for (const scoreSnap of scores.docs) {
-      const revs = await scoreSnap.ref.collection("revisions").get();
-      for (const revSnap of revs.docs) {
-        const parsed = zRevisionParts.safeParse(revSnap.data());
-        if (!parsed.success) {
-          continue;
-        }
-
-        const parts = parsed.data.parts.map((part) => ({
-          ...part,
-          name: stemFromMidiPath(part.midi.path) ?? part.name,
-        }));
-        const changed = parts.some((part, i) => part.name !== parsed.data.parts[i].name);
-        if (!changed) {
-          continue;
-        }
-        if (dryRun) {
-          console.log(`  [dry] restore ${scoreSnap.id}/${revSnap.id}`);
-          continue;
-        }
-        await revSnap.ref.update({ parts });
-        console.log(`  restored ${scoreSnap.id}/${revSnap.id}`);
+    const updates: { ref: FirebaseFirestore.DocumentReference; parts: unknown[] }[] = [];
+    for (const revSnap of revs.docs) {
+      const title = titleById.get(revSnap.ref.parent.parent?.id ?? "");
+      if (!title) {
+        continue;
       }
+      const parsed = zRevisionParts.safeParse(revSnap.data());
+      if (!parsed.success) {
+        continue;
+      }
+      const parts = parsed.data.parts.map((part) => ({
+        ...part,
+        name: stemFromPartName(part.name, title),
+      }));
+      if (!parts.some((part, i) => part.name !== parsed.data.parts[i].name)) {
+        continue;
+      }
+      updates.push({ ref: revSnap.ref, parts });
     }
+
+    console.log(`${updates.length} revisions to restore`);
+    if (dryRun) {
+      return;
+    }
+    await commitInChunks(db, updates);
   },
 };
 

@@ -1,45 +1,56 @@
 import { describe, expect, it } from "vitest";
 import {
   partNameFromStem,
-  stemFromMidiPath,
+  stemFromPartName,
 } from "./202609201500_part_names";
 
 describe("partNameFromStem", () => {
-  it("drops the song title and reads as a part name", () => {
-    expect(partNameFromStem("cadern.in test-trompete-a", "cadern.in test")).toBe(
-      "trompete a",
+  // Both families below were taken from the real collection.
+  it("strips a spaced-hyphen title prefix", () => {
+    expect(partNameFromStem("olha pro céu - sax alto", "olha pro céu")).toBe(
+      "sax alto",
     );
   });
 
-  it("keeps instrument names that already contain a space", () => {
-    expect(partNameFromStem("Marcha-tuba eb", "Marcha")).toBe("tuba eb");
+  it("strips a slugified, underscored title prefix", () => {
+    expect(partNameFromStem("a_banda_BONE_COM_PIRATA", "a banda")).toBe(
+      "bone com pirata",
+    );
   });
 
-  it("handles a title whose slash was rewritten by safeFilename", () => {
-    expect(partNameFromStem("A-B-flauta", "A/B")).toBe("flauta");
+  it("matches the title case-insensitively", () => {
+    expect(partNameFromStem("Cajuina_BONE_PIRATA", "cajuina")).toBe(
+      "bone pirata",
+    );
   });
 
   it("is idempotent — a second run finds no title to strip", () => {
-    const once = partNameFromStem("Marcha-trompete-a", "Marcha");
-    expect(partNameFromStem(once, "Marcha")).toBe(once);
+    const once = partNameFromStem("olha pro céu - sax alto", "olha pro céu");
+    expect(partNameFromStem(once, "olha pro céu")).toBe(once);
   });
 
-  it("leaves a name alone when the title is not an exact prefix", () => {
-    // Fuzzy matching here would silently corrupt names, and this runs once.
+  it("leaves a name alone when the title is not a prefix", () => {
     expect(partNameFromStem("Marchinha-trompete", "Marcha")).toBe(
       "Marchinha-trompete",
     );
   });
+
+  it("never eats into the following word", () => {
+    // Why there is no empty separator among the candidates.
+    expect(partNameFromStem("a bandagem", "a banda")).toBe("a bandagem");
+  });
 });
 
-describe("stemFromMidiPath", () => {
-  it("recovers the original stem, which makes down exact", () => {
-    expect(
-      stemFromMidiPath("songs/proj-marcha/1/parts/Marcha-trompete-a.midi"),
-    ).toBe("Marcha-trompete-a");
+describe("stemFromPartName", () => {
+  it("restores a title prefix in the canonical form", () => {
+    expect(stemFromPartName("sax alto", "olha pro céu")).toBe(
+      "olha pro céu - sax alto",
+    );
   });
 
-  it("returns undefined for a path it does not recognise", () => {
-    expect(stemFromMidiPath("songs/proj-marcha/1/score.midi")).toBeUndefined();
+  it("leaves names that already carry the title", () => {
+    expect(stemFromPartName("olha pro céu - sax alto", "olha pro céu")).toBe(
+      "olha pro céu - sax alto",
+    );
   });
 });
