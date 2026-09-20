@@ -178,7 +178,7 @@ const isSvgPageOf = (filename: string, basename: string): boolean =>
  * Lists a part's generated files in reading order. Sorted numerically, because
  * a lexical sort puts page 10 before page 2.
  */
-const collectPartFiles = (
+export const collectPartFiles = (
   files: string[],
   basename: string,
 ): Pick<MetajsonPart, "svg" | "midi"> => ({
@@ -213,9 +213,14 @@ export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
     const selectedInScoreOrder = [...options.selectedParts].sort(
       (left, right) => left.scoreIndex - right.scoreIndex,
     );
+    // Guard against the file changing between reading its metadata and
+    // exporting. Names cannot be compared here: --score-meta reports an
+    // instrument's long name ("Eufônio B♭ (concerto)") while --score-parts
+    // reports the part name ("Bombardino"), and they differ for most parts.
     if (
       selectedInScoreOrder.some(
-        (part) => split.parts[part.scoreIndex] !== part.name,
+        (part) =>
+          part.scoreIndex < 0 || part.scoreIndex >= split.parts.length,
       )
     ) {
       throw new Error("Selected parts no longer match the score");
@@ -263,9 +268,11 @@ export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
       composer: options.metadata.composer,
       previousSource: options.metadata.previousSource,
       poet: options.metadata.poet,
-      // Part names are carried here verbatim; filenames are only transport.
+      // The part name, as MuseScore titles the generated part — that is what
+      // is printed on the musician's sheet. Carried verbatim; filenames are
+      // only transport.
       parts: selectedInScoreOrder.map((part) => ({
-        name: part.name,
+        name: split.parts[part.scoreIndex],
         instrument: part.instrument,
         ...collectPartFiles(generatedNames, basenames.get(part.id)!),
       })),
