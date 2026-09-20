@@ -1,12 +1,28 @@
 import { useEffect, useState } from "react";
 import type { ScorePart } from "../../scripts/lib/scoreMeta";
 import type { ExportResult } from "../../scripts/lib/exportScore";
+import type { ExportFailure } from "../../scripts/lib/exportError";
+import { translateWarning } from "../lib/warningMessages";
 import { FileDrop } from "./components/FileDrop";
 import {
   MetadataForm,
   type MetadataValues,
 } from "./components/MetadataForm";
 import { PartsTable } from "./components/PartsTable";
+
+/** Library messages are English by policy; the UI is pt-BR. */
+function describeFailure(failure: ExportFailure): string {
+  return translateWarning(failure.code, {
+    ...failure.meta,
+    message: failure.message,
+    files: Array.isArray(failure.meta.files)
+      ? failure.meta.files.join(", ")
+      : failure.meta.files,
+    missing: Array.isArray(failure.meta.missing)
+      ? failure.meta.missing.join(", ")
+      : failure.meta.missing,
+  });
+}
 
 export function App() {
   const [mscorePath, setMscorePath] = useState<string | null>(null);
@@ -93,30 +109,54 @@ export function App() {
     if (!destinationDirectory) {
       return;
     }
-    setExporting(true);
-    try {
-      const selectedParts = parts.flatMap((part, scoreIndex) =>
-        selected.has(part.id) && part.instrument
-          ? [{
-              id: part.id,
-              name: part.name,
-              scoreIndex,
-              instrument: part.instrument,
-            }]
-          : [],
+
+    const selectedParts = parts.flatMap((part, scoreIndex) =>
+      selected.has(part.id) && part.instrument
+        ? [{
+            id: part.id,
+            name: part.name,
+            scoreIndex,
+            instrument: part.instrument,
+          }]
+        : [],
+    );
+
+    const attempt = async (overwrite: boolean) => {
+      setExporting(true);
+      try {
+        return await window.api.runExport({
+          msczPath,
+          title: metadata.title,
+          selectedParts,
+          metadata,
+          destinationDirectory,
+          overwrite,
+        });
+      } finally {
+        setExporting(false);
+      }
+    };
+
+    let outcome = await attempt(false);
+
+    // A destination that already holds a previous export is a question, not a
+    // failure: exporting, spotting a typo and re-exporting is a normal loop.
+    if (!outcome.ok && outcome.code === "EXPORT_DESTINATION_NOT_EMPTY") {
+      const files = (outcome.meta.files as string[] | undefined) ?? [];
+      const confirmed = window.confirm(
+        `A pasta de destino já tem ${files.length} arquivo(s) desta ` +
+          `exportação:\n\n${files.join("\n")}\n\nSubstituir?`,
       );
-      const result = await window.api.runExport({
-        msczPath,
-        title: metadata.title,
-        selectedParts,
-        metadata,
-        destinationDirectory,
-      });
-      setExportResult(result);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setExporting(false);
+      if (!confirmed) {
+        return;
+      }
+      outcome = await attempt(true);
+    }
+
+    if (outcome.ok) {
+      setExportResult(outcome.value);
+    } else {
+      setError(describeFailure(outcome));
     }
   };
 

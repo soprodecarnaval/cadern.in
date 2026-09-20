@@ -11,6 +11,7 @@ import {
   exportScoreFolder,
   type RunExportOptions,
 } from "../scripts/lib/exportScore";
+import { ExportError, toExportFailure } from "../scripts/lib/exportError";
 import { getMscorePath, setMscorePath } from "./settings";
 
 // Expand a leading ~ from manually-typed paths (native pickers return absolute).
@@ -103,19 +104,32 @@ export function registerIpc(): void {
       ),
   );
 
+  // Returns an outcome rather than rejecting: Electron flattens Error
+  // subclasses and rewrites their message, so a thrown code cannot be
+  // recovered on the renderer side.
   ipcMain.handle(
     "score:runExport",
     (_e, options: Omit<RunExportOptions, "mscorePath">) => {
-      const mscorePath = resolveMscorePath();
-      if (!mscorePath) {
-        throw new Error("MuseScore path not set");
+      try {
+        const mscorePath = resolveMscorePath();
+        if (!mscorePath) {
+          throw new ExportError(
+            "EXPORT_MSCORE_NOT_SET",
+            "MuseScore path not set",
+          );
+        }
+        return {
+          ok: true as const,
+          value: exportScoreFolder({
+            ...options,
+            mscorePath,
+            msczPath: expandHome(options.msczPath),
+            destinationDirectory: expandHome(options.destinationDirectory),
+          }),
+        };
+      } catch (error) {
+        return toExportFailure(error);
       }
-      return exportScoreFolder({
-        ...options,
-        mscorePath,
-        msczPath: expandHome(options.msczPath),
-        destinationDirectory: expandHome(options.destinationDirectory),
-      });
     },
   );
 

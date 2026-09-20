@@ -4,6 +4,7 @@ import type {
   ExportResult,
   RunExportOptions,
 } from "../../scripts/lib/exportScore";
+import type { ExportOutcome } from "../../scripts/lib/exportError";
 
 // Bridge exposed by electron/preload.ts via contextBridge.
 export interface ExportApi {
@@ -25,9 +26,10 @@ export interface ExportApi {
     destinationPath: string,
     tags: MetadataTags,
   ): Promise<string>;
+  // Resolves with an outcome rather than rejecting; see scripts/lib/exportError.
   runExport(
     options: Omit<RunExportOptions, "mscorePath">,
-  ): Promise<ExportResult>;
+  ): Promise<ExportOutcome<ExportResult>>;
   openFolder(folderPath: string): Promise<string>;
 }
 

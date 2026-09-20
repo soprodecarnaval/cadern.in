@@ -9,6 +9,7 @@ import {
 } from "./mscoreEnvironment";
 import { copyMsczWithMeta, type MetadataTags } from "./msczMeta";
 import { assertSupportedMscz } from "./msczArchive";
+import { ExportError } from "./exportError";
 import {
   METAJSON_VERSION,
   type Metajson,
@@ -29,6 +30,8 @@ export interface RunExportOptions {
   selectedParts: SelectedPart[];
   metadata: MetadataTags;
   destinationDirectory: string;
+  /** Replace files already in the destination instead of refusing. */
+  overwrite?: boolean;
 }
 
 export interface ExportResult {
@@ -146,10 +149,13 @@ const assertGeneratedAssets = (
           (name.startsWith(`${basename}-`) && name.endsWith(".svg")),
       ),
   );
-  if (missingMidi.length > 0 || missingSvg.length > 0) {
-    throw new Error(
-      `MuseScore did not generate: ${[...missingMidi, ...missingSvg].join(", ")}. ` +
+  const missing = [...missingMidi, ...missingSvg];
+  if (missing.length > 0) {
+    throw new ExportError(
+      "EXPORT_ASSETS_MISSING",
+      `MuseScore did not generate: ${missing.join(", ")}. ` +
         `Generated files: ${files.join(", ") || "none"}`,
+      { missing },
     );
   }
 };
@@ -193,11 +199,21 @@ export const collectPartFiles = (
 
 export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
   if (options.selectedParts.length === 0) {
-    throw new Error("Select at least one compatible part");
+    throw new ExportError(
+      "EXPORT_NO_PARTS",
+      "Select at least one compatible part",
+    );
   }
   assertSupportedMscz(options.msczPath);
-  if (!fs.statSync(options.destinationDirectory).isDirectory()) {
-    throw new Error("Export destination is not a directory");
+  if (
+    !fs.existsSync(options.destinationDirectory) ||
+    !fs.statSync(options.destinationDirectory).isDirectory()
+  ) {
+    throw new ExportError(
+      "EXPORT_DESTINATION_NOT_DIRECTORY",
+      "Export destination is not a directory",
+      { path: options.destinationDirectory },
+    );
   }
 
   const stagingDirectory = fs.mkdtempSync(
@@ -223,7 +239,10 @@ export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
           part.scoreIndex < 0 || part.scoreIndex >= split.parts.length,
       )
     ) {
-      throw new Error("Selected parts no longer match the score");
+      throw new ExportError(
+        "EXPORT_SCORE_CHANGED",
+        "Selected parts no longer match the score",
+      );
     }
 
     const basenames = buildPartBasenames(
@@ -289,14 +308,32 @@ export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
       )
       .filter((name) => !name.startsWith("part-"))
       .sort();
+    // Checked before copying anything: failing partway would leave the
+    // destination holding half an export.
+    const conflicts = generatedFiles.filter((name) =>
+      fs.existsSync(path.join(options.destinationDirectory, name)),
+    );
+    if (conflicts.length > 0 && !options.overwrite) {
+      throw new ExportError(
+        "EXPORT_DESTINATION_NOT_EMPTY",
+        `Destination already has: ${conflicts.join(", ")}`,
+        { files: conflicts, directory: options.destinationDirectory },
+      );
+    }
+
     for (const name of generatedFiles) {
       const destination = path.join(options.destinationDirectory, name);
+      const replacing = conflicts.includes(name);
       fs.copyFileSync(
         path.join(stagingDirectory, name),
         destination,
-        fs.constants.COPYFILE_EXCL,
+        replacing ? 0 : fs.constants.COPYFILE_EXCL,
       );
-      copiedFiles.push(destination);
+      // Only roll back files we created. Removing one we overwrote would
+      // destroy the user's previous export instead of restoring it.
+      if (!replacing) {
+        copiedFiles.push(destination);
+      }
     }
 
     return {

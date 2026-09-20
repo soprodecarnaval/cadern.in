@@ -3,6 +3,7 @@ import type { Instrument } from "../../types/instrument";
 import { mapInstrumentId } from "./scoreInstrument";
 import { withIsolatedMscoreEnvironment } from "./mscoreEnvironment";
 import { assertSupportedMscz } from "./msczArchive";
+import { ExportError } from "./exportError";
 
 export interface ScorePart {
   id: string;
@@ -91,7 +92,10 @@ export const readScoreMeta = (
     // MuseScore 4 can print valid metadata and then crash on shutdown.
     const recovered = recoverScoreMetaStdout(e);
     if (!recovered) {
-      throw new Error("MuseScore failed to read this score's metadata.");
+      throw new ExportError(
+        "EXPORT_METADATA_UNREADABLE",
+        "MuseScore failed to read this score's metadata.",
+      );
     }
     stdout = recovered;
   }

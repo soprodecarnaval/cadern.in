@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import AdmZip from "adm-zip";
+import { ExportError } from "./exportError";
 
 // A .mscz is a zip. META-INF/container.xml lists every packaged file as a
 // <rootfile full-path="..."/>, including the score itself, whose name tracks the
@@ -77,17 +78,23 @@ export const MINIMUM_MSCORE_MAJOR = 4;
  */
 export const assertSupportedMscz = (msczPath: string): void => {
   if (!fs.existsSync(msczPath)) {
-    throw new Error(`File not found: ${msczPath}`);
+    throw new ExportError(
+      "EXPORT_FILE_NOT_FOUND",
+      `File not found: ${msczPath}`,
+      { path: msczPath },
+    );
   }
 
   let version: MsczVersion;
   try {
     version = readMsczVersion(msczPath);
   } catch (error) {
-    throw new Error(
+    throw new ExportError(
+      "EXPORT_NOT_A_SCORE",
       `Could not open this file as a MuseScore score: ${
         error instanceof Error ? error.message : String(error)
       }`,
+      { path: msczPath },
     );
   }
 
@@ -97,9 +104,11 @@ export const assertSupportedMscz = (msczPath: string): void => {
     return;
   }
   if (major < MINIMUM_MSCORE_MAJOR) {
-    throw new Error(
+    throw new ExportError(
+      "EXPORT_UNSUPPORTED_VERSION",
       `This score was saved in MuseScore ${version.program ?? major}. Open it ` +
         `in MuseScore ${MINIMUM_MSCORE_MAJOR} and save it again, then retry.`,
+      { version: version.program ?? String(major), minimum: MINIMUM_MSCORE_MAJOR },
     );
   }
 };
