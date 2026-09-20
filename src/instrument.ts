@@ -74,6 +74,24 @@ export const parseInstrument = (raw: string): Instrument | undefined => {
   return match ? match[1] : undefined;
 };
 
+/**
+ * Removes the instrument from an authored part name, for the songbook option
+ * that prints "1" rather than "Trompete 1".
+ *
+ * Deliberately does not strip the song title, unlike extractPartLabel: part
+ * names are authored now, so a part legitimately called "Marcha solo" in a song
+ * called "Marcha" must not come out as "solo".
+ */
+export const stripInstrumentFromPartName = (
+  partName: string,
+): string | undefined => {
+  const normalized = partName.replace(/[_\-.]/g, " ").toLowerCase();
+  const match = instrumentAliases.find(([alias]) => normalized.includes(alias));
+  const stripped = match ? normalized.replace(match[0], "") : normalized;
+  return stripped.replace(/\s+/g, " ").trim() || undefined;
+};
+
+/** @deprecated pre-v2 part names only; see stripInstrumentFromPartName. */
 export const extractPartLabel = (
   partName: string,
   songTitle: string,
