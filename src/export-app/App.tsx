@@ -3,6 +3,8 @@ import type { ScorePart } from "../../scripts/lib/scoreMeta";
 import type { ExportResult } from "../../scripts/lib/exportScore";
 import type { ExportFailure } from "../../scripts/lib/exportError";
 import { translateWarning } from "../lib/warningMessages";
+import { useAuth } from "../auth";
+import { LoginForm } from "./components/LoginForm";
 import { FileDrop } from "./components/FileDrop";
 import {
   MetadataForm,
@@ -25,6 +27,29 @@ function describeFailure(failure: ExportFailure): string {
 }
 
 export function App() {
+  const { currentUser, logout } = useAuth();
+
+  // Login gates the whole app: uploading is the point of it, and a session
+  // established up front is one less interruption mid-export.
+  if (!currentUser) {
+    return (
+      <main className="app app--login">
+        <h1>cadern.in — Exportador</h1>
+        <LoginForm />
+      </main>
+    );
+  }
+
+  return <ExportApp onLogout={() => void logout()} user={currentUser.email ?? ""} />;
+}
+
+function ExportApp({
+  onLogout,
+  user,
+}: {
+  onLogout: () => void;
+  user: string;
+}) {
   const [mscorePath, setMscorePath] = useState<string | null>(null);
   const [resolvingMscore, setResolvingMscore] = useState(true);
   const [msczPath, setMsczPath] = useState("");
@@ -162,7 +187,15 @@ export function App() {
 
   return (
     <main className="app">
-      <h1>cadern.in — Exportador</h1>
+      <header className="session">
+        <h1>cadern.in — Exportador</h1>
+        <span className="session-user">
+          {user}
+          <button type="button" className="link" onClick={onLogout}>
+            Sair
+          </button>
+        </span>
+      </header>
 
       <section className="row mscore-bar">
         <strong>MuseScore 4:</strong>

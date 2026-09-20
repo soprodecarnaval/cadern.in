@@ -2,13 +2,22 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import electron from "vite-plugin-electron/simple";
 import path from "node:path";
+import { loadAppEnv } from "./vite.env";
 
 const repoRoot = __dirname;
 
 // Dedicated build for the Electron export app. Independent of the website's
 // vite.config.ts so the site bundle never pulls in electron.
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const { define } = loadAppEnv(mode, repoRoot);
+
+  return {
   root: path.resolve(repoRoot, "src/export-app"),
+  // `root` is src/export-app, but the .env files live at the repo root, and
+  // envDir defaults to `root` — without this the app builds with no Firebase
+  // config at all.
+  envDir: repoRoot,
+  define,
   plugins: [
     react(),
     electron({
@@ -33,4 +42,5 @@ export default defineConfig({
     emptyOutDir: true,
     target: "esnext",
   },
+  };
 });
