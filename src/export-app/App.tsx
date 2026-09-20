@@ -3,8 +3,10 @@ import type { ScorePart } from "../../scripts/lib/scoreMeta";
 import type { ExportResult } from "../../scripts/lib/exportScore";
 import type { ExportFailure } from "../../scripts/lib/exportError";
 import { translateWarning } from "../lib/warningMessages";
+import type { User } from "firebase/auth";
 import { useAuth } from "../auth";
 import { LoginForm } from "./components/LoginForm";
+import { UploadPanel } from "./components/UploadPanel";
 import { FileDrop } from "./components/FileDrop";
 import {
   MetadataForm,
@@ -40,7 +42,12 @@ export function App() {
     );
   }
 
-  return <ExportApp onLogout={() => void logout()} user={currentUser.email ?? ""} />;
+  return (
+    <ExportApp
+      onLogout={() => void logout()}
+      user={currentUser}
+    />
+  );
 }
 
 function ExportApp({
@@ -48,7 +55,7 @@ function ExportApp({
   user,
 }: {
   onLogout: () => void;
-  user: string;
+  user: User;
 }) {
   const [mscorePath, setMscorePath] = useState<string | null>(null);
   const [resolvingMscore, setResolvingMscore] = useState(true);
@@ -190,7 +197,7 @@ function ExportApp({
       <header className="session">
         <h1>cadern.in — Exportador</h1>
         <span className="session-user">
-          {user}
+          {user.email}
           <button type="button" className="link" onClick={onLogout}>
             Sair
           </button>
@@ -280,6 +287,10 @@ function ExportApp({
                 Abrir pasta
               </button>
             </section>
+          )}
+
+          {exportResult && (
+            <UploadPanel user={user} directory={exportResult.directory} />
           )}
         </>
       )}

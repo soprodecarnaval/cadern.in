@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld("api", {
       "mscorePath"
     >,
   ) => ipcRenderer.invoke("score:runExport", options),
+  readExportFolder: (folderPath: string) =>
+    ipcRenderer.invoke("score:readExportFolder", folderPath),
   openFolder: (folderPath: string) =>
     ipcRenderer.invoke("shell:openFolder", folderPath),
 });

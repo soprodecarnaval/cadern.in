@@ -1,4 +1,5 @@
 import { dialog, ipcMain, shell } from "electron";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { autolocateMscore, validateMscore } from "../scripts/lib/mscz";
@@ -132,6 +133,19 @@ export function registerIpc(): void {
       }
     },
   );
+
+  // The renderer cannot read the filesystem, but Firebase auth and Storage
+  // run there — so the bytes have to cross rather than uploading from main.
+  ipcMain.handle("score:readExportFolder", (_e, folderPath: string) => {
+    const folder = expandHome(folderPath);
+    return fs
+      .readdirSync(folder)
+      .filter((name) => fs.statSync(path.join(folder, name)).isFile())
+      .map((name) => ({
+        name,
+        bytes: fs.readFileSync(path.join(folder, name)),
+      }));
+  });
 
   ipcMain.handle("shell:openFolder", (_e, folderPath: string) =>
     shell.openPath(expandHome(folderPath)),

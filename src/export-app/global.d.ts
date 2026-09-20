@@ -30,6 +30,10 @@ export interface ExportApi {
   runExport(
     options: Omit<RunExportOptions, "mscorePath">,
   ): Promise<ExportOutcome<ExportResult>>;
+  /** Reads an exported folder so the renderer can rebuild browser `File`s. */
+  readExportFolder(
+    folderPath: string,
+  ): Promise<{ name: string; bytes: Uint8Array }[]>;
   openFolder(folderPath: string): Promise<string>;
 }
 

@@ -55,26 +55,59 @@ itself. Main reads the folder and sends `{ name, bytes }[]`; the renderer
 reconstructs `File` objects. For a typical export that is a few MB across one
 structured-clone message.
 
+## Decisions
+
+- **Target project is chosen, not assumed.** `getUserMemberProjects` filtered to
+  editor-or-above, defaulting to the user's Acervo. Uploading only to a personal
+  project would mean someone has to move every score before it can appear in a
+  songbook.
+- **An existing score becomes a new revision.** Export, spot a mistake, fix,
+  re-upload is the normal loop.
+
+## The collision that forced the second decision
+
+`uploadScore` derives `scoreId` as `${projectId}-${slugify(title)}`, and both
+`createScore` and `createRevision` use `setDoc`, which **overwrites**. Uploading
+a score whose title matches one already in the project would therefore destroy
+the existing revision 1 and its score document, silently. The website avoids
+this only by having a separate `/upload/:scoreId` route for new revisions; a
+fresh upload there has no collision check either.
+
+`UploadPanel` derives the same id, looks the score up before anything is
+written, and reports how many revisions exist so the outcome is stated before
+the button is pressed.
+
 ## Steps
 
-1. IPC `readExportFolder(dest)` → `{ name, bytes }[]`.
-2. Renderer: build `File[]`, run `parseUploadedFiles` + `validateParsedScore`,
-   surface warnings via `translateWarning` (pt-BR, as 011 established).
-3. `getOrCreateDefaultProject(currentUser)` → `uploadScore(...)` with
-   `onProgress` driving a progress bar.
-4. Success state with a link/id; failures routed through the same
-   code-and-translate path 011 introduced rather than raw messages.
+1. ✅ IPC `score:readExportFolder` → `{ name, bytes }[]`.
+2. ✅ Renderer rebuilds `File[]`, runs `parseUploadedFiles` +
+   `validateParsedScore`, surfaces warnings through `translateWarning`.
+3. ✅ Project picker; `uploadScore(...)` with `onProgress`.
+4. ✅ Success state naming the score id and revision number.
 
 ## Files
 
-- `electron/ipc.ts` (`readExportFolder`)
+- `electron/ipc.ts`, `electron/preload.ts`, `src/export-app/global.d.ts`
 - `src/export-app/components/UploadPanel.tsx`
 - `src/export-app/App.tsx`
 
 ## Acceptance
 
-- One click after export uploads the score to the user's default project.
-- A folder the export app produced uploads with no warnings.
-- Progress and final success/failure are shown, in pt-BR.
-- Uploaded files land under `scores/…`, matching existing content.
-- Resulting score is visible in cadern.in.
+Unverifiable without a real Firebase round trip — there is no emulator harness
+yet, so none of these are ticked from inspection.
+
+- [ ] Uploading after an export puts the score in the chosen project.
+- [ ] A folder the export app produced uploads with **no** warnings.
+- [ ] Progress and final success/failure are shown, in pt-BR.
+- [ ] Uploaded files land under `scores/…`, matching existing content.
+- [ ] Re-uploading the same score adds revision N+1 and leaves revision 1 intact.
+- [ ] Resulting score is visible in cadern.in.
+
+## Known gaps
+
+- No link through to the score on the website; the success state names the id
+  only. Opening it needs `shell.openExternal` and a base URL, neither of which
+  the app currently has.
+- Re-uploading an existing score does not refresh the score document's title,
+  composer or tags — a pre-existing `uploadScore` behaviour, not introduced
+  here, but newly easy to hit now that re-upload is a supported flow.

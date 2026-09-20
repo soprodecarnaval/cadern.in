@@ -277,3 +277,60 @@ button.link {
   opacity: 0.6;
   line-height: 1.4;
 }
+
+.upload-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 8px;
+}
+
+.upload-panel h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.upload-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.upload-panel label span {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.upload-panel select {
+  padding: 0.45rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.upload-summary,
+.upload-progress {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.upload-notice {
+  margin: 0;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(200, 150, 0, 0.12);
+}
+
+.upload-warnings {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
