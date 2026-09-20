@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ScorePart } from "../../scripts/lib/scoreMeta";
+import type { ExportResult } from "../../scripts/lib/exportScore";
 import { FileDrop } from "./components/FileDrop";
 import {
   MetadataForm,
@@ -15,6 +16,8 @@ export function App() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [metadata, setMetadata] = useState<MetadataValues | null>(null);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState<ExportResult | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -40,6 +43,7 @@ export function App() {
     setParts([]);
     setSelected(new Set());
     setMetadata(null);
+    setExportResult(null);
     setLoading(true);
     try {
       const result = await window.api.readScoreMeta(path);
@@ -77,6 +81,43 @@ export function App() {
       }
       return next;
     });
+  };
+
+  const runExport = async () => {
+    if (!metadata) {
+      return;
+    }
+    setError("");
+    setExportResult(null);
+    const destinationDirectory = await window.api.pickExportDirectory();
+    if (!destinationDirectory) {
+      return;
+    }
+    setExporting(true);
+    try {
+      const selectedParts = parts.flatMap((part, scoreIndex) =>
+        selected.has(part.id) && part.instrument
+          ? [{
+              id: part.id,
+              name: part.name,
+              scoreIndex,
+              instrument: part.instrument,
+            }]
+          : [],
+      );
+      const result = await window.api.runExport({
+        msczPath,
+        title: metadata.title,
+        selectedParts,
+        metadata,
+        destinationDirectory,
+      });
+      setExportResult(result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -121,6 +162,7 @@ export function App() {
                 setParts([]);
                 setSelected(new Set());
                 setMetadata(null);
+                setExportResult(null);
                 setError("");
               }}
             >
@@ -134,7 +176,38 @@ export function App() {
               onToggle={togglePart}
             />
           )}
-          <MetadataForm value={metadata} onChange={setMetadata} />
+          <MetadataForm
+            value={metadata}
+            onChange={(value) => {
+              setMetadata(value);
+              setExportResult(null);
+            }}
+          />
+          <section className="export-actions">
+            <button
+              className="btn-primary"
+              disabled={selected.size === 0 || exporting}
+              onClick={() => void runExport()}
+            >
+              {exporting ? "Exportando…" : "Exportar…"}
+            </button>
+            {selected.size === 0 && (
+              <span className="muted">Selecione pelo menos uma parte.</span>
+            )}
+          </section>
+          {exportResult && (
+            <section className="export-result">
+              <strong>Exportação concluída</strong>
+              <span>{exportResult.files.length} arquivos criados.</span>
+              <button
+                onClick={() =>
+                  void window.api.openFolder(exportResult.directory)
+                }
+              >
+                Abrir pasta
+              </button>
+            </section>
+          )}
         </>
       )}
     </main>

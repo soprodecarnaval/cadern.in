@@ -2,7 +2,10 @@ import { execFileSync } from "child_process";
 import fs from "fs";
 import type { Instrument } from "../../types/instrument";
 import { mapInstrumentId } from "./scoreInstrument";
-import { withIsolatedMscoreEnvironment } from "./mscoreEnvironment";
+import {
+  isMscoreMutexCrash,
+  withIsolatedMscoreEnvironment,
+} from "./mscoreEnvironment";
 
 export interface ScorePart {
   id: string;
@@ -56,6 +59,20 @@ const parseScoreMeta = (stdout: string): RawMeta => {
   return parsed.metadata;
 };
 
+export const recoverScoreMetaStdout = (error: unknown): string | undefined => {
+  const stdout = (error as { stdout?: string | Buffer }).stdout;
+  const value = Buffer.isBuffer(stdout) ? stdout.toString("utf8") : stdout;
+  if (!value) {
+    return undefined;
+  }
+  try {
+    parseScoreMeta(value);
+    return value;
+  } catch {
+    return undefined;
+  }
+};
+
 export const readScoreMeta = (
   mscore: string,
   msczPath: string,
@@ -77,17 +94,18 @@ export const readScoreMeta = (
       }),
     );
   } catch (e) {
-    const err = e as { signal?: string; stderr?: string };
-    const crashed =
-      err.signal === "SIGABRT" ||
-      (err.stderr ?? "").includes("mutex lock failed");
-    if (crashed) {
-      throw new Error(
-        "Could not read this score. If it was made in MuseScore 3, open it " +
-          "in MuseScore 4 and save it again, then retry.",
-      );
+    const recovered = recoverScoreMetaStdout(e);
+    if (recovered) {
+      stdout = recovered;
+    } else {
+      if (isMscoreMutexCrash(e)) {
+        throw new Error(
+          "Could not read this score. If it was made in MuseScore 3, open it " +
+            "in MuseScore 4 and save it again, then retry.",
+        );
+      }
+      throw new Error("MuseScore failed to read this score's metadata.");
     }
-    throw new Error("MuseScore failed to read this score's metadata.");
   }
   const m = parseScoreMeta(stdout);
 

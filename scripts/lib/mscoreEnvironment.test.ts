@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
-import { withIsolatedMscoreEnvironment } from "./mscoreEnvironment";
+import {
+  isMscoreMutexCrash,
+  withIsolatedMscoreEnvironment,
+} from "./mscoreEnvironment";
 
 describe("withIsolatedMscoreEnvironment", () => {
   it("provides isolated config and data directories and removes them", () => {
@@ -30,5 +33,19 @@ describe("withIsolatedMscoreEnvironment", () => {
       }),
     ).toThrow("MuseScore failed");
     expect(fs.existsSync(configDirectory)).toBe(false);
+  });
+});
+
+describe("isMscoreMutexCrash", () => {
+  it("matches only the known MuseScore shutdown failure", () => {
+    expect(
+      isMscoreMutexCrash({
+        signal: "SIGABRT",
+        stderr: Buffer.from("mutex lock failed"),
+      }),
+    ).toBe(true);
+    expect(
+      isMscoreMutexCrash({ signal: "SIGABRT", stderr: "other crash" }),
+    ).toBe(false);
   });
 });

@@ -62,6 +62,14 @@ button:disabled {
   opacity: 0.5;
   cursor: default;
 }
+.btn-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
 .btn-link {
   border: none;
   background: none;
@@ -178,4 +186,28 @@ button:disabled {
 .metadata-form input:focus {
   border-color: var(--accent);
   outline: 2px solid #dbeafe;
+}
+
+.export-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  font-size: 13px;
+}
+
+.export-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+  font-size: 13px;
+}
+
+.export-result span {
+  flex: 1;
 }

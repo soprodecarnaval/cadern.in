@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from "electron";
+import { dialog, ipcMain, shell } from "electron";
 import os from "node:os";
 import path from "node:path";
 import { autolocateMscore, validateMscore } from "../scripts/lib/mscz";
@@ -7,6 +7,10 @@ import {
   copyMsczWithMeta,
   type MetadataTags,
 } from "../scripts/lib/msczMeta";
+import {
+  exportScoreFolder,
+  type RunExportOptions,
+} from "../scripts/lib/exportScore";
 import { getMscorePath, setMscorePath } from "./settings";
 
 // Expand a leading ~ from manually-typed paths (native pickers return absolute).
@@ -70,6 +74,17 @@ export function registerIpc(): void {
     return res.canceled ? null : (res.filePaths[0] ?? null);
   });
 
+  ipcMain.handle(
+    "dialog:pickExportDirectory",
+    async (): Promise<string | null> => {
+      const res = await dialog.showOpenDialog({
+        title: "Choose export folder",
+        properties: ["openDirectory", "createDirectory"],
+      });
+      return res.canceled ? null : (res.filePaths[0] ?? null);
+    },
+  );
+
   ipcMain.handle("score:readMeta", (_e, msczPath: string) => {
     const mscore = resolveMscorePath();
     if (!mscore) {
@@ -86,5 +101,25 @@ export function registerIpc(): void {
         expandHome(destinationPath),
         tags,
       ),
+  );
+
+  ipcMain.handle(
+    "score:runExport",
+    (_e, options: Omit<RunExportOptions, "mscorePath">) => {
+      const mscorePath = resolveMscorePath();
+      if (!mscorePath) {
+        throw new Error("MuseScore path not set");
+      }
+      return exportScoreFolder({
+        ...options,
+        mscorePath,
+        msczPath: expandHome(options.msczPath),
+        destinationDirectory: expandHome(options.destinationDirectory),
+      });
+    },
+  );
+
+  ipcMain.handle("shell:openFolder", (_e, folderPath: string) =>
+    shell.openPath(expandHome(folderPath)),
   );
 }

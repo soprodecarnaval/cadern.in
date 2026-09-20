@@ -23,3 +23,11 @@ export const withIsolatedMscoreEnvironment = <T>(
     fs.rmSync(directory, { recursive: true, force: true });
   }
 };
+
+export const isMscoreMutexCrash = (error: unknown): boolean => {
+  const value = error as { signal?: string; stderr?: string | Buffer };
+  const stderr = Buffer.isBuffer(value.stderr)
+    ? value.stderr.toString("utf8")
+    : (value.stderr ?? "");
+  return value.signal === "SIGABRT" && stderr.includes("mutex lock failed");
+};
