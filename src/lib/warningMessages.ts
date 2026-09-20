@@ -3,6 +3,8 @@ export type WarningCode =
   | "NO_MSCZ"
   | "METAJSON_MISSING"
   | "METAJSON_PARSE_FAILED"
+  | "METAJSON_LEGACY"
+  | "METAJSON_FILE_MISSING"
   | "INSTRUMENT_NOT_DETECTED"
   | "PART_NAME_EMPTY"
   | "PART_NO_SVG"
@@ -14,6 +16,10 @@ const messages: Record<WarningCode, string> = {
   NO_MSCZ: "Nenhum arquivo .mscz encontrado",
   METAJSON_MISSING: "Arquivo metajson não encontrado",
   METAJSON_PARSE_FAILED: "Falha ao ler o metajson",
+  METAJSON_LEGACY:
+    "Formato antigo de metajson: os nomes das partes serão deduzidos dos " +
+    "nomes dos arquivos. Exporte novamente pelo app de exportação.",
+  METAJSON_FILE_MISSING: 'Arquivo "{file}" listado no metajson não foi enviado',
   INSTRUMENT_NOT_DETECTED: "Instrumento não reconhecido no nome do arquivo",
   PART_NAME_EMPTY: 'Nome da parte vazio para "{entryPath}"',
   PART_NO_SVG: 'Parte "{partName}" não tem arquivos SVG',

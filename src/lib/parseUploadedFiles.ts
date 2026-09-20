@@ -1,5 +1,6 @@
 import z from "zod";
 import type { Instrument } from "../../types/instrument";
+import { zMetajson, type Metajson } from "../../types/metajson";
 import { parseInstrument } from "../instrument";
 import type { Warning } from "../result";
 
@@ -11,7 +12,13 @@ interface FileDraft {
 }
 
 export interface ParsedPart {
+  /** Display name. Authored in MuseScore; arbitrary. */
   name: string;
+  /**
+   * File stem. Keys `fileMap` and, downstream, Storage paths — so it must stay
+   * filesystem-safe even when `name` is not.
+   */
+  basename: string;
   instrument: Instrument;
   svg: string[];
   midi: string;
@@ -33,18 +40,31 @@ interface MetajsonFields {
   tags: string[];
 }
 
-async function readMetajson(file: File): Promise<MetajsonFields | null> {
+interface ReadMetajson {
+  fields: MetajsonFields;
+  /** Present only for v2 sidecars; pre-v2 leaves parts to be inferred. */
+  manifest: Metajson | null;
+}
+
+const metajsonFields = (data: {
+  composer?: string;
+  previousSource?: string;
+  poet?: string;
+}): MetajsonFields => ({
+  composer: data.composer ?? "",
+  sub: data.previousSource ?? "",
+  tags: data.poet?.split(",").map((t: string) => t.trim()) ?? [],
+});
+
+async function readMetajson(file: File): Promise<ReadMetajson | null> {
   try {
-    const text = await file.text();
-    const data = JSON.parse(text) as {
-      composer?: string;
-      previousSource?: string;
-      poet?: string;
-    };
+    const data = JSON.parse(await file.text()) as Record<string, unknown>;
+    // Keyed on the version literal, not on the presence of `parts`: MuseScore
+    // writes its own metajson with a differently-shaped `parts` array.
+    const parsed = zMetajson.safeParse(data);
     return {
-      composer: data.composer ?? "",
-      sub: data.previousSource ?? "",
-      tags: data.poet?.split(",").map((t: string) => t.trim()) ?? [],
+      fields: metajsonFields(data),
+      manifest: parsed.success ? parsed.data : null,
     };
   } catch {
     return null;
@@ -75,6 +95,7 @@ export async function parseUploadedFiles(files: File[]): Promise<ParsedScore> {
 
   let title = "";
   let meta: MetajsonFields = { composer: "", sub: "", tags: [] };
+  let manifest: Metajson | null = null;
   let msczFile: File | undefined;
   const partDrafts = new Map<string, FileDraft>();
 
@@ -93,29 +114,41 @@ export async function parseUploadedFiles(files: File[]): Promise<ParsedScore> {
   } else {
     warnings.push({ code: "NO_MSCZ", meta: {} });
   }
+  if (msczFile) {
+    fileMap.set("mscz", msczFile);
+  }
+
+  // Read the sidecar before anything else: a v2 manifest replaces filename
+  // inference entirely, so the inference pass must not run and warn first.
+  const metajsonFile = files.find((f) => f.name.endsWith(".metajson"));
+  if (metajsonFile) {
+    const parsed = await readMetajson(metajsonFile);
+    if (parsed) {
+      meta = parsed.fields;
+      manifest = parsed.manifest;
+      fileMap.set("metajson", metajsonFile);
+    } else {
+      warnings.push({
+        code: "METAJSON_PARSE_FAILED",
+        meta: { file: metajsonFile.name },
+      });
+    }
+  }
+
+  if (manifest) {
+    return buildFromManifest(files, manifest, meta, title, fileMap, warnings);
+  }
+  warnings.push({ code: "METAJSON_LEGACY", meta: {} });
 
   for (const file of files) {
     const ext = getExtension(file.name);
     const basename = removeExtension(file.name);
 
     if (ext === ".metajson") {
-      const parsed = await readMetajson(file);
-      if (parsed) {
-        meta = parsed;
-        fileMap.set("metajson", file);
-      } else {
-        warnings.push({
-          code: "METAJSON_PARSE_FAILED",
-          meta: { file: file.name },
-        });
-      }
       continue;
     }
 
     if (ext === ".mscz") {
-      if (file === msczFile) {
-        fileMap.set("mscz", file);
-      }
       continue;
     }
 
@@ -166,7 +199,7 @@ export async function parseUploadedFiles(files: File[]): Promise<ParsedScore> {
     }
   }
 
-  // Build parts array
+  // Pre-v2: part names and instruments are inferred from filenames.
   const parts: ParsedPart[] = [];
   for (const [, draft] of partDrafts) {
     draft.svg.sort((a, b) => a.page - b.page);
@@ -182,10 +215,82 @@ export async function parseUploadedFiles(files: File[]): Promise<ParsedScore> {
 
     parts.push({
       name: draft.name,
+      basename: draft.name,
       instrument: draft.instrument,
       svg: svgPaths,
       midi: midiPath,
     });
+  }
+
+  return {
+    title,
+    composer: meta.composer,
+    sub: meta.sub,
+    tags: meta.tags,
+    parts,
+    fileMap,
+    warnings,
+  };
+}
+
+/**
+ * v2: the sidecar lists every file by name, so nothing is inferred. Storage keys
+ * are still derived from the part's stem and page index rather than the supplied
+ * filenames, keeping them stable and identical to what pre-v2 produced.
+ */
+function buildFromManifest(
+  files: File[],
+  manifest: Metajson,
+  meta: MetajsonFields,
+  title: string,
+  fileMap: Map<string, File>,
+  warnings: Warning[],
+): ParsedScore {
+  const byName = new Map(files.map((file) => [file.name, file]));
+  const claimed = new Set<string>();
+  const parts: ParsedPart[] = [];
+
+  for (const part of manifest.parts) {
+    const basename = part.midi.replace(/\.midi$/, "");
+
+    const midiFile = byName.get(part.midi);
+    if (midiFile) {
+      claimed.add(part.midi);
+      fileMap.set(`parts/${basename}.midi`, midiFile);
+    } else {
+      warnings.push({ code: "PART_NO_MIDI", meta: { partName: part.name } });
+    }
+
+    const svgKeys = part.svg.map((filename, index) => {
+      const key = `parts/${basename}-${index + 1}.svg`;
+      const file = byName.get(filename);
+      if (file) {
+        claimed.add(filename);
+        fileMap.set(key, file);
+      } else {
+        warnings.push({ code: "METAJSON_FILE_MISSING", meta: { file: filename } });
+      }
+      return key;
+    });
+    if (svgKeys.length === 0) {
+      warnings.push({ code: "PART_NO_SVG", meta: { partName: part.name } });
+    }
+
+    parts.push({
+      name: part.name,
+      basename,
+      instrument: part.instrument,
+      svg: svgKeys,
+      midi: `parts/${basename}.midi`,
+    });
+  }
+
+  // The full-score midi is the one no part claimed.
+  const scoreMidi = files.find(
+    (file) => file.name.endsWith(".midi") && !claimed.has(file.name),
+  );
+  if (scoreMidi) {
+    fileMap.set("midi", scoreMidi);
   }
 
   return {
@@ -206,7 +311,8 @@ const zParsedScoreValidation = z.object({
   tags: z.array(z.string()),
   parts: z.array(
     z.object({
-      name: z.string(),
+      name: z.string().min(1),
+      basename: z.string().min(1),
       instrument: z.string(),
       svg: z.array(z.string()),
       midi: z.string(),

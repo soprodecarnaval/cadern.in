@@ -94,10 +94,12 @@ export async function uploadScore(
   const missing = (key: string) => ({ path: key, url: "" });
 
   const revisionParts = parsed.parts.map((part) => ({
+    // `name` is the authored part name and may contain anything, including a
+    // path separator — keys are built from `basename`, never from it.
     name: part.name,
     instrument: part.instrument,
     svg: part.svg.map((svgKey) => storageFiles.get(svgKey) ?? missing(svgKey)),
-    midi: storageFiles.get(`parts/${part.name}.midi`) ?? missing(part.midi),
+    midi: storageFiles.get(part.midi) ?? missing(part.midi),
   }));
 
   if (existingScoreId && revisionNumber > 1) {
