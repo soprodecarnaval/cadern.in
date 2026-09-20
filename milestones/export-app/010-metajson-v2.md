@@ -110,10 +110,16 @@ sidecars:
 - The export app, which has never shipped — no `electron-builder.yml`, no tags,
   `version: 0.0.0`. There are no installs in the wild producing pre-v2 output.
 
-So the CLI, not the export app, is what keeps generating folders a v2-only
-uploader would reject. **Decision: `scripts/exportMscz.ts` is phased out rather
-than upgraded**, once the export app replaces it. That makes step D below depend
-on 008 (packaging).
+So the CLI, not the export app, was what kept generating folders a v2-only
+uploader would reject. **`scripts/exportMscz.ts` has been retired** rather than
+upgraded, along with `generateAssets` — the function that asked MuseScore to
+write the pre-v2 sidecar in the first place.
+
+D2 therefore does not depend on 008, as previously recorded here. Nothing
+produces pre-v2 folders any more, so removing the inference path depends only on
+whether anyone still holds one they cannot re-export. Note that
+`scripts/lib/backfillMetajson.ts` currently *uses* that path, so it has to take
+the logic with it when D2 lands.
 
 ### Why detection keys on `version`, not on `parts`
 
@@ -128,7 +134,8 @@ dump as ours, so `zMetajson` requires `version: 2` as a literal discriminator.
 | A | Exporter writes v2 | nothing |
 | B | Uploader accepts both: v2 uses the manifest, pre-v2 infers as today and warns | nothing |
 | C | `scripts/backfillMetajson.ts`; mark `exportMscz.ts` deprecated | nothing |
-| D | Remove inference and `exportMscz.ts`; pre-v2 becomes a hard error — **after 008** | pre-v2 folders, deliberately |
+| D1 | ✅ Retire `exportMscz.ts` — nothing produces pre-v2 sidecars any more | nothing |
+| D2 | Remove the inference path; pre-v2 becomes a hard error | pre-v2 folders still on disk, deliberately |
 
 B before D avoids a flag day: the new path lands while old folders still work, so
 the two can be verified independently.

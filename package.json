@@ -10,7 +10,6 @@
     "build": "tsc && vite build",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "export:mscz": "tsx scripts/exportMscz.ts",
     "export-app:dev": "vite --config vite.electron.config.ts",
     "export-app:build": "vite build --config vite.electron.config.ts",
     "verify:assets": "tsx --env-file=.env.local scripts/verifyAssets.ts",
