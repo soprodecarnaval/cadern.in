@@ -9,6 +9,11 @@ import {
 } from "./mscoreEnvironment";
 import { copyMsczWithMeta, type MetadataTags } from "./msczMeta";
 import { assertSupportedMscz } from "./msczArchive";
+import {
+  METAJSON_VERSION,
+  type Metajson,
+  type MetajsonPart,
+} from "../../types/metajson";
 
 export interface SelectedPart {
   id: string;
@@ -158,6 +163,34 @@ const normalizeGeneratedFilenames = (directory: string): void => {
   }
 };
 
+const svgPageNumber = (filename: string, basename: string): number => {
+  // `basename.svg` is a single-page part; `basename-N.svg` is page N.
+  const suffix = filename.slice(basename.length, -".svg".length);
+  const page = Number.parseInt(suffix.replace(/^-/, ""), 10);
+  return Number.isNaN(page) ? 1 : page;
+};
+
+const isSvgPageOf = (filename: string, basename: string): boolean =>
+  filename.endsWith(".svg") &&
+  (filename === `${basename}.svg` || filename.startsWith(`${basename}-`));
+
+/**
+ * Lists a part's generated files in reading order. Sorted numerically, because
+ * a lexical sort puts page 10 before page 2.
+ */
+const collectPartFiles = (
+  files: string[],
+  basename: string,
+): Pick<MetajsonPart, "svg" | "midi"> => ({
+  svg: files
+    .filter((name) => isSvgPageOf(name, basename))
+    .sort(
+      (left, right) =>
+        svgPageNumber(left, basename) - svgPageNumber(right, basename),
+    ),
+  midi: `${basename}.midi`,
+});
+
 export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
   if (options.selectedParts.length === 0) {
     throw new Error("Select at least one compatible part");
@@ -224,17 +257,22 @@ export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
       title,
       selectedInScoreOrder.map((part) => basenames.get(part.id)!),
     );
+    const generatedNames = fs.readdirSync(stagingDirectory);
+    const metajson: Metajson = {
+      version: METAJSON_VERSION,
+      composer: options.metadata.composer,
+      previousSource: options.metadata.previousSource,
+      poet: options.metadata.poet,
+      // Part names are carried here verbatim; filenames are only transport.
+      parts: selectedInScoreOrder.map((part) => ({
+        name: part.name,
+        instrument: part.instrument,
+        ...collectPartFiles(generatedNames, basenames.get(part.id)!),
+      })),
+    };
     fs.writeFileSync(
       path.join(stagingDirectory, `${title}.metajson`),
-      JSON.stringify(
-        {
-          composer: options.metadata.composer,
-          previousSource: options.metadata.previousSource,
-          poet: options.metadata.poet,
-        },
-        null,
-        2,
-      ),
+      JSON.stringify(metajson, null, 2),
     );
 
     const generatedFiles = fs
