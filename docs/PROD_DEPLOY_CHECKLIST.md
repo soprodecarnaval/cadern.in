@@ -78,12 +78,38 @@ staging reported **1073 of 1073 revisions, 0 skipped, 0 emptied**.
       emulator harness does not exist yet
 - [ ] Upload a **second revision** to that same score — the existing-score path
       is unchanged but shares the reordered code
+- [ ] **Confirm revision 1 survived.** Open it explicitly and check its files
+      still resolve. `createScore` and `createRevision` both use `setDoc`, so a
+      second upload landing on revision 1 instead of 2 overwrites it silently —
+      there is no error to notice
 - [ ] Confirm files landed under `scores/{id}/{rev}/…` and that the score opens
 - [ ] Force a failed upload if you can (kill the network partway) and confirm
       the half-created score does not appear in the collection
-- [ ] Upload a folder exported by the export app — expect **zero** warnings
 - [ ] Upload a pre-v2 folder — expect it to succeed with a `METAJSON_LEGACY`
       deprecation warning, not a failure
+
+## 5. Export app (not deployed, but exercises the same pipeline)
+
+The export app has no packaging yet (008), so it only runs from a checkout.
+These are not deploy gates — but it calls `parseUploadedFiles` and `uploadScore`
+unchanged, so a failure here is a failure in shared code that *is* deployed.
+
+Run with `npm run export-app:dev`, against staging.
+
+- [ ] Log in; confirm the session survives quitting and reopening the app
+      (Firebase Auth uses IndexedDB in the renderer — reasoned, not verified)
+- [ ] Export a score, then upload it — expect **zero** warnings, since the
+      folder carries a v2 manifest and nothing is inferred
+- [ ] The project picker lists every project where you are editor or above, and
+      preselects your Acervo
+- [ ] Upload to a **shared band project**, not just the Acervo, and confirm the
+      score shows up there on the website
+- [ ] Re-export and re-upload the same score. The panel should warn that it
+      already exists and name the revision it will create **before** you press
+      Enviar; afterwards, check revision 1 is intact
+- [ ] Export a score with **duplicate instruments** (two trumpets) and confirm
+      both parts upload and are distinguishable
+- [ ] Part names on the website match what MuseScore calls them, not filenames
 
 ## Known pre-existing issues this deploy does *not* fix
 
@@ -101,6 +127,16 @@ working on it, and the first one silently breaks uploads.
 - [ ] `scripts/verifyAssets.ts:4` imports `../types/docs.js` — a `.js` extension
       in a local import path, which the project conventions forbid. Harmless,
       trivial.
+
+## Known gaps, recorded rather than fixed
+
+- The export app's success state names the score id but cannot link to it;
+  that needs `shell.openExternal` and a base URL the app does not have.
+- Re-uploading an existing score does **not** refresh the score document's
+  title, composer or tags — only `latestRevisionId` moves. Pre-existing
+  `uploadScore` behaviour, but newly easy to hit now that re-upload is a
+  supported flow. Correcting a composer therefore requires editing the score
+  on the website as well.
 
 ## Rollback
 
