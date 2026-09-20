@@ -49,10 +49,14 @@ is commented out (lines 31-48), and `allInstruments` in `PdfGenerator.tsx` omits
 them, so they never generate a songbook. The plugin's "Adicionar piratas" flow
 (`public/plugin/tutorial.html:208`) adds pirata *markings* to a score, which does
 not change the part's instrument — a pirata trumpet part is a `trompete`.
-Remove both enum values and the commented-out alias block. Check first whether
-any existing Firestore `parts[].instrument` still carries these strings; if so,
-migrate them to the plain variant before dropping the enum, since `zInstrument`
-would otherwise fail to parse those revision documents.
+Remove both enum values and the commented-out alias block.
+
+**Verified safe, no migration needed.** A survey of all 5894 parts in the
+collection found ten distinct `parts[].instrument` values, all within the current
+enum, and neither pirata value among them. 628 parts mention pirata in their
+*name* ("a_banda_BONE_COM_PIRATA"), but every one stores plain `trombone` (310)
+or `trompete` (318). The distinction lives in the name, which is where it
+belongs, and survives the part-name backfill as "bone com pirata".
 
 ## Single declarative instrument table
 Instrument knowledge is spread across five hand-maintained places that must be kept
