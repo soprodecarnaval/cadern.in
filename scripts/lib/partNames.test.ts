@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   partNameFromStem,
   stemFromPartName,
-} from "./202609201500_part_names";
+} from "./partNames";
 
 describe("partNameFromStem", () => {
   // Both families below were taken from the real collection.
