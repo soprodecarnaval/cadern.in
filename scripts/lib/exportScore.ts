@@ -220,8 +220,17 @@ export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
     path.join(os.tmpdir(), "cadernin-export-"),
   );
   const copiedFiles: string[] = [];
+  const title = safeFilename(options.title);
+  const exportDirectory = path.join(options.destinationDirectory, title);
+  let createdExportDirectory = false;
   try {
-    const title = safeFilename(options.title);
+    if (fs.existsSync(exportDirectory) && !fs.statSync(exportDirectory).isDirectory()) {
+      throw new ExportError(
+        "EXPORT_DESTINATION_NOT_DIRECTORY",
+        "Export destination is not a directory",
+        { path: exportDirectory },
+      );
+    }
     const scorePath = path.join(stagingDirectory, `${title}.mscz`);
     copyMsczWithMeta(options.msczPath, scorePath, options.metadata);
 
@@ -311,18 +320,22 @@ export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
     // Checked before copying anything: failing partway would leave the
     // destination holding half an export.
     const conflicts = generatedFiles.filter((name) =>
-      fs.existsSync(path.join(options.destinationDirectory, name)),
+      fs.existsSync(path.join(exportDirectory, name)),
     );
     if (conflicts.length > 0 && !options.overwrite) {
       throw new ExportError(
         "EXPORT_DESTINATION_NOT_EMPTY",
         `Destination already has: ${conflicts.join(", ")}`,
-        { files: conflicts, directory: options.destinationDirectory },
+        { files: conflicts, directory: exportDirectory },
       );
     }
 
+    if (!fs.existsSync(exportDirectory)) {
+      fs.mkdirSync(exportDirectory);
+      createdExportDirectory = true;
+    }
     for (const name of generatedFiles) {
-      const destination = path.join(options.destinationDirectory, name);
+      const destination = path.join(exportDirectory, name);
       const replacing = conflicts.includes(name);
       fs.copyFileSync(
         path.join(stagingDirectory, name),
@@ -337,12 +350,15 @@ export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
     }
 
     return {
-      directory: options.destinationDirectory,
+      directory: exportDirectory,
       files: generatedFiles,
     };
   } catch (error) {
     for (const file of copiedFiles) {
       fs.unlinkSync(file);
+    }
+    if (createdExportDirectory && fs.readdirSync(exportDirectory).length === 0) {
+      fs.rmdirSync(exportDirectory);
     }
     throw error;
   } finally {

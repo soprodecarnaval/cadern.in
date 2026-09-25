@@ -1,11 +1,56 @@
-import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildPartBasenames,
   collectPartFiles,
   safeFilename,
+  exportScoreFolder,
 } from "./exportScore";
 
+vi.mock("node:child_process", () => ({ execFileSync: vi.fn() }));
+
 describe("exportScore", () => {
+  it("exports into the score basename folder and detects collisions there", () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "export-folder-test-"));
+    vi.mocked(execFileSync).mockImplementation(((_command: string, args: string[]) => {
+      const argumentsList = args;
+      if (argumentsList.includes("--score-parts")) {
+        return JSON.stringify({ parts: ["Trumpet"], partsBin: [""] });
+      }
+      const jobs = JSON.parse(fs.readFileSync(argumentsList[2], "utf8")) as
+        Array<{ out: string | string[] }>;
+      for (const job of jobs) {
+        for (const output of [job.out].flat()) {
+          fs.writeFileSync(output, "generated asset");
+        }
+      }
+      return Buffer.alloc(0);
+    }) as typeof execFileSync);
+    try {
+      const options = {
+        mscorePath: "mscore",
+        msczPath: "test-scores/all-instruments.mscz",
+        title: "Canção: teste",
+        selectedParts: [{ id: "1", name: "Trumpet", scoreIndex: 0, instrument: "trompete" as const }],
+        metadata: { title: "Canção: teste", composer: "", previousSource: "", poet: "" },
+        destinationDirectory: directory,
+      };
+      const result = exportScoreFolder(options);
+      expect(result.directory).toBe(path.join(directory, "Canção- teste"));
+      expect(fs.readdirSync(directory)).toEqual(["Canção- teste"]);
+      expect(fs.readdirSync(result.directory).sort()).toEqual(result.files);
+      expect(result.files).toContain("Canção- teste.mscz");
+      expect(() => exportScoreFolder(options)).toThrow(/Destination already has/);
+      expect(exportScoreFolder({ ...options, overwrite: true })).toEqual(result);
+    } finally {
+      vi.mocked(execFileSync).mockReset();
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it("preserves Unicode while replacing unsafe filename characters", () => {
     expect(safeFilename('Olha pro Céu: "Prática"')).toBe(
       "Olha pro Céu- -Prática-",
