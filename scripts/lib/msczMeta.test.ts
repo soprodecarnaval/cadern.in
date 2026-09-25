@@ -33,6 +33,47 @@ afterEach(() => {
 });
 
 describe("writeMetaTags", () => {
+  it("copies metadata into the main score of an archive with 12 excerpts", () => {
+    const sourcePath = makeArchive("<museScore><Score /></museScore>");
+    const zip = new AdmZip(sourcePath);
+    const excerptXml = '<museScore><Score><metaTag name="workTitle">Part</metaTag></Score></museScore>';
+    const excerptNames = Array.from(
+      { length: 12 },
+      (_, index) => `Excerpts/Excerpt-${index + 1}/part.mscx`,
+    );
+    for (const name of excerptNames) {
+      zip.addFile(name, Buffer.from(excerptXml));
+    }
+    zip.updateFile("META-INF/container.xml", Buffer.from(
+      '<container><rootfiles>' +
+        [...excerptNames, "score.mscx"].map(
+          (name) => `<rootfile full-path="${name}"/>`,
+        ).join("") +
+        '</rootfiles></container>',
+    ));
+    zip.writeZip(sourcePath);
+    const sourceBefore = fs.readFileSync(sourcePath);
+    const destinationPath = path.join(path.dirname(sourcePath), "copy.mscz");
+
+    copyMsczWithMeta(sourcePath, destinationPath, {
+      title: "Updated title",
+      composer: "Updated composer",
+      previousSource: "",
+      poet: "",
+    });
+
+    expect(readScoreXml(destinationPath)).toContain(
+      '<metaTag name="workTitle">Updated title</metaTag>',
+    );
+    expect(fs.readFileSync(sourcePath)).toEqual(sourceBefore);
+    const copied = new AdmZip(destinationPath);
+    for (const entry of zip.getEntries()) {
+      if (entry.entryName !== "score.mscx") {
+        expect(copied.getEntry(entry.entryName)?.getData()).toEqual(entry.getData());
+      }
+    }
+  });
+
   it("updates existing tags and inserts missing tags", () => {
     const archivePath = makeArchive(
       '<?xml version="1.0"?><museScore><Score>' +
