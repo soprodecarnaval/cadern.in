@@ -26,6 +26,7 @@ const allInstruments: Instrument[] = [
   "sax alto",
   "sax soprano",
   "sax tenor",
+  "sax baritono",
   "flauta",
   "tuba",
   "tuba eb",
@@ -264,7 +265,6 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
           carnivalMode,
           backSheetPageNumber,
           antiAssedioPages,
-          stripInstrumentFromPartLabel: false,
           debugBoundingBoxes,
         });
 
