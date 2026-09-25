@@ -29,7 +29,7 @@ const messages: Record<WarningCode, string> = {
   METAJSON_MISSING: "Arquivo metajson não encontrado",
   METAJSON_PARSE_FAILED: "Falha ao ler o metajson",
   METAJSON_LEGACY:
-    "Formato antigo de metajson. Exporte novamente pelo app de exportação, " +
+    "Formato antigo de metajson. Exporte novamente pelo app exportador, " +
     "ou atualize a pasta com o script backfill:metajson.",
   METAJSON_FILE_MISSING: 'Arquivo "{file}" listado no metajson não foi enviado',
   INSTRUMENT_NOT_DETECTED: 'Instrumento não reconhecido em "{file}"',

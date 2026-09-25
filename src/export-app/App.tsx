@@ -176,8 +176,8 @@ function ExportApp({
     if (!outcome.ok && outcome.code === "EXPORT_DESTINATION_NOT_EMPTY") {
       const files = (outcome.meta.files as string[] | undefined) ?? [];
       const confirmed = window.confirm(
-        `A pasta de destino já tem ${files.length} arquivo(s) desta ` +
-          `exportação:\n\n${files.join("\n")}\n\nSubstituir?`,
+        `A pasta de destino já tem ${files.length} arquivo(s) exportados` +
+          `:\n\n${files.join("\n")}\n\nSubstituir?`,
       );
       if (!confirmed) {
         return;
@@ -277,7 +277,7 @@ function ExportApp({
           </section>
           {exportResult && (
             <section className="export-result">
-              <strong>Exportação concluída</strong>
+              <strong>Partitura exportada com sucesso</strong>
               <span>{exportResult.files.length} arquivos criados.</span>
               <button
                 onClick={() =>
