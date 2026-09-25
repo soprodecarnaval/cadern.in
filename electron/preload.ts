@@ -32,4 +32,5 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("score:readExportFolder", folderPath),
   openFolder: (folderPath: string) =>
     ipcRenderer.invoke("shell:openFolder", folderPath),
+  openMuseScoreDownload: () => ipcRenderer.invoke("shell:openMuseScoreDownload"),
 });

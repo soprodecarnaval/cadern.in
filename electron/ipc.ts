@@ -150,4 +150,7 @@ export function registerIpc(): void {
   ipcMain.handle("shell:openFolder", (_e, folderPath: string) =>
     shell.openPath(expandHome(folderPath)),
   );
+  ipcMain.handle("shell:openMuseScoreDownload", () =>
+    shell.openExternal("https://musescore.org/en/download"),
+  );
 }

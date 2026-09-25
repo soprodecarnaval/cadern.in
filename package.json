@@ -12,6 +12,10 @@
     "preview": "vite preview",
     "export-app:dev": "vite --config vite.electron.config.ts",
     "export-app:build": "vite build --config vite.electron.config.ts",
+    "export-app:dist": "npm run export-app:build && node scripts/prepareExportAppPackage.mjs && electron-builder --publish never",
+    "export-app:dist:mac": "npm run export-app:build && node scripts/prepareExportAppPackage.mjs && electron-builder --mac dmg --publish never",
+    "export-app:dist:win": "npm run export-app:build && node scripts/prepareExportAppPackage.mjs && electron-builder --win nsis --x64 --publish never",
+    "export-app:dist:linux": "npm run export-app:build && node scripts/prepareExportAppPackage.mjs && electron-builder --linux AppImage --x64 --publish never",
     "verify:assets": "tsx --env-file=.env.local scripts/verifyAssets.ts",
     "migrate": "tsx --env-file=.env.local scripts/migrate.ts",
     "migrate:up": "npm run migrate -- --execute",
@@ -64,6 +68,7 @@
     "d3": "^7.8.5",
     "d3-node": "^0.2.0",
     "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^8.44.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.1",
@@ -77,5 +82,10 @@
     "vite-plugin-electron": "^0.28.8",
     "vite-plugin-node-polyfills": "^0.15.0",
     "vitest": "^2.0.3"
+  },
+  "overrides": {
+    "app-builder-lib": {
+      "@noble/hashes": "1.8.0"
+    }
   }
 }

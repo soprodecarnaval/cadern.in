@@ -225,7 +225,14 @@ function ExportApp({
 
       {!resolvingMscore && !mscorePath && (
         <p className="muted">
-          Localize o MuseScore 4 para selecionar uma partitura.
+          Localize o MuseScore 4 para selecionar uma partitura. {" "}
+          <button
+            type="button"
+            className="btn-link"
+            onClick={() => void window.api.openMuseScoreDownload()}
+          >
+            Baixar MuseScore Studio
+          </button>
         </p>
       )}
       {loading && <p className="muted">Lendo partitura…</p>}

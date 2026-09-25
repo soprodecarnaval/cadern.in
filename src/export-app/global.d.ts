@@ -35,6 +35,7 @@ export interface ExportApi {
     folderPath: string,
   ): Promise<{ name: string; bytes: Uint8Array }[]>;
   openFolder(folderPath: string): Promise<string>;
+  openMuseScoreDownload(): Promise<void>;
 }
 
 declare global {

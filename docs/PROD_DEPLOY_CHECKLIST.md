@@ -1,7 +1,7 @@
 # Production deploy checklist — `feat/exporter-app`
 
-Covers the website changes on this branch. The export app itself is **not**
-deployed by this: it has no packaging yet (008), so it only runs from a checkout.
+Covers the website changes on this branch. The export app is packaged separately;
+the site deploy does not publish its installers.
 
 ## The one ordering constraint
 
@@ -88,13 +88,13 @@ staging reported **1073 of 1073 revisions, 0 skipped, 0 emptied**.
 - [ ] Upload a pre-v2 folder — expect it to succeed with a `METAJSON_LEGACY`
       deprecation warning, not a failure
 
-## 5. Export app (not deployed, but exercises the same pipeline)
+## 5. Export app (separate desktop release)
 
-The export app has no packaging yet (008), so it only runs from a checkout.
-These are not deploy gates — but it calls `parseUploadedFiles` and `uploadScore`
-unchanged, so a failure here is a failure in shared code that *is* deployed.
+The app has local DMG, NSIS and AppImage builds. These checks are not site deploy
+gates, but the app calls `parseUploadedFiles` and `uploadScore` unchanged, so a
+failure here can also reveal a problem in shared code that *is* deployed.
 
-Run with `npm run export-app:dev`, against staging.
+Run with `npm run export-app:dev` or an installed build, against staging.
 
 - [ ] Log in; confirm the session survives quitting and reopening the app
       (Firebase Auth uses IndexedDB in the renderer — reasoned, not verified)
@@ -110,6 +110,10 @@ Run with `npm run export-app:dev`, against staging.
 - [ ] Export a score with **duplicate instruments** (two trumpets) and confirm
       both parts upload and are distinguishable
 - [ ] Part names on the website match what MuseScore calls them, not filenames
+- [ ] Install and test the Windows x64 installer and Linux x64 AppImage on their
+      respective operating systems, including MuseScore detection, export and upload
+- [ ] Add a public exporter download and README page with installers, supported
+      systems, MuseScore 4 requirement, installation steps and usage instructions
 
 ## Known pre-existing issues this deploy does *not* fix
 
