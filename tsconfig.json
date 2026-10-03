@@ -20,6 +20,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "scripts", "types.ts"],
+  "include": ["src", "scripts", "types", "electron"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
 import type { ScorePart } from "../../scripts/lib/scoreMeta";
+import type { ExportResult } from "../../scripts/lib/exportScore";
+import type { ExportFailure } from "../../scripts/lib/exportError";
+import { translateWarning } from "../lib/warningMessages";
+import type { User } from "firebase/auth";
+import { useAuth } from "../auth";
+import { LoginForm } from "./components/LoginForm";
+import { UploadPanel } from "./components/UploadPanel";
 import { FileDrop } from "./components/FileDrop";
 import {
   MetadataForm,
@@ -7,7 +14,49 @@ import {
 } from "./components/MetadataForm";
 import { PartsTable } from "./components/PartsTable";
 
+/** Library messages are English by policy; the UI is pt-BR. */
+function describeFailure(failure: ExportFailure): string {
+  return translateWarning(failure.code, {
+    ...failure.meta,
+    message: failure.message,
+    files: Array.isArray(failure.meta.files)
+      ? failure.meta.files.join(", ")
+      : failure.meta.files,
+    missing: Array.isArray(failure.meta.missing)
+      ? failure.meta.missing.join(", ")
+      : failure.meta.missing,
+  });
+}
+
 export function App() {
+  const { currentUser, logout } = useAuth();
+
+  // Login gates the whole app: uploading is the point of it, and a session
+  // established up front is one less interruption mid-export.
+  if (!currentUser) {
+    return (
+      <main className="app app--login">
+        <h1>cadern.in — Exportador</h1>
+        <LoginForm />
+      </main>
+    );
+  }
+
+  return (
+    <ExportApp
+      onLogout={() => void logout()}
+      user={currentUser}
+    />
+  );
+}
+
+function ExportApp({
+  onLogout,
+  user,
+}: {
+  onLogout: () => void;
+  user: User;
+}) {
   const [mscorePath, setMscorePath] = useState<string | null>(null);
   const [resolvingMscore, setResolvingMscore] = useState(true);
   const [msczPath, setMsczPath] = useState("");
@@ -15,6 +64,8 @@ export function App() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [metadata, setMetadata] = useState<MetadataValues | null>(null);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState<ExportResult | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -40,6 +91,7 @@ export function App() {
     setParts([]);
     setSelected(new Set());
     setMetadata(null);
+    setExportResult(null);
     setLoading(true);
     try {
       const result = await window.api.readScoreMeta(path);
@@ -79,9 +131,78 @@ export function App() {
     });
   };
 
+  const runExport = async () => {
+    if (!metadata) {
+      return;
+    }
+    setError("");
+    setExportResult(null);
+    const destinationDirectory = await window.api.pickExportDirectory();
+    if (!destinationDirectory) {
+      return;
+    }
+
+    const selectedParts = parts.flatMap((part, scoreIndex) =>
+      selected.has(part.id) && part.instrument
+        ? [{
+            id: part.id,
+            name: part.name,
+            scoreIndex,
+            instrument: part.instrument,
+          }]
+        : [],
+    );
+
+    const attempt = async (overwrite: boolean) => {
+      setExporting(true);
+      try {
+        return await window.api.runExport({
+          msczPath,
+          title: metadata.title,
+          selectedParts,
+          metadata,
+          destinationDirectory,
+          overwrite,
+        });
+      } finally {
+        setExporting(false);
+      }
+    };
+
+    let outcome = await attempt(false);
+
+    // A destination that already holds a previous export is a question, not a
+    // failure: exporting, spotting a typo and re-exporting is a normal loop.
+    if (!outcome.ok && outcome.code === "EXPORT_DESTINATION_NOT_EMPTY") {
+      const files = (outcome.meta.files as string[] | undefined) ?? [];
+      const confirmed = window.confirm(
+        `A pasta de destino já tem ${files.length} arquivo(s) exportados` +
+          `:\n\n${files.join("\n")}\n\nSubstituir?`,
+      );
+      if (!confirmed) {
+        return;
+      }
+      outcome = await attempt(true);
+    }
+
+    if (outcome.ok) {
+      setExportResult(outcome.value);
+    } else {
+      setError(describeFailure(outcome));
+    }
+  };
+
   return (
     <main className="app">
-      <h1>cadern.in — Exportador</h1>
+      <header className="session">
+        <h1>cadern.in — Exportador</h1>
+        <span className="session-user">
+          {user.email}
+          <button type="button" className="link" onClick={onLogout}>
+            Sair
+          </button>
+        </span>
+      </header>
 
       <section className="row mscore-bar">
         <strong>MuseScore 4:</strong>
@@ -104,7 +225,14 @@ export function App() {
 
       {!resolvingMscore && !mscorePath && (
         <p className="muted">
-          Localize o MuseScore 4 para selecionar uma partitura.
+          Localize o MuseScore 4 para selecionar uma partitura. {" "}
+          <button
+            type="button"
+            className="btn-link"
+            onClick={() => void window.api.openMuseScoreDownload()}
+          >
+            Baixar MuseScore Studio
+          </button>
         </p>
       )}
       {loading && <p className="muted">Lendo partitura…</p>}
@@ -121,6 +249,7 @@ export function App() {
                 setParts([]);
                 setSelected(new Set());
                 setMetadata(null);
+                setExportResult(null);
                 setError("");
               }}
             >
@@ -134,7 +263,42 @@ export function App() {
               onToggle={togglePart}
             />
           )}
-          <MetadataForm value={metadata} onChange={setMetadata} />
+          <MetadataForm
+            value={metadata}
+            onChange={(value) => {
+              setMetadata(value);
+              setExportResult(null);
+            }}
+          />
+          <section className="export-actions">
+            <button
+              className="btn-primary"
+              disabled={selected.size === 0 || exporting}
+              onClick={() => void runExport()}
+            >
+              {exporting ? "Exportando…" : "Exportar…"}
+            </button>
+            {selected.size === 0 && (
+              <span className="muted">Selecione pelo menos uma parte.</span>
+            )}
+          </section>
+          {exportResult && (
+            <section className="export-result">
+              <strong>Partitura exportada com sucesso</strong>
+              <span>{exportResult.files.length} arquivos criados.</span>
+              <button
+                onClick={() =>
+                  void window.api.openFolder(exportResult.directory)
+                }
+              >
+                Abrir pasta
+              </button>
+            </section>
+          )}
+
+          {exportResult && (
+            <UploadPanel user={user} directory={exportResult.directory} />
+          )}
         </>
       )}
     </main>

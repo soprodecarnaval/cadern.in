@@ -1,4 +1,5 @@
-import { ipcMain, dialog } from "electron";
+import { dialog, ipcMain, shell } from "electron";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { autolocateMscore, validateMscore } from "../scripts/lib/mscz";
@@ -7,6 +8,11 @@ import {
   copyMsczWithMeta,
   type MetadataTags,
 } from "../scripts/lib/msczMeta";
+import {
+  exportScoreFolder,
+  type RunExportOptions,
+} from "../scripts/lib/exportScore";
+import { ExportError, toExportFailure } from "../scripts/lib/exportError";
 import { getMscorePath, setMscorePath } from "./settings";
 
 // Expand a leading ~ from manually-typed paths (native pickers return absolute).
@@ -70,6 +76,17 @@ export function registerIpc(): void {
     return res.canceled ? null : (res.filePaths[0] ?? null);
   });
 
+  ipcMain.handle(
+    "dialog:pickExportDirectory",
+    async (): Promise<string | null> => {
+      const res = await dialog.showOpenDialog({
+        title: "Choose export folder",
+        properties: ["openDirectory", "createDirectory"],
+      });
+      return res.canceled ? null : (res.filePaths[0] ?? null);
+    },
+  );
+
   ipcMain.handle("score:readMeta", (_e, msczPath: string) => {
     const mscore = resolveMscorePath();
     if (!mscore) {
@@ -86,5 +103,54 @@ export function registerIpc(): void {
         expandHome(destinationPath),
         tags,
       ),
+  );
+
+  // Returns an outcome rather than rejecting: Electron flattens Error
+  // subclasses and rewrites their message, so a thrown code cannot be
+  // recovered on the renderer side.
+  ipcMain.handle(
+    "score:runExport",
+    (_e, options: Omit<RunExportOptions, "mscorePath">) => {
+      try {
+        const mscorePath = resolveMscorePath();
+        if (!mscorePath) {
+          throw new ExportError(
+            "EXPORT_MSCORE_NOT_SET",
+            "MuseScore path not set",
+          );
+        }
+        return {
+          ok: true as const,
+          value: exportScoreFolder({
+            ...options,
+            mscorePath,
+            msczPath: expandHome(options.msczPath),
+            destinationDirectory: expandHome(options.destinationDirectory),
+          }),
+        };
+      } catch (error) {
+        return toExportFailure(error);
+      }
+    },
+  );
+
+  // The renderer cannot read the filesystem, but Firebase auth and Storage
+  // run there — so the bytes have to cross rather than uploading from main.
+  ipcMain.handle("score:readExportFolder", (_e, folderPath: string) => {
+    const folder = expandHome(folderPath);
+    return fs
+      .readdirSync(folder)
+      .filter((name) => fs.statSync(path.join(folder, name)).isFile())
+      .map((name) => ({
+        name,
+        bytes: fs.readFileSync(path.join(folder, name)),
+      }));
+  });
+
+  ipcMain.handle("shell:openFolder", (_e, folderPath: string) =>
+    shell.openPath(expandHome(folderPath)),
+  );
+  ipcMain.handle("shell:openMuseScoreDownload", () =>
+    shell.openExternal("https://musescore.org/en/download"),
   );
 }

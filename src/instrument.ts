@@ -16,6 +16,15 @@ const instrumentAliases: [string, Instrument][] = [
   ["sax alta", "sax alto"],
   ["saxophone alto", "sax alto"],
   ["alto sax", "sax alto"],
+  // sax baritono
+  ["sax baritono", "sax baritono"],
+  ["sax barítono", "sax baritono"],
+  ["baritone sax", "sax baritono"],
+  ["bari sax", "sax baritono"],
+  ["saxophone baritone", "sax baritono"],
+  ["baritono", "sax baritono"],
+  ["barítono", "sax baritono"],
+  ["baritone", "sax baritono"],
   // sax soprano
   ["soprano", "sax soprano"],
   ["sax soprano", "sax soprano"],
@@ -63,31 +72,4 @@ export const parseInstrument = (raw: string): Instrument | undefined => {
   const normalized = raw.replace(/[_\-.]/g, " ").toLowerCase();
   const match = instrumentAliases.find(([alias]) => normalized.includes(alias));
   return match ? match[1] : undefined;
-};
-
-export const extractPartLabel = (
-  partName: string,
-  songTitle: string,
-  stripInstrument = false,
-): string | undefined => {
-  // Normalize: replace separators with spaces, lowercase
-  let normalized = partName.replace(/[_\-.]/g, " ").toLowerCase();
-  const normalizedSongTitle = songTitle.replace(/[_\-.]/g, " ").toLowerCase();
-
-  // Remove song title
-  normalized = normalized.replace(normalizedSongTitle, "");
-
-  // Optionally remove instrument name
-  if (stripInstrument) {
-    const match = instrumentAliases.find(([alias]) =>
-      normalized.includes(alias),
-    );
-    if (match) {
-      normalized = normalized.replace(match[0], "");
-    }
-  }
-
-  // Clean up: trim, collapse spaces
-  const label = normalized.replace(/\s+/g, " ").trim();
-  return label || undefined;
 };
