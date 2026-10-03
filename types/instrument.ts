@@ -5,6 +5,7 @@ export const zInstrument = z.enum([
   "clarinete",
   "flauta",
   "sax alto",
+  "sax baritono",
   "sax soprano",
   "sax tenor",
   "trombone",

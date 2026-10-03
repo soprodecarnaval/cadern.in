@@ -1,0 +1,25 @@
+appId: in.cadern.exporter
+productName: Exportador cadern.in
+directories:
+  buildResources: build
+  app: _build/export-app/staging
+  output: _build/export-app/artifacts
+files:
+  - dist-electron/**/*
+  - dist-export-app/**/*
+  - '!node_modules/**/*'
+asar: true
+npmRebuild: false
+mac:
+  category: public.app-category.music
+  identity: null
+  target:
+    - dmg
+win:
+  target:
+    - nsis
+linux:
+  category: Audio
+  syncDesktopName: true
+  target:
+    - AppImage

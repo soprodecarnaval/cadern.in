@@ -67,7 +67,7 @@ var _data = {
         "exportingPart": "Parte",
         "exporting": "Exportando...",
         "selectMscz": "Selecione o arquivo .mscz da partitura",
-        "runCommand": "Exportação automática falhou. Execute no terminal:",
+        "runCommand": "Erro ao exportar partitura. Execute no terminal:",
         "copyCommand": "Copiar comando",
         "openFolder": "Abrir pasta"
     }
