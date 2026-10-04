@@ -65,6 +65,15 @@ service cloud.firestore {
         allow update: if request.auth != null &&
           isEditor(get(/databases/$(database)/documents/scores/$(scoreId)).data.projectId);
       }
+
+      // Successor of `revisions` (collab-flow §1, §2.3.1): written alongside it
+      // until the legacy subcollection is dropped, and never modified.
+      match /scoreRevisions/{revisionId} {
+        allow read: if true;
+        allow create: if request.auth != null &&
+          isEditor(get(/databases/$(database)/documents/scores/$(scoreId)).data.projectId);
+        allow update, delete: if false;
+      }
     }
 
     // Required for collectionGroup("revisions") queries

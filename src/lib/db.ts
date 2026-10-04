@@ -19,15 +19,16 @@ import { db } from "../firebase";
 import {
   zScoreDoc,
   zScoreData,
-  zRevisionDoc,
-  zRevisionData,
+  zScoreRevisionDoc,
+  zScoreRevisionData,
+  zLegacyRevisionData,
   zProjectDoc,
   zProjectData,
   zProjectCreateData,
   zUserProjectInvitationDoc,
   zUserProjectInvitationData,
   type ScoreDoc,
-  type RevisionDoc,
+  type ScoreRevisionDoc,
   type ProjectDoc,
   type ProjectCreateData,
   type UserProjectRole,
@@ -36,7 +37,7 @@ import {
 import type z from "zod";
 
 type ScoreData = z.infer<typeof zScoreData>;
-type RevisionData = z.infer<typeof zRevisionData>;
+type ScoreRevisionData = z.infer<typeof zScoreRevisionData>;
 type UserProjectInvitationData = z.infer<typeof zUserProjectInvitationData>;
 
 export type WithId<T> = T & { id: string };
@@ -51,25 +52,33 @@ export async function getScore(id: string): Promise<WithId<ScoreDoc> | null> {
   return { id: snap.id, ...zScoreDoc.parse(snap.data()) };
 }
 
-export async function getRevision(
+// Score revisions live in two subcollections until the legacy one is dropped
+// (collab-flow M9). Every write goes to both; reads stay on the legacy one —
+// the only one flag-off code knows — until each reader moves to the new model.
+const SCORE_REVISIONS = "scoreRevisions";
+const LEGACY_REVISIONS = "revisions";
+
+export async function getScoreRevision(
   scoreId: string,
   revisionId: string,
-): Promise<WithId<RevisionDoc> | null> {
+): Promise<WithId<ScoreRevisionDoc> | null> {
   const snap = await getDoc(
-    doc(db, "scores", scoreId, "revisions", revisionId),
+    doc(db, "scores", scoreId, LEGACY_REVISIONS, revisionId),
   );
   if (!snap.exists()) {
     return null;
   }
-  return { id: snap.id, ...zRevisionDoc.parse(snap.data()) };
+  return { id: snap.id, ...zScoreRevisionDoc.parse(snap.data()) };
 }
 
 export async function getScoreRevisions(
   scoreId: string,
-): Promise<WithId<RevisionDoc>[]> {
-  const snap = await getDocs(collection(db, "scores", scoreId, "revisions"));
+): Promise<WithId<ScoreRevisionDoc>[]> {
+  const snap = await getDocs(
+    collection(db, "scores", scoreId, LEGACY_REVISIONS),
+  );
   return snap.docs
-    .map((d) => ({ id: d.id, ...zRevisionDoc.parse(d.data()) }))
+    .map((d) => ({ id: d.id, ...zScoreRevisionDoc.parse(d.data()) }))
     .sort((a, b) => b.revisionNumber - a.revisionNumber);
 }
 
@@ -98,16 +107,19 @@ export async function getAllScores(): Promise<WithId<ScoreDoc>[]> {
   return snap.docs.map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }));
 }
 
-export async function getLatestRevisions(): Promise<
-  (WithId<RevisionDoc> & { scoreId: string })[]
+export async function getLatestScoreRevisions(): Promise<
+  (WithId<ScoreRevisionDoc> & { scoreId: string })[]
 > {
   const snap = await getDocs(
-    query(collectionGroup(db, "revisions"), where("isLatest", "==", true)),
+    query(
+      collectionGroup(db, LEGACY_REVISIONS),
+      where("isLatest", "==", true),
+    ),
   );
   return snap.docs.map((d) => ({
     id: d.id,
     scoreId: d.ref.parent.parent!.id,
-    ...zRevisionDoc.parse(d.data()),
+    ...zScoreRevisionDoc.parse(d.data()),
   }));
 }
 
@@ -132,23 +144,32 @@ export async function softDeleteScore(id: string): Promise<void> {
   });
 }
 
-export async function createRevision(
+/**
+ * Writes the revision to both subcollections in one batch. The legacy copy also
+ * carries `isLatest`, which moves off `prevRevisionId`.
+ */
+export async function createScoreRevision(
   scoreId: string,
   revisionId: string,
-  data: RevisionData,
+  data: ScoreRevisionData,
+  prevRevisionId: string | null,
 ): Promise<void> {
-  await setDoc(doc(db, "scores", scoreId, "revisions", revisionId), {
-    ...zRevisionData.parse(data),
+  const parsed = zScoreRevisionData.parse(data);
+  const batch = writeBatch(db);
+  batch.set(doc(db, "scores", scoreId, SCORE_REVISIONS, revisionId), {
+    ...parsed,
     uploadedAt: serverTimestamp(),
   });
-}
-
-export async function updateRevision(
-  scoreId: string,
-  revisionId: string,
-  data: Partial<RevisionData>,
-): Promise<void> {
-  await updateDoc(doc(db, "scores", scoreId, "revisions", revisionId), data);
+  batch.set(doc(db, "scores", scoreId, LEGACY_REVISIONS, revisionId), {
+    ...zLegacyRevisionData.parse({ ...parsed, isLatest: true }),
+    uploadedAt: serverTimestamp(),
+  });
+  if (prevRevisionId) {
+    batch.update(doc(db, "scores", scoreId, LEGACY_REVISIONS, prevRevisionId), {
+      isLatest: false,
+    });
+  }
+  await batch.commit();
 }
 
 // -- Projects --

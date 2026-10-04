@@ -1,7 +1,7 @@
 import { initializeApp, applicationDefault } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { zRevisionDoc } from "../types/docs.js";
+import { zScoreRevisionDoc } from "../types/docs";
 import { FIREBASE_STORAGE_BUCKET, FIRESTORE_DATABASE_ID } from "./lib/env";
 
 initializeApp({
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
 
   for (const doc of snap.docs) {
     const scoreId = doc.ref.parent.parent!.id;
-    const revision = zRevisionDoc.parse(doc.data());
+    const revision = zScoreRevisionDoc.parse(doc.data());
 
     const paths = [
       revision.mscz.path,

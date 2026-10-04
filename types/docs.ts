@@ -58,7 +58,7 @@ export const zScoreDoc = zScoreData.extend({
 });
 export type ScoreDoc = z.infer<typeof zScoreDoc>;
 
-export const zRevisionData = z.object({
+export const zScoreRevisionData = z.object({
   revisionNumber: z.number().int().positive(),
   uploadedBy: z.string(),
   mscz: zStorageFile,
@@ -66,10 +66,17 @@ export const zRevisionData = z.object({
   midi: zStorageFile,
   parts: z.array(zPartData),
   notes: z.string(),
+});
+export const zScoreRevisionDoc = zScoreRevisionData.extend({
+  uploadedAt: zTimestamp,
+});
+export type ScoreRevisionDoc = z.infer<typeof zScoreRevisionDoc>;
+
+// Shape of `scores/{id}/revisions/{id}`, which flag-off code still reads. Kept
+// in sync by dual-writes until the legacy subcollection is dropped (M9).
+export const zLegacyRevisionData = zScoreRevisionData.extend({
   isLatest: z.boolean(),
 });
-export const zRevisionDoc = zRevisionData.extend({ uploadedAt: zTimestamp });
-export type RevisionDoc = z.infer<typeof zRevisionDoc>;
 
 export const zSongbookScoreRef = z.object({
   type: z.literal("score"),

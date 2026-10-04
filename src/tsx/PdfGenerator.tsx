@@ -11,13 +11,16 @@ import {
 } from "react-bootstrap";
 import React, { useState, useMemo } from "react";
 import type { Instrument } from "../../types/instrument";
-import type { ScoreViewModel, RevisionViewModel } from "../../types/viewModels";
+import type {
+  ScoreViewModel,
+  ScoreRevisionViewModel,
+} from "../../types/viewModels";
 import type {
   SongbookViewModel,
   SongbookItemViewModel,
   SongbookScoreViewModel,
 } from "../../types/viewModels";
-import { isSongbookSection, getRevision } from "../lib/songbook";
+import { isSongbookSection, getScoreRevision } from "../lib/songbook";
 import { createSongBook } from "../createSongBook";
 
 const allInstruments: Instrument[] = [
@@ -45,7 +48,7 @@ interface PdfGeneratorProps {
 
 export type SectionScore = {
   score: ScoreViewModel;
-  revision: RevisionViewModel;
+  revision: ScoreRevisionViewModel;
 };
 
 export type Section = {
@@ -136,7 +139,7 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
 
     for (const instrument of allInstruments) {
       const count = scores.filter((s) =>
-        getRevision(s).parts?.some((p) => p.instrument === instrument),
+        getScoreRevision(s).parts?.some((p) => p.instrument === instrument),
       ).length;
 
       const fallback = instrumentFallbacks[instrument];
@@ -144,8 +147,8 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
       if (fallback) {
         countWithFallback = scores.filter(
           (s) =>
-            getRevision(s).parts?.some((p) => p.instrument === instrument) ||
-            getRevision(s).parts?.some((p) => p.instrument === fallback),
+            getScoreRevision(s).parts?.some((p) => p.instrument === instrument) ||
+            getScoreRevision(s).parts?.some((p) => p.instrument === fallback),
         ).length;
       }
 
@@ -242,7 +245,7 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
           }
           currentSection.scores.push({
             score: item.score,
-            revision: getRevision(item),
+            revision: getScoreRevision(item),
           });
         }
       }

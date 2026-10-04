@@ -221,6 +221,57 @@ describe("score revisions (legacy `revisions`)", () => {
   });
 });
 
+describe("score revisions (`scoreRevisions`)", () => {
+  const revision = { revisionNumber: 2, uploadedBy: EDITOR };
+  const ref = (db: Firestore, id = "2") =>
+    doc(db, "scores", SCORE, "scoreRevisions", id);
+
+  it("is world-readable", async () => {
+    await seedProject(testEnv());
+    await seed((db) => setDoc(ref(db, "1"), revision));
+    await assertSucceeds(getDoc(ref(as(null), "1")));
+  });
+
+  it("lets an editor create a revision", async () => {
+    await seedProject(testEnv());
+    await assertSucceeds(setDoc(ref(as(EDITOR)), revision));
+  });
+
+  it("denies a reviewer or outsider creating a revision", async () => {
+    await seedProject(testEnv());
+    await assertFails(setDoc(ref(as(REVIEWER)), revision));
+    await assertFails(setDoc(ref(as(OUTSIDER)), revision));
+  });
+
+  it("denies everyone updating or deleting a revision", async () => {
+    await seedProject(testEnv());
+    await seed((db) => setDoc(ref(db, "1"), revision));
+    await assertFails(updateDoc(ref(as(OWNER), "1"), { notes: "x" }));
+    await assertFails(deleteDoc(ref(as(OWNER), "1")));
+  });
+
+  it("accepts the dual-write batch uploadScore commits", async () => {
+    await seedProject(testEnv());
+    await seed((db) =>
+      setDoc(doc(db, "scores", SCORE, "revisions", "1"), {
+        revisionNumber: 1,
+        isLatest: true,
+      }),
+    );
+    const db = as(EDITOR);
+    const batch = writeBatch(db);
+    batch.set(ref(db), revision);
+    batch.set(doc(db, "scores", SCORE, "revisions", "2"), {
+      ...revision,
+      isLatest: true,
+    });
+    batch.update(doc(db, "scores", SCORE, "revisions", "1"), {
+      isLatest: false,
+    });
+    await assertSucceeds(batch.commit());
+  });
+});
+
 describe("songbooks", () => {
   const songbook = (isPublished: boolean) => ({
     title: "Carnaval 2026",
