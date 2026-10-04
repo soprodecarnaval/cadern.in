@@ -7,7 +7,7 @@ import type {
   RevisionViewModel,
   PartViewModel,
 } from "../types/viewModels";
-import { FEATURE_FLAG_AUTH_ENABLED } from "./featureFlags";
+import { FEATURE_FLAG_COLLAB_FLOW } from "./featureFlags";
 import {
   CollectionContext,
   type CollectionStatus,
@@ -25,7 +25,7 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
 
   console.log(songDocs.length);
 
-  const filteredProjectDocs = FEATURE_FLAG_AUTH_ENABLED
+  const filteredProjectDocs = FEATURE_FLAG_COLLAB_FLOW
     ? projectDocs
     : projectDocs.filter((p) => CADERNIN_UID && isOwner(p, CADERNIN_UID));
 

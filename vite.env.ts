@@ -20,7 +20,7 @@ const OPTIONAL_DEFAULTS: Record<string, string> = {
   VITE_FIRESTORE_DATABASE_ID: "(default)",
 };
 
-const FEATURE_FLAG_KEYS = ["VITE_FEATURE_FLAG_AUTH_ENABLED"] as const;
+const FEATURE_FLAG_KEYS = ["VITE_FEATURE_FLAG_COLLAB_FLOW"] as const;
 
 export interface AppEnv {
   env: Record<string, string>;

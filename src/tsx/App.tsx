@@ -22,7 +22,7 @@ import { isSongbookSection, songbookScore } from "../lib/songbook";
 import "bootstrap/dist/css/bootstrap.css";
 import "../css/App.css";
 import { AuthButton } from "./AuthButton";
-import { FEATURE_FLAG_AUTH_ENABLED } from "../featureFlags";
+import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { useAuth } from "../auth";
 import { UploadPage } from "./UploadPage";
 import { MyScoresPage } from "./MyScoresPage";
@@ -31,6 +31,7 @@ import { MeusProjetosPage } from "./MeusProjetosPage";
 import { CreateProjectPage } from "./CreateProjectPage";
 import { PublicProjectPage } from "./PublicProjectPage";
 import { ProjectSettingsPage } from "./ProjectSettingsPage";
+import { NotFoundPage } from "./NotFoundPage";
 import { getPendingUserProjectInvitations } from "../lib/db";
 
 function HomePage() {
@@ -130,7 +131,7 @@ function App() {
   const { currentUser } = useAuth();
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!FEATURE_FLAG_COLLAB_FLOW || !currentUser) {
       setInboxCount(0);
       return;
     }
@@ -159,7 +160,7 @@ function App() {
               Plugin de Musescore
             </a>
           </div>
-          {FEATURE_FLAG_AUTH_ENABLED && (
+          {FEATURE_FLAG_COLLAB_FLOW && (
             <Nav className="ms-auto d-flex align-items-center gap-2">
               {currentUser && (
                 <>
@@ -185,15 +186,23 @@ function App() {
 
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/upload" element={<UploadPage />} />
-        <Route path="/upload/:scoreId" element={<UploadPage />} />
-        <Route path="/my-scores" element={<MyScoresPage />} />
         <Route path="/score/:scoreId" element={<ScorePage />} />
         <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
-        <Route path="/projects" element={<MeusProjetosPage />} />
-        <Route path="/projects/new" element={<CreateProjectPage />} />
-        <Route path="/projects/:slug" element={<PublicProjectPage />} />
-        <Route path="/projects/:slug/settings" element={<ProjectSettingsPage />} />
+        {FEATURE_FLAG_COLLAB_FLOW && (
+          <>
+            <Route path="/upload" element={<UploadPage />} />
+            <Route path="/upload/:scoreId" element={<UploadPage />} />
+            <Route path="/my-scores" element={<MyScoresPage />} />
+            <Route path="/projects" element={<MeusProjetosPage />} />
+            <Route path="/projects/new" element={<CreateProjectPage />} />
+            <Route path="/projects/:slug" element={<PublicProjectPage />} />
+            <Route
+              path="/projects/:slug/settings"
+              element={<ProjectSettingsPage />}
+            />
+          </>
+        )}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
       {currentUser ? (
