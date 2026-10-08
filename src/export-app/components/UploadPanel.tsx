@@ -8,6 +8,7 @@ import {
 import {
   getScore,
   getScoreRevisions,
+  getMemberRole,
   getUserMemberProjects,
   type WithId,
 } from "../../lib/db";
@@ -48,9 +49,11 @@ export function UploadPanel({ user, directory }: Props) {
   useEffect(() => {
     void (async () => {
       const defaultId = await getOrCreateDefaultProject(user);
-      const mine = (await getUserMemberProjects(user.uid)).filter((p) =>
-        isEditor(p, user.uid),
+      const memberOf = await getUserMemberProjects(user.uid);
+      const roles = await Promise.all(
+        memberOf.map((p) => getMemberRole(p.id, user.uid)),
       );
+      const mine = memberOf.filter((_, i) => isEditor(roles[i]));
       setProjects(mine);
       setProjectId(defaultId);
     })();

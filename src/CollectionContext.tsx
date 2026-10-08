@@ -5,7 +5,7 @@ import {
   getAllScores,
   getLatestScoreRevisions,
 } from "./lib/db";
-import { isOwner } from "./lib/roles";
+import { legacyIsOwner } from "./lib/roles";
 import type {
   ScoreViewModel,
   ScoreRevisionViewModel,
@@ -31,7 +31,7 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
 
   const filteredProjectDocs = FEATURE_FLAG_COLLAB_FLOW
     ? projectDocs
-    : projectDocs.filter((p) => CADERNIN_UID && isOwner(p, CADERNIN_UID));
+    : projectDocs.filter((p) => CADERNIN_UID && legacyIsOwner(p, CADERNIN_UID));
 
   const projectTitles = new Map(
     filteredProjectDocs.map((p) => [p.id, p.title]),

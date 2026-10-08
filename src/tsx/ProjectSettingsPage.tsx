@@ -12,23 +12,33 @@ import { useParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import {
   getProjectBySlug,
+  getProjectMembers,
   updateProjectTitle,
   removeProjectMember,
   updateProjectMemberRole,
   createUserProjectInvitation,
   getProjectUserProjectInvitations,
   cancelUserProjectInvitation,
-  getUserByEmail,
+  findUserForInvite,
   type WithId,
 } from "../lib/db";
-import { isAdmin as isAdminRole, isOwner as isOwnerRole } from "../lib/roles";
+import {
+  INVITABLE_ROLES,
+  canGrantRole,
+  canInvite,
+  canRemoveMember,
+  grantableRoles,
+  isAdmin,
+} from "../lib/roles";
+import { displayNameOf } from "../lib/displayName";
+import { useMemberRole } from "../lib/useMemberRole";
 import type {
+  InvitableRole,
   ProjectDoc,
+  ProjectMemberDoc,
   UserProjectRole,
   UserProjectInvitationDoc,
 } from "../../types/docs";
-
-const ALL_ROLES: UserProjectRole[] = ["reviewer", "editor", "admin", "owner"];
 
 const ROLE_LABELS: Record<UserProjectRole, string> = {
   owner: "Dono",
@@ -59,9 +69,11 @@ export function ProjectSettingsPage() {
   const { slug } = useParams<{ slug: string }>();
   const { currentUser } = useAuth();
 
+  const myRole = useMemberRole(slug);
   const [project, setProject] = useState<WithId<ProjectDoc> | null | "loading">(
     "loading",
   );
+  const [members, setMembers] = useState<ProjectMemberDoc[]>([]);
   const [invitations, setInvitations] = useState<
     WithId<UserProjectInvitationDoc>[]
   >([]);
@@ -71,10 +83,13 @@ export function ProjectSettingsPage() {
   const [titleSuccess, setTitleSuccess] = useState("");
   const [titleError, setTitleError] = useState("");
 
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<UserProjectRole>("reviewer");
+  const [inviteName, setInviteName] = useState("");
+  const [inviteRole, setInviteRole] = useState<InvitableRole>("reviewer");
   const [invitePending, setInvitePending] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState("");
+  const [inviteMessage, setInviteMessage] = useState<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
 
   const [removingMember, setRemovingMember] = useState<string | null>(null);
   const [cancellingInvite, setCancellingInvite] = useState<string | null>(null);
@@ -89,10 +104,11 @@ export function ProjectSettingsPage() {
         setTitleInput(p.title);
       }
     });
+    void getProjectMembers(slug).then(setMembers);
     void getProjectUserProjectInvitations(slug).then(setInvitations);
   }, [slug]);
 
-  if (project === "loading") {
+  if (project === "loading" || myRole === "loading") {
     return (
       <Container className="mt-4">
         <Spinner animation="border" />
@@ -108,14 +124,13 @@ export function ProjectSettingsPage() {
     );
   }
 
-  if (!isAdminRole(project, currentUser.uid)) {
+  if (!isAdmin(myRole)) {
     return (
       <Container className="mt-4">
         <Alert variant="danger">Sem permissão para acessar esta página.</Alert>
       </Container>
     );
   }
-  const isOwner = isOwnerRole(project, currentUser.uid);
 
   const handleSaveTitle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,31 +153,52 @@ export function ProjectSettingsPage() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!slug || !currentUser) {
+    if (!slug) {
       return;
     }
     setInvitePending(true);
-    setInviteMessage("");
+    setInviteMessage(null);
     try {
-      const user = await getUserByEmail(inviteEmail.trim());
-      if (user) {
-        await createUserProjectInvitation({
-          fromUserId: currentUser.uid,
-          toUserId: user.id,
-          projectId: slug,
-          role: inviteRole,
-          accepted: null,
-        });
-        const updated = await getProjectUserProjectInvitations(slug);
-        setInvitations(updated);
+      const result = await findUserForInvite(slug, inviteName.trim());
+      if (result.status === "not-found") {
+        setInviteMessage({ ok: false, text: "Usuário não encontrado." });
+        return;
       }
-      // Always show success — avoids email enumeration
-      setInviteMessage("Convite enviado!");
-      setInviteEmail("");
+      if (result.status === "ambiguous") {
+        setInviteMessage({
+          ok: false,
+          text: "Mais de um usuário com esse nome. Peça para a pessoa mudar o nome de usuário.",
+        });
+        return;
+      }
+      if (members.some((m) => m.uid === result.uid)) {
+        setInviteMessage({
+          ok: false,
+          text: `${result.displayName} já é membro do projeto.`,
+        });
+        return;
+      }
+      await createUserProjectInvitation({
+        fromUserId: currentUser.uid,
+        toUserId: result.uid,
+        projectId: slug,
+        role: inviteRole,
+        accepted: null,
+        projectTitle: project.title,
+        fromDisplayName: displayNameOf(currentUser),
+        toDisplayName: result.displayName,
+      });
+      setInvitations(await getProjectUserProjectInvitations(slug));
+      setInviteMessage({
+        ok: true,
+        text: `Convite enviado para ${result.displayName}!`,
+      });
+      setInviteName("");
     } catch (err: unknown) {
-      setInviteMessage(
-        err instanceof Error ? err.message : "Erro ao enviar convite",
-      );
+      setInviteMessage({
+        ok: false,
+        text: err instanceof Error ? err.message : "Erro ao enviar convite",
+      });
     } finally {
       setInvitePending(false);
     }
@@ -173,10 +209,7 @@ export function ProjectSettingsPage() {
       return;
     }
     await updateProjectMemberRole(slug, uid, role);
-    setProject({
-      ...project,
-      members: { ...project.members, [uid]: role },
-    });
+    setMembers((prev) => prev.map((m) => (m.uid === uid ? { ...m, role } : m)));
   };
 
   const handleRemoveMember = async (uid: string) => {
@@ -186,28 +219,28 @@ export function ProjectSettingsPage() {
     setRemovingMember(uid);
     try {
       await removeProjectMember(slug, uid);
-      const updated = { ...project.members };
-      delete updated[uid];
-      setProject({ ...project, members: updated });
+      setMembers((prev) => prev.filter((m) => m.uid !== uid));
     } finally {
       setRemovingMember(null);
     }
   };
 
-  const handleCancelInvitation = async (id: string) => {
-    if (!confirm("Cancelar este convite?")) {
+  const handleCancelInvitation = async (toUserId: string) => {
+    if (!slug || !confirm("Cancelar este convite?")) {
       return;
     }
-    setCancellingInvite(id);
+    setCancellingInvite(toUserId);
     try {
-      await cancelUserProjectInvitation(id);
-      setInvitations((prev) => prev.filter((inv) => inv.id !== id));
+      await cancelUserProjectInvitation(slug, toUserId);
+      setInvitations((prev) => prev.filter((inv) => inv.toUserId !== toUserId));
     } finally {
       setCancellingInvite(null);
     }
   };
 
-  const members = Object.entries(project.members);
+  const showRemoveColumn = members.some((m) =>
+    canRemoveMember(myRole, m.uid === currentUser.uid),
+  );
   const pendingInvitations = invitations.filter((inv) => inv.accepted === null);
 
   return (
@@ -245,110 +278,123 @@ export function ProjectSettingsPage() {
         <Table bordered size="sm">
           <thead>
             <tr>
-              <th>UID</th>
+              <th>Nome</th>
               <th>Papel</th>
-              {isOwner && <th></th>}
+              {showRemoveColumn && <th></th>}
             </tr>
           </thead>
           <tbody>
-            {members.map(([uid, role]) => (
-              <tr key={uid}>
-                <td className="font-monospace" style={{ fontSize: 12 }}>
-                  {uid}
-                </td>
-                <td>
-                  {role === "owner" ? (
-                    <Badge bg={ROLE_BADGE_VARIANTS[role]}>
-                      {ROLE_LABELS[role]}
-                    </Badge>
-                  ) : (
-                    <Form.Select
-                      size="sm"
-                      value={role}
-                      onChange={(e) =>
-                        void handleRoleChange(
-                          uid,
-                          e.target.value as UserProjectRole,
-                        )
-                      }
-                      style={{ width: "auto" }}
-                    >
-                      {ALL_ROLES.filter((r) => r !== "owner").map((r) => (
-                        <option key={r} value={r}>
-                          {ROLE_LABELS[r]}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  )}
-                </td>
-                {isOwner && (
+            {members.map(({ uid, role, displayName }) => {
+              const isSelf = uid === currentUser.uid;
+              const options = grantableRoles(myRole).filter(
+                (r) => r === role || canGrantRole(myRole, role, r, isSelf),
+              );
+              return (
+                <tr key={uid}>
                   <td>
-                    {role !== "owner" && (
-                      <Button
+                    {displayName}
+                    {isSelf && <span className="text-muted"> (você)</span>}
+                  </td>
+                  <td>
+                    {options.length > 1 ? (
+                      <Form.Select
                         size="sm"
-                        variant="outline-danger"
-                        disabled={removingMember === uid}
-                        onClick={() => void handleRemoveMember(uid)}
+                        value={role}
+                        onChange={(e) =>
+                          void handleRoleChange(
+                            uid,
+                            e.target.value as UserProjectRole,
+                          )
+                        }
+                        style={{ width: "auto" }}
                       >
-                        {removingMember === uid ? (
-                          <Spinner animation="border" size="sm" />
-                        ) : (
-                          "Remover"
-                        )}
-                      </Button>
+                        {options.map((r) => (
+                          <option key={r} value={r}>
+                            {ROLE_LABELS[r]}
+                          </option>
+                        ))}
+                      </Form.Select>
+                    ) : (
+                      <Badge bg={ROLE_BADGE_VARIANTS[role]}>
+                        {ROLE_LABELS[role]}
+                      </Badge>
                     )}
                   </td>
-                )}
-              </tr>
-            ))}
+                  {showRemoveColumn && (
+                    <td>
+                      {canRemoveMember(myRole, isSelf) && (
+                        <Button
+                          size="sm"
+                          variant="outline-danger"
+                          disabled={removingMember === uid}
+                          onClick={() => void handleRemoveMember(uid)}
+                        >
+                          {removingMember === uid ? (
+                            <Spinner animation="border" size="sm" />
+                          ) : (
+                            "Remover"
+                          )}
+                        </Button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </Table>
       </section>
 
       {/* Invite */}
-      <section className="mb-5">
-        <h5>Convidar</h5>
-        <Form
-          onSubmit={(e) => void handleInvite(e)}
-          className="d-flex gap-2 align-items-end flex-wrap"
-        >
-          <Form.Group>
-            <Form.Label>Email</Form.Label>
-            <Form.Control
-              type="email"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="email@exemplo.com"
-              required
-              style={{ width: 240 }}
-            />
-          </Form.Group>
-          <Form.Group>
-            <Form.Label>Papel</Form.Label>
-            <Form.Select
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as UserProjectRole)}
-              style={{ width: "auto" }}
-            >
-              {ALL_ROLES.filter((r) => r !== "owner").map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABELS[r]}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-          <Button type="submit" disabled={invitePending}>
-            {invitePending ? (
-              <Spinner animation="border" size="sm" />
-            ) : (
-              "Convidar"
+      {canInvite(myRole) && (
+        <section className="mb-5">
+          <h5>Convidar</h5>
+          <Form
+            onSubmit={(e) => void handleInvite(e)}
+            className="d-flex gap-2 align-items-end flex-wrap"
+          >
+            <Form.Group>
+              <Form.Label>Nome de usuário</Form.Label>
+              <Form.Control
+                type="text"
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                placeholder="Nome de usuário"
+                required
+                style={{ width: 240 }}
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>Papel</Form.Label>
+              <Form.Select
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value as InvitableRole)}
+                style={{ width: "auto" }}
+              >
+                {INVITABLE_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+            <Button type="submit" disabled={invitePending}>
+              {invitePending ? (
+                <Spinner animation="border" size="sm" />
+              ) : (
+                "Convidar"
+              )}
+            </Button>
+            {inviteMessage && (
+              <span
+                className={`${inviteMessage.ok ? "text-success" : "text-danger"} align-self-end`}
+              >
+                {inviteMessage.text}
+              </span>
             )}
-          </Button>
-          {inviteMessage && (
-            <span className="text-success align-self-end">{inviteMessage}</span>
-          )}
-        </Form>
-      </section>
+          </Form>
+        </section>
+      )}
 
       {/* Pending invitations log */}
       {pendingInvitations.length > 0 && (
@@ -357,7 +403,7 @@ export function ProjectSettingsPage() {
           <Table bordered size="sm">
             <thead>
               <tr>
-                <th>Para (UID)</th>
+                <th>Para</th>
                 <th>Papel</th>
                 <th>Enviado em</th>
                 <th></th>
@@ -365,10 +411,8 @@ export function ProjectSettingsPage() {
             </thead>
             <tbody>
               {pendingInvitations.map((inv) => (
-                <tr key={inv.id}>
-                  <td className="font-monospace" style={{ fontSize: 12 }}>
-                    {inv.toUserId}
-                  </td>
+                <tr key={inv.toUserId}>
+                  <td>{inv.toDisplayName}</td>
                   <td>
                     <Badge bg={ROLE_BADGE_VARIANTS[inv.role]}>
                       {ROLE_LABELS[inv.role]}
@@ -379,10 +423,10 @@ export function ProjectSettingsPage() {
                     <Button
                       size="sm"
                       variant="outline-danger"
-                      disabled={cancellingInvite === inv.id}
-                      onClick={() => void handleCancelInvitation(inv.id)}
+                      disabled={cancellingInvite === inv.toUserId}
+                      onClick={() => void handleCancelInvitation(inv.toUserId)}
                     >
-                      {cancellingInvite === inv.id ? (
+                      {cancellingInvite === inv.toUserId ? (
                         <Spinner animation="border" size="sm" />
                       ) : (
                         "Cancelar"
