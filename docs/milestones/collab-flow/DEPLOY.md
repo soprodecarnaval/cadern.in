@@ -107,6 +107,13 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
 4. Verify: homepage unchanged; an export-app re-upload shows revision N+1 with
    refreshed metadata on the score page.
 
+## 5. Task 003 — soft deletes
+
+1. Merge → deploy ships hosting and rules. No migration (M1 already backfilled
+   `deletedAt`).
+2. Verify: homepage unchanged; projects and scores can no longer be hard-deleted
+   from the client.
+
 ## Open
 
 - **M1b semantics.** The export app has been creating `Acervo @<name>` projects in
