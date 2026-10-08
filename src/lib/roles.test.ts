@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  canDeleteProject,
+  canDeleteScore,
   canGrantRole,
   canRemoveMember,
   grantableRoles,
@@ -8,19 +10,20 @@ import {
   isOwner,
   isReviewer,
   legacyIsOwner,
+  type Role,
 } from "./roles";
 
 describe("role hierarchy", () => {
   it("is cumulative", () => {
-    expect([isOwner, isAdmin, isEditor, isReviewer].map((f) => f("owner"))).toEqual(
-      [true, true, true, true],
-    );
-    expect([isOwner, isAdmin, isEditor, isReviewer].map((f) => f("admin"))).toEqual(
-      [false, true, true, true],
-    );
-    expect([isOwner, isAdmin, isEditor, isReviewer].map((f) => f("editor"))).toEqual(
-      [false, false, true, true],
-    );
+    expect(
+      [isOwner, isAdmin, isEditor, isReviewer].map((f) => f("owner")),
+    ).toEqual([true, true, true, true]);
+    expect(
+      [isOwner, isAdmin, isEditor, isReviewer].map((f) => f("admin")),
+    ).toEqual([false, true, true, true]);
+    expect(
+      [isOwner, isAdmin, isEditor, isReviewer].map((f) => f("editor")),
+    ).toEqual([false, false, true, true]);
     expect(
       [isOwner, isAdmin, isEditor, isReviewer].map((f) => f("reviewer")),
     ).toEqual([false, false, false, true]);
@@ -65,6 +68,16 @@ describe("canRemoveMember", () => {
     expect(canRemoveMember("owner", false)).toBe(true);
     expect(canRemoveMember("owner", true)).toBe(false);
     expect(canRemoveMember("admin", false)).toBe(false);
+  });
+});
+
+describe("deletion", () => {
+  it("is owner-only for projects and scores", () => {
+    expect(
+      ["owner", "admin", "editor"].map((r) => canDeleteProject(r as Role)),
+    ).toEqual([true, false, false]);
+    expect(canDeleteScore("owner")).toBe(true);
+    expect(canDeleteScore("admin")).toBe(false);
   });
 });
 

@@ -23,20 +23,30 @@ service cloud.firestore {
         : 'none';
     }
 
+    // A soft-deleted project freezes everything under it: no role grants any
+    // write, the owner's included, so restoring is a console operation
+    // (collab-flow §6, §8). `get` with a default tolerates projects created
+    // before `deletedAt` existed.
+    function alive(projectId) {
+      return get(projectPath(projectId)).data.get('deletedAt', null) == null;
+    }
+
     function isReviewer(projectId) {
-      return memberRole(projectId) in ['owner', 'admin', 'editor', 'reviewer'];
+      return alive(projectId) &&
+        memberRole(projectId) in ['owner', 'admin', 'editor', 'reviewer'];
     }
 
     function isEditor(projectId) {
-      return memberRole(projectId) in ['owner', 'admin', 'editor'];
+      return alive(projectId) &&
+        memberRole(projectId) in ['owner', 'admin', 'editor'];
     }
 
     function isAdmin(projectId) {
-      return memberRole(projectId) in ['owner', 'admin'];
+      return alive(projectId) && memberRole(projectId) in ['owner', 'admin'];
     }
 
     function isOwner(projectId) {
-      return memberRole(projectId) == 'owner';
+      return alive(projectId) && memberRole(projectId) == 'owner';
     }
 
     match /users/{uid} {
@@ -60,7 +70,8 @@ service cloud.firestore {
         isJoiningByInvitation(projectId) ||
         isOwner(projectId)
       );
-      allow delete: if request.auth != null && isOwner(projectId);
+      // Soft deletes only: the owner sets `deletedAt` (update, above).
+      allow delete: if false;
 
       // An invitee accepting adds exactly themselves to memberIds, in the
       // batch that creates their member doc.
@@ -112,6 +123,7 @@ service cloud.firestore {
         function isAcceptingInvitation(projectId, uid) {
           let invitation = invitationPath(projectId, uid);
           return uid == request.auth.uid &&
+            alive(projectId) &&
             exists(invitation) &&
             get(invitation).data.accepted == null &&
             get(invitation).data.deletedAt == null &&
@@ -183,8 +195,8 @@ service cloud.firestore {
           onlyUpdatingFields(['metadataOverride'])) ||
         (isOwner(resource.data.projectId) && onlyUpdatingFields(['deletedAt']))
       );
-      allow delete: if request.auth != null &&
-        isAdmin(resource.data.projectId);
+      // Soft deletes only (`deletedAt`, above).
+      allow delete: if false;
 
       // Legacy copy, read by flag-off code until collab-flow M9. Same data as
       // `scoreRevisions`, plus `isLatest`, the only field that ever changes.

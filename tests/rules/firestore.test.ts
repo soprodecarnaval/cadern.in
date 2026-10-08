@@ -15,6 +15,7 @@ import {
   writeBatch,
   arrayRemove,
   arrayUnion,
+  deleteField,
   serverTimestamp,
   type Firestore,
 } from "firebase/firestore";
@@ -168,14 +169,108 @@ describe("projects", () => {
     );
   });
 
-  it("BUG (003): lets the owner hard-delete the project", async () => {
+  it("denies everyone hard-deleting the project", async () => {
     await seedProject(testEnv());
-    await assertSucceeds(deleteDoc(doc(as(OWNER), "projects", PROJECT)));
+    await assertFails(deleteDoc(doc(as(OWNER), "projects", PROJECT)));
+    await assertFails(deleteDoc(doc(as(ADMIN), "projects", PROJECT)));
   });
 
-  it("denies an admin deleting the project", async () => {
+  it("lets only the owner soft-delete the project", async () => {
     await seedProject(testEnv());
-    await assertFails(deleteDoc(doc(as(ADMIN), "projects", PROJECT)));
+    const deleted = { deletedAt: serverTimestamp() };
+    await assertFails(updateDoc(doc(as(ADMIN), "projects", PROJECT), deleted));
+    await assertSucceeds(
+      updateDoc(doc(as(OWNER), "projects", PROJECT), deleted),
+    );
+  });
+
+  it("tolerates projects created before deletedAt existed", async () => {
+    await seedProject(testEnv());
+    await seed((db) =>
+      updateDoc(doc(db, "projects", PROJECT), { deletedAt: deleteField() }),
+    );
+    await assertSucceeds(
+      updateDoc(doc(as(EDITOR), "projects", PROJECT), { title: "Outro" }),
+    );
+  });
+});
+
+describe("a soft-deleted project", () => {
+  async function seedDeleted() {
+    await seedProject(testEnv());
+    await seed((db) =>
+      updateDoc(doc(db, "projects", PROJECT), { deletedAt: new Date() }),
+    );
+  }
+
+  it("stays readable, as do its scores", async () => {
+    await seedDeleted();
+    await assertSucceeds(getDoc(doc(as(null), "projects", PROJECT)));
+    await assertSucceeds(getDoc(doc(as(null), "scores", SCORE)));
+  });
+
+  it("can't be restored or renamed, even by its owner", async () => {
+    await seedDeleted();
+    const ref = doc(as(OWNER), "projects", PROJECT);
+    await assertFails(updateDoc(ref, { deletedAt: null }));
+    await assertFails(updateDoc(ref, { title: "Outro" }));
+  });
+
+  it("takes every write away from its members", async () => {
+    await seedDeleted();
+    await assertFails(
+      setDoc(doc(as(EDITOR), "scores", "acervo-nova"), {
+        projectId: PROJECT,
+        uploadedBy: EDITOR,
+        latestRevisionId: "",
+        title: "x",
+        composer: "",
+        sub: "",
+        tags: [],
+        published: null,
+        deletedAt: null,
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(as(ADMIN), "scores", SCORE), {
+        metadataOverride: { title: "x" },
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(as(OWNER), "projects", PROJECT, "members", EDITOR), {
+        role: "reviewer",
+      }),
+    );
+  });
+
+  it("can't be joined through a pending invitation", async () => {
+    await seedDeleted();
+    await seed((db) =>
+      setDoc(doc(db, "projects", PROJECT, "invitations", OUTSIDER), {
+        fromUserId: ADMIN,
+        toUserId: OUTSIDER,
+        projectId: PROJECT,
+        role: "editor",
+        accepted: null,
+        deletedAt: null,
+      }),
+    );
+    const db = as(OUTSIDER);
+    const batch = writeBatch(db);
+    batch.update(doc(db, "projects", PROJECT, "invitations", OUTSIDER), {
+      accepted: true,
+      deletedAt: serverTimestamp(),
+    });
+    batch.set(doc(db, "projects", PROJECT, "members", OUTSIDER), {
+      uid: OUTSIDER,
+      role: "editor",
+      displayName: OUTSIDER,
+      addedBy: ADMIN,
+    });
+    batch.update(doc(db, "projects", PROJECT), {
+      memberIds: arrayUnion(OUTSIDER),
+    });
+    await assertFails(batch.commit());
   });
 });
 
@@ -344,14 +439,10 @@ describe("scores", () => {
     );
   });
 
-  it("BUG (003): lets an admin hard-delete a score", async () => {
+  it("denies everyone hard-deleting a score", async () => {
     await seedProject(testEnv());
-    await assertSucceeds(deleteDoc(ref(as(ADMIN))));
-  });
-
-  it("denies an editor deleting a score", async () => {
-    await seedProject(testEnv());
-    await assertFails(deleteDoc(ref(as(EDITOR))));
+    await assertFails(deleteDoc(ref(as(OWNER))));
+    await assertFails(deleteDoc(ref(as(ADMIN))));
   });
 });
 

@@ -63,7 +63,7 @@ export function PublicProjectPage() {
     );
   }
 
-  if (!project) {
+  if (!project || project.deletedAt) {
     return (
       <Container className="mt-4">
         <Alert variant="danger">Projeto não encontrado.</Alert>
