@@ -2,16 +2,25 @@ import { useEffect, useState } from "react";
 import { Alert, Button, Container, Spinner } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import { getScore, getScoreRevision, getProject } from "../lib/db";
+import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
+import { isAdmin } from "../lib/roles";
+import {
+  resolveScoreMetadata,
+  uploadedScoreMetadata,
+} from "../lib/scoreMetadata";
+import { useMemberRole } from "../lib/useMemberRole";
+import type { ScoreMetadata } from "../../types/docs";
 import { ScoreDisplay, type ScoreDisplayPart } from "./ScoreDisplay";
+import { ScoreMetadataEditor } from "./ScoreMetadataEditor";
+import { ScoreRevisionList } from "./ScoreRevisionList";
 
-interface LoadedScore {
+interface LoadedScore extends ScoreMetadata {
   scoreId: string;
   revisionId: string;
+  latestRevisionId: string;
   revisionNumber: number;
-  title: string;
-  composer: string;
-  sub: string;
-  tags: string[];
+  uploaded: ScoreMetadata;
+  projectId: string;
   projectTitle: string;
   msczUrl: string;
   arrangementMidiUrl: string | null;
@@ -40,11 +49,11 @@ async function loadScore(
   return {
     scoreId,
     revisionId: resolvedRevisionId,
+    latestRevisionId: song.latestRevisionId,
     revisionNumber: rev.revisionNumber,
-    title: song.title,
-    composer: song.composer,
-    sub: song.sub,
-    tags: song.tags,
+    ...resolveScoreMetadata(song),
+    uploaded: uploadedScoreMetadata(song),
+    projectId: song.projectId,
     projectTitle,
     msczUrl: rev.mscz.url,
     arrangementMidiUrl: rev.midi.url || null,
@@ -64,6 +73,10 @@ export function ScorePage() {
   }>();
   const [score, setScore] = useState<LoadedScore | null>(null);
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const role = useMemberRole(
+    FEATURE_FLAG_COLLAB_FLOW ? score?.projectId : undefined,
+  );
 
   useEffect(() => {
     if (!scoreId) {
@@ -100,15 +113,26 @@ export function ScorePage() {
       </div>
       <div className="d-flex align-items-center justify-content-between mb-3">
         <p className="text-muted mb-0">{score.projectTitle}</p>
-        <Button
-          variant="outline-secondary"
-          size="sm"
-          as="a"
-          href={score.msczUrl}
-          download={`${score.title}.mscz`}
-        >
-          Baixar .mscz
-        </Button>
+        <div className="d-flex gap-2">
+          {role !== "loading" && isAdmin(role) && (
+            <Button
+              variant="outline-primary"
+              size="sm"
+              onClick={() => setEditing(true)}
+            >
+              Editar metadados
+            </Button>
+          )}
+          <Button
+            variant="outline-secondary"
+            size="sm"
+            as="a"
+            href={score.msczUrl}
+            download={`${score.title}.mscz`}
+          >
+            Baixar .mscz
+          </Button>
+        </div>
       </div>
       <ScoreDisplay
         title={score.title}
@@ -118,6 +142,29 @@ export function ScorePage() {
         arrangementMidiUrl={score.arrangementMidiUrl}
         parts={score.parts}
       />
+      {FEATURE_FLAG_COLLAB_FLOW && (
+        <section className="mt-4">
+          <h5>Revisões</h5>
+          <ScoreRevisionList
+            scoreId={score.scoreId}
+            projectId={score.projectId}
+            currentRevisionId={score.revisionId}
+            latestRevisionId={score.latestRevisionId}
+          />
+        </section>
+      )}
+      {editing && (
+        <ScoreMetadataEditor
+          show
+          scoreId={score.scoreId}
+          uploaded={score.uploaded}
+          current={score}
+          onHide={() => setEditing(false)}
+          onSaved={(override) =>
+            setScore({ ...score, ...score.uploaded, ...override })
+          }
+        />
+      )}
     </Container>
   );
 }
