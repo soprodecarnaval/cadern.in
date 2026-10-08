@@ -114,6 +114,12 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
 2. Verify: homepage unchanged; projects and scores can no longer be hard-deleted
    from the client.
 
+## 6. Task 004a — songbooks: model, editor, save
+
+1. Merge → deploy ships hosting and rules. No migration (no songbook docs exist).
+2. Verify (flag on, staging): save a homepage list as a songbook, edit it into a
+   second revision, open the first via the history.
+
 ## Open
 
 - **M1b semantics.** The export app has been creating `Acervo @<name>` projects in
