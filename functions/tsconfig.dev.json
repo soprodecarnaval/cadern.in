@@ -1,5 +1,12 @@
 {
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
   "include": [
-    ".eslintrc.js"
+    ".eslintrc.js",
+    "src",
+    "test",
+    "vitest.config.ts"
   ]
 }

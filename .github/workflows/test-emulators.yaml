@@ -1,4 +1,4 @@
-name: Security rules tests
+name: Firebase emulator tests
 
 on:
   pull_request:
@@ -7,13 +7,14 @@ on:
       - "storage.rules"
       - "firebase.json"
       - "tests/rules/**"
+      - "functions/**"
       - "vitest.rules.config.ts"
       - "package.json"
       - "package-lock.json"
   workflow_dispatch:
 
 jobs:
-  test-rules:
+  test-emulators:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -38,5 +39,9 @@ jobs:
           key: firebase-emulators-${{ hashFiles('package-lock.json') }}
       - name: Install dependencies
         run: npm ci
+      - name: Install functions dependencies
+        run: npm ci --prefix functions
       - name: Run rules tests
         run: npm run test:rules
+      - name: Run functions tests
+        run: npm run test:functions
