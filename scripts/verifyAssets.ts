@@ -1,13 +1,10 @@
-import { initializeApp, applicationDefault } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { zScoreRevisionDoc } from "../types/docs";
-import { FIREBASE_STORAGE_BUCKET, FIRESTORE_DATABASE_ID } from "./lib/env";
+import { FIRESTORE_DATABASE_ID } from "./lib/env";
+import { initAdminApp } from "./lib/firebaseAdmin";
 
-initializeApp({
-  credential: applicationDefault(),
-  storageBucket: FIREBASE_STORAGE_BUCKET,
-});
+initAdminApp();
 
 const db = getFirestore(FIRESTORE_DATABASE_ID);
 const bucket = getStorage().bucket();

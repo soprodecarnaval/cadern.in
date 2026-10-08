@@ -4,16 +4,19 @@
  *   tsx --env-file=.env.local scripts/migrate.ts cleanup [--execute]
  *
  * Required environment variables:
- *   VITE_FIREBASE_STORAGE_BUCKET   Cloud Storage bucket name
+ *   SCRIPTS_FIREBASE_PROJECT_ID       Firebase project to migrate
+ *   SCRIPTS_FIREBASE_STORAGE_BUCKET   Cloud Storage bucket of that project
+ *   GOOGLE_APPLICATION_CREDENTIALS    service-account key for that project
+ *                                     (or `gcloud auth application-default login`)
  */
 
-import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { migrations } from "./migrations/index";
 import { getSchema, setVersion, setCleanedVersion } from "./lib/migration";
 import type { MigrationContext } from "./lib/migration";
-import { FIRESTORE_DATABASE_ID, FIREBASE_STORAGE_BUCKET } from "./lib/env";
+import { FIRESTORE_DATABASE_ID } from "./lib/env";
+import { initAdminApp } from "./lib/firebaseAdmin";
 
 const rawArgs = process.argv.slice(2);
 const isCleanup = rawArgs[0] === "cleanup";
@@ -102,7 +105,7 @@ async function runCleanup(
 }
 
 async function main() {
-  initializeApp({ storageBucket: FIREBASE_STORAGE_BUCKET });
+  initAdminApp();
   const db = getFirestore(FIRESTORE_DATABASE_ID);
   const bucket = getStorage().bucket();
   const dryRun = !execute;
