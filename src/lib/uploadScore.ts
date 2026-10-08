@@ -5,14 +5,13 @@ import { displayNameOf } from "./displayName";
 import type { ParsedScore } from "./parseUploadedFiles";
 import type { User } from "firebase/auth";
 import {
+  commitScoreRevision,
   createProject,
   createScore,
-  createScoreRevision,
-  getScoreRevisions,
   getProject,
   softDeleteScore,
-  updateScore,
 } from "./db";
+import { newRevisionId, revisionSlug } from "./revisionId";
 
 const DEFAULT_PROJECT_PREFIX = "Acervo @";
 
@@ -50,10 +49,16 @@ export async function uploadScore(
   existingScoreId?: string,
 ): Promise<string> {
   const scoreId = existingScoreId ?? `${projectId}-${slugify(parsed.title)}`;
-  const revisionNumber = existingScoreId
-    ? (await getScoreRevisions(scoreId)).length + 1
-    : 1;
-  const revId = String(revisionNumber);
+  const metadata = {
+    title: parsed.title,
+    composer: parsed.composer,
+    sub: parsed.sub,
+    tags: parsed.tags,
+  };
+  // The revision's place in the chain (number, predecessor) is settled by the
+  // transaction in commitScoreRevision; the id only has to be unique.
+  const slug = revisionSlug(parsed.title, new Date());
+  const revId = newRevisionId(slug);
   // `scores/`, not `songs/`: the collection was renamed by migration
   // 202604201809_songs_to_scores, which moved the objects too.
   const storageBase = `scores/${scoreId}/${revId}`;
@@ -66,14 +71,9 @@ export async function uploadScore(
   const isNewScore = !existingScoreId;
   if (isNewScore) {
     await createScore(scoreId, {
-      title: parsed.title,
-      composer: parsed.composer,
-      sub: parsed.sub,
-      tags: parsed.tags,
       projectId,
       uploadedBy: user.uid,
-      // Set once the revision it points at exists.
-      latestRevisionId: "",
+      metadata,
     });
   }
 
@@ -125,26 +125,21 @@ export async function uploadScore(
       midi: storageFiles.get(part.midi) ?? missing(part.midi),
     }));
 
-    await createScoreRevision(
-      scoreId,
-      revId,
-      {
-        revisionNumber,
-        uploadedBy: user.uid,
-        mscz: storageFiles.get("mscz") ?? missing("mscz"),
-        metajson: storageFiles.get("metajson") ?? missing("metajson"),
-        midi: storageFiles.get("midi") ?? missing("midi"),
-        parts: revisionParts,
-        notes: "",
-      },
-      revisionNumber > 1 ? String(revisionNumber - 1) : null,
-    );
-
-    await updateScore(scoreId, { latestRevisionId: revId });
+    await commitScoreRevision(scoreId, revId, {
+      uploadedBy: user.uid,
+      slug,
+      metadata,
+      origin: { type: "upload" },
+      mscz: storageFiles.get("mscz") ?? missing("mscz"),
+      metajson: storageFiles.get("metajson") ?? missing("metajson"),
+      midi: storageFiles.get("midi") ?? missing("midi"),
+      parts: revisionParts,
+      notes: "",
+    });
   } catch (error) {
     // A score created above but never given a revision would list without
-    // opening. Soft, not hard: firestore.rules lets an editor update a score
-    // but only an admin delete one.
+    // opening. Soft, not hard: firestore.rules lets its creator soft-delete a
+    // score that has no revision yet, and nobody hard-delete one.
     if (isNewScore) {
       await softDeleteScore(scoreId).catch(() => undefined);
     }

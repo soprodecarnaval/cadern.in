@@ -10,6 +10,7 @@ import {
   type WithId,
 } from "../lib/db";
 import type { ScoreDoc, ScoreRevisionDoc } from "../../types/docs";
+import { resolveScoreMetadata } from "../lib/scoreMetadata";
 
 function formatDate(timestamp: Timestamp | null | undefined): string {
   if (!timestamp) {
@@ -53,9 +54,9 @@ function SongRow({
           >
             {expanded ? "▾" : "▸"}
           </button>
-          {song.title}
+          {resolveScoreMetadata(song).title}
         </td>
-        <td>{song.composer}</td>
+        <td>{resolveScoreMetadata(song).composer}</td>
         <td>{formatDate(song.createdAt)}</td>
         <td>#{song.latestRevisionId}</td>
         <td>

@@ -6,6 +6,7 @@ import {
   getLatestScoreRevisions,
 } from "./lib/db";
 import { legacyIsOwner } from "./lib/roles";
+import { resolveScoreMetadata } from "./lib/scoreMetadata";
 import type {
   ScoreViewModel,
   ScoreRevisionViewModel,
@@ -70,10 +71,7 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
 
     scores.push({
       id: song.id,
-      title: song.title,
-      composer: song.composer,
-      sub: song.sub,
-      tags: song.tags,
+      ...resolveScoreMetadata(song),
       projectTitle: projectTitles.get(song.projectId) ?? song.projectId,
       latestRevision,
     });
