@@ -4,55 +4,69 @@
 each carrying the metadata of its mscz; the container caches the latest metadata
 and admins can override it.
 
-**Depends on:** 000. (Rules use the member-doc helpers from 001; if 002 lands
-first, write them against the legacy map and switch in 001.)
+**Depends on:** 000, 001.
 
 Spec: PLAN §0 (dual-write), §2.2, §2.3, §4.3 (`scores`, `scoreRevisions`), §5.1, §5.2.
 
 ## Decisions
 
 - **Existing revision ids are kept**; new ones are
-  `${slugify(title)}-${YYYYMMDDTHHmmss}-${rand4}`.
+  `${slugify(title)}-${YYYYMMDDTHHmmss}-${rand4}` (`src/lib/revisionId.ts`).
 - **No `isLatest` on `scoreRevisions`**; "latest" is the container's
   `latestRevisionId`. Revisions are never updated.
-- **Display metadata = `metadataOverride[f] ?? cachedMetadata[f]`**, through one
-  helper. No component reads score metadata fields directly.
+- **Display metadata = `metadataOverride[f] ?? cachedMetadata[f] ?? legacy[f]`**,
+  through `resolveScoreMetadata`. No component reads score metadata fields directly.
 - **Re-upload refreshes `cachedMetadata`**; an existing override still wins, which
   is what stops a stale export from resurrecting a corrected value
   (`TECH_DEBT.md`, "No way to correct score metadata").
-- **Dual-write until launch** (PLAN §0): legacy `revisions` doc + `isLatest` flip +
-  legacy score fields, so flag-off prod stays current.
+- **Dual-write until launch** (PLAN §0): both revision subcollections get the same
+  data (legacy also `isLatest`), and the container its legacy metadata fields.
+- **Reads stay on the legacy `revisions` subcollection until the launch (007)**:
+  older export-app builds write only `revisions`. One switch, at launch.
+- **New fields are optional in zod** until M9: flag-off prod parses score docs
+  with the same build, before M3/M4 have backfilled them.
+- **`ScoreEditModal` stays as is**: it is the songbook builder's per-PDF edit and
+  never persisted. The admin override is a separate editor on the score page.
+- **Revision list and override editor are flag-on only.** Uploaders who are no
+  longer members show as `UNKNOWN_UPLOADER` (`"—"`, `ScoreRevisionList.tsx`).
+- **Old revisions' `metadata` comes from the current score fields** — no history
+  exists.
 
 ## Steps
 
-1. Schemas: revision `prevRevisionId`, `slug`, `metadata`, `origin` (no
-   `isLatest`); container `cachedMetadata`, `metadataOverride?`, `forkedFrom?`,
-   `published` (nullable; written only by 004's function, created as `null`).
-   Legacy top-level `title/composer/sub/tags` stay optional until M9.
-2. `uploadScore`: timestamp revision ids; container created first (unchanged);
-   blobs; then `runTransaction` that reads `latestRevisionId`, creates the revision
-   with `prevRevisionId`/`revisionNumber`, updates `latestRevisionId` +
-   `cachedMetadata`, and dual-writes the legacy shape. Failure cleanup stays
-   (allowed by the creator clause, PLAN §5.1).
-3. `resolveScoreMetadata(score)` helper; wire `ScorePage`, `PublicProjectPage`,
-   project score lists, songbook rows. (Homepage moves to songbooks in 004.)
-4. Admin metadata override on `ScorePage` (title, composer, sub, tags), gated by
-   `canEditMetadata`. Repurpose or remove `ScoreEditModal`, which today edits a
-   songbook row in memory only.
-5. Revision list on `ScorePage` walks the chain and shows uploader + date.
-6. Rules: `scores` update clauses (editor pointer+cache, creator abandon, admin
-   override, owner `deletedAt`); `scoreRevisions` create-only. Tests per clause.
-7. Migrations M3 (`prevRevisionId`, `slug`, `origin`) and M4 (`metadata` on every
-   revision, `cachedMetadata` and `published: null` on containers).
-8. Release export app with the new upload path.
+1. ✅ Schemas: revision `prevRevisionId`, `slug`, `metadata`, `origin`
+   (`zNewScoreRevisionData` requires them on write); container `cachedMetadata`,
+   `metadataOverride`, `forkedFrom`, `published`.
+2. ✅ `uploadScore` → `commitScoreRevision`: one `runTransaction` that reads the
+   container, links to `latestRevisionId`, numbers the revision, writes both
+   subcollections, flips the legacy `isLatest` and updates the container. Fixes the
+   `length + 1` race and the re-upload metadata bug.
+3. ✅ `resolveScoreMetadata` / `uploadedScoreMetadata`; wired into
+   `CollectionContext`, `ScorePage`, `PublicProjectPage`, `MyScoresPage`.
+4. ✅ `ScoreMetadataEditor` on `ScorePage` (admins): stores only fields that differ
+   from the upload; per-field "restaurar".
+5. ✅ `ScoreRevisionList` on `ScorePage`: number, date, uploader, current marked.
+6. ✅ Rules: `scores` create (own upload, empty pointer, `published == null`);
+   update clauses — editor pointer + metadata only with the new revision committed
+   alongside, creator abandon while empty, admin `metadataOverride`, owner
+   `deletedAt`; `scoreRevisions` create must extend the chain (prev = current
+   latest, becomes latest in the same commit); legacy `revisions` update only
+   `isLatest`. Tests per clause.
+7. ✅ Migrations `202610081300` M3 (`prevRevisionId` by `revisionNumber`, `slug`,
+   `origin`) and `202610081301` M4 (`metadata` on revisions, `cachedMetadata` and
+   `published: null` on scores), both subcollections. Applied on staging ✓.
+8. ⏳ After deploy: prod migrations, then release the export app — older builds
+   can no longer upload (their revisions don't extend the chain).
 
 ## Files
 
-- `types/docs.ts`, `types/viewModels.ts`, `src/lib/db.ts`, `src/lib/uploadScore.ts`
-- `src/lib/scoreMetadata.ts` (new)
-- `src/tsx/ScorePage.tsx`, `src/tsx/ScoreEditModal.tsx`, `src/tsx/PublicProjectPage.tsx`
-- `firestore.rules`, `tests/rules/`
-- `scripts/migrations/` (M3, M4)
+- `types/docs.ts`, `src/lib/db.ts`, `src/lib/uploadScore.ts`
+- `src/lib/revisionId.ts`, `src/lib/scoreMetadata.ts` (+ tests)
+- `src/tsx/ScorePage.tsx`, `src/tsx/ScoreMetadataEditor.tsx`,
+  `src/tsx/ScoreRevisionList.tsx`, `src/tsx/PublicProjectPage.tsx`,
+  `src/tsx/MyScoresPage.tsx`, `src/CollectionContext.tsx`
+- `firestore.rules`, `tests/rules/firestore.test.ts`
+- `scripts/lib/scoreRevisions.ts`, `scripts/migrations/` (M3, M4)
 
 ## Acceptance
 
