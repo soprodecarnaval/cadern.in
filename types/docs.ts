@@ -63,20 +63,53 @@ export const zProjectMemberDoc = zProjectMemberData.extend({
 });
 export type ProjectMemberDoc = z.infer<typeof zProjectMemberDoc>;
 
-export const zScoreData = z.object({
+export const zScoreMetadata = z.object({
   title: z.string(),
   composer: z.string(),
   sub: z.string(),
   tags: z.array(z.string()),
+});
+export type ScoreMetadata = z.infer<typeof zScoreMetadata>;
+
+export const zScoreData = z.object({
   projectId: z.string(),
   uploadedBy: z.string(),
   latestRevisionId: z.string(),
+  // Legacy display fields, read by flag-off code. Dual-written with
+  // `cachedMetadata` until collab-flow M9; read through resolveScoreMetadata.
+  title: z.string(),
+  composer: z.string(),
+  sub: z.string(),
+  tags: z.array(z.string()),
+  // Latest revision's metadata. Optional until collab-flow M4 backfills it.
+  cachedMetadata: zScoreMetadata.optional(),
+  // Admin corrections; win over `cachedMetadata` field by field.
+  metadataOverride: zScoreMetadata.partial().optional(),
+  forkedFrom: z
+    .object({ scoreId: z.string(), revisionId: z.string(), projectId: z.string() })
+    .optional(),
+  // Maintained server-side (collab-flow §2.2.1); clients never write it.
+  published: z
+    .object({ revisionId: z.string(), songbookIds: z.array(z.string()) })
+    .nullable()
+    .optional(),
 });
+export type ScoreData = z.infer<typeof zScoreData>;
 export const zScoreDoc = zScoreData.extend({
   createdAt: zTimestamp,
   deletedAt: zTimestamp.nullable().optional(),
 });
 export type ScoreDoc = z.infer<typeof zScoreDoc>;
+
+export const zScoreRevisionOrigin = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("upload") }),
+  z.object({
+    type: z.literal("fork"),
+    sourceScoreId: z.string(),
+    sourceRevisionId: z.string(),
+    sourceProjectId: z.string(),
+  }),
+]);
 
 export const zScoreRevisionData = z.object({
   revisionNumber: z.number().int().positive(),
@@ -86,11 +119,25 @@ export const zScoreRevisionData = z.object({
   midi: zStorageFile,
   parts: z.array(zPartData),
   notes: z.string(),
+  // Optional until collab-flow M3/M4 backfill them; every new revision has
+  // them (zNewScoreRevisionData).
+  prevRevisionId: z.string().nullable().optional(),
+  slug: z.string().optional(),
+  metadata: zScoreMetadata.optional(),
+  origin: zScoreRevisionOrigin.optional(),
 });
 export const zScoreRevisionDoc = zScoreRevisionData.extend({
   uploadedAt: zTimestamp,
 });
 export type ScoreRevisionDoc = z.infer<typeof zScoreRevisionDoc>;
+
+export const zNewScoreRevisionData = zScoreRevisionData.required({
+  prevRevisionId: true,
+  slug: true,
+  metadata: true,
+  origin: true,
+});
+export type NewScoreRevisionData = z.infer<typeof zNewScoreRevisionData>;
 
 // Shape of `scores/{id}/revisions/{id}`, which flag-off code still reads. Kept
 // in sync by dual-writes until the legacy subcollection is dropped (M9).

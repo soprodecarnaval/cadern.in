@@ -92,6 +92,21 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
 3. Release the export app (reads roles from member docs).
 4. Verify: an export-app upload by a project editor succeeds; homepage unchanged.
 
+## 4. Task 002 — score revision model
+
+1. Merge → deploy ships hosting and rules.
+2. **Immediately** migrate to `202610081301` (dry run first):
+   - `202610081300` M3 — chains existing revisions (`prevRevisionId` by
+     `revisionNumber`), adds `slug` and `origin: upload`. The dry run warns about
+     scores whose `latestRevisionId` isn't their highest revision.
+   - `202610081301` M4 — copies each score's current metadata to
+     `cachedMetadata` and to every revision's `metadata`; `published: null`.
+3. Release the export app. From this deploy on, only builds with
+   `commitScoreRevision` can upload: the rules require every new revision to
+   extend the chain.
+4. Verify: homepage unchanged; an export-app re-upload shows revision N+1 with
+   refreshed metadata on the score page.
+
 ## Open
 
 - **M1b semantics.** The export app has been creating `Acervo @<name>` projects in

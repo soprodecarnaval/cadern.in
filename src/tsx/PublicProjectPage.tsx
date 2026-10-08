@@ -11,6 +11,7 @@ import { Link, useParams } from "react-router-dom";
 import { getProjectBySlug, getProjectScores, type WithId } from "../lib/db";
 import { isAdmin } from "../lib/roles";
 import { useMemberRole } from "../lib/useMemberRole";
+import { resolveScoreMetadata } from "../lib/scoreMetadata";
 import type { ProjectDoc, UserProjectRole, ScoreDoc } from "../../types/docs";
 
 const ROLE_LABELS: Record<UserProjectRole, string> = {
@@ -113,8 +114,8 @@ export function PublicProjectPage() {
           <tbody>
             {scores.map((score) => (
               <tr key={score.id}>
-                <td>{score.title}</td>
-                <td>{score.composer}</td>
+                <td>{resolveScoreMetadata(score).title}</td>
+                <td>{resolveScoreMetadata(score).composer}</td>
                 <td>
                   <Link to={`/score/${encodeURIComponent(score.id)}`}>
                     <Button size="sm" variant="outline-secondary">

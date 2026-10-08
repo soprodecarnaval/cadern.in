@@ -3,10 +3,12 @@ import {
   arrayUnion,
   collection,
   collectionGroup,
+  deleteField,
   doc,
   getDocs,
   getDoc,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -18,8 +20,9 @@ import { db, functions } from "../firebase";
 import {
   zScoreDoc,
   zScoreData,
+  zScoreMetadata,
   zScoreRevisionDoc,
-  zScoreRevisionData,
+  zNewScoreRevisionData,
   zLegacyRevisionData,
   zProjectDoc,
   zProjectData,
@@ -29,6 +32,8 @@ import {
   zUserProjectInvitationDoc,
   zUserProjectInvitationData,
   type ScoreDoc,
+  type ScoreMetadata,
+  type NewScoreRevisionData,
   type ScoreRevisionDoc,
   type ProjectDoc,
   type ProjectCreateData,
@@ -38,8 +43,6 @@ import {
 } from "../../types/docs";
 import type z from "zod";
 
-type ScoreData = z.infer<typeof zScoreData>;
-type ScoreRevisionData = z.infer<typeof zScoreRevisionData>;
 type UserProjectInvitationData = z.infer<typeof zUserProjectInvitationData>;
 
 export type WithId<T> = T & { id: string };
@@ -55,8 +58,9 @@ export async function getScore(id: string): Promise<WithId<ScoreDoc> | null> {
 }
 
 // Score revisions live in two subcollections until the legacy one is dropped
-// (collab-flow M9). Every write goes to both; reads stay on the legacy one —
-// the only one flag-off code knows — until each reader moves to the new model.
+// (collab-flow M9). Every write goes to both, with the same data; reads stay on
+// the legacy one — the only one flag-off code and older export-app builds know —
+// until the launch (collab-flow 007).
 const SCORE_REVISIONS = "scoreRevisions";
 const LEGACY_REVISIONS = "revisions";
 
@@ -125,19 +129,45 @@ export async function getLatestScoreRevisions(): Promise<
   }));
 }
 
-export async function createScore(id: string, data: ScoreData): Promise<void> {
-  await setDoc(doc(db, "scores", id), {
-    ...zScoreData.parse(data),
+function scoreRef(id: string) {
+  return doc(db, "scores", id);
+}
+
+/**
+ * Creates the container before any revision exists (`latestRevisionId: ""`),
+ * so storage rules can resolve the project while its files upload.
+ */
+export async function createScore(
+  id: string,
+  data: { projectId: string; uploadedBy: string; metadata: ScoreMetadata },
+): Promise<void> {
+  const metadata = zScoreMetadata.parse(data.metadata);
+  await setDoc(scoreRef(id), {
+    ...zScoreData.parse({
+      projectId: data.projectId,
+      uploadedBy: data.uploadedBy,
+      latestRevisionId: "",
+      ...metadata,
+      cachedMetadata: metadata,
+    }),
+    published: null,
     createdAt: serverTimestamp(),
     deletedAt: null,
   });
 }
 
-export async function updateScore(
+/**
+ * Sets the admin corrections over the score's revision metadata. Fields left
+ * out fall back to the latest revision's; an empty override is removed.
+ */
+export async function updateScoreMetadataOverride(
   id: string,
-  data: Partial<ScoreData>,
+  override: Partial<ScoreMetadata>,
 ): Promise<void> {
-  await updateDoc(doc(db, "scores", id), data);
+  const parsed = zScoreMetadata.partial().parse(override);
+  await updateDoc(scoreRef(id), {
+    metadataOverride: Object.keys(parsed).length > 0 ? parsed : deleteField(),
+  });
 }
 
 export async function softDeleteScore(id: string): Promise<void> {
@@ -147,31 +177,60 @@ export async function softDeleteScore(id: string): Promise<void> {
 }
 
 /**
- * Writes the revision to both subcollections in one batch. The legacy copy also
- * carries `isLatest`, which moves off `prevRevisionId`.
+ * Appends a revision to the score's chain, in one transaction: the new
+ * revision links to the current latest (`prevRevisionId`), takes the next
+ * `revisionNumber`, and becomes `latestRevisionId`, with its metadata cached on
+ * the container. Concurrent uploads retry rather than overwrite each other.
+ *
+ * Writes both revision subcollections; the legacy copy also carries `isLatest`
+ * and the container its legacy metadata fields (collab-flow §0).
  */
-export async function createScoreRevision(
+export async function commitScoreRevision(
   scoreId: string,
   revisionId: string,
-  data: ScoreRevisionData,
-  prevRevisionId: string | null,
-): Promise<void> {
-  const parsed = zScoreRevisionData.parse(data);
-  const batch = writeBatch(db);
-  batch.set(doc(db, "scores", scoreId, SCORE_REVISIONS, revisionId), {
-    ...parsed,
-    uploadedAt: serverTimestamp(),
-  });
-  batch.set(doc(db, "scores", scoreId, LEGACY_REVISIONS, revisionId), {
-    ...zLegacyRevisionData.parse({ ...parsed, isLatest: true }),
-    uploadedAt: serverTimestamp(),
-  });
-  if (prevRevisionId) {
-    batch.update(doc(db, "scores", scoreId, LEGACY_REVISIONS, prevRevisionId), {
-      isLatest: false,
+  data: Omit<NewScoreRevisionData, "revisionNumber" | "prevRevisionId">,
+): Promise<{ revisionNumber: number }> {
+  return runTransaction(db, async (tx) => {
+    const scoreSnap = await tx.get(scoreRef(scoreId));
+    if (!scoreSnap.exists()) {
+      throw new Error(`Score ${scoreId} not found`);
+    }
+    const prevRevisionId = zScoreDoc.parse(scoreSnap.data()).latestRevisionId || null;
+
+    let revisionNumber = 1;
+    if (prevRevisionId) {
+      const prevSnap = await tx.get(
+        doc(db, "scores", scoreId, LEGACY_REVISIONS, prevRevisionId),
+      );
+      revisionNumber =
+        zScoreRevisionDoc.parse(prevSnap.data()).revisionNumber + 1;
+    }
+
+    const revision = zNewScoreRevisionData.parse({
+      ...data,
+      revisionNumber,
+      prevRevisionId,
     });
-  }
-  await batch.commit();
+    tx.set(doc(db, "scores", scoreId, SCORE_REVISIONS, revisionId), {
+      ...revision,
+      uploadedAt: serverTimestamp(),
+    });
+    tx.set(doc(db, "scores", scoreId, LEGACY_REVISIONS, revisionId), {
+      ...zLegacyRevisionData.parse({ ...revision, isLatest: true }),
+      uploadedAt: serverTimestamp(),
+    });
+    if (prevRevisionId) {
+      tx.update(doc(db, "scores", scoreId, LEGACY_REVISIONS, prevRevisionId), {
+        isLatest: false,
+      });
+    }
+    tx.update(scoreRef(scoreId), {
+      latestRevisionId: revisionId,
+      cachedMetadata: revision.metadata,
+      ...revision.metadata,
+    });
+    return { revisionNumber };
+  });
 }
 
 // -- Projects --
