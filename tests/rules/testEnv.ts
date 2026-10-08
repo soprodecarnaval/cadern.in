@@ -43,21 +43,30 @@ export function useTestEnv(): () => RulesTestEnvironment {
   return () => testEnv;
 }
 
-/** A project with one member per role, and one score in it. */
+/** A project with one member doc per role, and one score in it. */
 export async function seedProject(testEnv: RulesTestEnvironment) {
   await testEnv.withSecurityRulesDisabled(async (ctx) => {
     const db = ctx.firestore() as unknown as Firestore;
     await setDoc(doc(db, "projects", PROJECT), {
       title: "Acervo",
       slug: PROJECT,
-      members: {
-        [OWNER]: "owner",
-        [ADMIN]: "admin",
-        [EDITOR]: "editor",
-        [REVIEWER]: "reviewer",
-      },
       memberIds: [OWNER, ADMIN, EDITOR, REVIEWER],
+      deletedAt: null,
     });
+    const roles = {
+      [OWNER]: "owner",
+      [ADMIN]: "admin",
+      [EDITOR]: "editor",
+      [REVIEWER]: "reviewer",
+    };
+    for (const [uid, role] of Object.entries(roles)) {
+      await setDoc(doc(db, "projects", PROJECT, "members", uid), {
+        uid,
+        role,
+        displayName: uid,
+        addedBy: OWNER,
+      });
+    }
     await setDoc(doc(db, "scores", SCORE), {
       title: "Olha pro céu",
       projectId: PROJECT,

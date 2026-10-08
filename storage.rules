@@ -8,10 +8,11 @@ service firebase.storage {
       ).data.projectId;
     }
 
+    // Roles come from projects/{id}/members/{uid}, as in firestore.rules.
     function memberRole(projectId) {
       return firestore.get(
-        /databases/(default)/documents/projects/$(projectId)
-      ).data.members[request.auth.uid];
+        /databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid)
+      ).data.role;
     }
 
     // Any project editor may write its score assets — not only whoever
