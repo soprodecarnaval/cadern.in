@@ -13,6 +13,9 @@ import {
   updateDoc,
   where,
   writeBatch,
+  arrayRemove,
+  arrayUnion,
+  serverTimestamp,
   type Firestore,
 } from "firebase/firestore";
 import { describe, it } from "vitest";
@@ -50,7 +53,7 @@ describe("users", () => {
     await assertFails(getDoc(doc(as(EDITOR), "users", OWNER)));
   });
 
-  it("BUG (001): denies the invite-by-email lookup", async () => {
+  it("denies querying users by email (lookups run in findUserForInvite)", async () => {
     await seed((db) =>
       setDoc(doc(db, "users", OUTSIDER), {
         displayName: "O",
@@ -66,30 +69,70 @@ describe("users", () => {
 });
 
 describe("projects", () => {
+  const newProject = (owner: string) => ({
+    title: "Novo",
+    slug: "novo",
+    memberIds: [owner],
+    deletedAt: null,
+  });
+  const ownerDoc = (uid: string) => ({
+    uid,
+    role: "owner",
+    displayName: uid,
+    addedBy: uid,
+  });
+
   it("is world-readable", async () => {
     await seedProject(testEnv());
     await assertSucceeds(getDoc(doc(as(null), "projects", PROJECT)));
   });
 
-  it("lets a user create a project they own", async () => {
-    await assertSucceeds(
+  it("lets a user create a project with their owner doc in one batch", async () => {
+    const db = as(OUTSIDER);
+    const batch = writeBatch(db);
+    batch.set(doc(db, "projects", "novo"), newProject(OUTSIDER));
+    batch.set(
+      doc(db, "projects", "novo", "members", OUTSIDER),
+      ownerDoc(OUTSIDER),
+    );
+    await assertSucceeds(batch.commit());
+  });
+
+  it("denies creating a project for someone else", async () => {
+    const db = as(OUTSIDER);
+    await assertFails(setDoc(doc(db, "projects", "novo"), newProject(OWNER)));
+  });
+
+  it("denies creating a project with the legacy members map", async () => {
+    await assertFails(
       setDoc(doc(as(OUTSIDER), "projects", "novo"), {
-        title: "Novo",
-        slug: "novo",
+        ...newProject(OUTSIDER),
         members: { [OUTSIDER]: "owner" },
-        memberIds: [OUTSIDER],
       }),
     );
   });
 
-  it("denies creating a project owned by someone else", async () => {
+  it("denies claiming ownership of an existing project", async () => {
+    await seedProject(testEnv());
     await assertFails(
-      setDoc(doc(as(OUTSIDER), "projects", "novo"), {
-        title: "Novo",
-        slug: "novo",
-        members: { [OWNER]: "owner" },
-        memberIds: [OWNER],
+      setDoc(
+        doc(as(OUTSIDER), "projects", PROJECT, "members", OUTSIDER),
+        ownerDoc(OUTSIDER),
+      ),
+    );
+  });
+
+  it("ignores the legacy members map", async () => {
+    await seed((db) =>
+      setDoc(doc(db, "projects", PROJECT), {
+        title: "Acervo",
+        slug: PROJECT,
+        memberIds: [OUTSIDER],
+        members: { [OUTSIDER]: "owner" },
       }),
+    );
+    await assertFails(
+      updateDoc(doc(as(OUTSIDER), "projects", PROJECT), { title: "Outro" }),
     );
   });
 
@@ -97,7 +140,7 @@ describe("projects", () => {
     await seedProject(testEnv());
     const ref = doc(as(EDITOR), "projects", PROJECT);
     await assertSucceeds(updateDoc(ref, { title: "Outro" }));
-    await assertFails(updateDoc(ref, { [`members.${OUTSIDER}`]: "editor" }));
+    await assertFails(updateDoc(ref, { memberIds: arrayUnion(OUTSIDER) }));
   });
 
   it("denies a reviewer changing the title", async () => {
@@ -107,11 +150,20 @@ describe("projects", () => {
     );
   });
 
-  it("BUG (001): lets an admin grant owner", async () => {
+  it("lets an admin maintain memberIds", async () => {
     await seedProject(testEnv());
     await assertSucceeds(
       updateDoc(doc(as(ADMIN), "projects", PROJECT), {
-        [`members.${OUTSIDER}`]: "owner",
+        memberIds: arrayRemove(REVIEWER),
+      }),
+    );
+  });
+
+  it("denies a non-member adding themselves to memberIds", async () => {
+    await seedProject(testEnv());
+    await assertFails(
+      updateDoc(doc(as(OUTSIDER), "projects", PROJECT), {
+        memberIds: arrayUnion(OUTSIDER),
       }),
     );
   });
@@ -124,6 +176,78 @@ describe("projects", () => {
   it("denies an admin deleting the project", async () => {
     await seedProject(testEnv());
     await assertFails(deleteDoc(doc(as(ADMIN), "projects", PROJECT)));
+  });
+});
+
+describe("members", () => {
+  const member = (uid: string, role: string) => ({
+    uid,
+    role,
+    displayName: uid,
+    addedBy: OWNER,
+  });
+  const ref = (db: Firestore, uid: string) =>
+    doc(db, "projects", PROJECT, "members", uid);
+
+  it("is world-readable", async () => {
+    await seedProject(testEnv());
+    await assertSucceeds(getDoc(ref(as(null), EDITOR)));
+  });
+
+  it("lets an admin add editors and reviewers only", async () => {
+    await seedProject(testEnv());
+    await assertSucceeds(
+      setDoc(ref(as(ADMIN), OUTSIDER), member(OUTSIDER, "editor")),
+    );
+    await assertFails(setDoc(ref(as(ADMIN), "x"), member("x", "admin")));
+    await assertFails(setDoc(ref(as(ADMIN), "y"), member("y", "owner")));
+  });
+
+  it("lets an admin move people between editor and reviewer only", async () => {
+    await seedProject(testEnv());
+    await assertSucceeds(
+      updateDoc(ref(as(ADMIN), EDITOR), { role: "reviewer" }),
+    );
+    await assertFails(updateDoc(ref(as(ADMIN), REVIEWER), { role: "admin" }));
+    await assertFails(updateDoc(ref(as(ADMIN), OWNER), { role: "editor" }));
+  });
+
+  it("denies an admin removing anyone", async () => {
+    await seedProject(testEnv());
+    await assertFails(deleteDoc(ref(as(ADMIN), REVIEWER)));
+  });
+
+  it("lets the owner grant admin and remove members", async () => {
+    await seedProject(testEnv());
+    await assertSucceeds(updateDoc(ref(as(OWNER), EDITOR), { role: "admin" }));
+    await assertSucceeds(deleteDoc(ref(as(OWNER), REVIEWER)));
+  });
+
+  it("never allows a second owner", async () => {
+    await seedProject(testEnv());
+    await assertFails(updateDoc(ref(as(OWNER), ADMIN), { role: "owner" }));
+    await assertFails(
+      setDoc(ref(as(OWNER), OUTSIDER), member(OUTSIDER, "owner")),
+    );
+  });
+
+  it("denies the owner demoting or removing themselves", async () => {
+    await seedProject(testEnv());
+    await assertFails(updateDoc(ref(as(OWNER), OWNER), { role: "admin" }));
+    await assertFails(deleteDoc(ref(as(OWNER), OWNER)));
+  });
+
+  it("denies editors managing members", async () => {
+    await seedProject(testEnv());
+    await assertFails(
+      setDoc(ref(as(EDITOR), OUTSIDER), member(OUTSIDER, "reviewer")),
+    );
+    await assertFails(updateDoc(ref(as(EDITOR), REVIEWER), { role: "editor" }));
+  });
+
+  it("denies changing anything but the role", async () => {
+    await seedProject(testEnv());
+    await assertFails(updateDoc(ref(as(OWNER), EDITOR), { uid: OUTSIDER }));
   });
 });
 
@@ -143,13 +267,19 @@ describe("scores", () => {
 
   it("lets an editor create a score", async () => {
     await seedProject(testEnv());
-    await assertSucceeds(setDoc(doc(as(EDITOR), "scores", "acervo-nova"), score));
+    await assertSucceeds(
+      setDoc(doc(as(EDITOR), "scores", "acervo-nova"), score),
+    );
   });
 
   it("denies a reviewer or outsider creating a score", async () => {
     await seedProject(testEnv());
-    await assertFails(setDoc(doc(as(REVIEWER), "scores", "acervo-nova"), score));
-    await assertFails(setDoc(doc(as(OUTSIDER), "scores", "acervo-nova"), score));
+    await assertFails(
+      setDoc(doc(as(REVIEWER), "scores", "acervo-nova"), score),
+    );
+    await assertFails(
+      setDoc(doc(as(OUTSIDER), "scores", "acervo-nova"), score),
+    );
   });
 
   it("BUG (002): lets an editor update any score field", async () => {
@@ -303,47 +433,161 @@ describe("songbooks", () => {
 });
 
 describe("invitations", () => {
-  const invitation = {
+  const invitation = (role = "editor") => ({
     fromUserId: ADMIN,
     toUserId: OUTSIDER,
     projectId: PROJECT,
-    role: "editor",
+    role,
     accepted: null,
+    projectTitle: "Acervo",
+    fromDisplayName: ADMIN,
+    toDisplayName: OUTSIDER,
     deletedAt: null,
-  };
+  });
+  const ref = (db: Firestore, uid = OUTSIDER) =>
+    doc(db, "projects", PROJECT, "invitations", uid);
+  const seedInvitation = (role = "editor") =>
+    seed((db) => setDoc(ref(db), invitation(role)));
 
-  it("lets an admin invite", async () => {
+  /** The batch acceptUserProjectInvitation commits. */
+  function acceptBatch(db: Firestore, role = "editor") {
+    const batch = writeBatch(db);
+    batch.update(ref(db), { accepted: true, deletedAt: serverTimestamp() });
+    batch.set(doc(db, "projects", PROJECT, "members", OUTSIDER), {
+      uid: OUTSIDER,
+      role,
+      displayName: OUTSIDER,
+      addedBy: ADMIN,
+    });
+    batch.update(doc(db, "projects", PROJECT), {
+      memberIds: arrayUnion(OUTSIDER),
+    });
+    return batch;
+  }
+
+  it("lets an admin invite as editor or reviewer only", async () => {
     await seedProject(testEnv());
-    await assertSucceeds(
-      setDoc(doc(as(ADMIN), "invitations", "inv"), invitation),
-    );
+    await assertSucceeds(setDoc(ref(as(ADMIN)), invitation("reviewer")));
+    await assertFails(setDoc(ref(as(ADMIN)), invitation("admin")));
+  });
+
+  it("lets an admin re-invite, overwriting the earlier invitation", async () => {
+    await seedProject(testEnv());
+    await seedInvitation("reviewer");
+    await assertSucceeds(setDoc(ref(as(ADMIN)), invitation("editor")));
+  });
+
+  it("denies inviting at a path that doesn't match the invitee", async () => {
+    await seedProject(testEnv());
+    await assertFails(setDoc(ref(as(ADMIN), "someone-else"), invitation()));
   });
 
   it("denies an editor inviting", async () => {
     await seedProject(testEnv());
     await assertFails(
-      setDoc(doc(as(EDITOR), "invitations", "inv"), {
-        ...invitation,
-        fromUserId: EDITOR,
+      setDoc(ref(as(EDITOR)), { ...invitation(), fromUserId: EDITOR }),
+    );
+  });
+
+  it("lets the invitee and admins read it, nobody else", async () => {
+    await seedProject(testEnv());
+    await seedInvitation();
+    await assertSucceeds(getDoc(ref(as(OUTSIDER))));
+    await assertSucceeds(getDoc(ref(as(ADMIN))));
+    await assertFails(getDoc(ref(as(EDITOR))));
+  });
+
+  it("lets the invitee list their pending invitations across projects", async () => {
+    await seedProject(testEnv());
+    await seedInvitation();
+    const pending = (db: Firestore, uid: string) =>
+      getDocs(
+        query(
+          collectionGroup(db, "invitations"),
+          where("toUserId", "==", uid),
+          where("accepted", "==", null),
+          where("deletedAt", "==", null),
+        ),
+      );
+    await assertSucceeds(pending(as(OUTSIDER), OUTSIDER));
+    await assertFails(pending(as(EDITOR), OUTSIDER));
+  });
+
+  it("lets the invitee accept: invitation, member doc and memberIds", async () => {
+    await seedProject(testEnv());
+    await seedInvitation();
+    await assertSucceeds(acceptBatch(as(OUTSIDER)).commit());
+  });
+
+  it("denies accepting at a different role than invited", async () => {
+    await seedProject(testEnv());
+    await seedInvitation("reviewer");
+    await assertFails(acceptBatch(as(OUTSIDER), "editor").commit());
+  });
+
+  it("denies joining without closing the invitation", async () => {
+    await seedProject(testEnv());
+    await seedInvitation();
+    const db = as(OUTSIDER);
+    const batch = writeBatch(db);
+    batch.set(doc(db, "projects", PROJECT, "members", OUTSIDER), {
+      uid: OUTSIDER,
+      role: "editor",
+      displayName: OUTSIDER,
+      addedBy: ADMIN,
+    });
+    batch.update(doc(db, "projects", PROJECT), {
+      memberIds: arrayUnion(OUTSIDER),
+    });
+    await assertFails(batch.commit());
+  });
+
+  it("denies accepting a cancelled invitation", async () => {
+    await seedProject(testEnv());
+    await seed((db) =>
+      setDoc(ref(db), { ...invitation(), deletedAt: new Date() }),
+    );
+    await assertFails(acceptBatch(as(OUTSIDER)).commit());
+  });
+
+  it("denies joining with no invitation", async () => {
+    await seedProject(testEnv());
+    const db = as(OUTSIDER);
+    await assertFails(
+      setDoc(doc(db, "projects", PROJECT, "members", OUTSIDER), {
+        uid: OUTSIDER,
+        role: "editor",
+        displayName: OUTSIDER,
+        addedBy: ADMIN,
       }),
     );
   });
 
-  it("lets the invitee read their invitation", async () => {
+  it("lets the invitee decline and an admin cancel", async () => {
     await seedProject(testEnv());
-    await seed((db) => setDoc(doc(db, "invitations", "inv"), invitation));
-    await assertSucceeds(getDoc(doc(as(OUTSIDER), "invitations", "inv")));
+    await seedInvitation();
+    await assertSucceeds(
+      updateDoc(ref(as(OUTSIDER)), {
+        accepted: false,
+        deletedAt: serverTimestamp(),
+      }),
+    );
+    await seedInvitation();
+    await assertSucceeds(
+      updateDoc(ref(as(ADMIN)), { deletedAt: serverTimestamp() }),
+    );
   });
 
-  it("BUG (001): denies the invitee accepting", async () => {
+  it("denies the invitee changing the role", async () => {
     await seedProject(testEnv());
-    await seed((db) => setDoc(doc(db, "invitations", "inv"), invitation));
-    const db = as(OUTSIDER);
-    const batch = writeBatch(db);
-    batch.update(doc(db, "invitations", "inv"), { accepted: true });
-    batch.update(doc(db, "projects", PROJECT), {
-      [`members.${OUTSIDER}`]: "editor",
-    });
-    await assertFails(batch.commit());
+    await seedInvitation("reviewer");
+    await assertFails(updateDoc(ref(as(OUTSIDER)), { role: "editor" }));
+  });
+
+  it("denies writing top-level invitations, which no longer exist", async () => {
+    await seedProject(testEnv());
+    await assertFails(
+      setDoc(doc(as(ADMIN), "invitations", "inv"), invitation()),
+    );
   });
 });

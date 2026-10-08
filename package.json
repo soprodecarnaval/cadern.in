@@ -24,6 +24,7 @@
     "plugin:package": "bash scripts/packagePlugin.sh",
     "deploy": "npm run build && npx firebase-tools deploy",
     "test": "vitest",
+    "test:functions": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore --project demo-cadernin 'npm --prefix functions test'",
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-cadernin 'vitest run --config vitest.rules.config.ts'",
     "backfill:metajson": "tsx scripts/backfillMetajson.ts"
   },

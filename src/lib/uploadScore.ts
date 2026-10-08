@@ -1,6 +1,7 @@
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 import { slugify } from "./slugify";
+import { displayNameOf } from "./displayName";
 import type { ParsedScore } from "./parseUploadedFiles";
 import type { User } from "firebase/auth";
 import {
@@ -32,10 +33,11 @@ export async function getOrCreateDefaultProject(user: User): Promise<string> {
   const slug = slugify(title);
   const existing = await getProject(slug);
   if (!existing) {
-    await createProject(slug, {
-      title,
-      members: { [user.uid]: "owner" },
-    });
+    await createProject(
+      slug,
+      { title },
+      { uid: user.uid, displayName: displayNameOf(user) },
+    );
   }
   return slug;
 }

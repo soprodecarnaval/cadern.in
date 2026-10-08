@@ -1,10 +1,8 @@
 import {
-  addDoc,
   arrayRemove,
   arrayUnion,
   collection,
   collectionGroup,
-  deleteField,
   doc,
   getDocs,
   getDoc,
@@ -15,7 +13,8 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { httpsCallable } from "firebase/functions";
+import { db, functions } from "../firebase";
 import {
   zScoreDoc,
   zScoreData,
@@ -25,12 +24,15 @@ import {
   zProjectDoc,
   zProjectData,
   zProjectCreateData,
+  zProjectMemberData,
+  zProjectMemberDoc,
   zUserProjectInvitationDoc,
   zUserProjectInvitationData,
   type ScoreDoc,
   type ScoreRevisionDoc,
   type ProjectDoc,
   type ProjectCreateData,
+  type ProjectMemberDoc,
   type UserProjectRole,
   type UserProjectInvitationDoc,
 } from "../../types/docs";
@@ -215,16 +217,33 @@ export async function getAllProjects(): Promise<WithId<ProjectDoc>[]> {
   return snap.docs.map(parseProject);
 }
 
+function memberRef(slug: string, uid: string) {
+  return doc(db, "projects", slug, "members", uid);
+}
+
+/** Writes the project and its creator's owner member document together. */
 export async function createProject(
   slug: string,
   data: ProjectCreateData,
+  owner: { uid: string; displayName: string },
 ): Promise<void> {
-  const parsed = zProjectCreateData.parse(data);
-  const memberIds = Object.keys(parsed.members);
-  await setDoc(projectRef(slug), {
-    ...zProjectData.parse({ ...parsed, slug, memberIds }),
+  const { title } = zProjectCreateData.parse(data);
+  const batch = writeBatch(db);
+  batch.set(projectRef(slug), {
+    ...zProjectData.parse({ title, slug, memberIds: [owner.uid] }),
     createdAt: serverTimestamp(),
+    deletedAt: null,
   });
+  batch.set(memberRef(slug, owner.uid), {
+    ...zProjectMemberData.parse({
+      uid: owner.uid,
+      role: "owner",
+      displayName: owner.displayName,
+      addedBy: owner.uid,
+    }),
+    addedAt: serverTimestamp(),
+  });
+  await batch.commit();
 }
 
 export async function updateProjectTitle(
@@ -234,29 +253,21 @@ export async function updateProjectTitle(
   await updateDoc(projectRef(slug), { title });
 }
 
-export async function addProjectMember(
+// -- Members --
+
+export async function getProjectMembers(
   slug: string,
-  uid: string,
-  role: UserProjectRole,
-): Promise<void> {
-  const batch = writeBatch(db);
-  batch.update(projectRef(slug), {
-    [`members.${uid}`]: role,
-    memberIds: arrayUnion(uid),
-  });
-  await batch.commit();
+): Promise<ProjectMemberDoc[]> {
+  const snap = await getDocs(collection(db, "projects", slug, "members"));
+  return snap.docs.map((d) => zProjectMemberDoc.parse(d.data()));
 }
 
-export async function removeProjectMember(
+export async function getMemberRole(
   slug: string,
   uid: string,
-): Promise<void> {
-  const batch = writeBatch(db);
-  batch.update(projectRef(slug), {
-    [`members.${uid}`]: deleteField(),
-    memberIds: arrayRemove(uid),
-  });
-  await batch.commit();
+): Promise<UserProjectRole | undefined> {
+  const snap = await getDoc(memberRef(slug, uid));
+  return snap.exists() ? zProjectMemberDoc.parse(snap.data()).role : undefined;
 }
 
 export async function updateProjectMemberRole(
@@ -264,25 +275,44 @@ export async function updateProjectMemberRole(
   uid: string,
   role: UserProjectRole,
 ): Promise<void> {
-  await updateDoc(projectRef(slug), { [`members.${uid}`]: role });
+  await updateDoc(memberRef(slug, uid), { role });
+}
+
+export async function removeProjectMember(
+  slug: string,
+  uid: string,
+): Promise<void> {
+  const batch = writeBatch(db);
+  batch.delete(memberRef(slug, uid));
+  batch.update(projectRef(slug), { memberIds: arrayRemove(uid) });
+  await batch.commit();
 }
 
 // -- Invitations --
 
-function invitationsCol() {
-  return collection(db, "invitations");
+// One invitation per (project, invitee), keyed by the invitee, so security
+// rules can find it when the invitee accepts.
+function invitationRef(projectId: string, toUserId: string) {
+  return doc(db, "projects", projectId, "invitations", toUserId);
 }
 
+function parseInvitation(snap: {
+  id: string;
+  data(): Record<string, unknown>;
+}): WithId<UserProjectInvitationDoc> {
+  return { id: snap.id, ...zUserProjectInvitationDoc.parse(snap.data()) };
+}
+
+/** Re-inviting overwrites any earlier invitation to the same user. */
 export async function createUserProjectInvitation(
   data: UserProjectInvitationData,
-): Promise<string> {
-  const ref = await addDoc(invitationsCol(), {
+): Promise<void> {
+  await setDoc(invitationRef(data.projectId, data.toUserId), {
     ...zUserProjectInvitationData.parse(data),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     deletedAt: null,
   });
-  return ref.id;
 }
 
 export async function getPendingUserProjectInvitations(
@@ -290,16 +320,13 @@ export async function getPendingUserProjectInvitations(
 ): Promise<WithId<UserProjectInvitationDoc>[]> {
   const snap = await getDocs(
     query(
-      invitationsCol(),
+      collectionGroup(db, "invitations"),
       where("toUserId", "==", toUserId),
       where("accepted", "==", null),
       where("deletedAt", "==", null),
     ),
   );
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...zUserProjectInvitationDoc.parse(d.data()),
-  }));
+  return snap.docs.map(parseInvitation);
 }
 
 export async function getProjectUserProjectInvitations(
@@ -307,65 +334,79 @@ export async function getProjectUserProjectInvitations(
 ): Promise<WithId<UserProjectInvitationDoc>[]> {
   const snap = await getDocs(
     query(
-      invitationsCol(),
-      where("projectId", "==", projectId),
+      collection(db, "projects", projectId, "invitations"),
       where("deletedAt", "==", null),
     ),
   );
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...zUserProjectInvitationDoc.parse(d.data()),
-  }));
+  return snap.docs.map(parseInvitation);
 }
 
-export async function acceptUserProjectInvitation(id: string): Promise<void> {
-  const snap = await getDoc(doc(invitationsCol(), id));
-  if (!snap.exists()) {
-    throw new Error(`Invitation ${id} not found`);
-  }
-  const inv = zUserProjectInvitationDoc.parse(snap.data());
-
+/**
+ * The invitee closes the invitation, creates their own member document and
+ * adds themselves to `memberIds` — one batch, so rules see all three at once.
+ */
+export async function acceptUserProjectInvitation(
+  invitation: UserProjectInvitationDoc,
+  displayName: string,
+): Promise<void> {
+  const { projectId, toUserId } = invitation;
   const batch = writeBatch(db);
-  batch.update(doc(invitationsCol(), id), {
+  batch.update(invitationRef(projectId, toUserId), {
     accepted: true,
     updatedAt: serverTimestamp(),
     deletedAt: serverTimestamp(),
   });
-  batch.update(projectRef(inv.projectId), {
-    [`members.${inv.toUserId}`]: inv.role,
-    memberIds: arrayUnion(inv.toUserId),
+  batch.set(memberRef(projectId, toUserId), {
+    ...zProjectMemberData.parse({
+      uid: toUserId,
+      role: invitation.role,
+      displayName,
+      addedBy: invitation.fromUserId,
+    }),
+    addedAt: serverTimestamp(),
   });
+  batch.update(projectRef(projectId), { memberIds: arrayUnion(toUserId) });
   await batch.commit();
 }
 
-export async function denyUserProjectInvitation(id: string): Promise<void> {
-  await updateDoc(doc(invitationsCol(), id), {
+export async function denyUserProjectInvitation(
+  projectId: string,
+  toUserId: string,
+): Promise<void> {
+  await updateDoc(invitationRef(projectId, toUserId), {
     accepted: false,
     updatedAt: serverTimestamp(),
     deletedAt: serverTimestamp(),
   });
 }
 
-export async function cancelUserProjectInvitation(id: string): Promise<void> {
-  await updateDoc(doc(invitationsCol(), id), {
+export async function cancelUserProjectInvitation(
+  projectId: string,
+  toUserId: string,
+): Promise<void> {
+  await updateDoc(invitationRef(projectId, toUserId), {
     deletedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 }
 
-export async function getUserByEmail(
-  email: string,
-): Promise<WithId<{ displayName: string; email: string }> | null> {
-  const snap = await getDocs(
-    query(collection(db, "users"), where("email", "==", email)),
-  );
-  if (snap.empty) {
-    return null;
-  }
-  const d = snap.docs[0];
-  return {
-    id: d.id,
-    email: d.data().email as string,
-    displayName: d.data().displayName as string,
-  };
+/** Mirrors `FindUserForInviteResult` in functions/src/findUserForInvite.ts. */
+export type FindUserForInviteResult =
+  | { status: "found"; uid: string; displayName: string }
+  | { status: "not-found" }
+  | { status: "ambiguous" };
+
+/**
+ * Looks a user up by display name. Runs server-side: `users` is not readable
+ * by other users, and display names live in Firebase Auth.
+ */
+export async function findUserForInvite(
+  projectId: string,
+  displayName: string,
+): Promise<FindUserForInviteResult> {
+  const call = httpsCallable<
+    { projectId: string; displayName: string },
+    FindUserForInviteResult
+  >(functions, "findUserForInvite");
+  return (await call({ projectId, displayName })).data;
 }

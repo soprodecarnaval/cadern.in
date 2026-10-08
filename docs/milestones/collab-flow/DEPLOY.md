@@ -63,6 +63,39 @@ belongs to another project. **Always dry-run first and read the output.**
 4. Verify: homepage lists the same scores; an export-app upload shows on the
    homepage and lands in both subcollections.
 
+## 3. Task 001 — members and invitations (PR #387)
+
+**Before merging:** run the read-only project audit against prod and settle M1b
+— see "Open" below:
+
+```fish
+npx tsx --env-file=.env.prod-scripts.local scripts/auditProjects.ts
+```
+
+It lists each project's owners and members (legacy map and member docs) and its
+live/deleted scores, and flags projects not solely owned by CADERNIN and scores
+with no project doc.
+
+**Cloud Functions prerequisite (first function, once per Firebase project):** the
+project must be on the Blaze plan with these APIs enabled, or the deploy fails:
+
+```fish
+gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com eventarc.googleapis.com --project cadernin-6c0d1
+```
+
+1. Merge → deploy ships hosting, rules and the `findUserForInvite` function.
+2. **Immediately** migrate to `202610081202`. Until M1b runs, the rules find no
+   member docs and deny role-gated writes (export-app uploads):
+   - `202610081200` M1 — `deletedAt: null` on projects and songbooks.
+   - `202610081201` M1b — project member docs.
+   - `202610081202` M1c — deletes legacy top-level invitations.
+3. Release the export app (reads roles from member docs).
+4. Verify: an export-app upload by a project editor succeeds; homepage unchanged.
+
 ## Open
 
-- Later slices (001–007) append their steps here as they are merged.
+- **M1b semantics.** The export app has been creating `Acervo @<name>` projects in
+  prod, so user projects with scores may exist. The audit decides between
+  "CADERNIN sole owner of every project" and converting each project's map.
+  No migration deletes scores or blobs either way.
+- Later slices (002–007) append their steps here as they are merged.

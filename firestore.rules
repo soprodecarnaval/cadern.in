@@ -3,12 +3,24 @@ rules_version='2'
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function projectData(projectId) {
-      return get(/databases/$(database)/documents/projects/$(projectId)).data;
+    function projectPath(projectId) {
+      return /databases/$(database)/documents/projects/$(projectId);
     }
 
+    function memberPath(projectId, uid) {
+      return /databases/$(database)/documents/projects/$(projectId)/members/$(uid);
+    }
+
+    function invitationPath(projectId, uid) {
+      return /databases/$(database)/documents/projects/$(projectId)/invitations/$(uid);
+    }
+
+    // Roles come from projects/{id}/members/{uid} (collab-flow §2.1.1). The
+    // legacy `members` map on the project doc grants nothing.
     function memberRole(projectId) {
-      return projectData(projectId).members[request.auth.uid];
+      return request.auth != null && exists(memberPath(projectId, request.auth.uid))
+        ? get(memberPath(projectId, request.auth.uid)).data.role
+        : 'none';
     }
 
     function isReviewer(projectId) {
@@ -34,19 +46,111 @@ service cloud.firestore {
 
     match /projects/{projectId} {
       allow read: if true;
+      // The creator's owner member doc is written in the same batch (see
+      // `members` below).
       allow create: if request.auth != null &&
-        // Creator must set themselves as owner
-        request.resource.data.members[request.auth.uid] == 'owner' &&
-        request.auth.uid in request.resource.data.memberIds;
+        request.resource.data.memberIds == [request.auth.uid] &&
+        request.resource.data.deletedAt == null &&
+        !('members' in request.resource.data);
       allow update: if request.auth != null && (
-        // Editors+ can update title and score-related fields
         (isEditor(projectId) && onlyUpdatingFields(['title'])) ||
-        // Admins+ can add/update members
-        (isAdmin(projectId) && onlyUpdatingFields(['members', 'memberIds', 'title'])) ||
-        // Owners can do anything
+        // memberIds is a query index only; admins keep it in sync with the
+        // member docs, and it grants nothing.
+        (isAdmin(projectId) && onlyUpdatingFields(['memberIds'])) ||
+        isJoiningByInvitation(projectId) ||
         isOwner(projectId)
       );
       allow delete: if request.auth != null && isOwner(projectId);
+
+      // An invitee accepting adds exactly themselves to memberIds, in the
+      // batch that creates their member doc.
+      function isJoiningByInvitation(projectId) {
+        let before = resource.data.memberIds.toSet();
+        let after = request.resource.data.memberIds.toSet();
+        return onlyUpdatingFields(['memberIds']) &&
+          after.difference(before) == [request.auth.uid].toSet() &&
+          before.difference(after).size() == 0 &&
+          existsAfter(memberPath(projectId, request.auth.uid));
+      }
+
+      match /members/{uid} {
+        allow read: if true;
+        allow create: if request.auth != null &&
+          request.resource.data.uid == uid && (
+            isCreatorBootstrap(projectId, uid) ||
+            // Owners add anyone but themselves, never as a second owner.
+            (isOwner(projectId) && uid != request.auth.uid &&
+              request.resource.data.role != 'owner') ||
+            (isAdmin(projectId) &&
+              request.resource.data.role in ['editor', 'reviewer']) ||
+            isAcceptingInvitation(projectId, uid)
+          );
+        allow update: if request.auth != null &&
+          onlyUpdatingFields(['role']) && (
+            (isOwner(projectId) && uid != request.auth.uid &&
+              resource.data.role != 'owner' &&
+              request.resource.data.role != 'owner') ||
+            (isAdmin(projectId) &&
+              resource.data.role in ['editor', 'reviewer'] &&
+              request.resource.data.role in ['editor', 'reviewer'])
+          );
+        // Owners can't remove themselves: a project always keeps its owner.
+        allow delete: if request.auth != null &&
+          isOwner(projectId) && uid != request.auth.uid;
+
+        // The project and its creator's owner doc are written in one batch.
+        // `exists` sees the pre-batch state, `getAfter` the post-batch one.
+        function isCreatorBootstrap(projectId, uid) {
+          return uid == request.auth.uid &&
+            request.resource.data.role == 'owner' &&
+            !exists(projectPath(projectId)) &&
+            getAfter(projectPath(projectId)).data.memberIds == [uid];
+        }
+
+        // The invitee creates their own doc at exactly the invited role, in
+        // the batch that closes the invitation.
+        function isAcceptingInvitation(projectId, uid) {
+          let invitation = invitationPath(projectId, uid);
+          return uid == request.auth.uid &&
+            exists(invitation) &&
+            get(invitation).data.accepted == null &&
+            get(invitation).data.deletedAt == null &&
+            get(invitation).data.role == request.resource.data.role &&
+            getAfter(invitation).data.accepted == true;
+        }
+      }
+
+      // Keyed by invitee, so the accept rule above can find it.
+      match /invitations/{uid} {
+        allow read: if request.auth != null &&
+          (uid == request.auth.uid || isAdmin(projectId));
+        // (Re-)invite: overwrites any earlier invitation to the same user.
+        allow create, update: if request.auth != null &&
+          isAdmin(projectId) &&
+          request.resource.data.role in ['editor', 'reviewer'] &&
+          request.resource.data.toUserId == uid &&
+          request.resource.data.projectId == projectId &&
+          request.resource.data.fromUserId == request.auth.uid &&
+          request.resource.data.accepted == null &&
+          request.resource.data.deletedAt == null;
+        // Invitee accepts or declines, once.
+        allow update: if request.auth != null &&
+          uid == request.auth.uid &&
+          resource.data.accepted == null &&
+          request.resource.data.accepted is bool &&
+          onlyUpdatingFields(['accepted', 'updatedAt', 'deletedAt']);
+        // Admin cancels.
+        allow update: if request.auth != null &&
+          isAdmin(projectId) &&
+          onlyUpdatingFields(['deletedAt', 'updatedAt']);
+        allow delete: if false;
+      }
+    }
+
+    // "My pending invitations" across projects.
+    match /{path=**}/invitations/{invitationId} {
+      allow read: if request.auth != null &&
+        resource.data.toUserId == request.auth.uid;
     }
 
     match /scores/{scoreId} {
@@ -92,23 +196,6 @@ service cloud.firestore {
         isEditor(resource.data.projectId);
       allow delete: if request.auth != null &&
         isAdmin(resource.data.projectId);
-    }
-
-    match /invitations/{invitationId} {
-      // Recipient can read their own invitations; admins can read project invitations
-      allow read: if request.auth != null && (
-        resource.data.toUserId == request.auth.uid ||
-        isAdmin(resource.data.projectId)
-      );
-      // Admins+ can send invitations
-      allow create: if request.auth != null &&
-        isAdmin(request.resource.data.projectId) &&
-        request.resource.data.fromUserId == request.auth.uid;
-      // Recipient can accept/deny; admins can cancel (set deletedAt)
-      allow update: if request.auth != null && (
-        resource.data.toUserId == request.auth.uid ||
-        isAdmin(resource.data.projectId)
-      );
     }
 
     function onlyUpdatingFields(fields) {

@@ -31,7 +31,7 @@ baseline, a rules test harness, and the `ScoreRevision` naming in code and data.
    auth), `@firebase/rules-unit-testing` dev dep, a separate vitest project / config
    for rules tests, `npm run test:rules` wrapping `firebase emulators:exec`.
    `firebase-tools` is a dev dep; the emulators need **Java 21+**. CI job
-   `.github/workflows/test-rules.yaml` runs on PRs touching rules or tests.
+   `.github/workflows/test-emulators.yaml` runs on PRs touching rules, tests or functions.
 5. ✅ Baseline tests for the *current* `firestore.rules` / `storage.rules`, so the
    later rewrites show diffs in behaviour, not just in text. Tests named
    `BUG (NNN)` pin behaviour slice NNN changes.

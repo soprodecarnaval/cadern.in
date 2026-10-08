@@ -8,9 +8,9 @@ import {
   Table,
 } from "react-bootstrap";
 import { Link, useParams } from "react-router-dom";
-import { useAuth } from "../auth";
 import { getProjectBySlug, getProjectScores, type WithId } from "../lib/db";
-import { memberRole, isAdmin } from "../lib/roles";
+import { isAdmin } from "../lib/roles";
+import { useMemberRole } from "../lib/useMemberRole";
 import type { ProjectDoc, UserProjectRole, ScoreDoc } from "../../types/docs";
 
 const ROLE_LABELS: Record<UserProjectRole, string> = {
@@ -29,7 +29,7 @@ const ROLE_BADGE_VARIANTS: Record<UserProjectRole, string> = {
 
 export function PublicProjectPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { currentUser } = useAuth();
+  const role = useMemberRole(slug);
 
   const [project, setProject] = useState<WithId<ProjectDoc> | null | "loading">(
     "loading",
@@ -70,8 +70,8 @@ export function PublicProjectPage() {
     );
   }
 
-  const myRole = currentUser ? memberRole(project, currentUser.uid) : undefined;
-  const canManage = currentUser ? isAdmin(project, currentUser.uid) : false;
+  const myRole = role === "loading" ? undefined : role;
+  const canManage = isAdmin(myRole);
 
   return (
     <Container className="mt-4">

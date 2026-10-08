@@ -28,20 +28,40 @@ export type UserDoc = z.infer<typeof zUserDoc>;
 export const zUserProjectRole = z.enum(["owner", "admin", "editor", "reviewer"]);
 export type UserProjectRole = z.infer<typeof zUserProjectRole>;
 
+export const zInvitableRole = z.enum(["editor", "reviewer"]);
+export type InvitableRole = z.infer<typeof zInvitableRole>;
+
 export const zProjectCreateData = z.object({
   title: z.string(),
-  members: z.record(zUserProjectRole),
 });
 export type ProjectCreateData = z.infer<typeof zProjectCreateData>;
 
 export const zProjectData = z.object({
   title: z.string(),
   slug: z.string(),
-  members: z.record(zUserProjectRole),
+  // Query index for "my projects" only — never consulted for permissions.
   memberIds: z.array(z.string()),
+  // Legacy role map, superseded by `projects/{id}/members`. Read only by
+  // flag-off code; dropped in collab-flow M9.
+  members: z.record(zUserProjectRole).optional(),
 });
-export const zProjectDoc = zProjectData.extend({ createdAt: zTimestamp });
+export const zProjectDoc = zProjectData.extend({
+  createdAt: zTimestamp,
+  // Optional until collab-flow M1 backfills it.
+  deletedAt: zTimestamp.nullable().optional(),
+});
 export type ProjectDoc = z.infer<typeof zProjectDoc>;
+
+export const zProjectMemberData = z.object({
+  uid: z.string(),
+  role: zUserProjectRole,
+  displayName: z.string(),
+  addedBy: z.string(),
+});
+export const zProjectMemberDoc = zProjectMemberData.extend({
+  addedAt: zTimestamp,
+});
+export type ProjectMemberDoc = z.infer<typeof zProjectMemberDoc>;
 
 export const zScoreData = z.object({
   title: z.string(),
@@ -116,8 +136,12 @@ export const zUserProjectInvitationData = z.object({
   fromUserId: z.string(),
   toUserId: z.string(),
   projectId: z.string(),
-  role: zUserProjectRole,
+  role: zInvitableRole,
   accepted: z.boolean().nullable(),
+  // Denormalized: neither side can read the other's user record.
+  projectTitle: z.string(),
+  fromDisplayName: z.string(),
+  toDisplayName: z.string(),
 });
 export const zUserProjectInvitationDoc = zUserProjectInvitationData.extend({
   createdAt: zTimestamp,
