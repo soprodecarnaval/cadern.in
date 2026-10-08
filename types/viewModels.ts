@@ -26,6 +26,7 @@ export type ScoreViewModel = {
   composer: string;
   sub: string;
   tags: string[];
+  projectId: string;
   projectTitle: string;
   latestRevision: ScoreRevisionViewModel;
 };

@@ -15,12 +15,20 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
+import { FirebaseError } from "firebase/app";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
+import { newRevisionId, revisionSlug } from "./revisionId";
 import {
   zScoreDoc,
   zScoreData,
   zScoreMetadata,
+  zScoreLinkData,
+  zScoreLinkDoc,
+  zSongbookData,
+  zSongbookDoc,
+  zSongbookRevisionData,
+  zSongbookRevisionDoc,
   zScoreRevisionDoc,
   zNewScoreRevisionData,
   zLegacyRevisionData,
@@ -32,6 +40,10 @@ import {
   zUserProjectInvitationDoc,
   zUserProjectInvitationData,
   type ScoreDoc,
+  type ScoreLinkDoc,
+  type SongbookDoc,
+  type SongbookRevisionContent,
+  type SongbookRevisionDoc,
   type ScoreMetadata,
   type NewScoreRevisionData,
   type ScoreRevisionDoc,
@@ -490,4 +502,182 @@ export async function findUserForInvite(
     FindUserForInviteResult
   >(functions, "findUserForInvite");
   return (await call({ projectId, displayName })).data;
+}
+
+// -- Score links --
+
+/** A score of another project, used by this one (collab-flow §2.1.3). */
+function scoreLinkRef(projectId: string, scoreId: string) {
+  return doc(db, "projects", projectId, "scoreLinks", scoreId);
+}
+
+export async function getProjectScoreLinks(
+  projectId: string,
+): Promise<ScoreLinkDoc[]> {
+  const snap = await getDocs(collection(db, "projects", projectId, "scoreLinks"));
+  return snap.docs
+    .map((d) => zScoreLinkDoc.parse(d.data()))
+    .filter((link) => !link.deletedAt);
+}
+
+// -- Songbooks --
+
+/** Deterministic, so a slug is unique within its project. */
+export function songbookId(projectId: string, slug: string): string {
+  return `${projectId}~${slug}`;
+}
+
+function songbookRef(id: string) {
+  return doc(db, "songbooks", id);
+}
+
+function songbookRevisionRef(songbookId: string, revisionId: string) {
+  return doc(db, "songbooks", songbookId, "songbookRevisions", revisionId);
+}
+
+const isPermissionDenied = (err: unknown) =>
+  err instanceof FirebaseError && err.code === "permission-denied";
+
+/**
+ * `null` when it doesn't exist or the caller may not see it (unpublished and
+ * not a member) — the two are indistinguishable by design.
+ */
+export async function getSongbook(
+  projectId: string,
+  slug: string,
+): Promise<WithId<SongbookDoc> | null> {
+  try {
+    const snap = await getDoc(songbookRef(songbookId(projectId, slug)));
+    return snap.exists()
+      ? { id: snap.id, ...zSongbookDoc.parse(snap.data()) }
+      : null;
+  } catch (err) {
+    if (isPermissionDenied(err)) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * A project's live songbooks. Non-members must pass `publishedOnly`: the
+ * rules only let them query what they can read.
+ */
+export async function getProjectSongbooks(
+  projectId: string,
+  { publishedOnly }: { publishedOnly: boolean },
+): Promise<WithId<SongbookDoc>[]> {
+  const constraints = [
+    where("projectId", "==", projectId),
+    where("deletedAt", "==", null),
+    ...(publishedOnly ? [where("isPublished", "==", true)] : []),
+  ];
+  const snap = await getDocs(query(collection(db, "songbooks"), ...constraints));
+  return snap.docs.map((d) => ({ id: d.id, ...zSongbookDoc.parse(d.data()) }));
+}
+
+export async function getSongbookRevision(
+  songbookId: string,
+  revisionId: string,
+): Promise<WithId<SongbookRevisionDoc> | null> {
+  const snap = await getDoc(songbookRevisionRef(songbookId, revisionId));
+  return snap.exists()
+    ? { id: snap.id, ...zSongbookRevisionDoc.parse(snap.data()) }
+    : null;
+}
+
+/** Newest first. Members only. */
+export async function getSongbookRevisions(
+  songbookId: string,
+): Promise<WithId<SongbookRevisionDoc>[]> {
+  const snap = await getDocs(
+    collection(db, "songbooks", songbookId, "songbookRevisions"),
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...zSongbookRevisionDoc.parse(d.data()) }))
+    .sort((a, b) => b.revisionNumber - a.revisionNumber);
+}
+
+/**
+ * Creates the songbook with its first revision, linking in the same batch
+ * any scores that belong to other projects (`links`).
+ */
+export async function createSongbook(input: {
+  projectId: string;
+  slug: string;
+  title: string;
+  content: SongbookRevisionContent;
+  createdBy: string;
+  links: { scoreId: string; sourceProjectId: string }[];
+}): Promise<string> {
+  const id = songbookId(input.projectId, input.slug);
+  const revisionId = newRevisionId(revisionSlug(input.title, new Date()));
+  const batch = writeBatch(db);
+  for (const link of input.links) {
+    batch.set(scoreLinkRef(input.projectId, link.scoreId), {
+      ...zScoreLinkData.parse({ ...link, addedBy: input.createdBy }),
+      addedAt: serverTimestamp(),
+      deletedAt: null,
+    });
+  }
+  batch.set(songbookRef(id), {
+    ...zSongbookData.parse({
+      title: input.title,
+      projectId: input.projectId,
+      slug: input.slug,
+      currentRevisionId: revisionId,
+      isPublished: false,
+    }),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    deletedAt: null,
+  });
+  batch.set(songbookRevisionRef(id, revisionId), {
+    ...zSongbookRevisionData.parse({
+      ...input.content,
+      revisionNumber: 1,
+      prevRevisionId: null,
+      createdBy: input.createdBy,
+      note: "",
+    }),
+    createdAt: serverTimestamp(),
+  });
+  await batch.commit();
+  return id;
+}
+
+/**
+ * Copy-on-write: a new revision on top of the current one, which it then
+ * replaces as `currentRevisionId` — in one transaction, so concurrent edits
+ * retry instead of overwriting (collab-flow §5.5).
+ */
+export async function createSongbookRevision(
+  id: string,
+  content: SongbookRevisionContent,
+  input: { createdBy: string; note: string },
+): Promise<string> {
+  return runTransaction(db, async (tx) => {
+    const songbookSnap = await tx.get(songbookRef(id));
+    const songbook = zSongbookDoc.parse(songbookSnap.data());
+    const prevSnap = await tx.get(
+      songbookRevisionRef(id, songbook.currentRevisionId),
+    );
+    const prev = zSongbookRevisionDoc.parse(prevSnap.data());
+    const revisionId = newRevisionId(revisionSlug(songbook.title, new Date()));
+    tx.set(songbookRevisionRef(id, revisionId), {
+      ...zSongbookRevisionData.parse({
+        ...content,
+        revisionNumber: prev.revisionNumber + 1,
+        prevRevisionId: songbook.currentRevisionId,
+        createdBy: input.createdBy,
+        note: input.note,
+      }),
+      createdAt: serverTimestamp(),
+    });
+    tx.update(songbookRef(id), {
+      currentRevisionId: revisionId,
+      updatedAt: serverTimestamp(),
+    });
+    return revisionId;
+  });
 }
