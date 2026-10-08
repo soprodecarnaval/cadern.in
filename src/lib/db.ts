@@ -259,6 +259,10 @@ export async function getProjectBySlug(
 /** @deprecated use getProjectBySlug */
 export const getProject = getProjectBySlug;
 
+// Filtered in code, not with `where("deletedAt", "==", null)`: that would also
+// drop projects created before the field existed.
+const isLive = (project: ProjectDoc) => !project.deletedAt;
+
 export async function getUserMemberProjects(
   uid: string,
 ): Promise<WithId<ProjectDoc>[]> {
@@ -268,12 +272,12 @@ export async function getUserMemberProjects(
       where("memberIds", "array-contains", uid),
     ),
   );
-  return snap.docs.map(parseProject);
+  return snap.docs.map(parseProject).filter(isLive);
 }
 
 export async function getAllProjects(): Promise<WithId<ProjectDoc>[]> {
   const snap = await getDocs(collection(db, "projects"));
-  return snap.docs.map(parseProject);
+  return snap.docs.map(parseProject).filter(isLive);
 }
 
 function memberRef(slug: string, uid: string) {
@@ -302,6 +306,24 @@ export async function createProject(
     }),
     addedAt: serverTimestamp(),
   });
+  await batch.commit();
+}
+
+/**
+ * Soft-deletes the project, cancelling its pending invitations in the same
+ * batch so they leave invitees' inboxes. Its scores and members stay; nothing
+ * under a deleted project can be written any more (firestore.rules `alive`).
+ */
+export async function softDeleteProject(slug: string): Promise<void> {
+  const pending = await getProjectUserProjectInvitations(slug);
+  const batch = writeBatch(db);
+  batch.update(projectRef(slug), { deletedAt: serverTimestamp() });
+  for (const inv of pending) {
+    batch.update(invitationRef(slug, inv.toUserId), {
+      deletedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
   await batch.commit();
 }
 

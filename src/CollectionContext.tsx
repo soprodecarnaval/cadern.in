@@ -39,11 +39,14 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
   );
 
   const revisionsByScoreId = new Map(revisionDocs.map((r) => [r.scoreId, r]));
+  // getAllProjects returns live projects only; a deleted project hides its
+  // scores (collab-flow §6).
+  const liveProjectIds = new Set(projectDocs.map((p) => p.id));
 
   const scores: ScoreViewModel[] = [];
 
   for (const song of songDocs) {
-    if (song.deletedAt) {
+    if (song.deletedAt || !liveProjectIds.has(song.projectId)) {
       continue;
     }
     const revision = revisionsByScoreId.get(song.id);

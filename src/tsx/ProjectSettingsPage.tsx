@@ -8,7 +8,7 @@ import {
   Spinner,
   Table,
 } from "react-bootstrap";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth";
 import {
   getProjectBySlug,
@@ -20,10 +20,12 @@ import {
   getProjectUserProjectInvitations,
   cancelUserProjectInvitation,
   findUserForInvite,
+  softDeleteProject,
   type WithId,
 } from "../lib/db";
 import {
   INVITABLE_ROLES,
+  canDeleteProject,
   canGrantRole,
   canInvite,
   canRemoveMember,
@@ -69,6 +71,7 @@ export function ProjectSettingsPage() {
   const { slug } = useParams<{ slug: string }>();
   const { currentUser } = useAuth();
 
+  const navigate = useNavigate();
   const myRole = useMemberRole(slug);
   const [project, setProject] = useState<WithId<ProjectDoc> | null | "loading">(
     "loading",
@@ -116,7 +119,7 @@ export function ProjectSettingsPage() {
     );
   }
 
-  if (!project || !currentUser) {
+  if (!project || project.deletedAt || !currentUser) {
     return (
       <Container className="mt-4">
         <Alert variant="danger">Projeto não encontrado ou acesso negado.</Alert>
@@ -439,6 +442,72 @@ export function ProjectSettingsPage() {
           </Table>
         </section>
       )}
+
+      {canDeleteProject(myRole) && (
+        <DeleteProjectSection
+          project={project}
+          onDeleted={() => void navigate("/projects")}
+        />
+      )}
     </Container>
+  );
+}
+
+/**
+ * Owner-only. Asks for the project's name before soft-deleting it, since its
+ * scores disappear with it and there is no restore in the app.
+ */
+function DeleteProjectSection({
+  project,
+  onDeleted,
+}: {
+  project: WithId<ProjectDoc>;
+  onDeleted: () => void;
+}) {
+  const [confirmation, setConfirmation] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPending(true);
+    setError("");
+    try {
+      await softDeleteProject(project.id);
+      onDeleted();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erro ao excluir");
+      setPending(false);
+    }
+  };
+
+  return (
+    <section className="mb-5 border border-danger rounded p-3">
+      <h5 className="text-danger">Zona de perigo</h5>
+      <p className="mb-2">
+        Excluir o projeto esconde todas as suas partituras e não pode ser
+        desfeito pelo site. Para confirmar, digite o nome do projeto:{" "}
+        <strong>{project.title}</strong>
+      </p>
+      <Form
+        onSubmit={(e) => void handleDelete(e)}
+        className="d-flex gap-2 align-items-start flex-wrap"
+      >
+        <Form.Control
+          value={confirmation}
+          onChange={(e) => setConfirmation(e.target.value)}
+          placeholder={project.title}
+          style={{ width: 240 }}
+        />
+        <Button
+          type="submit"
+          variant="danger"
+          disabled={pending || confirmation !== project.title}
+        >
+          {pending ? <Spinner animation="border" size="sm" /> : "Excluir projeto"}
+        </Button>
+      </Form>
+      {error && <div className="text-danger mt-2">{error}</div>}
+    </section>
   );
 }

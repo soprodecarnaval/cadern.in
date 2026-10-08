@@ -25,6 +25,9 @@ export function isReviewer(role: Role): boolean {
 
 export const canEditProjectTitle = isEditor;
 export const canInvite = isAdmin;
+export const canEditScoreMetadata = isAdmin;
+export const canDeleteProject = isOwner;
+export const canDeleteScore = isOwner;
 
 export const INVITABLE_ROLES: InvitableRole[] = ["reviewer", "editor"];
 // `owner` is never granted: a project has exactly one, and transferring it is

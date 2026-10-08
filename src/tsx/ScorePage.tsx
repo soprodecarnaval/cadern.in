@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Container, Spinner } from "react-bootstrap";
-import { useParams } from "react-router-dom";
-import { getScore, getScoreRevision, getProject } from "../lib/db";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  getScore,
+  getScoreRevision,
+  getProject,
+  softDeleteScore,
+} from "../lib/db";
 import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
-import { isAdmin } from "../lib/roles";
+import { canDeleteScore, canEditScoreMetadata } from "../lib/roles";
 import {
   resolveScoreMetadata,
   uploadedScoreMetadata,
@@ -44,6 +49,10 @@ async function loadScore(
   if (!rev) {
     throw new Error("Revisão não encontrada");
   }
+  // A deleted project hides its scores (collab-flow §6).
+  if (project?.deletedAt) {
+    throw new Error("Partitura não encontrada");
+  }
   const projectTitle = project?.title ?? song.projectId;
 
   return {
@@ -73,7 +82,9 @@ export function ScorePage() {
   }>();
   const [score, setScore] = useState<LoadedScore | null>(null);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const role = useMemberRole(
     FEATURE_FLAG_COLLAB_FLOW ? score?.projectId : undefined,
   );
@@ -88,6 +99,23 @@ export function ScorePage() {
       .then(setScore)
       .catch((e: unknown) => setError(e instanceof Error ? e.message : "Erro"));
   }, [scoreId, revisionId]);
+
+  const handleDelete = async () => {
+    if (
+      !score ||
+      !confirm(`Excluir "${score.title}"? Ela some do site e do projeto.`)
+    ) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await softDeleteScore(score.scoreId);
+      void navigate(`/projects/${encodeURIComponent(score.projectId)}`);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Erro ao excluir");
+      setDeleting(false);
+    }
+  };
 
   if (error) {
     return (
@@ -114,7 +142,17 @@ export function ScorePage() {
       <div className="d-flex align-items-center justify-content-between mb-3">
         <p className="text-muted mb-0">{score.projectTitle}</p>
         <div className="d-flex gap-2">
-          {role !== "loading" && isAdmin(role) && (
+          {role !== "loading" && canDeleteScore(role) && (
+            <Button
+              variant="outline-danger"
+              size="sm"
+              disabled={deleting}
+              onClick={() => void handleDelete()}
+            >
+              Excluir partitura
+            </Button>
+          )}
+          {role !== "loading" && canEditScoreMetadata(role) && (
             <Button
               variant="outline-primary"
               size="sm"
