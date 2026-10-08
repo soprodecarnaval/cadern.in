@@ -194,12 +194,15 @@ invitation per user per project — re-inviting overwrites.
 `toUserId == uid`, which needs a collection-group rule and a composite index
 (`toUserId`, `accepted`, `deletedAt`) in `firestore.indexes.json`.
 
-**Finding the invitee.** `getUserByEmail` (`db.ts`) queries `users` by email, but
-`users/{uid}` is readable only by its owner, so the query is **denied by the
-deployed rules** — invite-by-email is broken the same way acceptance is. Fix: a
-callable Cloud Function `findUserForInvite({ projectId, email })` that checks the
-caller is ADMIN+ of the project and returns `{ uid, displayName }` only. Email
-never leaves the server.
+**Finding the invitee.** `getUserByEmail` (`db.ts`) queried `users` by email, but
+`users/{uid}` is readable only by its owner — and nothing ever wrote `users/{uid}`
+docs, so it could not have worked either way. Invites are **by username**, which is
+the Firebase Auth `displayName`: a callable Cloud Function
+`findUserForInvite({ projectId, displayName })` checks the caller is ADMIN+ of the
+project, pages through Auth users for a trimmed, case-insensitive match, and
+returns `{ uid, displayName }`, "not found" or "ambiguous" — never an email.
+Display names are not unique, so an ambiguous match asks the invitee to rename.
+Username suggestions and email invites are future work (§8).
 
 > **Live bug this fixes.** `acceptUserProjectInvitation` (`src/lib/db.ts`)
 > batch-updates `projects/{pid}.members` as the invitee. The invitee holds no role
@@ -544,7 +547,7 @@ EDITOR+ on the *target* project only — no role in the source project.
 | 12 | ~~`storage.rules` path vs. upload path~~ | resolved on `main` (§3) |
 | 14 | invitation acceptance is **denied** — invitee has no role, so the `projects` update rule rejects it | invitations move to `projects/{pid}/invitations/{uid}`; invitee creates their own member doc, rule verifies the invitation; project rule lets the invitee add only themselves to `memberIds` (§2.1.2) |
 | 15 | `match /{path=**}/revisions/{id}` world-readable | kept for legacy `revisions` until M9, then removed; `scoreRevisions` needs no collection-group rule; songbook revisions use `songbookRevisions` so they are never swept in (§1) |
-| 16 | invite-by-email queries `users`, which rules deny | callable function `findUserForInvite` (§2.1.2) |
+| 16 | invite-by-email queries `users`, which rules deny (and nothing writes) | invite by username via callable function `findUserForInvite` (§2.1.2) |
 | 17 | no collection-group rule for invitations | added, invitee-only (`toUserId == auth.uid`) |
 | 18 | owner may demote/remove themselves | owner may not write or delete **their own** member doc; ownership transfer is a deferred admin-panel operation (§8) |
 | 19 | no score links | `projects/{pid}/scoreLinks/{scoreId}` ← EDITOR+ of `pid`, only for scores of other projects; fork containers must name a live link (§2.1.3, §5.3) |
@@ -1133,6 +1136,9 @@ published songbooks already answer "what is public".)
 - **Project ownership transfer UI** (already in `TECH_DEBT.md`). Prerequisite for
   moving migrated projects off the CADERNIN account (§7.1).
 - **Comment notifications** (email / in-app).
+- **Invites: username suggestions and email invites.** v1 invites by exact
+  username (§2.1.2); add search-as-you-type over usernames, and invitations to an
+  email address that resolve on sign-up.
 - **cadern.in admin panel.** A cross-project operator surface, gated on a
   site-admin claim rather than a project role. Home for:
   - restoring soft-deleted projects / scores / songbooks (no restore UI ships in v1;
@@ -1152,7 +1158,7 @@ numbered files:
 | # | Slice | Depends on |
 |---|---|---|
 | [000](000-foundations.md) | Foundations: flag rename, prod audit, emulator + rules tests, `ScoreRevision` rename | — |
-| [001](001-members-invitations.md) | Members & invitations subcollections; fixes acceptance and invite-by-email | 000 |
+| [001](001-members-invitations.md) | Members & invitations subcollections; fixes acceptance; invite by username | 000 |
 | [002](002-score-revisions.md) | Score revision linked list, transactional upload, metadata cache/override | 000 |
 | [003](003-soft-deletes.md) | Soft deletes for project / score; read-path filtering | 001, 002 |
 | [004](004-songbooks.md) | Songbooks: persisted revisions, pins, covers, publishing, public page, songbook-driven homepage | 001, 002, 003 |
@@ -1199,7 +1205,9 @@ None blocking. Things to watch rather than decide now:
 | Members move to `projects/{pid}/members/{uid}`; `memberIds` kept as a query index only | §2.1.1 |
 | Member docs denormalize `displayName` only — no email, since they are public | §2.1.1 |
 | Invitations move to `projects/{pid}/invitations/{uid}`; invitee may add only themselves to `memberIds` | §2.1.2 |
-| Invite-by-email via a callable function; `users` stays owner-readable | §2.1.2 |
+| Invite by username (Auth `displayName`) via a callable function; `users` stays owner-readable | §2.1.2 |
+| Display names come from Firebase Auth; nothing reads `users/{uid}` | §2.1.2 |
+| `owner` is never granted; a project has exactly one owner | §4.3.1 |
 | Owners cannot modify or delete their own member doc | §4.3.1 |
 | `metadataOverride` kept as an admin layer over revision metadata | §2.2 |
 | Existing revision ids kept; new ones are timestamp-based | §2.3 |
