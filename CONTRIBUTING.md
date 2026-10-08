@@ -68,6 +68,10 @@
 - Instale dependências: `npm install`
 - Execute o projeto: `npm run dev`
 - Testes das regras de segurança (Firestore/Storage): `npm run test:rules` — sobe os emuladores do Firebase e exige **Java 21+**
+- Desenvolvimento local com os emuladores do Firebase (sem tocar em staging/produção, **Java 21+**):
+  1. `npm run emulators` — sobe auth, Firestore, Storage e Functions
+  2. `npm run emulators:seed` — apaga e popula os emuladores (usuários `owner|admin|editor|reviewer|outsider@dev.cadern.in`, senha `senha123`)
+  3. `npm run dev:emulators` — roda o site contra os emuladores, com `FEATURE_FLAG_COLLAB_FLOW` ligada
 
 ### 2. Criando Issues
 **SEMPRE** crie uma issue antes de codificar. Use os templates apropriados:
