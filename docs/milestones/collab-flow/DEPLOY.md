@@ -65,8 +65,23 @@ belongs to another project. **Always dry-run first and read the output.**
 
 ## 3. Task 001 — members and invitations (PR #387)
 
-**Before merging:** run the project audit (pending: `scripts/auditProjects.ts`)
-against prod and settle M1b — see "Open" below.
+**Before merging:** run the read-only project audit against prod and settle M1b
+— see "Open" below:
+
+```fish
+npx tsx --env-file=.env.prod-scripts.local scripts/auditProjects.ts
+```
+
+It lists each project's owners and members (legacy map and member docs) and its
+live/deleted scores, and flags projects not solely owned by CADERNIN and scores
+with no project doc.
+
+**Cloud Functions prerequisite (first function, once per Firebase project):** the
+project must be on the Blaze plan with these APIs enabled, or the deploy fails:
+
+```fish
+gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com run.googleapis.com eventarc.googleapis.com --project cadernin-6c0d1
+```
 
 1. Merge → deploy ships hosting, rules and the `findUserForInvite` function.
 2. **Immediately** migrate to `202610081202`. Until M1b runs, the rules find no
