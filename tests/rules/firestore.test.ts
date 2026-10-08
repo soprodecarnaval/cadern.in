@@ -251,69 +251,160 @@ describe("members", () => {
   });
 });
 
+const META = { title: "Olha pro céu", composer: "C", sub: "S", tags: [] };
+
 describe("scores", () => {
-  const score = {
-    title: "Nova",
+  const newScore = (uploadedBy = EDITOR) => ({
     projectId: PROJECT,
-    uploadedBy: EDITOR,
+    uploadedBy,
     latestRevisionId: "",
+    ...META,
+    cachedMetadata: META,
+    published: null,
     deletedAt: null,
-  };
+  });
+  const ref = (db: Firestore, id = SCORE) => doc(db, "scores", id);
 
   it("is world-readable", async () => {
     await seedProject(testEnv());
-    await assertSucceeds(getDoc(doc(as(null), "scores", SCORE)));
+    await assertSucceeds(getDoc(ref(as(null))));
   });
 
-  it("lets an editor create a score", async () => {
+  it("lets an editor create an empty score as its uploader", async () => {
     await seedProject(testEnv());
-    await assertSucceeds(
-      setDoc(doc(as(EDITOR), "scores", "acervo-nova"), score),
+    await assertSucceeds(setDoc(ref(as(EDITOR), "acervo-nova"), newScore()));
+  });
+
+  it("denies creating a score for someone else, with revisions or published", async () => {
+    await seedProject(testEnv());
+    const db = as(EDITOR);
+    await assertFails(setDoc(ref(db, "acervo-nova"), newScore(OWNER)));
+    await assertFails(
+      setDoc(ref(db, "acervo-nova"), { ...newScore(), latestRevisionId: "1" }),
+    );
+    await assertFails(
+      setDoc(ref(db, "acervo-nova"), {
+        ...newScore(),
+        published: { revisionId: "1", songbookIds: [] },
+      }),
     );
   });
 
   it("denies a reviewer or outsider creating a score", async () => {
     await seedProject(testEnv());
+    await assertFails(setDoc(ref(as(REVIEWER), "acervo-nova"), newScore()));
+    await assertFails(setDoc(ref(as(OUTSIDER), "acervo-nova"), newScore()));
+  });
+
+  it("denies an editor editing metadata or the pointer directly", async () => {
+    await seedProject(testEnv());
+    await assertFails(updateDoc(ref(as(EDITOR)), { title: "Outro" }));
+    await assertFails(updateDoc(ref(as(EDITOR)), { latestRevisionId: "2" }));
+  });
+
+  it("lets an admin set metadataOverride, but not an editor", async () => {
+    await seedProject(testEnv());
+    const override = { metadataOverride: { composer: "Fixed" } };
+    await assertSucceeds(updateDoc(ref(as(ADMIN)), override));
+    await assertFails(updateDoc(ref(as(EDITOR)), override));
+  });
+
+  it("lets the creator abandon a score only while it has no revision", async () => {
+    await seedProject(testEnv());
+    await seed((db) => setDoc(ref(db, "acervo-nova"), newScore()));
     await assertFails(
-      setDoc(doc(as(REVIEWER), "scores", "acervo-nova"), score),
+      updateDoc(ref(as(REVIEWER), "acervo-nova"), {
+        deletedAt: serverTimestamp(),
+      }),
     );
+    await assertSucceeds(
+      updateDoc(ref(as(EDITOR), "acervo-nova"), {
+        deletedAt: serverTimestamp(),
+      }),
+    );
+    // SCORE already has a revision.
     await assertFails(
-      setDoc(doc(as(OUTSIDER), "scores", "acervo-nova"), score),
+      updateDoc(ref(as(EDITOR)), { deletedAt: serverTimestamp() }),
     );
   });
 
-  it("BUG (002): lets an editor update any score field", async () => {
+  it("lets the owner soft-delete a score", async () => {
     await seedProject(testEnv());
     await assertSucceeds(
-      updateDoc(doc(as(EDITOR), "scores", SCORE), { title: "Outro" }),
+      updateDoc(ref(as(OWNER)), { deletedAt: serverTimestamp() }),
+    );
+  });
+
+  it("denies writing the published marker", async () => {
+    await seedProject(testEnv());
+    await assertFails(
+      updateDoc(ref(as(OWNER)), {
+        published: { revisionId: "1", songbookIds: [] },
+      }),
     );
   });
 
   it("BUG (003): lets an admin hard-delete a score", async () => {
     await seedProject(testEnv());
-    await assertSucceeds(deleteDoc(doc(as(ADMIN), "scores", SCORE)));
+    await assertSucceeds(deleteDoc(ref(as(ADMIN))));
   });
 
   it("denies an editor deleting a score", async () => {
     await seedProject(testEnv());
-    await assertFails(deleteDoc(doc(as(EDITOR), "scores", SCORE)));
+    await assertFails(deleteDoc(ref(as(EDITOR))));
   });
 });
 
-describe("score revisions (legacy `revisions`)", () => {
-  const revision = { revisionNumber: 2, uploadedBy: EDITOR, isLatest: true };
+describe("score revisions", () => {
+  // SCORE's latest revision is "1" (seedProject).
+  const revision = (prevRevisionId: string | null, uploadedBy = EDITOR) => ({
+    revisionNumber: 2,
+    uploadedBy,
+    prevRevisionId,
+    slug: "olha-pro-ceu-20261008T140509",
+    metadata: META,
+    origin: { type: "upload" },
+  });
+  const newRef = (db: Firestore, id = "2", scoreId = SCORE) =>
+    doc(db, "scores", scoreId, "scoreRevisions", id);
+  const legacyRef = (db: Firestore, id: string, scoreId = SCORE) =>
+    doc(db, "scores", scoreId, "revisions", id);
 
-  it("is world-readable, including the collection-group query", async () => {
+  async function seedLatest() {
     await seedProject(testEnv());
-    await seed((db) =>
-      setDoc(doc(db, "scores", SCORE, "revisions", "1"), {
-        ...revision,
+    await seed(async (db) => {
+      await setDoc(newRef(db, "1"), { ...revision(null), revisionNumber: 1 });
+      await setDoc(legacyRef(db, "1"), {
+        ...revision(null),
         revisionNumber: 1,
-      }),
-    );
-    await assertSucceeds(
-      getDoc(doc(as(null), "scores", SCORE, "revisions", "1")),
-    );
+        isLatest: true,
+      });
+    });
+  }
+
+  /** The writes commitScoreRevision makes in its transaction. */
+  function commitBatch(
+    db: Firestore,
+    data: ReturnType<typeof revision>,
+    { id = "2", scoreId = SCORE, prev = "1" as string | null } = {},
+  ) {
+    const batch = writeBatch(db);
+    batch.set(newRef(db, id, scoreId), data);
+    batch.set(legacyRef(db, id, scoreId), { ...data, isLatest: true });
+    if (prev) {
+      batch.update(legacyRef(db, prev, scoreId), { isLatest: false });
+    }
+    batch.update(doc(db, "scores", scoreId), {
+      latestRevisionId: id,
+      cachedMetadata: META,
+      ...META,
+    });
+    return batch;
+  }
+
+  it("is world-readable, including the legacy collection-group query", async () => {
+    await seedLatest();
+    await assertSucceeds(getDoc(newRef(as(null), "1")));
     await assertSucceeds(
       getDocs(
         query(
@@ -324,81 +415,62 @@ describe("score revisions (legacy `revisions`)", () => {
     );
   });
 
-  it("lets an editor create a revision", async () => {
-    await seedProject(testEnv());
-    await assertSucceeds(
-      setDoc(doc(as(EDITOR), "scores", SCORE, "revisions", "2"), revision),
-    );
+  it("lets an editor append a revision to the chain", async () => {
+    await seedLatest();
+    await assertSucceeds(commitBatch(as(EDITOR), revision("1")).commit());
   });
 
-  it("denies a reviewer creating a revision", async () => {
-    await seedProject(testEnv());
-    await assertFails(
-      setDoc(doc(as(REVIEWER), "scores", SCORE, "revisions", "2"), revision),
-    );
-  });
-
-  it("BUG (002): lets an editor rewrite any revision field", async () => {
+  it("lets an editor add the first revision of a new score", async () => {
     await seedProject(testEnv());
     await seed((db) =>
-      setDoc(doc(db, "scores", SCORE, "revisions", "1"), revision),
-    );
-    await assertSucceeds(
-      updateDoc(doc(as(EDITOR), "scores", SCORE, "revisions", "1"), {
-        uploadedBy: OUTSIDER,
+      setDoc(doc(db, "scores", "acervo-nova"), {
+        projectId: PROJECT,
+        uploadedBy: EDITOR,
+        latestRevisionId: "",
       }),
     );
-  });
-});
-
-describe("score revisions (`scoreRevisions`)", () => {
-  const revision = { revisionNumber: 2, uploadedBy: EDITOR };
-  const ref = (db: Firestore, id = "2") =>
-    doc(db, "scores", SCORE, "scoreRevisions", id);
-
-  it("is world-readable", async () => {
-    await seedProject(testEnv());
-    await seed((db) => setDoc(ref(db, "1"), revision));
-    await assertSucceeds(getDoc(ref(as(null), "1")));
+    await assertSucceeds(
+      commitBatch(as(EDITOR), revision(null), {
+        id: "1",
+        scoreId: "acervo-nova",
+        prev: null,
+      }).commit(),
+    );
   });
 
-  it("lets an editor create a revision", async () => {
-    await seedProject(testEnv());
-    await assertSucceeds(setDoc(ref(as(EDITOR)), revision));
+  it("denies forking or skipping the chain", async () => {
+    await seedLatest();
+    await assertFails(commitBatch(as(EDITOR), revision(null)).commit());
+    await assertFails(commitBatch(as(EDITOR), revision("0")).commit());
   });
 
-  it("denies a reviewer or outsider creating a revision", async () => {
-    await seedProject(testEnv());
-    await assertFails(setDoc(ref(as(REVIEWER)), revision));
-    await assertFails(setDoc(ref(as(OUTSIDER)), revision));
+  it("denies a revision that doesn't become the latest", async () => {
+    await seedLatest();
+    await assertFails(setDoc(newRef(as(EDITOR)), revision("1")));
+  });
+
+  it("denies a reviewer, or an editor posing as another uploader", async () => {
+    await seedLatest();
+    await assertFails(
+      commitBatch(as(REVIEWER), revision("1", REVIEWER)).commit(),
+    );
+    await assertFails(commitBatch(as(EDITOR), revision("1", OWNER)).commit());
   });
 
   it("denies everyone updating or deleting a revision", async () => {
-    await seedProject(testEnv());
-    await seed((db) => setDoc(ref(db, "1"), revision));
-    await assertFails(updateDoc(ref(as(OWNER), "1"), { notes: "x" }));
-    await assertFails(deleteDoc(ref(as(OWNER), "1")));
+    await seedLatest();
+    await assertFails(updateDoc(newRef(as(OWNER), "1"), { notes: "x" }));
+    await assertFails(deleteDoc(newRef(as(OWNER), "1")));
   });
 
-  it("accepts the dual-write batch uploadScore commits", async () => {
-    await seedProject(testEnv());
-    await seed((db) =>
-      setDoc(doc(db, "scores", SCORE, "revisions", "1"), {
-        revisionNumber: 1,
-        isLatest: true,
-      }),
+  it("lets an editor flip only isLatest on a legacy revision", async () => {
+    await seedLatest();
+    await assertSucceeds(
+      updateDoc(legacyRef(as(EDITOR), "1"), { isLatest: false }),
     );
-    const db = as(EDITOR);
-    const batch = writeBatch(db);
-    batch.set(ref(db), revision);
-    batch.set(doc(db, "scores", SCORE, "revisions", "2"), {
-      ...revision,
-      isLatest: true,
-    });
-    batch.update(doc(db, "scores", SCORE, "revisions", "1"), {
-      isLatest: false,
-    });
-    await assertSucceeds(batch.commit());
+    await assertFails(
+      updateDoc(legacyRef(as(EDITOR), "1"), { uploadedBy: OUTSIDER }),
+    );
   });
 });
 

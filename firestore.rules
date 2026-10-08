@@ -153,30 +153,69 @@ service cloud.firestore {
         resource.data.toUserId == request.auth.uid;
     }
 
+    function scorePath(scoreId) {
+      return /databases/$(database)/documents/scores/$(scoreId);
+    }
+
     match /scores/{scoreId} {
       allow read: if true;
+      // Created before its first revision, so storage rules can resolve the
+      // project while files upload (collab-flow §5.1).
       allow create: if request.auth != null &&
-        isEditor(request.resource.data.projectId);
-      allow update: if request.auth != null &&
-        isEditor(resource.data.projectId);
+        isEditor(request.resource.data.projectId) &&
+        request.resource.data.uploadedBy == request.auth.uid &&
+        request.resource.data.latestRevisionId == '' &&
+        request.resource.data.published == null &&
+        request.resource.data.deletedAt == null;
+      allow update: if request.auth != null && (
+        // A new revision moves the pointer and refreshes the cached (and
+        // legacy) metadata, committed together with the revision itself.
+        (isEditor(resource.data.projectId) &&
+          onlyUpdatingFields(['latestRevisionId', 'cachedMetadata',
+                              'title', 'composer', 'sub', 'tags']) &&
+          existsAfter(/databases/$(database)/documents/scores/$(scoreId)/scoreRevisions/$(request.resource.data.latestRevisionId))) ||
+        // The creator abandons a score whose first upload failed.
+        (isEditor(resource.data.projectId) &&
+          resource.data.uploadedBy == request.auth.uid &&
+          resource.data.latestRevisionId == '' &&
+          onlyUpdatingFields(['deletedAt'])) ||
+        (isAdmin(resource.data.projectId) &&
+          onlyUpdatingFields(['metadataOverride'])) ||
+        (isOwner(resource.data.projectId) && onlyUpdatingFields(['deletedAt']))
+      );
       allow delete: if request.auth != null &&
         isAdmin(resource.data.projectId);
 
+      // Legacy copy, read by flag-off code until collab-flow M9. Same data as
+      // `scoreRevisions`, plus `isLatest`, the only field that ever changes.
       match /revisions/{revisionId} {
         allow read: if true;
         allow create: if request.auth != null &&
-          isEditor(get(/databases/$(database)/documents/scores/$(scoreId)).data.projectId);
+          isEditor(get(scorePath(scoreId)).data.projectId) &&
+          request.resource.data.uploadedBy == request.auth.uid;
         allow update: if request.auth != null &&
-          isEditor(get(/databases/$(database)/documents/scores/$(scoreId)).data.projectId);
+          isEditor(get(scorePath(scoreId)).data.projectId) &&
+          onlyUpdatingFields(['isLatest']);
       }
 
-      // Successor of `revisions` (collab-flow §1, §2.3.1): written alongside it
-      // until the legacy subcollection is dropped, and never modified.
+      // Immutable. Each revision links to the one it supersedes and becomes
+      // the score's latest in the same commit, so the chain can neither fork
+      // nor skip (collab-flow §2.3).
       match /scoreRevisions/{revisionId} {
         allow read: if true;
         allow create: if request.auth != null &&
-          isEditor(get(/databases/$(database)/documents/scores/$(scoreId)).data.projectId);
+          isEditor(get(scorePath(scoreId)).data.projectId) &&
+          request.resource.data.uploadedBy == request.auth.uid &&
+          extendsChain(scoreId, revisionId);
         allow update, delete: if false;
+
+        function extendsChain(scoreId, revisionId) {
+          let latest = get(scorePath(scoreId)).data.latestRevisionId;
+          return (latest == ''
+              ? request.resource.data.prevRevisionId == null
+              : request.resource.data.prevRevisionId == latest) &&
+            getAfter(scorePath(scoreId)).data.latestRevisionId == revisionId;
+        }
       }
     }
 
