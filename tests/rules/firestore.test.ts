@@ -566,32 +566,236 @@ describe("score revisions", () => {
 });
 
 describe("songbooks", () => {
-  const songbook = (isPublished: boolean) => ({
+  const SB = `${PROJECT}~carnaval-2026`;
+  const content = (pins: Record<string, string> = { [SCORE]: "1" }) => ({
+    entries: [{ type: "score", scoreId: SCORE, order: 0, index: 1 }],
+    pins,
+    covers: {},
+  });
+  const container = (currentRevisionId = "r1", isPublished = false) => ({
     title: "Carnaval 2026",
     projectId: PROJECT,
     slug: "carnaval-2026",
+    currentRevisionId,
     isPublished,
-    entries: [],
+    deletedAt: null,
   });
-
-  it("lets anyone read a published songbook", async () => {
-    await seedProject(testEnv());
-    await seed((db) => setDoc(doc(db, "songbooks", "sb"), songbook(true)));
-    await assertSucceeds(getDoc(doc(as(null), "songbooks", "sb")));
+  const revision = (
+    revisionNumber: number,
+    prevRevisionId: string | null,
+    createdBy = ADMIN,
+    pins?: Record<string, string>,
+  ) => ({
+    ...content(pins),
+    revisionNumber,
+    prevRevisionId,
+    createdBy,
+    note: "",
   });
+  const sbRef = (db: Firestore, id = SB) => doc(db, "songbooks", id);
+  const revRef = (db: Firestore, rev: string) =>
+    doc(db, "songbooks", SB, "songbookRevisions", rev);
 
-  it("restricts an unpublished songbook to members", async () => {
+  async function seedSongbook(isPublished = false) {
     await seedProject(testEnv());
-    await seed((db) => setDoc(doc(db, "songbooks", "sb"), songbook(false)));
-    await assertFails(getDoc(doc(as(OUTSIDER), "songbooks", "sb")));
-    await assertSucceeds(getDoc(doc(as(REVIEWER), "songbooks", "sb")));
-  });
+    await seed(async (db) => {
+      await setDoc(sbRef(db), container("r1", isPublished));
+      await setDoc(revRef(db, "r1"), revision(1, null));
+    });
+  }
 
-  it("BUG (004): lets an editor create and publish a songbook", async () => {
-    await seedProject(testEnv());
-    await assertSucceeds(
-      setDoc(doc(as(EDITOR), "songbooks", "sb"), songbook(true)),
+  /** What createSongbook commits. */
+  function createBatch(db: Firestore, id = SB, slug = "carnaval-2026") {
+    const batch = writeBatch(db);
+    batch.set(sbRef(db, id), { ...container(), slug });
+    batch.set(
+      doc(db, "songbooks", id, "songbookRevisions", "r1"),
+      revision(1, null),
     );
+    return batch;
+  }
+
+  /** What createSongbookRevision commits. */
+  function reviseBatch(
+    db: Firestore,
+    data: ReturnType<typeof revision>,
+    rev = "r2",
+  ) {
+    const batch = writeBatch(db);
+    batch.set(revRef(db, rev), data);
+    batch.update(sbRef(db), { currentRevisionId: rev });
+    return batch;
+  }
+
+  it("lets an admin create a songbook with its first revision", async () => {
+    await seedProject(testEnv());
+    await assertSucceeds(createBatch(as(ADMIN)).commit());
+  });
+
+  it("denies an editor creating a songbook", async () => {
+    await seedProject(testEnv());
+    const db = as(EDITOR);
+    const batch = writeBatch(db);
+    batch.set(sbRef(db), container());
+    batch.set(revRef(db, "r1"), revision(1, null, EDITOR));
+    await assertFails(batch.commit());
+  });
+
+  it("denies an id that doesn't match project and slug", async () => {
+    await seedProject(testEnv());
+    await assertFails(createBatch(as(ADMIN), `${PROJECT}~outro`).commit());
+  });
+
+  it("denies creating a published songbook", async () => {
+    await seedProject(testEnv());
+    const db = as(ADMIN);
+    const batch = writeBatch(db);
+    batch.set(sbRef(db), container("r1", true));
+    batch.set(revRef(db, "r1"), revision(1, null));
+    await assertFails(batch.commit());
+  });
+
+  it("lets an admin revise anything on top of the current revision", async () => {
+    await seedSongbook();
+    const changed = { ...revision(2, "r1"), entries: [] };
+    await assertSucceeds(reviseBatch(as(ADMIN), changed).commit());
+  });
+
+  it("lets an editor re-pin, and nothing else", async () => {
+    await seedSongbook();
+    await assertSucceeds(
+      reviseBatch(
+        as(EDITOR),
+        revision(2, "r1", EDITOR, { [SCORE]: "2" }),
+      ).commit(),
+    );
+  });
+
+  it("denies an editor changing entries", async () => {
+    await seedSongbook();
+    await assertFails(
+      reviseBatch(as(EDITOR), {
+        ...revision(2, "r1", EDITOR),
+        entries: [],
+      }).commit(),
+    );
+  });
+
+  it("denies building on anything but the current revision", async () => {
+    await seedSongbook();
+    await seed(async (db) => {
+      await setDoc(revRef(db, "r2"), revision(2, "r1"));
+      await updateDoc(sbRef(db), { currentRevisionId: "r2" });
+    });
+    // An editor naming r1 as predecessor would roll back r2's entries.
+    await assertFails(
+      reviseBatch(as(EDITOR), revision(3, "r1", EDITOR), "r3").commit(),
+    );
+    await assertFails(reviseBatch(as(ADMIN), revision(3, "r1"), "r3").commit());
+  });
+
+  it("denies a revision that doesn't become current, or a reviewer's", async () => {
+    await seedSongbook();
+    await assertFails(setDoc(revRef(as(ADMIN), "r2"), revision(2, "r1")));
+    await assertFails(
+      reviseBatch(as(REVIEWER), revision(2, "r1", REVIEWER)).commit(),
+    );
+  });
+
+  it("makes revisions immutable", async () => {
+    await seedSongbook();
+    await assertFails(updateDoc(revRef(as(OWNER), "r1"), { note: "x" }));
+    await assertFails(deleteDoc(revRef(as(OWNER), "r1")));
+  });
+
+  it("restricts an unpublished songbook and its revisions to members", async () => {
+    await seedSongbook(false);
+    await assertFails(getDoc(sbRef(as(OUTSIDER))));
+    await assertFails(getDoc(revRef(as(OUTSIDER), "r1")));
+    await assertSucceeds(getDoc(sbRef(as(REVIEWER))));
+    await assertSucceeds(getDoc(revRef(as(REVIEWER), "r1")));
+  });
+
+  it("shows non-members only the current revision of a published songbook", async () => {
+    await seedSongbook(true);
+    await seed(async (db) => {
+      await setDoc(revRef(db, "r2"), revision(2, "r1"));
+      await updateDoc(sbRef(db), { currentRevisionId: "r2" });
+    });
+    await assertSucceeds(getDoc(sbRef(as(null))));
+    await assertSucceeds(getDoc(revRef(as(null), "r2")));
+    await assertFails(getDoc(revRef(as(null), "r1")));
+  });
+
+  it("lets non-members list published songbooks only", async () => {
+    await seedSongbook(true);
+    const list = (db: Firestore, publishedOnly: boolean) =>
+      getDocs(
+        query(
+          collection(db, "songbooks"),
+          where("projectId", "==", PROJECT),
+          where("deletedAt", "==", null),
+          ...(publishedOnly ? [where("isPublished", "==", true)] : []),
+        ),
+      );
+    await assertSucceeds(list(as(null), true));
+    await assertFails(list(as(null), false));
+    await assertSucceeds(list(as(REVIEWER), false));
+  });
+
+  it("lets only the owner publish or delete, and admins rename", async () => {
+    await seedSongbook();
+    await assertFails(updateDoc(sbRef(as(ADMIN)), { isPublished: true }));
+    await assertSucceeds(updateDoc(sbRef(as(OWNER)), { isPublished: true }));
+    await assertSucceeds(updateDoc(sbRef(as(ADMIN)), { title: "Outro" }));
+    await assertFails(updateDoc(sbRef(as(ADMIN)), { slug: "outro" }));
+    await assertFails(deleteDoc(sbRef(as(OWNER))));
+  });
+});
+
+describe("score links", () => {
+  const OTHER = "outro";
+  const OTHER_SCORE = "outro-samba";
+  const link = (sourceProjectId = OTHER, addedBy = EDITOR) => ({
+    scoreId: OTHER_SCORE,
+    sourceProjectId,
+    addedBy,
+    deletedAt: null,
+  });
+  const ref = (db: Firestore, scoreId = OTHER_SCORE) =>
+    doc(db, "projects", PROJECT, "scoreLinks", scoreId);
+
+  async function seedOtherScore() {
+    await seedProject(testEnv());
+    await seed((db) =>
+      setDoc(doc(db, "scores", OTHER_SCORE), {
+        projectId: OTHER,
+        uploadedBy: OUTSIDER,
+        latestRevisionId: "1",
+      }),
+    );
+  }
+
+  it("lets an editor link another project's score", async () => {
+    await seedOtherScore();
+    await assertSucceeds(setDoc(ref(as(EDITOR)), link()));
+  });
+
+  it("denies linking the project's own score or misstating its source", async () => {
+    await seedOtherScore();
+    await assertFails(
+      setDoc(ref(as(EDITOR), SCORE), {
+        ...link(PROJECT),
+        scoreId: SCORE,
+      }),
+    );
+    await assertFails(setDoc(ref(as(EDITOR)), link("someone-else")));
+  });
+
+  it("denies reviewers and outsiders linking", async () => {
+    await seedOtherScore();
+    await assertFails(setDoc(ref(as(REVIEWER)), link(OTHER, REVIEWER)));
+    await assertFails(setDoc(ref(as(OUTSIDER)), link(OTHER, OUTSIDER)));
   });
 });
 

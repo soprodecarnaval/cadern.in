@@ -6,12 +6,8 @@ import {
   getLatestScoreRevisions,
 } from "./lib/db";
 import { legacyIsOwner } from "./lib/roles";
-import { resolveScoreMetadata } from "./lib/scoreMetadata";
-import type {
-  ScoreViewModel,
-  ScoreRevisionViewModel,
-  PartViewModel,
-} from "../types/viewModels";
+import { toScoreViewModel } from "./lib/viewModels";
+import type { ScoreViewModel } from "../types/viewModels";
 import { FEATURE_FLAG_COLLAB_FLOW } from "./featureFlags";
 import {
   CollectionContext,
@@ -54,30 +50,13 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
       continue;
     }
 
-    const parts: PartViewModel[] = revision.parts.map((p) => ({
-      ...p,
-      svg: p.svg.map((f) => f.url),
-      midi: p.midi.url,
-    }));
-
-    const latestRevision: ScoreRevisionViewModel = {
-      id: revision.id,
-      revisionNumber: revision.revisionNumber,
-      uploadedBy: revision.uploadedBy,
-      uploadedAt: revision.uploadedAt,
-      mscz: revision.mscz.url,
-      metajson: revision.metajson.url,
-      midi: revision.midi.url,
-      parts,
-      notes: revision.notes,
-    };
-
-    scores.push({
-      id: song.id,
-      ...resolveScoreMetadata(song),
-      projectTitle: projectTitles.get(song.projectId) ?? song.projectId,
-      latestRevision,
-    });
+    scores.push(
+      toScoreViewModel(
+        song,
+        revision,
+        projectTitles.get(song.projectId) ?? song.projectId,
+      ),
+    );
   }
 
   return scores;

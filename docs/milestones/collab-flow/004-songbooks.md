@@ -7,72 +7,81 @@ define the homepage.
 
 **Depends on:** 001, 002, 003.
 
-Spec: PLAN §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`), §4.4, §5.5–§5.7, §7.1.
+Spec: PLAN §2.1.3, §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`,
+`scoreLinks`), §4.4, §5.5–§5.7, §7.1.
 
 ## Decisions
 
+- **Four stacked PRs:** 004a model + editor + save; 004b PDFs from a revision +
+  covers; 004c pins + publishing + public pages; 004d published marker + homepage.
 - **Every change is a new `songbookRevisions` doc** + `currentRevisionId` bump, in
-  one batch.
+  one transaction that must build on the current revision.
 - **Editor revisions must build on the current revision** and leave
   `entries`/`covers` identical (PLAN §4.3).
-- **`index` is frozen at revision creation**; `createSongBook` stops numbering.
-- **Entries come from the project's own scores plus its linked scores** (006).
-  If 006 has not landed, own scores only.
+- **`index` is frozen at revision creation**; `createSongBook` stops numbering
+  (004b).
+- **Songbook id is `${projectId}~${slug}`**, so a slug is unique per project; the
+  slug is fixed at creation, only the title can be renamed.
+- **Entries come from the project's own scores plus its linked scores.** The link
+  model (`projects/{id}/scoreLinks/{scoreId}`) lands here, not in 006: saving the
+  homepage builder links any scores of other projects in the same batch.
+- **The homepage builder stays** for everyone, and gets "Salvar caderninho" (flag
+  on). Logged-out users log in first; the builder's list survives that — and
+  reloads — in `localStorage`, for everyone.
+- **PDF options stay a generation-time choice** for now (PLAN §8).
+- **No M5:** there are no songbook docs to migrate.
 - **Homepage = scores pinned by published songbooks, at the published revision**
   (PLAN §4.4), read from the function-maintained `scores.published` marker
-  (PLAN §2.2.1) — never by searching songbooks client-side.
-- Large slice — split into sub-PRs along the steps below.
+  (PLAN §2.2.1) — never by searching songbooks client-side (004d).
 
-## Steps
+## 004a — model, editor, save
 
-1. Schemas: `zSongbookData` (container, `currentRevisionId`, `deletedAt`),
-   `zSongbookRevision` (`entries` with `index`, `pins`, `covers`, `prevRevisionId`,
-   `createdBy`, `note`). Remove `"latest"` from the score ref.
-2. `db.ts`: create songbook (container + revision 1), `createSongbookRevision`
-   (copy-on-write from current), `getSongbookBySlug`, `getProjectSongbooks`,
-   `getSongbookRevisions`.
-3. Persist the builder: `SongBookTable` state saves as a revision (admin); load an
-   existing songbook into it; the score picker searches the project's own and
-   linked scores.
-4. Routes: `/projects/:slug/songbooks`, `/projects/:slug/songbooks/:songbookSlug`,
-   public `/songbooks/:projectSlug/:songbookSlug`.
-5. `createSongBook` / `PdfGenerator`: consume frozen `index`, pinned revisions and
-   `revision.covers[instrument]`.
-6. Stale-pin badge + "bump entry" / "bump all" (EDITOR+).
-7. Deleted-score rendering (§5.7): `deleted` on `SectionScore`, struck-through index
-   entry, omitted pages, front-matter marker, struck row in the web view.
-8. Covers: bulk filename-matched upload via `parseInstrument`, warnings for
-   unmatched files, `songbooks/{id}/{revisionId}/covers/` storage path, admin-only.
-9. Publish/unpublish and soft delete (owner); public page for published songbooks
-   showing the current revision only. Project page (`PublicProjectPage`): non-members
-   see only published songbooks; members also see scores, links and unpublished
-   songbooks (PLAN §4.4).
-10. Revision history view (members only).
-11. `syncPublishedScores` Cloud Function (PLAN §2.2.1): triggers on `songbooks`,
-    `scores`, `projects` writes; recomputes `published` for affected scores.
-    Emulator tests: publish, unpublish, re-pin, songbook/score/project soft delete,
-    two songbooks pinning different revisions. Plus
-    `scripts/rebuildPublishedScores.ts` for migrations and repair.
-12. Homepage: `CollectionContext` (flag-on path) queries `scores where published !=
-    null` and loads each published revision; results link to it. Score page
-    defaults non-members to `published.revisionId`. Remove the CADERNIN uid filter
-    and `VITE_CADERNIN_UID` from the flag-on path.
-13. Rules: `songbooks`, `songbookRevisions` (incl. current-revision and
-    identical-entries/covers checks), `storage.rules` `songbooks/**`; no client
-    write may set `scores.published`. Tests, incl.
-    "editor cannot roll back entries via an old `prevRevisionId`" and "non-member
-    cannot read a non-current or unpublished revision".
-14. Migration M5 for any existing `songbooks` docs, then `rebuildPublishedScores`.
+1. ✅ Schemas: songbook container (`currentRevisionId`, `deletedAt`), songbook
+   revision (`entries` with `index`, `pins`, `covers`, chain fields), score link.
+   The old `"latest"` pin is gone.
+2. ✅ `db.ts`: `createSongbook` (container + revision 1 + links, one batch),
+   `createSongbookRevision` (transaction on the current revision), getters,
+   `getProjectScoreLinks`.
+3. ✅ Converters `toSongbookRevisionContent` / `fromSongbookRevision` (+ tests);
+   `loadPinnedScores`; view-model factory shared with the homepage.
+4. ✅ Pages: `/projects/:slug/songbooks` (list; admins create) and
+   `/projects/:slug/songbooks/:songbookSlug` (contents, PDF generation; admins
+   edit with the builder table and a project/linked score picker; members see the
+   history and older revisions via `?revisao=`).
+5. ✅ Homepage: `localStorage` persistence; "Salvar caderninho" → project + title
+   → songbook revision 1; login continues into the save.
+6. ✅ Rules + tests: songbook create (admin, id = project~slug, unpublished, first
+   revision alongside); updates (editor pointer with a new revision, admin title,
+   owner publish/delete); revisions immutable, extending the current one, editors
+   only re-pin; non-members read only a published songbook's current revision and
+   may only list published ones; score links (editor+, other projects only, real
+   source).
 
-## Files
+## 004b — PDFs from a revision
 
-- `types/docs.ts`, `types/viewModels.ts`, `src/lib/db.ts`, `src/lib/songbook.ts`, `src/lib/roles.ts`
-- `src/createSongBook.ts`, `src/tsx/PdfGenerator.tsx`, `src/tsx/SongBook*.tsx`
-- `src/tsx/App.tsx` + new songbook pages, `src/tsx/PublicProjectPage.tsx`, `src/CollectionContext.tsx`
-- `firestore.indexes.json`
-- `functions/src/syncPublishedScores.ts` (new), `scripts/rebuildPublishedScores.ts` (new)
-- `firestore.rules`, `storage.rules`, `tests/rules/`
-- `scripts/migrations/` (M5)
+1. `SectionScore` gains `index` and `deleted`; `createSongBook` uses `index` for
+   page numbers and the index page when given (the ad-hoc builder keeps numbering
+   by position).
+2. Deleted-score rendering (§5.7): struck-through index entry keeping its number,
+   no pages, front-matter marker; struck row in the web view.
+3. Covers: from `revision.covers[instrument]`; admin bulk upload matched by
+   filename via `parseInstrument`, warnings for unmatched files,
+   `songbooks/{id}/{revisionId}/covers/` + storage rule.
+
+## 004c — pins, publishing, public pages
+
+1. Stale-pin badge + "atualizar" for one entry or all (EDITOR+).
+2. Publish / unpublish / soft delete (owner).
+3. Public page `/songbooks/:projectSlug/:songbookSlug` for published songbooks.
+4. Project page shows non-members only published songbooks (PLAN §4.4).
+
+## 004d — published marker + homepage
+
+1. `syncPublishedScores` Cloud Function (PLAN §2.2.1) + emulator tests, and
+   `scripts/rebuildPublishedScores.ts`.
+2. Homepage (flag on): `scores where published != null` + published revisions;
+   score page defaults non-members to `published.revisionId`; CADERNIN filter
+   removed from the flag-on path.
 
 ## Acceptance
 
@@ -80,10 +89,8 @@ Spec: PLAN §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`), §4.4, §5.5
 - An editor can bump pins and nothing else (UI and rules).
 - A non-member reaches a published songbook's current revision and can generate
   its PDFs; nothing else.
-- A non-member on a project page sees its published songbooks and no score list.
 - A soft-deleted score keeps its number, struck through, with no pages emitted.
+- A logged-out user builds a list, logs in to save it, and lands on the new
+  songbook with the same list.
 - With the flag on, the homepage lists exactly the scores pinned by published
-  songbooks; unpublishing a songbook removes its scores within seconds (unless
-  another published songbook pins them).
-- Re-pinning a published songbook moves the score's `published.revisionId`; a
-  non-member opening the score page sees that revision.
+  songbooks.

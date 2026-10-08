@@ -145,13 +145,15 @@ export const zLegacyRevisionData = zScoreRevisionData.extend({
   isLatest: z.boolean(),
 });
 
-export const zSongbookScoreRef = z.object({
+export const zSongbookScoreEntry = z.object({
   type: z.literal("score"),
   scoreId: z.string(),
-  revisionId: z.string(), // "latest" is a valid special value
   order: z.number().int(),
+  // Frozen when the revision is created, so every instrument's PDF shares the
+  // numbering (collab-flow §2.6). Sections don't take a number.
+  index: z.number().int().positive(),
 });
-export type SongbookScoreRef = z.infer<typeof zSongbookScoreRef>;
+export type SongbookScoreEntry = z.infer<typeof zSongbookScoreEntry>;
 
 export const zSongbookSectionEntry = z.object({
   type: z.literal("section"),
@@ -161,7 +163,7 @@ export const zSongbookSectionEntry = z.object({
 export type SongbookSectionEntry = z.infer<typeof zSongbookSectionEntry>;
 
 export const zSongbookEntry = z.discriminatedUnion("type", [
-  zSongbookScoreRef,
+  zSongbookScoreEntry,
   zSongbookSectionEntry,
 ]);
 export type SongbookEntry = z.infer<typeof zSongbookEntry>;
@@ -169,15 +171,51 @@ export type SongbookEntry = z.infer<typeof zSongbookEntry>;
 export const zSongbookData = z.object({
   title: z.string(),
   projectId: z.string(),
+  // Unique within the project and fixed at creation: the id is
+  // `${projectId}~${slug}` and public URLs use it.
   slug: z.string(),
+  currentRevisionId: z.string(),
   isPublished: z.boolean(),
-  entries: z.array(zSongbookEntry),
 });
 export const zSongbookDoc = zSongbookData.extend({
   createdAt: zTimestamp,
   updatedAt: zTimestamp,
+  deletedAt: zTimestamp.nullable(),
 });
 export type SongbookDoc = z.infer<typeof zSongbookDoc>;
+
+export const zSongbookRevisionContent = z.object({
+  // Structure: which scores, in what order, under which sections. Admin-only.
+  entries: z.array(zSongbookEntry),
+  // Which revision of each score is used, keyed by score id. Editors may
+  // change only this (collab-flow §5.5), which is why it isn't in `entries`.
+  pins: z.record(z.string()),
+  // Per-instrument cover image. Admin-only.
+  covers: z.record(zInstrument, zStorageFile),
+});
+export type SongbookRevisionContent = z.infer<typeof zSongbookRevisionContent>;
+
+export const zSongbookRevisionData = zSongbookRevisionContent.extend({
+  revisionNumber: z.number().int().positive(),
+  prevRevisionId: z.string().nullable(),
+  createdBy: z.string(),
+  note: z.string(),
+});
+export const zSongbookRevisionDoc = zSongbookRevisionData.extend({
+  createdAt: zTimestamp,
+});
+export type SongbookRevisionDoc = z.infer<typeof zSongbookRevisionDoc>;
+
+export const zScoreLinkData = z.object({
+  scoreId: z.string(),
+  sourceProjectId: z.string(),
+  addedBy: z.string(),
+});
+export const zScoreLinkDoc = zScoreLinkData.extend({
+  addedAt: zTimestamp,
+  deletedAt: zTimestamp.nullable(),
+});
+export type ScoreLinkDoc = z.infer<typeof zScoreLinkDoc>;
 
 export const zUserProjectInvitationData = z.object({
   fromUserId: z.string(),

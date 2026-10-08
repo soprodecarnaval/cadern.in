@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Col, Container, Nav, Navbar, Row } from "react-bootstrap";
+import { Button, Col, Container, Nav, Navbar, Row } from "react-bootstrap";
 import { Link, Route, Routes } from "react-router-dom";
 import { AuthModal } from "./AuthModal";
 import { ProfileModal } from "./ProfileModal";
@@ -32,14 +32,59 @@ import { CreateProjectPage } from "./CreateProjectPage";
 import { PublicProjectPage } from "./PublicProjectPage";
 import { ProjectSettingsPage } from "./ProjectSettingsPage";
 import { NotFoundPage } from "./NotFoundPage";
+import { SaveSongbookModal } from "./SaveSongbookModal";
+import { ProjectSongbooksPage } from "./ProjectSongbooksPage";
+import { SongbookPage } from "./SongbookPage";
+import { useCollectionContext } from "../useCollectionContext";
+import {
+  markPendingSave,
+  restoreBuilderItems,
+  storeBuilderItems,
+  takePendingSave,
+} from "../lib/builderStorage";
 import { getPendingUserProjectInvitations } from "../lib/db";
 
-function HomePage() {
+function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
   const [results, setResults] = useState<ScoreViewModel[]>([]);
   const [items, setItems] = useState<SongbookItemViewModel[]>([]);
   const [playingPart, setPlayingPart] = useState<PlayingPartViewModel | null>(
     null,
   );
+  const { status, allScores } = useCollectionContext();
+  const { currentUser } = useAuth();
+  const [restored, setRestored] = useState(false);
+  const [showSave, setShowSave] = useState(false);
+
+  // The list survives reloads and logins: restored once the collection is
+  // loaded, then stored on every change.
+  useEffect(() => {
+    if (status === "ready" && !restored) {
+      setItems(restoreBuilderItems(allScores));
+      setRestored(true);
+    }
+  }, [status, restored, allScores]);
+
+  useEffect(() => {
+    if (restored) {
+      storeBuilderItems(items);
+    }
+  }, [restored, items]);
+
+  // Back from logging in to save: carry on with the save.
+  useEffect(() => {
+    if (currentUser && takePendingSave()) {
+      setShowSave(true);
+    }
+  }, [currentUser]);
+
+  const handleSave = () => {
+    if (currentUser) {
+      setShowSave(true);
+    } else {
+      markPendingSave();
+      onRequestLogin();
+    }
+  };
 
   const handleSelectSong = (song: ScoreViewModel, checked: boolean) => {
     checked ? handleAddScore(song) : handleRemoveScore(song);
@@ -110,7 +155,27 @@ function HomePage() {
             />
           </Col>
           <Col sm={6}>
-            <h3 className="results">Caderninho</h3>
+            <div className="d-flex justify-content-between align-items-baseline">
+              <h3 className="results">Caderninho</h3>
+              {FEATURE_FLAG_COLLAB_FLOW && (
+                <Button
+                  size="sm"
+                  variant="outline-primary"
+                  disabled={items.length === 0}
+                  onClick={handleSave}
+                >
+                  Salvar caderninho
+                </Button>
+              )}
+            </div>
+            {currentUser && showSave && (
+              <SaveSongbookModal
+                show
+                user={currentUser}
+                items={items}
+                onHide={() => setShowSave(false)}
+              />
+            )}
             <SongBookTable
               rows={items}
               setItems={setItems}
@@ -185,7 +250,10 @@ function App() {
       </Navbar>
 
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route
+          path="/"
+          element={<HomePage onRequestLogin={() => setShowUserModal(true)} />}
+        />
         <Route path="/score/:scoreId" element={<ScorePage />} />
         <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
         {FEATURE_FLAG_COLLAB_FLOW && (
@@ -199,6 +267,14 @@ function App() {
             <Route
               path="/projects/:slug/settings"
               element={<ProjectSettingsPage />}
+            />
+            <Route
+              path="/projects/:slug/songbooks"
+              element={<ProjectSongbooksPage />}
+            />
+            <Route
+              path="/projects/:slug/songbooks/:songbookSlug"
+              element={<SongbookPage />}
             />
           </>
         )}

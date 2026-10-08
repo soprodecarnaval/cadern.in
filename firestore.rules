@@ -132,6 +132,19 @@ service cloud.firestore {
         }
       }
 
+      // Scores of other projects this project uses (collab-flow §2.1.3).
+      // Unlinking sets `deletedAt`.
+      match /scoreLinks/{scoreId} {
+        allow read: if true;
+        allow create, update: if request.auth != null &&
+          isEditor(projectId) &&
+          request.resource.data.scoreId == scoreId &&
+          request.resource.data.addedBy == request.auth.uid &&
+          request.resource.data.sourceProjectId == get(scorePath(scoreId)).data.projectId &&
+          request.resource.data.sourceProjectId != projectId;
+        allow delete: if false;
+      }
+
       // Keyed by invitee, so the accept rule above can find it.
       match /invitations/{uid} {
         allow read: if request.auth != null &&
@@ -236,17 +249,74 @@ service cloud.firestore {
       allow read: if true;
     }
 
+    function songbookPath(songbookId) {
+      return /databases/$(database)/documents/songbooks/$(songbookId);
+    }
+
+    function songbookRevisionPath(songbookId, revisionId) {
+      return /databases/$(database)/documents/songbooks/$(songbookId)/songbookRevisions/$(revisionId);
+    }
+
+    // Changes always come with a new revision (collab-flow §5.5): the
+    // container only ever moves `currentRevisionId` to one committed alongside.
     match /songbooks/{songbookId} {
-      allow read: if resource.data.isPublished == true || (
-        request.auth != null &&
-        isReviewer(resource.data.projectId)
-      );
+      allow read: if (resource.data.isPublished == true &&
+          resource.data.deletedAt == null) ||
+        isReviewer(resource.data.projectId);
+      // The id is `${projectId}~${slug}`, so slugs are unique per project.
       allow create: if request.auth != null &&
-        isEditor(request.resource.data.projectId);
-      allow update: if request.auth != null &&
-        isEditor(resource.data.projectId);
-      allow delete: if request.auth != null &&
-        isAdmin(resource.data.projectId);
+        isAdmin(request.resource.data.projectId) &&
+        songbookId == request.resource.data.projectId + '~' + request.resource.data.slug &&
+        request.resource.data.isPublished == false &&
+        request.resource.data.deletedAt == null &&
+        existsAfter(songbookRevisionPath(songbookId, request.resource.data.currentRevisionId));
+      allow update: if request.auth != null && (
+        (isEditor(resource.data.projectId) &&
+          onlyUpdatingFields(['currentRevisionId', 'updatedAt']) &&
+          existsAfter(songbookRevisionPath(songbookId, request.resource.data.currentRevisionId))) ||
+        (isAdmin(resource.data.projectId) &&
+          onlyUpdatingFields(['title', 'updatedAt'])) ||
+        (isOwner(resource.data.projectId) &&
+          onlyUpdatingFields(['isPublished', 'deletedAt', 'updatedAt']))
+      );
+      allow delete: if false;
+
+      // Immutable. Non-members see only the revision a published songbook
+      // currently points at.
+      match /songbookRevisions/{revisionId} {
+        allow read: if isReviewer(get(songbookPath(songbookId)).data.projectId) || (
+          get(songbookPath(songbookId)).data.isPublished == true &&
+          get(songbookPath(songbookId)).data.deletedAt == null &&
+          get(songbookPath(songbookId)).data.currentRevisionId == revisionId
+        );
+        allow create: if request.auth != null &&
+          request.resource.data.createdBy == request.auth.uid &&
+          getAfter(songbookPath(songbookId)).data.currentRevisionId == revisionId &&
+          (isFirstRevision(songbookId) || extendsCurrent(songbookId));
+        allow update, delete: if false;
+
+        // Written in the batch that creates the songbook.
+        function isFirstRevision(songbookId) {
+          return !exists(songbookPath(songbookId)) &&
+            request.resource.data.prevRevisionId == null &&
+            request.resource.data.revisionNumber == 1 &&
+            isAdmin(getAfter(songbookPath(songbookId)).data.projectId);
+        }
+
+        // Builds on the current revision. Admins change anything; editors only
+        // re-pin, so `entries` and `covers` must match the current revision.
+        function extendsCurrent(songbookId) {
+          let songbook = get(songbookPath(songbookId)).data;
+          let current = get(songbookRevisionPath(songbookId, songbook.currentRevisionId)).data;
+          return request.resource.data.prevRevisionId == songbook.currentRevisionId &&
+            request.resource.data.revisionNumber == current.revisionNumber + 1 &&
+            (isAdmin(songbook.projectId) || (
+              isEditor(songbook.projectId) &&
+              request.resource.data.entries == current.entries &&
+              request.resource.data.covers == current.covers
+            ));
+        }
+      }
     }
 
     function onlyUpdatingFields(fields) {

@@ -387,11 +387,17 @@ immutability — the revision document itself is untouched.
 
 ### 2.5 `songbooks/{songbookId}` (container)
 
+Songbooks are created from a project's songbook list (empty), or by **saving the
+homepage builder** ("Salvar caderninho"): the user picks a project they
+administer — their Acervo by default — and scores from other projects are
+linked into it in the same batch (§2.1.3). Logged-out users go through login
+first; the builder's list survives that, and reloads, in `localStorage`.
+
 ```ts
 {
   title: string
   projectId: string
-  slug: string                    // unique within project; public URL segment
+  slug: string                    // fixed at creation; id is `${projectId}~${slug}`
   currentRevisionId: string
   isPublished: boolean            // orthogonal to revisions — see 4.4
   createdAt: Timestamp
@@ -517,7 +523,7 @@ Roles are cumulative: OWNER ⊃ ADMIN ⊃ EDITOR ⊃ REVIEWER.
 | Re-pin a score's revision in a SONGBOOK (`pins` only) | ❌ | ✅ | ✅ | ✅ |
 | Edit project title | ❌ | ✅ | ✅ | ✅ |
 | Edit score `metadataOverride` | ❌ | ❌ | ✅ | ✅ |
-| Create SONGBOOK; edit title/slug | ❌ | ❌ | ✅ | ✅ |
+| Create SONGBOOK; edit title | ❌ | ❌ | ✅ | ✅ |
 | Change songbook `entries` (add/remove/reorder/sections) | ❌ | ❌ | ✅ | ✅ |
 | Change songbook `covers` | ❌ | ❌ | ✅ | ✅ |
 | Invite members; assign EDITOR / REVIEWER | ❌ | ❌ | ✅ | ✅ |
@@ -637,7 +643,7 @@ match /songbooks/{songbookId} {
     // the new pointer must name a revision committed in the same batch
     (isEditor(resource.data.projectId) && changed(['currentRevisionId','updatedAt'])
       && existsAfter(/databases/$(db)/documents/songbooks/$(songbookId)/songbookRevisions/$(request.resource.data.currentRevisionId))) ||
-    (isAdmin(resource.data.projectId)  && changed(['title','slug','updatedAt']))     ||
+    (isAdmin(resource.data.projectId)  && changed(['title','updatedAt']))            ||
     (isOwner(resource.data.projectId)  && changed(['isPublished','deletedAt','updatedAt']));
   allow delete: if false;
 
@@ -1072,7 +1078,7 @@ needs it (§9) — not as a block at the end.
 | M1c | Delete legacy top-level `invitations/{autoId}` | 001 | not carried over: pre-existing projects are deleted at the prod launch |
 | M3 | Add `prevRevisionId` + `slug` + `origin` to existing revisions | 002 | order by `revisionNumber`; `origin: {type:"upload"}` for all |
 | M4 | Move metadata onto revisions | 002 | copy `scores.{title,composer,sub,tags}` → every revision's `metadata`; write `cachedMetadata` and `published: null`; legacy top-level fields kept until M9 (flag-off code reads them) |
-| M5 | Songbook containers → container + revision 1 | 004 | split `entries` into `entries` + `pins`; assign `index`; resolve `revisionId === "latest"` to the concrete `latestRevisionId`; then `rebuildPublishedScores` |
+| ~~M5~~ | ~~Songbook containers → container + revision 1~~ | — | dropped: no songbook docs exist in prod or staging |
 | M6 | Identify the four PROJECTS — carnaval, garota, na tora, besourinhos | 007 | confirm which already exist; all owned by the CADERNIN uid |
 | M7 | Build SONGBOOKS per project-year | 007 | carnaval via `generateCarnivalSections`; others via `generateSectionsByStyle` (`src/utils/songBookRows.ts`); reorder manually; created with `isPublished: true`; pins = each score's latest revision. Since the homepage becomes songbook-driven, the dry run reports every score on today's homepage that no published songbook pins — those disappear at launch unless placed somewhere; then `rebuildPublishedScores` |
 | M9 | Drop legacy data: score-level metadata, `projects.members` map, `scores/*/revisions` (and its collection-group rule); stop dual-writing | 007 | only after the flag is on in prod and the old code paths are deleted |
@@ -1119,6 +1125,10 @@ published songbooks already answer "what is public".)
 
 ## 8. Deferred / future improvements
 
+- **PDF options in the songbook revision.** Carnival mode, back-page numbers and
+  the anti-harassment pages change the generated PDF but are still chosen at
+  generation time. Store them in the revision, like `covers`, so a revision fully
+  determines its INSTRUMENT_SONGBOOKs.
 - **Persisted INSTRUMENT_SONGBOOK artifacts.** Generate PDFs server-side per
   songbook revision, store at `songbooks/{id}/{revisionId}/pdfs/{instrument}.pdf`,
   serve stable links. Needed if generation time or client memory becomes a problem,
@@ -1163,9 +1173,9 @@ numbered files:
 | [001](001-members-invitations.md) | Members & invitations subcollections; fixes acceptance; invite by username | 000 |
 | [002](002-score-revisions.md) | Score revision linked list, transactional upload, metadata cache/override | 000 |
 | [003](003-soft-deletes.md) | Soft deletes for project / score; read-path filtering | 001, 002 |
-| [004](004-songbooks.md) | Songbooks: persisted revisions, pins, covers, publishing, public page, songbook-driven homepage | 001, 002, 003 |
+| [004](004-songbooks.md) | Songbooks, in 4 PRs: (a) model, editor, save from the homepage, score links; (b) PDFs from a revision, covers; (c) pins, publishing, public pages; (d) published marker + homepage | 001, 002, 003 |
 | [005](005-review-comments.md) | Review comments with positional pins | 001, 002 |
-| [006](006-links-fork.md) | Score links (web) + fork-on-upload (export app) | 001, 002 |
+| [006](006-links-fork.md) | Linking UI (web) + fork-on-upload (export app); the link model lands in 004a | 001, 002, 004a |
 | [007](007-data-migration.md) | Real projects + songbooks, legacy cleanup, flag on in prod | all |
 
 001 and 002 are independent and can run in parallel; so can 005 and 006.

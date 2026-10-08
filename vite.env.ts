@@ -22,6 +22,19 @@ const OPTIONAL_DEFAULTS: Record<string, string> = {
 
 const FEATURE_FLAG_KEYS = ["VITE_FEATURE_FLAG_COLLAB_FLOW"] as const;
 
+// `npm run dev:emulators` (VITE_USE_EMULATORS=true): the app talks to the local
+// emulators under a `demo-` project, which can never reach a real one, so no
+// real config is needed — and any in .env files is overridden.
+export const EMULATOR_PROJECT_ID = "demo-cadernin";
+const EMULATOR_ENV: Record<(typeof REQUIRED_KEYS)[number], string> = {
+  VITE_FIREBASE_API_KEY: "demo-api-key",
+  VITE_FIREBASE_AUTH_DOMAIN: `${EMULATOR_PROJECT_ID}.firebaseapp.com`,
+  VITE_FIREBASE_PROJECT_ID: EMULATOR_PROJECT_ID,
+  VITE_FIREBASE_STORAGE_BUCKET: `${EMULATOR_PROJECT_ID}.appspot.com`,
+  VITE_FIREBASE_MESSAGING_SENDER_ID: "0",
+  VITE_FIREBASE_APP_ID: "demo-app-id",
+};
+
 export interface AppEnv {
   env: Record<string, string>;
   /** `define` entries supplying defaults Vite would otherwise leave undefined. */
@@ -29,7 +42,12 @@ export interface AppEnv {
 }
 
 export function loadAppEnv(mode: string, envDir: string): AppEnv {
-  const env = loadEnv(mode, envDir, "VITE_");
+  const loaded = loadEnv(mode, envDir, "VITE_");
+  const useEmulators = loaded.VITE_USE_EMULATORS === "true";
+  const env = useEmulators ? { ...loaded, ...EMULATOR_ENV } : loaded;
+  if (useEmulators) {
+    console.info(`Using the Firebase emulators (${EMULATOR_PROJECT_ID})`);
+  }
 
   const missing = REQUIRED_KEYS.filter((k) => !env[k]);
   if (missing.length) {
@@ -56,10 +74,10 @@ export function loadAppEnv(mode: string, envDir: string): AppEnv {
   return {
     env,
     define: Object.fromEntries(
-      Object.entries(resolvedOptionals).map(([k, v]) => [
-        `import.meta.env.${k}`,
-        JSON.stringify(v),
-      ]),
+      Object.entries({
+        ...resolvedOptionals,
+        ...(useEmulators ? EMULATOR_ENV : {}),
+      }).map(([k, v]) => [`import.meta.env.${k}`, JSON.stringify(v)]),
     ),
   };
 }
