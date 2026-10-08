@@ -7,7 +7,7 @@ import partNames from "./202609201500_part_names";
 import scoreRevisionsSubcollection from "./202610041500_score_revisions_subcollection";
 import deletedAt from "./202610081200_deleted_at";
 import projectMembers from "./202610081201_project_members";
-import projectInvitations from "./202610081202_project_invitations";
+import dropLegacyInvitations from "./202610081202_drop_legacy_invitations";
 
 export const migrations: Migration[] = [
   songsToScores,
@@ -18,5 +18,5 @@ export const migrations: Migration[] = [
   scoreRevisionsSubcollection,
   deletedAt,
   projectMembers,
-  projectInvitations,
+  dropLegacyInvitations,
 ];

@@ -584,7 +584,7 @@ describe("invitations", () => {
     await assertFails(updateDoc(ref(as(OUTSIDER)), { role: "editor" }));
   });
 
-  it("makes legacy top-level invitations read-only", async () => {
+  it("denies writing top-level invitations, which no longer exist", async () => {
     await seedProject(testEnv());
     await assertFails(
       setDoc(doc(as(ADMIN), "invitations", "inv"), invitation()),

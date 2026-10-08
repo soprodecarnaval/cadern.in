@@ -53,9 +53,9 @@ Spec: PLAN §2.1, §2.1.1, §2.1.2, §4.3 (`projects`, `members`, `invitations`)
 7. ✅ `storage.rules`: `role()` reads the member doc (§4.5).
 8. ✅ Migrations `202610081200` M1 (`deletedAt: null` on projects/songbooks),
    `202610081201` M1b (map → docs, `displayName` from Firebase Auth),
-   `202610081202` M1c (pending top-level invitations → per-project; originals get
-   `deletedAt` + `migratedAt`; admin/owner-role invitations skipped). Dry-run on
-   staging ✓; ⏳ apply after deploy.
+   `202610081202` M1c (deletes the legacy top-level invitations — not carried
+   over, since pre-existing projects are deleted at the prod launch; no rules
+   match them any more). Applied on staging ✓; ⏳ prod after deploy.
 9. ✅ UI: `ProjectSettingsPage` lists members by `displayName`; role select limited by
    `canGrantRole`; owner-only removal; invitation log with names; pending
    invitations accept/deny for the invitee; `CreateProjectPage` and

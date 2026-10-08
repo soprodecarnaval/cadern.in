@@ -185,7 +185,9 @@ await batch.commit();
 }
 ```
 
-Moved from the top-level `invitations/{autoId}` collection to a deterministic path,
+Replaces the top-level `invitations/{autoId}` collection — whose docs are deleted,
+not migrated (M1c), since every pre-existing project is deleted when this ships to
+production — with a deterministic path,
 keyed by invitee. This is what lets the invitee create their own member document:
 the rule locates the invitation without being told where it is (§4.3). One pending
 invitation per user per project — re-inviting overwrites.
@@ -1067,13 +1069,13 @@ needs it (§9) — not as a block at the end.
 | M2b | Copy `scores/*/revisions/*` → `scores/*/scoreRevisions/*` | 000 | same ids, `isLatest` dropped; old subcollection kept (and dual-written, §0) until M9 |
 | M1 | Backfill `deletedAt: null` on projects, songbooks | 001 | |
 | M1b | `projects.members` map → `projects/{pid}/members/{uid}` docs | 001 | one doc per entry; denormalize `displayName` from `users/{uid}` (admin credentials); keep `memberIds`; map dropped in M9 |
-| M1c | `invitations/{autoId}` → `projects/{pid}/invitations/{uid}` | 001 | keep the newest pending invitation per (project, user); fill the denormalized display fields |
+| M1c | Delete legacy top-level `invitations/{autoId}` | 001 | not carried over: pre-existing projects are deleted at the prod launch |
 | M3 | Add `prevRevisionId` + `slug` + `origin` to existing revisions | 002 | order by `revisionNumber`; `origin: {type:"upload"}` for all |
 | M4 | Move metadata onto revisions | 002 | copy `scores.{title,composer,sub,tags}` → every revision's `metadata`; write `cachedMetadata` and `published: null`; legacy top-level fields kept until M9 (flag-off code reads them) |
 | M5 | Songbook containers → container + revision 1 | 004 | split `entries` into `entries` + `pins`; assign `index`; resolve `revisionId === "latest"` to the concrete `latestRevisionId`; then `rebuildPublishedScores` |
 | M6 | Identify the four PROJECTS — carnaval, garota, na tora, besourinhos | 007 | confirm which already exist; all owned by the CADERNIN uid |
 | M7 | Build SONGBOOKS per project-year | 007 | carnaval via `generateCarnivalSections`; others via `generateSectionsByStyle` (`src/utils/songBookRows.ts`); reorder manually; created with `isPublished: true`; pins = each score's latest revision. Since the homepage becomes songbook-driven, the dry run reports every score on today's homepage that no published songbook pins — those disappear at launch unless placed somewhere; then `rebuildPublishedScores` |
-| M9 | Drop legacy data: score-level metadata, `projects.members` map, top-level `invitations`, `scores/*/revisions` (and its collection-group rule); stop dual-writing | 007 | only after the flag is on in prod and the old code paths are deleted |
+| M9 | Drop legacy data: score-level metadata, `projects.members` map, `scores/*/revisions` (and its collection-group rule); stop dual-writing | 007 | only after the flag is on in prod and the old code paths are deleted |
 
 There is no separate "deploy rules" step: each slice deploys its own rules (§0).
 

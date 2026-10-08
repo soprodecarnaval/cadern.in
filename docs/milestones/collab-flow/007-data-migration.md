@@ -20,10 +20,10 @@ Spec: PLAN §7, §7.1.
    launch (PLAN §7.1). Review the list and place or accept each.
 4. Turn `FEATURE_FLAG_COLLAB_FLOW` on in prod.
 5. Remove flag-off code paths, dual-writes in `uploadScore`, and the legacy rules
-   (`members` map helpers, `revisions` match + collection-group rule, top-level
-   `invitations`). Release an export-app build without dual-writes.
+   (`members` map helpers, `revisions` match + collection-group rule). Release an
+   export-app build without dual-writes.
 6. M9: drop legacy data — score-level metadata fields, `projects.members`,
-   top-level `invitations`, `scores/*/revisions`.
+   `scores/*/revisions`.
 7. (nice-to-have) PDF index-page → songbook reconstruction script.
 
 ## Files

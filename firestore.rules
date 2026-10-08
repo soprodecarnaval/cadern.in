@@ -198,16 +198,6 @@ service cloud.firestore {
         isAdmin(resource.data.projectId);
     }
 
-    // Legacy top-level invitations, moved under their project by migration;
-    // read-only until dropped in collab-flow M9.
-    match /invitations/{invitationId} {
-      allow read: if request.auth != null && (
-        resource.data.toUserId == request.auth.uid ||
-        isAdmin(resource.data.projectId)
-      );
-      allow write: if false;
-    }
-
     function onlyUpdatingFields(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
