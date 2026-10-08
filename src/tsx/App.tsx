@@ -32,6 +32,8 @@ import { CreateProjectPage } from "./CreateProjectPage";
 import { PublicProjectPage } from "./PublicProjectPage";
 import { ProjectSettingsPage } from "./ProjectSettingsPage";
 import { NotFoundPage } from "./NotFoundPage";
+import { ProjectSongbooksPage } from "./ProjectSongbooksPage";
+import { SongbookPage } from "./SongbookPage";
 import { getPendingUserProjectInvitations } from "../lib/db";
 
 function HomePage() {
@@ -199,6 +201,14 @@ function App() {
             <Route
               path="/projects/:slug/settings"
               element={<ProjectSettingsPage />}
+            />
+            <Route
+              path="/projects/:slug/songbooks"
+              element={<ProjectSongbooksPage />}
+            />
+            <Route
+              path="/projects/:slug/songbooks/:songbookSlug"
+              element={<SongbookPage />}
             />
           </>
         )}

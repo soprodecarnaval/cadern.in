@@ -94,7 +94,10 @@ export function PublicProjectPage() {
         </div>
       </div>
       <p className="text-muted mb-4">
-        <small>/{project.slug}</small>
+        <small>/{project.slug}</small> ·{" "}
+        <Link to={`/projects/${encodeURIComponent(project.id)}/songbooks`}>
+          Caderninhos
+        </Link>
       </p>
 
       <h5>Partituras</h5>
