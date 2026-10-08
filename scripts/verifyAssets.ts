@@ -1,13 +1,10 @@
-import { initializeApp, applicationDefault } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { zRevisionDoc } from "../types/docs.js";
-import { FIREBASE_STORAGE_BUCKET, FIRESTORE_DATABASE_ID } from "./lib/env";
+import { zScoreRevisionDoc } from "../types/docs";
+import { FIRESTORE_DATABASE_ID } from "./lib/env";
+import { initAdminApp } from "./lib/firebaseAdmin";
 
-initializeApp({
-  credential: applicationDefault(),
-  storageBucket: FIREBASE_STORAGE_BUCKET,
-});
+initAdminApp();
 
 const db = getFirestore(FIRESTORE_DATABASE_ID);
 const bucket = getStorage().bucket();
@@ -25,7 +22,7 @@ async function main(): Promise<void> {
 
   for (const doc of snap.docs) {
     const scoreId = doc.ref.parent.parent!.id;
-    const revision = zRevisionDoc.parse(doc.data());
+    const revision = zScoreRevisionDoc.parse(doc.data());
 
     const paths = [
       revision.mscz.path,

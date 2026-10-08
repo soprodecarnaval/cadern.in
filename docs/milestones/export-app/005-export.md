@@ -36,3 +36,15 @@
 - Only selected/compatible parts have assets.
 - Unicode in names is preserved (no `é` loss — Node `fs`, not QML XHR).
 - `.metajson` carries the edited metadata in cadern.in field names.
+
+## Status: implemented; runtime verification pending
+
+- Export works in an isolated staging directory, then copies only completed
+  output files into the chosen destination without overwriting existing files.
+- `--score-parts` provides ordered part-score binaries, avoiding ambiguous
+  MuseScore filenames for duplicate names.
+- Selected parts use canonical cadern.in instrument filenames; duplicates get
+  stable alphabetic suffixes that cannot be mistaken for SVG page numbers.
+- The metadata-updated `.mscz`, full-score MIDI, `.metajson`, and selected-part
+  SVG/MIDI files are returned in a manifest.
+- Renderer shows exporting, success/error, and open-folder controls.

@@ -67,6 +67,7 @@
 - Clone seu fork: `git clone https://github.com/SEU-USUARIO/musicoteca.git`
 - Instale dependências: `npm install`
 - Execute o projeto: `npm run dev`
+- Testes das regras de segurança (Firestore/Storage): `npm run test:rules` — sobe os emuladores do Firebase e exige **Java 21+**
 
 ### 2. Criando Issues
 **SEMPRE** crie uma issue antes de codificar. Use os templates apropriados:

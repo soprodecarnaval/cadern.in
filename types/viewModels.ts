@@ -8,7 +8,7 @@ export type PartViewModel = {
   midi: string;
 };
 
-export type RevisionViewModel = {
+export type ScoreRevisionViewModel = {
   id: string;
   revisionNumber: number;
   uploadedBy: string;
@@ -18,7 +18,6 @@ export type RevisionViewModel = {
   midi: string;
   parts: PartViewModel[];
   notes: string;
-  isLatest: boolean;
 };
 
 export type ScoreViewModel = {
@@ -28,13 +27,13 @@ export type ScoreViewModel = {
   sub: string;
   tags: string[];
   projectTitle: string;
-  latestRevision: RevisionViewModel;
+  latestRevision: ScoreRevisionViewModel;
 };
 
 export type SongbookScoreViewModel = {
   type: "score";
   score: ScoreViewModel;
-  revision?: RevisionViewModel;
+  revision?: ScoreRevisionViewModel;
 };
 
 export type SongbookSectionViewModel = {

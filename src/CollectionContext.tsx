@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useState, ReactNode } from "react";
 import Fuse, { IFuseOptions } from "fuse.js";
-import { getAllProjects, getAllScores, getLatestRevisions } from "./lib/db";
+import {
+  getAllProjects,
+  getAllScores,
+  getLatestScoreRevisions,
+} from "./lib/db";
 import { isOwner } from "./lib/roles";
 import type {
   ScoreViewModel,
-  RevisionViewModel,
+  ScoreRevisionViewModel,
   PartViewModel,
 } from "../types/viewModels";
-import { FEATURE_FLAG_AUTH_ENABLED } from "./featureFlags";
+import { FEATURE_FLAG_COLLAB_FLOW } from "./featureFlags";
 import {
   CollectionContext,
   type CollectionStatus,
@@ -20,12 +24,12 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
   const [projectDocs, songDocs, revisionDocs] = await Promise.all([
     getAllProjects(),
     getAllScores(),
-    getLatestRevisions(),
+    getLatestScoreRevisions(),
   ]);
 
   console.log(songDocs.length);
 
-  const filteredProjectDocs = FEATURE_FLAG_AUTH_ENABLED
+  const filteredProjectDocs = FEATURE_FLAG_COLLAB_FLOW
     ? projectDocs
     : projectDocs.filter((p) => CADERNIN_UID && isOwner(p, CADERNIN_UID));
 
@@ -52,7 +56,7 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
       midi: p.midi.url,
     }));
 
-    const latestRevision: RevisionViewModel = {
+    const latestRevision: ScoreRevisionViewModel = {
       id: revision.id,
       revisionNumber: revision.revisionNumber,
       uploadedBy: revision.uploadedBy,
@@ -62,7 +66,6 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
       midi: revision.midi.url,
       parts,
       notes: revision.notes,
-      isLatest: revision.isLatest,
     };
 
     scores.push({

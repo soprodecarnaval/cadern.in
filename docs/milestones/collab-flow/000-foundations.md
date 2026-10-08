@@ -1,0 +1,74 @@
+# 000 — Foundations
+
+**Goal:** Everything later slices assume: the feature flag, a verified prod
+baseline, a rules test harness, and the `ScoreRevision` naming in code and data.
+
+**Depends on:** nothing.
+
+## Decisions
+
+- **Flag rename, not a new flag.** `FEATURE_FLAG_AUTH_ENABLED` becomes
+  `FEATURE_FLAG_COLLAB_FLOW`, default `false`. It already gates every auth-facing
+  surface, which is exactly the collab surface.
+- **Rules are tested against the emulator, not deployed to find out.** Every later
+  slice adds tests here before touching `firestore.rules` / `storage.rules`.
+- **`revisions` → `scoreRevisions` is copied, not moved** (PLAN §1, M2b). The old
+  subcollection stays until M9 so a rollback still reads.
+
+## Steps
+
+1. ✅ Rename the flag: `src/featureFlags.ts`, `src/vite-env.d.ts`, `vite.env.ts`
+   (`FEATURE_FLAG_KEYS`), `src/tsx/App.tsx`, `src/CollectionContext.tsx`,
+   `.env.example`, `.env.local`, `.env.staging`, `.env.production`, both deploy
+   workflows. Missing/empty means `false`. **Manual (Gustavo):** set
+   `FEATURE_FLAG_COLLAB_FLOW` for staging; leave prod unset.
+2. ✅ Gate routes, not only nav links. Collab routes are registered only with the
+   flag on; anything unmatched renders `NotFoundPage`. The invitations inbox query
+   is skipped with the flag off.
+3. ⏳ **Manual.** Prod audit (M0): confirm the bucket has nothing under `songs/` and that
+   `202604201809_songs_to_scores` is recorded as applied.
+4. ✅ Emulator harness: `emulators` block in `firebase.json` (firestore, storage,
+   auth), `@firebase/rules-unit-testing` dev dep, a separate vitest project / config
+   for rules tests, `npm run test:rules` wrapping `firebase emulators:exec`.
+   `firebase-tools` is a dev dep; the emulators need **Java 21+**. CI job
+   `.github/workflows/test-rules.yaml` runs on PRs touching rules or tests.
+5. ✅ Baseline tests for the *current* `firestore.rules` / `storage.rules`, so the
+   later rewrites show diffs in behaviour, not just in text. Tests named
+   `BUG (NNN)` pin behaviour slice NNN changes.
+6. ✅ M2: rename `Revision` → `ScoreRevision` in code — `types/docs.ts`
+   (`zRevisionData`, `RevisionDoc`), `types/viewModels.ts` (`RevisionViewModel`),
+   `src/lib/db.ts`, `src/lib/songbook.ts`, components. Pure refactor.
+7. ✅ M2b: migration `202610041500_score_revisions_subcollection` copies
+   `scores/*/revisions/*` → `scores/*/scoreRevisions/*` (same ids, `isLatest`
+   dropped). `scoreRevisions` match added under `scores/{scoreId}` (no
+   collection-group rule). **All reads stay on `revisions` in this slice** — the
+   copies have no `isLatest` and no new-model reader exists yet; the score page
+   moves in 002, the homepage in 004.
+8. ✅ `createScoreRevision` dual-writes in one batch: the `scoreRevisions` doc plus
+   the legacy `revisions` doc, flipping the previous legacy `isLatest` — PLAN §0.
+9. ⏳ **Manual, after deploy.** Run M2b on staging, then prod; release a new
+   export-app build. Uploads from older export-app builds write only `revisions`,
+   so release it promptly; to catch up, re-apply M2b (`migrate:down` to
+   `202609201500`, then `migrate:up`) — copies overwrite.
+
+## Files
+
+- `src/featureFlags.ts`, `src/vite-env.d.ts`, `vite.env.ts`, `.env*`,
+  `.github/workflows/deploy-*.yaml`
+- `src/tsx/App.tsx`, `src/CollectionContext.tsx`
+- `firebase.json`, `package.json`, `vitest.rules.config.ts` (new), `tests/rules/` (new)
+- `types/docs.ts`, `types/viewModels.ts`, `src/lib/db.ts`, `src/lib/songbook.ts`,
+  `src/lib/uploadScore.ts`, components using `Revision*`
+- `scripts/migrations/<ts>_score_revisions_subcollection.ts`, `scripts/migrations/index.ts`
+- `firestore.rules`
+
+## Acceptance
+
+- No reference to `FEATURE_FLAG_AUTH_ENABLED` remains; flag-off build hides and
+  blocks every collab route.
+- `npm run test:rules` runs green against the emulator in CI-like conditions.
+- `grep -rn "\bRevision\b"` finds no stale type names; `tsc` passes.
+- After M2b, every score in prod has the same number of docs under
+  `scoreRevisions` as under `revisions`; homepage and score pages unchanged.
+- An export-app upload lands in both subcollections and shows on the flag-off
+  homepage.

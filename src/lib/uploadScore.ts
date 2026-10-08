@@ -5,12 +5,11 @@ import type { ParsedScore } from "./parseUploadedFiles";
 import type { User } from "firebase/auth";
 import {
   createProject,
-  createRevision,
   createScore,
+  createScoreRevision,
   getScoreRevisions,
   getProject,
   softDeleteScore,
-  updateRevision,
   updateScore,
 } from "./db";
 
@@ -124,22 +123,20 @@ export async function uploadScore(
       midi: storageFiles.get(part.midi) ?? missing(part.midi),
     }));
 
-    if (existingScoreId && revisionNumber > 1) {
-      await updateRevision(scoreId, String(revisionNumber - 1), {
-        isLatest: false,
-      });
-    }
-
-    await createRevision(scoreId, revId, {
-      revisionNumber,
-      uploadedBy: user.uid,
-      mscz: storageFiles.get("mscz") ?? missing("mscz"),
-      metajson: storageFiles.get("metajson") ?? missing("metajson"),
-      midi: storageFiles.get("midi") ?? missing("midi"),
-      parts: revisionParts,
-      notes: "",
-      isLatest: true,
-    });
+    await createScoreRevision(
+      scoreId,
+      revId,
+      {
+        revisionNumber,
+        uploadedBy: user.uid,
+        mscz: storageFiles.get("mscz") ?? missing("mscz"),
+        metajson: storageFiles.get("metajson") ?? missing("metajson"),
+        midi: storageFiles.get("midi") ?? missing("midi"),
+        parts: revisionParts,
+        notes: "",
+      },
+      revisionNumber > 1 ? String(revisionNumber - 1) : null,
+    );
 
     await updateScore(scoreId, { latestRevisionId: revId });
   } catch (error) {

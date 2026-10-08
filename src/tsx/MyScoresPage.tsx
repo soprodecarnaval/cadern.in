@@ -9,7 +9,7 @@ import {
   softDeleteScore,
   type WithId,
 } from "../lib/db";
-import type { ScoreDoc, RevisionDoc } from "../../types/docs";
+import type { ScoreDoc, ScoreRevisionDoc } from "../../types/docs";
 
 function formatDate(timestamp: Timestamp | null | undefined): string {
   if (!timestamp) {
@@ -28,7 +28,7 @@ function SongRow({
   onDelete: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [revisions, setRevisions] = useState<WithId<RevisionDoc>[] | null>(
+  const [revisions, setRevisions] = useState<WithId<ScoreRevisionDoc>[] | null>(
     null,
   );
   const [loadingRevisions, setLoadingRevisions] = useState(false);

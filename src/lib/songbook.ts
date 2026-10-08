@@ -1,6 +1,6 @@
 import type {
   ScoreViewModel,
-  RevisionViewModel,
+  ScoreRevisionViewModel,
   SongbookScoreViewModel,
   SongbookSectionViewModel,
   SongbookItemViewModel,
@@ -20,5 +20,7 @@ export const songbookSection = (title: string): SongbookSectionViewModel => ({
   title,
 });
 
-export const getRevision = (item: SongbookScoreViewModel): RevisionViewModel =>
+export const getScoreRevision = (
+  item: SongbookScoreViewModel,
+): ScoreRevisionViewModel =>
   item.revision ?? item.score.latestRevision;

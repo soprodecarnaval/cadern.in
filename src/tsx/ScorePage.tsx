@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Container, Spinner } from "react-bootstrap";
 import { useParams } from "react-router-dom";
-import { getScore, getRevision, getProject } from "../lib/db";
+import { getScore, getScoreRevision, getProject } from "../lib/db";
 import { ScoreDisplay, type ScoreDisplayPart } from "./ScoreDisplay";
 
 interface LoadedScore {
@@ -29,7 +29,7 @@ async function loadScore(
 
   const resolvedRevisionId = revisionId ?? song.latestRevisionId;
   const [rev, project] = await Promise.all([
-    getRevision(scoreId, resolvedRevisionId),
+    getScoreRevision(scoreId, resolvedRevisionId),
     getProject(song.projectId),
   ]);
   if (!rev) {

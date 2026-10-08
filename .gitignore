@@ -47,3 +47,6 @@ service-account.json
 
 # claude stuff
 .claude
+
+docs/untracked.md
+secrets

@@ -139,3 +139,5 @@ MuseScore 4.7 can abort `--score-meta` with `mutex lock failed` when it shares
 its normal config/data directories with another MuseScore process. Metadata
 commands now receive temporary `XDG_CONFIG_HOME` and `XDG_DATA_HOME`
 directories, removed after every invocation.
+MuseScore may also emit valid JSON before aborting during shutdown; that stdout
+is validated and recovered rather than reported as a score-format failure.

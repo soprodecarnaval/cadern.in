@@ -9,10 +9,11 @@ Script para popular o banco de dados e o storage do cadern.in a partir de uma pa
   ```bash
   gcloud auth application-default login
   ```
-  Alternativamente, defina `GOOGLE_APPLICATION_CREDENTIALS` apontando para um arquivo de chave de conta de serviço.
+  Alternativamente, defina `GOOGLE_APPLICATION_CREDENTIALS` apontando para um arquivo de chave de conta de serviço (em `secrets/`). Os scripts abortam se a chave ou o bucket forem de outro projeto que não `SCRIPTS_FIREBASE_PROJECT_ID`.
 - Arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
   ```
   SCRIPTS_CADERNIN_UID=<uid do usuário no Firebase>
+  SCRIPTS_FIREBASE_PROJECT_ID=<id do projeto no Firebase>
   SCRIPTS_FIREBASE_STORAGE_BUCKET=<nome do bucket no Cloud Storage>
   ```
 

@@ -27,7 +27,7 @@ jobs:
       VITE_FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
       VITE_CADERNIN_UID: ${{ vars.CADERNIN_UID }}
       VITE_APP_TITLE: ${{ vars.APP_TITLE}}
-      VITE_FEATURE_FLAG_AUTH_ENABLED: ${{ vars.FEATURE_FLAG_AUTH_ENABLED}}
+      VITE_FEATURE_FLAG_COLLAB_FLOW: ${{ vars.FEATURE_FLAG_COLLAB_FLOW}}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
