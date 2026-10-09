@@ -24,6 +24,7 @@ import {
 } from "../lib/db";
 import { isAdmin, isReviewer } from "../lib/roles";
 import {
+  REMOVED_SCORES_NOTE,
   fromSongbookRevision,
   isSongbookSection,
   songbookScore,
@@ -36,6 +37,7 @@ import type { SongbookDoc, SongbookRevisionDoc } from "../../types/docs";
 import type {
   PlayingPartViewModel,
   ScoreViewModel,
+  NumberedSongbookItemViewModel,
   SongbookItemViewModel,
 } from "../../types/viewModels";
 import { PDFGenerator } from "./PdfGenerator";
@@ -45,7 +47,7 @@ import { SongBookTable } from "./SongBookTable";
 interface Loaded {
   songbook: WithId<SongbookDoc>;
   revision: WithId<SongbookRevisionDoc>;
-  items: SongbookItemViewModel[];
+  items: NumberedSongbookItemViewModel[];
 }
 
 async function load(
@@ -164,32 +166,45 @@ export function SongbookPage() {
   );
 }
 
-function SongbookContents({ items }: { items: SongbookItemViewModel[] }) {
-  let index = 0;
+function SongbookContents({
+  items,
+}: {
+  items: NumberedSongbookItemViewModel[];
+}) {
+  const anyDeleted = items.some((i) => !isSongbookSection(i) && i.deleted);
   return (
-    <Table size="sm" className="mb-4">
-      <tbody>
-        {items.map((item, i) =>
-          isSongbookSection(item) ? (
-            <tr key={`s-${i}`}>
-              <th colSpan={3}>{item.title}</th>
-            </tr>
-          ) : (
-            <tr key={item.score.id}>
-              <td className="text-muted" style={{ width: 40 }}>
-                {++index}
-              </td>
-              <td>
-                <Link to={`/score/${encodeURIComponent(item.score.id)}`}>
-                  {item.score.title}
-                </Link>
-              </td>
-              <td className="text-muted">{item.score.composer}</td>
-            </tr>
-          ),
-        )}
-      </tbody>
-    </Table>
+    <>
+      <Table size="sm" className={anyDeleted ? "mb-1" : "mb-4"}>
+        <tbody>
+          {items.map((item, i) =>
+            isSongbookSection(item) ? (
+              <tr key={`s-${i}`}>
+                <th colSpan={3}>{item.title}</th>
+              </tr>
+            ) : (
+              <tr key={item.score.id} className={item.deleted ? "text-muted" : ""}>
+                <td className="text-muted" style={{ width: 40 }}>
+                  {item.index}
+                </td>
+                <td>
+                  {item.deleted ? (
+                    <s>{item.score.title}</s>
+                  ) : (
+                    <Link to={`/score/${encodeURIComponent(item.score.id)}`}>
+                      {item.score.title}
+                    </Link>
+                  )}
+                </td>
+                <td className="text-muted">{item.score.composer}</td>
+              </tr>
+            ),
+          )}
+        </tbody>
+      </Table>
+      {anyDeleted && (
+        <p className="text-muted small mb-4">{REMOVED_SCORES_NOTE}</p>
+      )}
+    </>
   );
 }
 

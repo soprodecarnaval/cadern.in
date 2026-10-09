@@ -2,6 +2,7 @@ import SVGtoPDF from "svg-to-pdfkit";
 import type { Instrument } from "../types/instrument";
 import type { ScoreViewModel, PartViewModel } from "../types/viewModels";
 import { Section } from "./tsx/PdfGenerator";
+import { REMOVED_SCORES_NOTE } from "./lib/songbook";
 
 interface PDFBlobStream extends NodeJS.WritableStream {
   toBlobURL(type: string): string;
@@ -79,7 +80,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
     promises.push(
       drawImage(
         doc,
-        `assets/capa_carnaval_2026_${instrument.replace(/[ ]/g, "_")}.png`,
+        `/assets/capa_carnaval_2026_${instrument.replace(/[ ]/g, "_")}.png`,
         pageNumber,
       ),
     );
@@ -111,7 +112,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
     doc.addPage();
     pageNumber++;
-    promises.push(drawImage(doc, "assets/anti_assedio_2026_1.png", pageNumber));
+    promises.push(drawImage(doc, "/assets/anti_assedio_2026_1.png", pageNumber));
 
     if (addBlank) {
       doc.addPage();
@@ -120,7 +121,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
     doc.addPage();
     pageNumber++;
-    promises.push(drawImage(doc, "assets/anti_assedio_2026_2.png", pageNumber));
+    promises.push(drawImage(doc, "/assets/anti_assedio_2026_2.png", pageNumber));
 
     if (addBlank) {
       doc.addPage();
@@ -129,7 +130,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
     doc.addPage();
     pageNumber++;
-    promises.push(drawImage(doc, "assets/anti_assedio_2026_3.png", pageNumber));
+    promises.push(drawImage(doc, "/assets/anti_assedio_2026_3.png", pageNumber));
 
     if (addBlank) {
       doc.addPage();
@@ -138,17 +139,20 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
     doc.addPage();
     pageNumber++;
-    promises.push(drawImage(doc, "assets/anti_assedio_2026_4.png", pageNumber));
+    promises.push(drawImage(doc, "/assets/anti_assedio_2026_4.png", pageNumber));
   }
 
   const { outline } = doc;
 
-  let songPageIndex = 1;
   for (const { title, scores } of sections) {
     const topItem = outline.addItem(title.toUpperCase());
     sectionTitleOutlines.set(title, topItem);
 
-    for (const { score, revision } of scores) {
+    for (const { score, revision, deleted, index: songPageIndex } of scores) {
+      // A deleted score keeps its number in the index but gets no pages.
+      if (deleted) {
+        continue;
+      }
       // Get all parts for the current instrument, with optional fallback
       let partsForInstrument =
         revision.parts?.filter((p) => p.instrument === instrument) ?? [];
@@ -188,8 +192,6 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
           promises.push(...addSongPagePromises);
         }
       }
-      // Always advance the index number for consistent numbering
-      songPageIndex++;
     }
   }
   const nonNullPromises = promises.filter((promise) => promise !== null);
@@ -283,7 +285,7 @@ const createDoc = () => {
 const loadFonts = async (doc: PDFKit.PDFDocument) => {
   const fonts = ["Roboto-Medium", "Roboto-Bold"];
   for (const font of fonts) {
-    const resp = await fetch(`${font}.ttf`);
+    const resp = await fetch(`/${font}.ttf`);
     const buffer = await resp.arrayBuffer();
     doc.registerFont(font, buffer);
   }
@@ -324,7 +326,7 @@ const addSongPage = async (
     currentPage++;
 
     if (hasSponsor) {
-      await drawImage(doc, `assets/patrocinio-2026.png`, currentPage);
+      await drawImage(doc, `/assets/patrocinio-2026.png`, currentPage);
 
       doc
         .font("Roboto-Bold")
@@ -651,7 +653,7 @@ const addIndexPage = (
       }
     }
 
-    scores.forEach(({ score, revision }, scoreIdx) => {
+    scores.forEach(({ score, revision, deleted, index }, scoreIdx) => {
       if (scoreIdx == 0) {
         if (currentLine == maxLinesPerColumn) {
           [currentX, currentY] = nextCursorPosition();
@@ -672,9 +674,10 @@ const addIndexPage = (
         partsForInstrument =
           revision.parts?.filter((p) => p.instrument === fallbackInstrument) ?? [];
       }
-      const hasInstrument = partsForInstrument.length > 0;
+      const hasInstrument = !deleted && partsForInstrument.length > 0;
       const isMultiPart = partsForInstrument.length > 1;
-      const songNumber = 1 + songCount++;
+      songCount++;
+      const songNumber = index;
       // Link to first part for multi-part, or score.id for single part
       const destId = isMultiPart ? `${score.id}_0` : score.id;
 
@@ -723,6 +726,17 @@ const addIndexPage = (
     });
     if (currentLine != 0) {[currentX, currentY] = nextCursorPosition();}
   });
+  if (sections.some(({ scores }) => scores.some((s) => s.deleted))) {
+    doc
+      .font("Roboto-Medium")
+      .fontSize(8)
+      .fillColor("gray")
+      .text(REMOVED_SCORES_NOTE, 1.44 * cm2pt, pageHeight - 0.8 * cm2pt, {
+        lineBreak: false,
+      })
+      .fillColor("black");
+  }
+
   if (carnivalMode) {
     doc.addPage();
     pageCount++;

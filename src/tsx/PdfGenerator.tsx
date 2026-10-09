@@ -49,6 +49,9 @@ interface PdfGeneratorProps {
 export type SectionScore = {
   score: ScoreViewModel;
   revision: ScoreRevisionViewModel;
+  index: number;
+  // Soft-deleted since the revision was saved: keeps its number, gets no pages.
+  deleted?: boolean;
 };
 
 export type Section = {
@@ -83,8 +86,9 @@ const HelpIcon = ({ tooltip }: { tooltip: JSX.Element }) => (
 );
 
 const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
+  // Deleted scores keep their number but get no pages, so they don't count.
   const scores = songBook.items.filter(
-    (r: SongbookItemViewModel) => !isSongbookSection(r),
+    (r: SongbookItemViewModel) => !isSongbookSection(r) && !r.deleted,
   ) as SongbookScoreViewModel[];
 
   const [songbookTitle, setTitle] = useState("");
@@ -246,6 +250,8 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
           currentSection.scores.push({
             score: item.score,
             revision: getScoreRevision(item),
+            index: item.index,
+            deleted: item.deleted,
           });
         }
       }

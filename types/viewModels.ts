@@ -35,6 +35,12 @@ export type SongbookScoreViewModel = {
   type: "score";
   score: ScoreViewModel;
   revision?: ScoreRevisionViewModel;
+  // The score's number in the songbook: frozen in a saved revision, assigned by
+  // position for an unsaved list (numberSongbookItems).
+  index?: number;
+  // Soft-deleted since a saved revision pinned it: keeps its number, gets no
+  // pages (collab-flow §5.7).
+  deleted?: boolean;
 };
 
 export type SongbookSectionViewModel = {
@@ -44,8 +50,16 @@ export type SongbookSectionViewModel = {
 
 export type SongbookItemViewModel = SongbookScoreViewModel | SongbookSectionViewModel;
 
+/** What PDF generation takes: every score numbered. */
+export type NumberedSongbookScoreViewModel = SongbookScoreViewModel & {
+  index: number;
+};
+export type NumberedSongbookItemViewModel =
+  | NumberedSongbookScoreViewModel
+  | SongbookSectionViewModel;
+
 export type SongbookViewModel = {
-  items: SongbookItemViewModel[];
+  items: NumberedSongbookItemViewModel[];
 };
 
 export type PlayingPartViewModel = {
