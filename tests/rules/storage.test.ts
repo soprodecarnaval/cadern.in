@@ -1,10 +1,19 @@
 // Baseline for the deployed storage.rules.
 import { assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
-import { getBytes, ref, uploadBytes, type FirebaseStorage } from "firebase/storage";
-import { describe, it } from "vitest";
 import {
+  getBytes,
+  ref,
+  uploadBytes,
+  type FirebaseStorage,
+} from "firebase/storage";
+import { describe, it } from "vitest";
+import { doc, setDoc, updateDoc, type Firestore } from "firebase/firestore";
+import {
+  ADMIN,
   EDITOR,
   OUTSIDER,
+  OWNER,
+  PROJECT,
   REVIEWER,
   SCORE,
   seedProject,
@@ -54,16 +63,62 @@ describe("scores/**", () => {
   });
 });
 
+describe("songbooks/**", () => {
+  const SB = "acervo~carnaval";
+  const coverPath = `songbooks/${SB}/r2/covers/trompete.png`;
+
+  async function seedSongbook() {
+    await seedProject(testEnv());
+    await testEnv().withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore() as unknown as Firestore;
+      await setDoc(doc(db, "songbooks", SB), { projectId: PROJECT });
+    });
+  }
+
+  it("lets admins upload covers, not editors or outsiders", async () => {
+    await seedSongbook();
+    await assertSucceeds(uploadBytes(ref(as(ADMIN), coverPath), BYTES));
+    await assertFails(uploadBytes(ref(as(EDITOR), coverPath), BYTES));
+    await assertFails(uploadBytes(ref(as(OUTSIDER), coverPath), BYTES));
+  });
+
+  it("is world-readable", async () => {
+    await seedSongbook();
+    await testEnv().withSecurityRulesDisabled(async (ctx) => {
+      const storage = ctx.storage() as unknown as FirebaseStorage;
+      await uploadBytes(ref(storage, coverPath), BYTES);
+    });
+    await assertSucceeds(getBytes(ref(as(null), coverPath)));
+  });
+});
+
+describe("a soft-deleted project", () => {
+  it("takes upload rights away", async () => {
+    await seedProject(testEnv());
+    await testEnv().withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore() as unknown as Firestore;
+      await updateDoc(doc(db, "projects", PROJECT), { deletedAt: new Date() });
+    });
+    await assertFails(uploadBytes(ref(as(OWNER), scorePath(SCORE)), BYTES));
+  });
+});
+
 describe("avatars/**", () => {
   it("lets a user write only their own avatar", async () => {
-    await assertSucceeds(uploadBytes(ref(as(EDITOR), `avatars/${EDITOR}`), BYTES));
-    await assertFails(uploadBytes(ref(as(EDITOR), `avatars/${OUTSIDER}`), BYTES));
+    await assertSucceeds(
+      uploadBytes(ref(as(EDITOR), `avatars/${EDITOR}`), BYTES),
+    );
+    await assertFails(
+      uploadBytes(ref(as(EDITOR), `avatars/${OUTSIDER}`), BYTES),
+    );
   });
 });
 
 describe("everything else", () => {
   it("is denied, including the legacy songs/ prefix", async () => {
-    await assertFails(uploadBytes(ref(as(EDITOR), `songs/${SCORE}/1/x`), BYTES));
+    await assertFails(
+      uploadBytes(ref(as(EDITOR), `songs/${SCORE}/1/x`), BYTES),
+    );
     await assertFails(getBytes(ref(as(null), `songs/${SCORE}/1/x`)));
   });
 });

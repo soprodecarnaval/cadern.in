@@ -522,6 +522,9 @@ export async function getProjectScoreLinks(
 
 // -- Songbooks --
 
+export const newSongbookRevisionId = (title: string): string =>
+  newRevisionId(revisionSlug(title, new Date()));
+
 /** Deterministic, so a slug is unique within its project. */
 export function songbookId(projectId: string, slug: string): string {
   return `${projectId}~${slug}`;
@@ -611,7 +614,7 @@ export async function createSongbook(input: {
   links: { scoreId: string; sourceProjectId: string }[];
 }): Promise<string> {
   const id = songbookId(input.projectId, input.slug);
-  const revisionId = newRevisionId(revisionSlug(input.title, new Date()));
+  const revisionId = newSongbookRevisionId(input.title);
   const batch = writeBatch(db);
   for (const link of input.links) {
     batch.set(scoreLinkRef(input.projectId, link.scoreId), {
@@ -654,7 +657,12 @@ export async function createSongbook(input: {
 export async function createSongbookRevision(
   id: string,
   content: SongbookRevisionContent,
-  input: { createdBy: string; note: string },
+  input: {
+    createdBy: string;
+    note: string;
+    // Known up front when files are uploaded under the revision's path first.
+    revisionId?: string;
+  },
 ): Promise<string> {
   return runTransaction(db, async (tx) => {
     const songbookSnap = await tx.get(songbookRef(id));
@@ -663,7 +671,8 @@ export async function createSongbookRevision(
       songbookRevisionRef(id, songbook.currentRevisionId),
     );
     const prev = zSongbookRevisionDoc.parse(prevSnap.data());
-    const revisionId = newRevisionId(revisionSlug(songbook.title, new Date()));
+    const revisionId =
+      input.revisionId ?? newSongbookRevisionId(songbook.title);
     tx.set(songbookRevisionRef(id, revisionId), {
       ...zSongbookRevisionData.parse({
         ...content,

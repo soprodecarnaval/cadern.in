@@ -8,11 +8,22 @@ service firebase.storage {
       ).data.projectId;
     }
 
-    // Roles come from projects/{id}/members/{uid}, as in firestore.rules.
+    function songbookProjectId(songbookId) {
+      return firestore.get(
+        /databases/(default)/documents/songbooks/$(songbookId)
+      ).data.projectId;
+    }
+
+    // Roles come from projects/{id}/members/{uid}, and a soft-deleted project
+    // grants nothing — as in firestore.rules.
     function memberRole(projectId) {
       return firestore.get(
-        /databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid)
-      ).data.role;
+        /databases/(default)/documents/projects/$(projectId)
+      ).data.get('deletedAt', null) == null
+        ? firestore.get(
+            /databases/(default)/documents/projects/$(projectId)/members/$(request.auth.uid)
+          ).data.role
+        : 'none';
     }
 
     // Any project editor may write its score assets — not only whoever
@@ -28,6 +39,14 @@ service firebase.storage {
       // always has a document to resolve the project from — including on a
       // first upload.
       allow write: if request.auth != null && canWriteScore(scoreId);
+    }
+
+    // Songbook covers (collab-flow §2.7): admins of the songbook's project,
+    // like the revisions that reference them.
+    match /songbooks/{songbookId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        memberRole(songbookProjectId(songbookId)) in ['owner', 'admin'];
     }
 
     match /avatars/{userId} {

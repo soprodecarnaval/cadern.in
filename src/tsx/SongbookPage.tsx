@@ -43,6 +43,7 @@ import type {
 import { PDFGenerator } from "./PdfGenerator";
 import { SongBar } from "./PlayerBar";
 import { SongBookTable } from "./SongBookTable";
+import { SongbookCoversEditor } from "./SongbookCoversEditor";
 
 interface Loaded {
   songbook: WithId<SongbookDoc>;
@@ -83,7 +84,7 @@ export function SongbookPage() {
   const revisionParam = searchParams.get("revisao");
   const role = useMemberRole(projectId);
   const [loaded, setLoaded] = useState<Loaded | null | "loading">("loading");
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<"contents" | "covers" | null>(null);
   const [reloads, setReloads] = useState(0);
 
   useEffect(() => {
@@ -110,6 +111,12 @@ export function SongbookPage() {
   }
 
   const { songbook, revision, items } = loaded;
+  const handleEditDone = (saved: boolean) => {
+    setEditing(null);
+    if (saved) {
+      setReloads((n) => n + 1);
+    }
+  };
   const isCurrent = revision.id === songbook.currentRevisionId;
 
   return (
@@ -127,32 +134,47 @@ export function SongbookPage() {
         {revision.note && <> · {revision.note}</>}
       </p>
 
-      {editing ? (
+      {editing === "contents" ? (
         <SongbookEditor
           projectId={projectId}
           songbook={songbook}
           initialItems={items}
-          onDone={(saved) => {
-            setEditing(false);
-            if (saved) {
-              setReloads((n) => n + 1);
-            }
-          }}
+          onDone={handleEditDone}
         />
       ) : (
         <>
-          {isCurrent && isAdmin(role) && (
-            <Button
-              size="sm"
-              variant="outline-primary"
-              className="mb-3"
-              onClick={() => setEditing(true)}
-            >
-              Editar
-            </Button>
+          {isCurrent && isAdmin(role) && editing === null && (
+            <div className="d-flex gap-2 mb-3">
+              <Button
+                size="sm"
+                variant="outline-primary"
+                onClick={() => setEditing("contents")}
+              >
+                Editar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-primary"
+                onClick={() => setEditing("covers")}
+              >
+                Capas
+              </Button>
+            </div>
+          )}
+          {editing === "covers" && (
+            <SongbookCoversEditor
+              songbook={songbook}
+              revision={revision}
+              onDone={handleEditDone}
+            />
           )}
           <SongbookContents items={items} />
-          <PDFGenerator songBook={{ items }} />
+          <PDFGenerator
+            songBook={{ items }}
+            covers={Object.fromEntries(
+              Object.entries(revision.covers).map(([i, f]) => [i, f.url]),
+            )}
+          />
           {isReviewer(role) && (
             <SongbookHistory
               songbookId={songbook.id}

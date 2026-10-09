@@ -44,6 +44,9 @@ const instrumentFallbacks: Partial<Record<Instrument, Instrument>> = {
 
 interface PdfGeneratorProps {
   songBook: SongbookViewModel;
+  // A saved songbook's per-instrument covers (download URLs). When given, they
+  // replace the per-generation cover pickers.
+  covers?: Partial<Record<Instrument, string>>;
 }
 
 export type SectionScore = {
@@ -85,7 +88,7 @@ const HelpIcon = ({ tooltip }: { tooltip: JSX.Element }) => (
   </OverlayTrigger>
 );
 
-const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
+const PDFGenerator = ({ songBook, covers }: PdfGeneratorProps) => {
   // Deleted scores keep their number but get no pages, so they don't count.
   const scores = songBook.items.filter(
     (r: SongbookItemViewModel) => !isSongbookSection(r) && !r.deleted,
@@ -270,7 +273,9 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
             : undefined,
           sections,
           title: songbookTitle,
-          coverImageUrl: instrumentCovers.get(instrument) || "",
+          coverImageUrl:
+            (covers ? covers[instrument] : instrumentCovers.get(instrument)) ||
+            "",
           carnivalMode,
           backSheetPageNumber,
           antiAssedioPages,
@@ -349,7 +354,9 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
                 const isCurrent = currentInstrument === instrument;
                 const isGreyedOut = isGenerating && !isSelected;
 
-                const hasCover = instrumentCovers.has(instrument);
+                const hasCover = covers
+                  ? !!covers[instrument]
+                  : instrumentCovers.has(instrument);
                 const fallback = instrumentFallbacks[instrument];
                 const hasFallback =
                   fallback && countWithFallback && countWithFallback > count;
@@ -405,7 +412,10 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
                       <span className="text-muted me-2">
                         ({displayCount}/{instrumentStats.totalScores})
                       </span>
-                      {!isGenerating && (
+                      {!isGenerating && covers && hasCover && (
+                        <span className="text-success small">✓ Capa</span>
+                      )}
+                      {!isGenerating && !covers && (
                         <>
                           <Form.Label
                             htmlFor={`cover-${instrument}`}
