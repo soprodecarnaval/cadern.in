@@ -18,8 +18,8 @@ Spec: PLAN §2.1.3, §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`,
   one transaction that must build on the current revision.
 - **Editor revisions must build on the current revision** and leave
   `entries`/`covers` identical (PLAN §4.3).
-- **`index` is frozen at revision creation**; `createSongBook` stops numbering
-  (004b).
+- **`index` is frozen at revision creation**; `createSongBook` no longer numbers
+  anything — unsaved lists are numbered before they reach it (004b).
 - **Songbook id is `${projectId}~${slug}`**, so a slug is unique per project; the
   slug is fixed at creation, only the title can be renamed.
 - **Entries come from the project's own scores plus its linked scores.** The link
@@ -59,14 +59,22 @@ Spec: PLAN §2.1.3, §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`,
 
 ## 004b — PDFs from a revision
 
-1. `SectionScore` gains `index` and `deleted`; `createSongBook` uses `index` for
-   page numbers and the index page when given (the ad-hoc builder keeps numbering
-   by position).
-2. Deleted-score rendering (§5.7): struck-through index entry keeping its number,
-   no pages, front-matter marker; struck row in the web view.
-3. Covers: from `revision.covers[instrument]`; admin bulk upload matched by
-   filename via `parseInstrument`, warnings for unmatched files,
-   `songbooks/{id}/{revisionId}/covers/` + storage rule.
+1. ✅ One numbering path: every list handed to PDF generation is numbered
+   (`NumberedSongbookItemViewModel`). A saved revision carries its frozen
+   `index`; the homepage builder numbers its list by position with
+   `numberSongbookItems` — the same function that freezes numbers on save.
+   `createSongBook` just prints `index`.
+2. ✅ Deleted scores (§5.7): struck-through index entry keeping its number, no
+   pages, "Partituras riscadas foram removidas do acervo." under the index; same in
+   the web view; they don't count in the per-instrument totals.
+3. ✅ Covers: "Capas" on the songbook page (admins) matches PNG/JPEG files to
+   instruments by name (`matchCoverFiles`, + tests), uploads them to
+   `songbooks/{id}/{revisionId}/covers/` and creates a revision noted
+   "capas: …"; saved songbooks' PDFs use them instead of the per-generation
+   pickers. `storage.rules`: covers writable by the project's admins; a deleted
+   project grants no storage writes at all.
+4. ✅ PDF assets (fonts, carnival covers, anti-harassment pages) load from absolute
+   paths — they 404'd on any route but `/`.
 
 ## 004c — pins, publishing, public pages
 
