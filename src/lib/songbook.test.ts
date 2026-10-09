@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ScoreViewModel } from "../../types/viewModels";
 import {
   fromSongbookRevision,
+  numberSongbookItems,
   songbookScore,
   songbookSection,
   toSongbookRevisionContent,
@@ -13,6 +14,19 @@ const score = (id: string, revisionId = `${id}-r1`) =>
     title: id,
     latestRevision: { id: revisionId },
   }) as unknown as ScoreViewModel;
+
+describe("numberSongbookItems", () => {
+  it("numbers scores by position, skipping sections", () => {
+    const a = songbookScore(score("a"));
+    const b = songbookScore(score("b"));
+    const section = songbookSection("S");
+    expect(numberSongbookItems([a, section, b])).toEqual([
+      { ...a, index: 1 },
+      section,
+      { ...b, index: 2 },
+    ]);
+  });
+});
 
 describe("toSongbookRevisionContent", () => {
   it("numbers scores only and pins each to its shown revision", () => {
@@ -45,18 +59,27 @@ describe("toSongbookRevisionContent", () => {
 });
 
 describe("fromSongbookRevision", () => {
-  it("restores list order and skips scores it can't find", () => {
+  it("restores list order, numbers and deletions, and skips missing scores", () => {
     const a = score("a");
+    const b = score("b");
     const items = fromSongbookRevision(
       {
         entries: [
-          { type: "score", scoreId: "missing", order: 2, index: 2 },
+          { type: "score", scoreId: "missing", order: 3, index: 3 },
+          { type: "score", scoreId: "b", order: 2, index: 2 },
           { type: "score", scoreId: "a", order: 1, index: 1 },
           { type: "section", title: "S", order: 0 },
         ],
       },
-      new Map([["a", a]]),
+      new Map([
+        ["a", { score: a, deleted: false }],
+        ["b", { score: b, deleted: true }],
+      ]),
     );
-    expect(items).toEqual([songbookSection("S"), songbookScore(a)]);
+    expect(items).toEqual([
+      songbookSection("S"),
+      { ...songbookScore(a), index: 1, deleted: false },
+      { ...songbookScore(b), index: 2, deleted: true },
+    ]);
   });
 });

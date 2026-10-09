@@ -24,6 +24,7 @@ import {
 } from "../lib/db";
 import { isAdmin, isReviewer } from "../lib/roles";
 import {
+  REMOVED_SCORES_NOTE,
   fromSongbookRevision,
   isSongbookSection,
   songbookScore,
@@ -36,16 +37,18 @@ import type { SongbookDoc, SongbookRevisionDoc } from "../../types/docs";
 import type {
   PlayingPartViewModel,
   ScoreViewModel,
+  NumberedSongbookItemViewModel,
   SongbookItemViewModel,
 } from "../../types/viewModels";
 import { PDFGenerator } from "./PdfGenerator";
 import { SongBar } from "./PlayerBar";
 import { SongBookTable } from "./SongBookTable";
+import { SongbookCoversEditor } from "./SongbookCoversEditor";
 
 interface Loaded {
   songbook: WithId<SongbookDoc>;
   revision: WithId<SongbookRevisionDoc>;
-  items: SongbookItemViewModel[];
+  items: NumberedSongbookItemViewModel[];
 }
 
 async function load(
@@ -81,7 +84,7 @@ export function SongbookPage() {
   const revisionParam = searchParams.get("revisao");
   const role = useMemberRole(projectId);
   const [loaded, setLoaded] = useState<Loaded | null | "loading">("loading");
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState<"contents" | "covers" | null>(null);
   const [reloads, setReloads] = useState(0);
 
   useEffect(() => {
@@ -108,6 +111,12 @@ export function SongbookPage() {
   }
 
   const { songbook, revision, items } = loaded;
+  const handleEditDone = (saved: boolean) => {
+    setEditing(null);
+    if (saved) {
+      setReloads((n) => n + 1);
+    }
+  };
   const isCurrent = revision.id === songbook.currentRevisionId;
 
   return (
@@ -125,32 +134,47 @@ export function SongbookPage() {
         {revision.note && <> · {revision.note}</>}
       </p>
 
-      {editing ? (
+      {editing === "contents" ? (
         <SongbookEditor
           projectId={projectId}
           songbook={songbook}
           initialItems={items}
-          onDone={(saved) => {
-            setEditing(false);
-            if (saved) {
-              setReloads((n) => n + 1);
-            }
-          }}
+          onDone={handleEditDone}
         />
       ) : (
         <>
-          {isCurrent && isAdmin(role) && (
-            <Button
-              size="sm"
-              variant="outline-primary"
-              className="mb-3"
-              onClick={() => setEditing(true)}
-            >
-              Editar
-            </Button>
+          {isCurrent && isAdmin(role) && editing === null && (
+            <div className="d-flex gap-2 mb-3">
+              <Button
+                size="sm"
+                variant="outline-primary"
+                onClick={() => setEditing("contents")}
+              >
+                Editar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-primary"
+                onClick={() => setEditing("covers")}
+              >
+                Capas
+              </Button>
+            </div>
+          )}
+          {editing === "covers" && (
+            <SongbookCoversEditor
+              songbook={songbook}
+              revision={revision}
+              onDone={handleEditDone}
+            />
           )}
           <SongbookContents items={items} />
-          <PDFGenerator songBook={{ items }} />
+          <PDFGenerator
+            songBook={{ items }}
+            covers={Object.fromEntries(
+              Object.entries(revision.covers).map(([i, f]) => [i, f.url]),
+            )}
+          />
           {isReviewer(role) && (
             <SongbookHistory
               songbookId={songbook.id}
@@ -164,32 +188,45 @@ export function SongbookPage() {
   );
 }
 
-function SongbookContents({ items }: { items: SongbookItemViewModel[] }) {
-  let index = 0;
+function SongbookContents({
+  items,
+}: {
+  items: NumberedSongbookItemViewModel[];
+}) {
+  const anyDeleted = items.some((i) => !isSongbookSection(i) && i.deleted);
   return (
-    <Table size="sm" className="mb-4">
-      <tbody>
-        {items.map((item, i) =>
-          isSongbookSection(item) ? (
-            <tr key={`s-${i}`}>
-              <th colSpan={3}>{item.title}</th>
-            </tr>
-          ) : (
-            <tr key={item.score.id}>
-              <td className="text-muted" style={{ width: 40 }}>
-                {++index}
-              </td>
-              <td>
-                <Link to={`/score/${encodeURIComponent(item.score.id)}`}>
-                  {item.score.title}
-                </Link>
-              </td>
-              <td className="text-muted">{item.score.composer}</td>
-            </tr>
-          ),
-        )}
-      </tbody>
-    </Table>
+    <>
+      <Table size="sm" className={anyDeleted ? "mb-1" : "mb-4"}>
+        <tbody>
+          {items.map((item, i) =>
+            isSongbookSection(item) ? (
+              <tr key={`s-${i}`}>
+                <th colSpan={3}>{item.title}</th>
+              </tr>
+            ) : (
+              <tr key={item.score.id} className={item.deleted ? "text-muted" : ""}>
+                <td className="text-muted" style={{ width: 40 }}>
+                  {item.index}
+                </td>
+                <td>
+                  {item.deleted ? (
+                    <s>{item.score.title}</s>
+                  ) : (
+                    <Link to={`/score/${encodeURIComponent(item.score.id)}`}>
+                      {item.score.title}
+                    </Link>
+                  )}
+                </td>
+                <td className="text-muted">{item.score.composer}</td>
+              </tr>
+            ),
+          )}
+        </tbody>
+      </Table>
+      {anyDeleted && (
+        <p className="text-muted small mb-4">{REMOVED_SCORES_NOTE}</p>
+      )}
+    </>
   );
 }
 

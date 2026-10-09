@@ -17,7 +17,11 @@ import type {
   SongbookViewModel,
   SongbookItemViewModel,
 } from "../../types/viewModels";
-import { isSongbookSection, songbookScore } from "../lib/songbook";
+import {
+  isSongbookSection,
+  numberSongbookItems,
+  songbookScore,
+} from "../lib/songbook";
 
 import "bootstrap/dist/css/bootstrap.css";
 import "../css/App.css";
@@ -130,7 +134,7 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
     setResults([]);
   };
 
-  const songBook: SongbookViewModel = { items };
+  const songBook: SongbookViewModel = { items: numberSongbookItems(items) };
 
   return (
     <>

@@ -120,6 +120,12 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
 2. Verify (flag on, staging): save a homepage list as a songbook, edit it into a
    second revision, open the first via the history.
 
+## 7. Task 004b — songbook PDFs and covers
+
+1. Merge → deploy ships hosting and storage rules. No migration.
+2. Verify (flag on, staging): add covers to a songbook, generate one instrument's
+   PDF from its page — cover, frozen numbers, deleted scores struck through.
+
 ## Open
 
 - **M1b semantics.** The export app has been creating `Acervo @<name>` projects in
