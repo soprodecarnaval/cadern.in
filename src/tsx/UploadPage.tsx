@@ -161,7 +161,7 @@ export function UploadPage() {
   if (step === "uploading") {
     return (
       <Container className="mt-4">
-        <h2>{existingScoreId ? "Nova revisão" : "Enviar partitura"}</h2>
+        <h2>{existingScoreId ? "Nova versão" : "Enviar partitura"}</h2>
         <Card>
           <Card.Body>
             <p>
@@ -242,7 +242,7 @@ export function UploadPage() {
 
   return (
     <Container className="mt-4">
-      <h2>{existingScoreId ? "Nova revisão" : "Enviar partitura"}</h2>
+      <h2>{existingScoreId ? "Nova versão" : "Enviar partitura"}</h2>
 
       <Card className="mb-3">
         <Card.Body>
@@ -370,7 +370,7 @@ export function UploadPage() {
               disabled={hasErrors || parsed.parts.length === 0}
               onClick={() => void handlePublish()}
             >
-              {existingScoreId ? "Enviar revisão" : "Publicar"}
+              {existingScoreId ? "Enviar versão" : "Publicar"}
             </Button>
           </div>
         </>

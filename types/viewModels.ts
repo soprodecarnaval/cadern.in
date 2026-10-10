@@ -41,6 +41,9 @@ export type SongbookScoreViewModel = {
   // Soft-deleted since a saved revision pinned it: keeps its number, gets no
   // pages (collab-flow §5.7).
   deleted?: boolean;
+  // The score's current latest revision, when the item comes from a saved
+  // revision: differs from the pinned one when a newer version exists.
+  latestRevisionId?: string;
 };
 
 export type SongbookSectionViewModel = {

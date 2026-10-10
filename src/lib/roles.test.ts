@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   canDeleteProject,
+  canDeleteSongbook,
+  canEditSongbook,
+  canPublishSongbook,
+  canRepinSongbook,
   canDeleteScore,
   canGrantRole,
   canRemoveMember,
@@ -78,6 +82,19 @@ describe("deletion", () => {
     ).toEqual([true, false, false]);
     expect(canDeleteScore("owner")).toBe(true);
     expect(canDeleteScore("admin")).toBe(false);
+  });
+});
+
+describe("songbooks", () => {
+  it("lets admins edit, editors re-pin, owners publish and delete", () => {
+    expect(canEditSongbook("admin")).toBe(true);
+    expect(canEditSongbook("editor")).toBe(false);
+    expect(canRepinSongbook("editor")).toBe(true);
+    expect(canRepinSongbook("reviewer")).toBe(false);
+    expect(canPublishSongbook("owner")).toBe(true);
+    expect(canPublishSongbook("admin")).toBe(false);
+    expect(canDeleteSongbook("owner")).toBe(true);
+    expect(canDeleteSongbook("admin")).toBe(false);
   });
 });
 

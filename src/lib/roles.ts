@@ -28,6 +28,10 @@ export const canInvite = isAdmin;
 export const canEditScoreMetadata = isAdmin;
 export const canDeleteProject = isOwner;
 export const canDeleteScore = isOwner;
+export const canEditSongbook = isAdmin;
+export const canRepinSongbook = isEditor;
+export const canPublishSongbook = isOwner;
+export const canDeleteSongbook = isOwner;
 
 export const INVITABLE_ROLES: InvitableRole[] = ["reviewer", "editor"];
 // `owner` is never granted: a project has exactly one, and transferring it is

@@ -280,6 +280,10 @@ function App() {
               path="/projects/:slug/songbooks/:songbookSlug"
               element={<SongbookPage />}
             />
+            <Route
+              path="/songbooks/:slug/:songbookSlug"
+              element={<SongbookPage />}
+            />
           </>
         )}
         <Route path="*" element={<NotFoundPage />} />

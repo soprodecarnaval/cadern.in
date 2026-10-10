@@ -129,10 +129,7 @@ export async function getLatestScoreRevisions(): Promise<
   (WithId<ScoreRevisionDoc> & { scoreId: string })[]
 > {
   const snap = await getDocs(
-    query(
-      collectionGroup(db, LEGACY_REVISIONS),
-      where("isLatest", "==", true),
-    ),
+    query(collectionGroup(db, LEGACY_REVISIONS), where("isLatest", "==", true)),
   );
   return snap.docs.map((d) => ({
     id: d.id,
@@ -207,7 +204,8 @@ export async function commitScoreRevision(
     if (!scoreSnap.exists()) {
       throw new Error(`Score ${scoreId} not found`);
     }
-    const prevRevisionId = zScoreDoc.parse(scoreSnap.data()).latestRevisionId || null;
+    const prevRevisionId =
+      zScoreDoc.parse(scoreSnap.data()).latestRevisionId || null;
 
     let revisionNumber = 1;
     if (prevRevisionId) {
@@ -514,7 +512,9 @@ function scoreLinkRef(projectId: string, scoreId: string) {
 export async function getProjectScoreLinks(
   projectId: string,
 ): Promise<ScoreLinkDoc[]> {
-  const snap = await getDocs(collection(db, "projects", projectId, "scoreLinks"));
+  const snap = await getDocs(
+    collection(db, "projects", projectId, "scoreLinks"),
+  );
   return snap.docs
     .map((d) => zScoreLinkDoc.parse(d.data()))
     .filter((link) => !link.deletedAt);
@@ -575,7 +575,9 @@ export async function getProjectSongbooks(
     where("deletedAt", "==", null),
     ...(publishedOnly ? [where("isPublished", "==", true)] : []),
   ];
-  const snap = await getDocs(query(collection(db, "songbooks"), ...constraints));
+  const snap = await getDocs(
+    query(collection(db, "songbooks"), ...constraints),
+  );
   return snap.docs.map((d) => ({ id: d.id, ...zSongbookDoc.parse(d.data()) }));
 }
 
@@ -688,5 +690,24 @@ export async function createSongbookRevision(
       updatedAt: serverTimestamp(),
     });
     return revisionId;
+  });
+}
+
+/** Owner-only: makes the current revision readable by everyone, or not. */
+export async function setSongbookPublished(
+  id: string,
+  isPublished: boolean,
+): Promise<void> {
+  await updateDoc(songbookRef(id), {
+    isPublished,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Owner-only. The songbook's scores are untouched (collab-flow §6). */
+export async function softDeleteSongbook(id: string): Promise<void> {
+  await updateDoc(songbookRef(id), {
+    deletedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
 }

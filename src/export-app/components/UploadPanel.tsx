@@ -127,7 +127,7 @@ export function UploadPanel({ user, directory }: Props) {
       <section className="upload-panel">
         <strong>Enviado para o cadern.in</strong>
         <span>
-          {status.scoreId} — revisão {status.revision}
+          {status.scoreId} — versão {status.revision}
         </span>
       </section>
     );
@@ -163,7 +163,7 @@ export function UploadPanel({ user, directory }: Props) {
       {existingRevisions !== null && (
         <p className="upload-notice">
           Esta partitura já existe neste projeto com {existingRevisions}{" "}
-          revisão(ões). O envio criará a revisão {existingRevisions + 1}.
+          versão(ões). O envio criará a versão {existingRevisions + 1}.
         </p>
       )}
 

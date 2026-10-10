@@ -20,6 +20,10 @@ export const REMOVED_SCORES_NOTE =
 export const songbookPath = (projectId: string, slug: string) =>
   `/projects/${encodeURIComponent(projectId)}/songbooks/${encodeURIComponent(slug)}`;
 
+/** Short, shareable URL of a published songbook. */
+export const publicSongbookPath = (projectId: string, slug: string) =>
+  `/songbooks/${encodeURIComponent(projectId)}/${encodeURIComponent(slug)}`;
+
 export const isSongbookSection = (
   item: SongbookItemViewModel,
 ): item is SongbookSectionViewModel => item.type === "section";
@@ -90,7 +94,10 @@ export function toSongbookRevisionContent(
  */
 export function fromSongbookRevision(
   revision: Pick<SongbookRevisionDoc, "entries">,
-  scores: Map<string, { score: ScoreViewModel; deleted: boolean }>,
+  scores: Map<
+    string,
+    { score: ScoreViewModel; deleted: boolean; latestRevisionId?: string }
+  >,
 ): NumberedSongbookItemViewModel[] {
   return [...revision.entries]
     .sort((a, b) => a.order - b.order)
@@ -105,8 +112,43 @@ export function fromSongbookRevision(
               ...songbookScore(pinned.score),
               index: entry.index,
               deleted: pinned.deleted,
+              latestRevisionId: pinned.latestRevisionId,
             },
           ]
         : [];
     });
+}
+
+/** A newer version of the score exists than the one the songbook pins. */
+export const hasNewerVersion = (item: SongbookScoreViewModel): boolean =>
+  !item.deleted &&
+  !!item.latestRevisionId &&
+  item.latestRevisionId !== getScoreRevision(item).id;
+
+/**
+ * The current revision's content with the given scores re-pinned to their
+ * latest version — the one change editors may make (collab-flow §5.5) — and
+ * a note naming them.
+ */
+export function repinnedContent(
+  current: SongbookRevisionContent,
+  items: SongbookItemViewModel[],
+  scoreIds: string[],
+): { content: SongbookRevisionContent; note: string } {
+  const pins = { ...current.pins };
+  const titles: string[] = [];
+  for (const item of items) {
+    if (
+      !isSongbookSection(item) &&
+      scoreIds.includes(item.score.id) &&
+      hasNewerVersion(item)
+    ) {
+      pins[item.score.id] = item.latestRevisionId!;
+      titles.push(item.score.title);
+    }
+  }
+  return {
+    content: { entries: current.entries, pins, covers: current.covers },
+    note: `atualiza: ${titles.join(", ")}`,
+  };
 }

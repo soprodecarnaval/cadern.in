@@ -50,7 +50,7 @@ clause on `scores`), §5.3.
 
 ### Web — lineage and songbooks
 
-9. Lineage on the score page: "derivado de X (projeto Y) @ revisão N" linking back;
+9. Lineage on the score page: "derivado de X (projeto Y) @ versão N" linking back;
    optional list of forks on the source (`scores where forkedFrom.scoreId == id`).
 10. Songbook badge "derivação disponível neste projeto" + admin "trocar pela
     derivação" (new songbook revision, same `order`/`index`). Lands after 004.

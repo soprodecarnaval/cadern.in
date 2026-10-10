@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { ScoreViewModel } from "../../types/viewModels";
 import {
   fromSongbookRevision,
+  hasNewerVersion,
   numberSongbookItems,
+  repinnedContent,
   songbookScore,
   songbookSection,
   toSongbookRevisionContent,
@@ -81,5 +83,38 @@ describe("fromSongbookRevision", () => {
       { ...songbookScore(a), index: 1, deleted: false },
       { ...songbookScore(b), index: 2, deleted: true },
     ]);
+  });
+});
+
+describe("newer versions", () => {
+  const pinned = (id: string, latest: string, deleted = false) => ({
+    ...songbookScore(score(id, `${id}-r1`)),
+    latestRevisionId: latest,
+    deleted,
+  });
+
+  it("flags pins behind the score's latest version, unless deleted", () => {
+    expect(hasNewerVersion(pinned("a", "a-r1"))).toBe(false);
+    expect(hasNewerVersion(pinned("a", "a-r2"))).toBe(true);
+    expect(hasNewerVersion(pinned("a", "a-r2", true))).toBe(false);
+  });
+
+  it("re-pins only the requested stale scores, keeping entries and covers", () => {
+    const current = {
+      entries: [{ type: "score" as const, scoreId: "a", order: 0, index: 1 }],
+      pins: { a: "a-r1", b: "b-r1", c: "c-r1" },
+      covers: {},
+    };
+    const items = [
+      pinned("a", "a-r2"),
+      pinned("b", "b-r3"),
+      pinned("c", "c-r1"),
+    ];
+    const { content, note } = repinnedContent(current, items, ["a", "c"]);
+    expect(content).toEqual({
+      ...current,
+      pins: { a: "a-r2", b: "b-r1", c: "c-r1" },
+    });
+    expect(note).toBe("atualiza: a");
   });
 });
