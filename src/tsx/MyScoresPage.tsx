@@ -68,7 +68,7 @@ function SongRow({
             </Link>
             <Link to={`/upload/${encodeURIComponent(song.id)}`}>
               <Button size="sm" variant="outline-primary">
-                Nova revisão
+                Nova versão
               </Button>
             </Link>
             <Button
@@ -95,7 +95,7 @@ function SongRow({
                   {revisions?.map((rev) => (
                     <tr key={rev.id} className="border-top">
                       <td className="ps-4 text-muted">
-                        Revisão #{rev.revisionNumber}
+                        Versão #{rev.revisionNumber}
                       </td>
                       <td className="text-muted">
                         {formatDate(rev.uploadedAt)}
@@ -178,7 +178,7 @@ export function MyScoresPage() {
               <th>Título</th>
               <th>Compositor</th>
               <th>Criado em</th>
-              <th>Revisão</th>
+              <th>Versão</th>
               <th>Ações</th>
             </tr>
           </thead>

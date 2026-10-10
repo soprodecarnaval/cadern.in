@@ -47,7 +47,7 @@ Spec: PLAN §2.1.3, §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`,
 4. ✅ Pages: `/projects/:slug/songbooks` (list; admins create) and
    `/projects/:slug/songbooks/:songbookSlug` (contents, PDF generation; admins
    edit with the builder table and a project/linked score picker; members see the
-   history and older revisions via `?revisao=`).
+   history and older revisions via `?versao=`).
 5. ✅ Homepage: `localStorage` persistence; "Salvar caderninho" → project + title
    → songbook revision 1; login continues into the save.
 6. ✅ Rules + tests: songbook create (admin, id = project~slug, unpublished, first

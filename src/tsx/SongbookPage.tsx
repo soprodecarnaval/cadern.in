@@ -72,7 +72,7 @@ async function load(
 }
 
 /**
- * A songbook at its current revision (or `?revisao=` for members). Admins edit
+ * A songbook at its current revision (or `?versao=` for members). Admins edit
  * the current revision; every save creates a new one.
  */
 export function SongbookPage() {
@@ -81,7 +81,7 @@ export function SongbookPage() {
     songbookSlug: string;
   }>();
   const [searchParams] = useSearchParams();
-  const revisionParam = searchParams.get("revisao");
+  const revisionParam = searchParams.get("versao");
   const role = useMemberRole(projectId);
   const [loaded, setLoaded] = useState<Loaded | null | "loading">("loading");
   const [editing, setEditing] = useState<"contents" | "covers" | null>(null);
@@ -123,9 +123,9 @@ export function SongbookPage() {
     <Container className="mt-4">
       <div className="d-flex align-items-baseline gap-2 mb-1">
         <h2 className="mb-0">{songbook.title}</h2>
-        <span className="text-muted">revisão #{revision.revisionNumber}</span>
+        <span className="text-muted">versão #{revision.revisionNumber}</span>
         {!songbook.isPublished && <Badge bg="secondary">não publicado</Badge>}
-        {!isCurrent && <Badge bg="warning">revisão antiga</Badge>}
+        {!isCurrent && <Badge bg="warning">versão antiga</Badge>}
       </div>
       <p className="text-muted">
         <Link to={`/projects/${encodeURIComponent(projectId)}/songbooks`}>
@@ -300,11 +300,11 @@ function SongbookEditor({
             className="mt-3"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="O que mudou nesta revisão? (opcional)"
+            placeholder="O que mudou nesta versão? (opcional)"
           />
           <div className="d-flex gap-2 mt-2">
             <Button disabled={pending} onClick={() => void handleSave()}>
-              {pending ? <Spinner animation="border" size="sm" /> : "Salvar revisão"}
+              {pending ? <Spinner animation="border" size="sm" /> : "Salvar versão"}
             </Button>
             <Button variant="secondary" onClick={() => onDone(false)}>
               Cancelar
@@ -429,10 +429,10 @@ function SongbookHistory({
             key={rev.id}
             action
             as={Link}
-            to={rev.id === currentRevisionId ? "?" : `?revisao=${encodeURIComponent(rev.id)}`}
+            to={rev.id === currentRevisionId ? "?" : `?versao=${encodeURIComponent(rev.id)}`}
             active={rev.id === shownRevisionId}
           >
-            Revisão #{rev.revisionNumber} ·{" "}
+            Versão #{rev.revisionNumber} ·{" "}
             {rev.createdAt?.toDate().toLocaleDateString("pt-BR") ?? "—"}
             {rev.note && <> · {rev.note}</>}
           </ListGroup.Item>

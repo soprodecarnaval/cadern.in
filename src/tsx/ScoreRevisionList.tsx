@@ -58,7 +58,7 @@ export function ScoreRevisionList({
           className="d-flex justify-content-between align-items-center"
         >
           <span>
-            Revisão #{rev.revisionNumber} · {formatDate(rev)} ·{" "}
+            Versão #{rev.revisionNumber} · {formatDate(rev)} ·{" "}
             {names.get(rev.uploadedBy) ?? UNKNOWN_UPLOADER}
           </span>
           {rev.id === latestRevisionId && <Badge bg="secondary">atual</Badge>}

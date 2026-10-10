@@ -47,7 +47,7 @@ async function loadScore(
     getProject(song.projectId),
   ]);
   if (!rev) {
-    throw new Error("Revisão não encontrada");
+    throw new Error("Versão não encontrada");
   }
   // A deleted project hides its scores (collab-flow §6).
   if (project?.deletedAt) {
@@ -137,7 +137,7 @@ export function ScorePage() {
     <Container className="mt-4">
       <div className="d-flex align-items-baseline gap-2 mb-1">
         <h2 className="mb-0">{score.title}</h2>
-        <span className="text-muted">revisão #{score.revisionNumber}</span>
+        <span className="text-muted">versão #{score.revisionNumber}</span>
       </div>
       <div className="d-flex align-items-center justify-content-between mb-3">
         <p className="text-muted mb-0">{score.projectTitle}</p>
@@ -182,7 +182,7 @@ export function ScorePage() {
       />
       {FEATURE_FLAG_COLLAB_FLOW && (
         <section className="mt-4">
-          <h5>Revisões</h5>
+          <h5>Versões</h5>
           <ScoreRevisionList
             scoreId={score.scoreId}
             projectId={score.projectId}

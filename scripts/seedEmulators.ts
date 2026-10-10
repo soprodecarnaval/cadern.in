@@ -129,7 +129,7 @@ function partSvg(title: string, part: string, revision: number): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="595" height="420" viewBox="0 0 595 420">
   <rect width="595" height="420" fill="white" stroke="black"/>
   <text x="297" y="190" font-size="32" text-anchor="middle" font-family="sans-serif">${esc(title)}</text>
-  <text x="297" y="240" font-size="20" text-anchor="middle" font-family="sans-serif">${esc(part)} · revisão ${revision}</text>
+  <text x="297" y="240" font-size="20" text-anchor="middle" font-family="sans-serif">${esc(part)} · versão ${revision}</text>
 </svg>`;
 }
 

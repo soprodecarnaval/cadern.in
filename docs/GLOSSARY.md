@@ -5,7 +5,7 @@ Mappings between user-facing Portuguese (pt-BR) terminology and English code ide
 | pt-BR (user-facing)       | en-US (code)          | Notes |
 |---------------------------|-----------------------|-------|
 | Partitura                 | Song / Score          | `Song` in Firestore/domain model; `Score` in the legacy collection format |
-| Revisão                   | Revision              | A versioned upload of a song |
+| Versão                    | Revision              | A versioned upload of a score, or a saved state of a songbook. **Never "revisão"** in the UI — "versão" is the user-facing term; code keeps `revision` |
 | Acervo @username          | Default project       | Auto-created personal project for each user; display name keeps pt-BR "Acervo @" prefix |
 | Projeto                   | Project               | A named collection of songs |
 | Compositor                | Composer              | |
