@@ -270,13 +270,18 @@ async function main(): Promise<void> {
     }
   }
 
-  // One songbook, pinned to each score's latest revision.
+  // One songbook, pinned to each score's first revision — so scores with a
+  // second one ("Olha pro Céu", "Cidade Maravilhosa") show a newer version.
   const songbookId = "acervo-dev~carnaval-dev";
   const pins: Record<string, string> = {};
   for (const id of firstScoreIds.slice(0, 4)) {
-    pins[id] = (await db.collection("scores").doc(id).get()).get(
-      "latestRevisionId",
-    ) as string;
+    const first = await db
+      .collection("scores")
+      .doc(id)
+      .collection("scoreRevisions")
+      .where("revisionNumber", "==", 1)
+      .get();
+    pins[id] = first.docs[0].id;
   }
   const entries = [
     { type: "section", title: "Marchinhas", order: 0 },
