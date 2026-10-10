@@ -78,10 +78,20 @@ Spec: PLAN §2.1.3, §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`,
 
 ## 004c — pins, publishing, public pages
 
-1. Stale-pin badge + "atualizar" for one entry or all (EDITOR+).
-2. Publish / unpublish / soft delete (owner).
-3. Public page `/songbooks/:projectSlug/:songbookSlug` for published songbooks.
-4. Project page shows non-members only published songbooks (PLAN §4.4).
+1. ✅ "nova versão" badge on entries whose score has a newer version than the
+   pinned one (members only; the public sees the songbook as published), linking
+   to the score. Editors+ get "atualizar" per entry and "Atualizar todas (N)":
+   a new revision with the same entries and covers, note "atualiza: …"
+   (`hasNewerVersion`, `repinnedContent`, + tests).
+2. ✅ Owners publish / unpublish, and delete after typing the title (scores
+   untouched). `canEditSongbook`, `canRepinSongbook`, `canPublishSongbook`,
+   `canDeleteSongbook` in `roles.ts`.
+3. ✅ Public page `/songbooks/:projectSlug/:songbookSlug` — the songbook page:
+   current revision of a published songbook, PDFs, no history or controls.
+   Behind `FEATURE_FLAG_COLLAB_FLOW` like the rest of the milestone.
+4. ✅ Project page: non-members see only published songbooks (linked to the public
+   URL), no score list; members see all songbooks and the scores. Linked scores
+   on the project page come with 006.
 
 ## 004d — published marker + homepage
 
