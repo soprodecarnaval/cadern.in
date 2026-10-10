@@ -9,7 +9,12 @@ import {
   Spinner,
   Table,
 } from "react-bootstrap";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { useAuth } from "../auth";
 import {
   createSongbookRevision,
@@ -20,12 +25,22 @@ import {
   getSongbook,
   getSongbookRevision,
   getSongbookRevisions,
+  setSongbookPublished,
+  softDeleteSongbook,
   type WithId,
 } from "../lib/db";
-import { isAdmin, isReviewer } from "../lib/roles";
+import {
+  canDeleteSongbook,
+  canEditSongbook,
+  canPublishSongbook,
+  canRepinSongbook,
+  isReviewer,
+} from "../lib/roles";
 import {
   REMOVED_SCORES_NOTE,
   fromSongbookRevision,
+  hasNewerVersion,
+  repinnedContent,
   isSongbookSection,
   songbookScore,
   toSongbookRevisionContent,
@@ -38,6 +53,7 @@ import type {
   PlayingPartViewModel,
   ScoreViewModel,
   NumberedSongbookItemViewModel,
+  NumberedSongbookScoreViewModel,
   SongbookItemViewModel,
 } from "../../types/viewModels";
 import { PDFGenerator } from "./PdfGenerator";
@@ -67,7 +83,10 @@ async function load(
   if (!revision) {
     return null;
   }
-  const items = fromSongbookRevision(revision, await loadPinnedScores(revision));
+  const items = fromSongbookRevision(
+    revision,
+    await loadPinnedScores(revision),
+  );
   return { songbook, revision, items };
 }
 
@@ -83,6 +102,8 @@ export function SongbookPage() {
   const [searchParams] = useSearchParams();
   const revisionParam = searchParams.get("versao");
   const role = useMemberRole(projectId);
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [loaded, setLoaded] = useState<Loaded | null | "loading">("loading");
   const [editing, setEditing] = useState<"contents" | "covers" | null>(null);
   const [reloads, setReloads] = useState(0);
@@ -118,6 +139,28 @@ export function SongbookPage() {
     }
   };
   const isCurrent = revision.id === songbook.currentRevisionId;
+  const stale = items.filter(
+    (i): i is NumberedSongbookScoreViewModel =>
+      !isSongbookSection(i) && hasNewerVersion(i),
+  );
+  const canRepin = isCurrent && canRepinSongbook(role);
+
+  const handleRepin = async (scoreIds: string[]) => {
+    if (!currentUser) {
+      return;
+    }
+    const { content, note } = repinnedContent(revision, items, scoreIds);
+    await createSongbookRevision(songbook.id, content, {
+      createdBy: currentUser.uid,
+      note,
+    });
+    setReloads((n) => n + 1);
+  };
+
+  const handleTogglePublished = async () => {
+    await setSongbookPublished(songbook.id, !songbook.isPublished);
+    setReloads((n) => n + 1);
+  };
 
   return (
     <Container className="mt-4">
@@ -143,22 +186,46 @@ export function SongbookPage() {
         />
       ) : (
         <>
-          {isCurrent && isAdmin(role) && editing === null && (
+          {isCurrent && editing === null && (
             <div className="d-flex gap-2 mb-3">
-              <Button
-                size="sm"
-                variant="outline-primary"
-                onClick={() => setEditing("contents")}
-              >
-                Editar
-              </Button>
-              <Button
-                size="sm"
-                variant="outline-primary"
-                onClick={() => setEditing("covers")}
-              >
-                Capas
-              </Button>
+              {canEditSongbook(role) && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline-primary"
+                    onClick={() => setEditing("contents")}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline-primary"
+                    onClick={() => setEditing("covers")}
+                  >
+                    Capas
+                  </Button>
+                </>
+              )}
+              {canRepin && stale.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline-warning"
+                  onClick={() => void handleRepin(stale.map((i) => i.score.id))}
+                >
+                  Atualizar todas ({stale.length})
+                </Button>
+              )}
+              {canPublishSongbook(role) && (
+                <Button
+                  size="sm"
+                  variant={
+                    songbook.isPublished ? "outline-secondary" : "success"
+                  }
+                  onClick={() => void handleTogglePublished()}
+                >
+                  {songbook.isPublished ? "Despublicar" : "Publicar"}
+                </Button>
+              )}
             </div>
           )}
           {editing === "covers" && (
@@ -168,7 +235,11 @@ export function SongbookPage() {
               onDone={handleEditDone}
             />
           )}
-          <SongbookContents items={items} />
+          <SongbookContents
+            items={items}
+            showNewerVersions={isReviewer(role)}
+            onRepin={canRepin ? (id) => void handleRepin([id]) : undefined}
+          />
           <PDFGenerator
             songBook={{ items }}
             covers={Object.fromEntries(
@@ -182,16 +253,92 @@ export function SongbookPage() {
               shownRevisionId={revision.id}
             />
           )}
+          {canDeleteSongbook(role) && (
+            <DeleteSongbookSection
+              songbook={songbook}
+              onDeleted={() =>
+                void navigate(
+                  `/projects/${encodeURIComponent(projectId)}/songbooks`,
+                )
+              }
+            />
+          )}
         </>
       )}
     </Container>
   );
 }
 
+/** Owner-only; asks for the title. The songbook's scores are untouched. */
+function DeleteSongbookSection({
+  songbook,
+  onDeleted,
+}: {
+  songbook: WithId<SongbookDoc>;
+  onDeleted: () => void;
+}) {
+  const [confirmation, setConfirmation] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPending(true);
+    setError("");
+    try {
+      await softDeleteSongbook(songbook.id);
+      onDeleted();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erro ao excluir");
+      setPending(false);
+    }
+  };
+
+  return (
+    <section className="mt-5 border border-danger rounded p-3">
+      <h5 className="text-danger">Zona de perigo</h5>
+      <p className="mb-2">
+        Excluir o caderninho não mexe nas partituras. Para confirmar, digite o
+        título: <strong>{songbook.title}</strong>
+      </p>
+      <Form
+        onSubmit={(e) => void handleDelete(e)}
+        className="d-flex gap-2 align-items-start flex-wrap"
+      >
+        <Form.Control
+          value={confirmation}
+          onChange={(e) => setConfirmation(e.target.value)}
+          placeholder={songbook.title}
+          style={{ width: 240 }}
+        />
+        <Button
+          type="submit"
+          variant="danger"
+          disabled={pending || confirmation !== songbook.title}
+        >
+          {pending ? (
+            <Spinner animation="border" size="sm" />
+          ) : (
+            "Excluir caderninho"
+          )}
+        </Button>
+      </Form>
+      {error && <div className="text-danger mt-2">{error}</div>}
+    </section>
+  );
+}
+
 function SongbookContents({
   items,
+  showNewerVersions,
+  onRepin,
 }: {
   items: NumberedSongbookItemViewModel[];
+  // Members see which scores have a newer version than the one pinned; the
+  // public sees the songbook as published.
+  showNewerVersions: boolean;
+  // Given to editors and up: re-pins one score to its latest version.
+  onRepin?: (scoreId: string) => void;
 }) {
   const anyDeleted = items.some((i) => !isSongbookSection(i) && i.deleted);
   return (
@@ -201,10 +348,13 @@ function SongbookContents({
           {items.map((item, i) =>
             isSongbookSection(item) ? (
               <tr key={`s-${i}`}>
-                <th colSpan={3}>{item.title}</th>
+                <th colSpan={4}>{item.title}</th>
               </tr>
             ) : (
-              <tr key={item.score.id} className={item.deleted ? "text-muted" : ""}>
+              <tr
+                key={item.score.id}
+                className={item.deleted ? "text-muted" : ""}
+              >
                 <td className="text-muted" style={{ width: 40 }}>
                   {item.index}
                 </td>
@@ -218,6 +368,27 @@ function SongbookContents({
                   )}
                 </td>
                 <td className="text-muted">{item.score.composer}</td>
+                <td className="text-end">
+                  {showNewerVersions && hasNewerVersion(item) && (
+                    <>
+                      <Link to={`/score/${encodeURIComponent(item.score.id)}`}>
+                        <Badge bg="warning" text="dark">
+                          nova versão
+                        </Badge>
+                      </Link>
+                      {onRepin && (
+                        <Button
+                          size="sm"
+                          variant="link"
+                          className="py-0"
+                          onClick={() => onRepin(item.score.id)}
+                        >
+                          atualizar
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </td>
               </tr>
             ),
           )}
@@ -264,10 +435,14 @@ function SongbookEditor({
     setPending(true);
     setError("");
     try {
-      await createSongbookRevision(songbook.id, toSongbookRevisionContent(items), {
-        createdBy: currentUser.uid,
-        note: note.trim(),
-      });
+      await createSongbookRevision(
+        songbook.id,
+        toSongbookRevisionContent(items),
+        {
+          createdBy: currentUser.uid,
+          note: note.trim(),
+        },
+      );
       onDone(true);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erro ao salvar");
@@ -304,7 +479,11 @@ function SongbookEditor({
           />
           <div className="d-flex gap-2 mt-2">
             <Button disabled={pending} onClick={() => void handleSave()}>
-              {pending ? <Spinner animation="border" size="sm" /> : "Salvar versão"}
+              {pending ? (
+                <Spinner animation="border" size="sm" />
+              ) : (
+                "Salvar versão"
+              )}
             </Button>
             <Button variant="secondary" onClick={() => onDone(false)}>
               Cancelar
@@ -390,7 +569,11 @@ function ProjectScorePicker({
                 </Badge>
               )}
             </span>
-            <Button size="sm" variant="outline-primary" onClick={() => onAdd(s)}>
+            <Button
+              size="sm"
+              variant="outline-primary"
+              onClick={() => onAdd(s)}
+            >
               Adicionar
             </Button>
           </ListGroup.Item>
@@ -429,7 +612,11 @@ function SongbookHistory({
             key={rev.id}
             action
             as={Link}
-            to={rev.id === currentRevisionId ? "?" : `?versao=${encodeURIComponent(rev.id)}`}
+            to={
+              rev.id === currentRevisionId
+                ? "?"
+                : `?versao=${encodeURIComponent(rev.id)}`
+            }
             active={rev.id === shownRevisionId}
           >
             Versão #{rev.revisionNumber} ·{" "}

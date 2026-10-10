@@ -7,6 +7,7 @@ export interface PinnedScore {
   score: ScoreViewModel;
   // Soft-deleted since the revision was saved (collab-flow §5.7).
   deleted: boolean;
+  latestRevisionId: string;
 }
 
 /**
@@ -40,6 +41,7 @@ export async function loadPinnedScores(
           await projectTitle(score.projectId),
         ),
         deleted: !!score.deletedAt,
+        latestRevisionId: score.latestRevisionId,
       };
       return [scoreId, pinnedScore] as const;
     }),
