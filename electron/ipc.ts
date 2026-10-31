@@ -4,6 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { autolocateMscore, validateMscore } from "../scripts/lib/mscz";
 import { readScoreMeta } from "../scripts/lib/scoreMeta";
+import { stampMsczFile, stampMsczIdentity } from "../scripts/lib/msczIdentity";
+import type { ScoreIdentity } from "../types/metajson";
 import {
   copyMsczWithMeta,
   type MetadataTags,
@@ -103,6 +105,18 @@ export function registerIpc(): void {
         expandHome(destinationPath),
         tags,
       ),
+  );
+
+  ipcMain.handle(
+    "score:stampMsczBytes",
+    (_e, bytes: Uint8Array, identity: ScoreIdentity): Uint8Array =>
+      stampMsczIdentity(Buffer.from(bytes), identity),
+  );
+
+  ipcMain.handle(
+    "score:stampMsczFile",
+    (_e, msczPath: string, identity: ScoreIdentity) =>
+      stampMsczFile(expandHome(msczPath), identity),
   );
 
   // Returns an outcome rather than rejecting: Electron flattens Error

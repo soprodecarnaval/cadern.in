@@ -5,6 +5,7 @@ import type {
   RunExportOptions,
 } from "../../scripts/lib/exportScore";
 import type { ExportOutcome } from "../../scripts/lib/exportError";
+import type { ScoreIdentity } from "../../types/metajson";
 
 // Bridge exposed by electron/preload.ts via contextBridge.
 export interface ExportApi {
@@ -26,6 +27,10 @@ export interface ExportApi {
     destinationPath: string,
     tags: MetadataTags,
   ): Promise<string>;
+  /** Writes the uploaded identity into a .mscz's bytes. */
+  stampMsczBytes(bytes: Uint8Array, identity: ScoreIdentity): Promise<Uint8Array>;
+  /** Writes the uploaded identity into the user's own file. */
+  stampMsczFile(msczPath: string, identity: ScoreIdentity): Promise<void>;
   // Resolves with an outcome rather than rejecting; see scripts/lib/exportError.
   runExport(
     options: Omit<RunExportOptions, "mscorePath">,
