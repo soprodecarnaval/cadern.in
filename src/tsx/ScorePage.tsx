@@ -30,6 +30,7 @@ import { commentThreads } from "../lib/comments";
 import type {
   CommentAnchor,
   ReviewCommentDoc,
+  ScoreData,
   ScoreMetadata,
 } from "../../types/docs";
 import { ReviewCommentsPanel } from "./ReviewCommentsPanel";
@@ -38,6 +39,7 @@ import {
   type ScoreDisplayPart,
   type ScorePin,
 } from "./ScoreDisplay";
+import { ScoreLineage } from "./ScoreLineage";
 import { ScoreMetadataEditor } from "./ScoreMetadataEditor";
 import { ScoreRevisionList } from "./ScoreRevisionList";
 
@@ -46,6 +48,7 @@ interface LoadedScore extends ScoreMetadata {
   revisionId: string;
   latestRevisionId: string;
   publishedRevisionId: string | null;
+  forkedFrom: ScoreData["forkedFrom"];
   revisionNumber: number;
   uploaded: ScoreMetadata;
   projectId: string;
@@ -92,6 +95,7 @@ async function loadScore(
     revisionId: resolvedRevisionId,
     latestRevisionId: song.latestRevisionId,
     publishedRevisionId: song.published?.revisionId ?? null,
+    forkedFrom: song.forkedFrom,
     revisionNumber: rev.revisionNumber,
     ...resolveScoreMetadata(song),
     uploaded: uploadedScoreMetadata(song),
@@ -238,6 +242,9 @@ export function ScorePage() {
           </Button>
         </div>
       </div>
+      {FEATURE_FLAG_COLLAB_FLOW && (
+        <ScoreLineage scoreId={score.scoreId} forkedFrom={score.forkedFrom} />
+      )}
       <Row>
         <Col lg={reviewing ? 8 : 12}>
           <ScoreDisplay

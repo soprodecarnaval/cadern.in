@@ -132,19 +132,6 @@ service cloud.firestore {
         }
       }
 
-      // Scores of other projects this project uses (collab-flow §2.1.3).
-      // Unlinking sets `deletedAt`.
-      match /scoreLinks/{scoreId} {
-        allow read: if true;
-        allow create, update: if request.auth != null &&
-          isEditor(projectId) &&
-          request.resource.data.scoreId == scoreId &&
-          request.resource.data.addedBy == request.auth.uid &&
-          request.resource.data.sourceProjectId == get(scorePath(scoreId)).data.projectId &&
-          request.resource.data.sourceProjectId != projectId;
-        allow delete: if false;
-      }
-
       // Keyed by invitee, so the accept rule above can find it.
       match /invitations/{uid} {
         allow read: if request.auth != null &&
@@ -182,6 +169,15 @@ service cloud.firestore {
       return /databases/$(database)/documents/scores/$(scoreId);
     }
 
+    // A fork names its source's real project, which can't be its own.
+    function isValidFork(score) {
+      return !('forkedFrom' in score) || (
+        exists(scorePath(score.forkedFrom.scoreId)) &&
+        get(scorePath(score.forkedFrom.scoreId)).data.projectId == score.forkedFrom.projectId &&
+        score.forkedFrom.projectId != score.projectId
+      );
+    }
+
     match /scores/{scoreId} {
       allow read: if true;
       // Created before its first revision, so storage rules can resolve the
@@ -191,7 +187,8 @@ service cloud.firestore {
         request.resource.data.uploadedBy == request.auth.uid &&
         request.resource.data.latestRevisionId == '' &&
         request.resource.data.published == null &&
-        request.resource.data.deletedAt == null;
+        request.resource.data.deletedAt == null &&
+        isValidFork(request.resource.data);
       allow update: if request.auth != null && (
         // A new revision moves the pointer and refreshes the cached (and
         // legacy) metadata, committed together with the revision itself.

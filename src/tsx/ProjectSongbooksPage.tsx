@@ -115,7 +115,6 @@ function CreateSongbookForm({ projectId }: { projectId: string }) {
         title: title.trim(),
         content: { entries: [], pins: {}, covers: {} },
         createdBy: currentUser.uid,
-        links: [],
       });
       void navigate(songbookPath(projectId, slug));
     } catch (err: unknown) {

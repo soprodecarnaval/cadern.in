@@ -12,6 +12,8 @@ import {
   softDeleteScore,
 } from "./db";
 import { newRevisionId, revisionSlug } from "./revisionId";
+import type { UploadTarget } from "./uploadTarget";
+import type { ScoreIdentity } from "../../types/metajson";
 
 const DEFAULT_PROJECT_PREFIX = "Acervo @";
 
@@ -44,11 +46,16 @@ export async function getOrCreateDefaultProject(user: User): Promise<string> {
 export async function uploadScore(
   parsed: ParsedScore,
   projectId: string,
+  target: UploadTarget,
   user: User,
-  onProgress?: OnProgress,
-  existingScoreId?: string,
-): Promise<string> {
-  const scoreId = existingScoreId ?? `${projectId}-${slugify(parsed.title)}`;
+  options: {
+    onProgress?: OnProgress;
+    // Writes the score and version this upload creates into the .mscz.
+    stampMscz?: (file: File, identity: ScoreIdentity) => Promise<File>;
+  } = {},
+): Promise<ScoreIdentity> {
+  const { onProgress, stampMscz } = options;
+  const scoreId = target.scoreId;
   const metadata = {
     title: parsed.title,
     composer: parsed.composer,
@@ -68,12 +75,13 @@ export async function uploadScore(
   // firestore.rules to authorise creating the revision. Creating it last — as
   // this used to — left both with nothing to read on a first upload.
   const filesTotal = parsed.fileMap.size;
-  const isNewScore = !existingScoreId;
+  const isNewScore = target.kind !== "version";
   if (isNewScore) {
     await createScore(scoreId, {
       projectId,
       uploadedBy: user.uid,
       metadata,
+      forkedFrom: target.kind === "fork" ? target.source : undefined,
     });
   }
 
@@ -84,7 +92,11 @@ export async function uploadScore(
 
     const storageFiles = new Map<string, { path: string; url: string }>();
 
-    for (const [key, file] of parsed.fileMap) {
+    for (const [key, original] of parsed.fileMap) {
+      const file =
+        key === "mscz" && stampMscz
+          ? await stampMscz(original, { scoreId, revisionId: revId })
+          : original;
       let storagePath: string;
       if (key === "mscz") {
         storagePath = `${storageBase}/score.mscz`;
@@ -121,7 +133,9 @@ export async function uploadScore(
       // path separator — keys are built from `basename`, never from it.
       name: part.name,
       instrument: part.instrument,
-      svg: part.svg.map((svgKey) => storageFiles.get(svgKey) ?? missing(svgKey)),
+      svg: part.svg.map(
+        (svgKey) => storageFiles.get(svgKey) ?? missing(svgKey),
+      ),
       midi: storageFiles.get(part.midi) ?? missing(part.midi),
     }));
 
@@ -129,7 +143,15 @@ export async function uploadScore(
       uploadedBy: user.uid,
       slug,
       metadata,
-      origin: { type: "upload" },
+      origin:
+        target.kind === "fork"
+          ? {
+              type: "fork",
+              sourceScoreId: target.source.scoreId,
+              sourceRevisionId: target.source.revisionId,
+              sourceProjectId: target.source.projectId,
+            }
+          : { type: "upload" },
       mscz: storageFiles.get("mscz") ?? missing("mscz"),
       metajson: storageFiles.get("metajson") ?? missing("metajson"),
       midi: storageFiles.get("midi") ?? missing("midi"),
@@ -147,5 +169,5 @@ export async function uploadScore(
   }
 
   onProgress?.({ stage: "done", filesUploaded: filesTotal, filesTotal });
-  return scoreId;
+  return { scoreId, revisionId: revId };
 }

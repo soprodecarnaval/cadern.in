@@ -270,6 +270,56 @@ async function main(): Promise<void> {
     }
   }
 
+  // A fork in Acervo Dev of Outro Projeto's "Asa Branca", which the songbook
+  // below uses: it shows the lineage and "trocar pela derivação".
+  const asaSource = "outro-projeto-asa-branca";
+  const asaSourceDoc = await db.collection("scores").doc(asaSource).get();
+  const asaRevisionId = asaSourceDoc.get("latestRevisionId") as string;
+  const asaRevision = await asaSourceDoc.ref
+    .collection("scoreRevisions")
+    .doc(asaRevisionId)
+    .get();
+  const forkOrigin = {
+    type: "fork",
+    sourceScoreId: asaSource,
+    sourceRevisionId: asaRevisionId,
+    sourceProjectId: "outro-projeto",
+  };
+  const forkRef = db.collection("scores").doc("acervo-dev-asa-branca");
+  await forkRef.set({
+    projectId: "acervo-dev",
+    uploadedBy: uids.editor,
+    latestRevisionId: "asa-branca-dev-fork1",
+    title: "Asa Branca",
+    composer: "Luiz Gonzaga",
+    sub: "",
+    tags: ["baião"],
+    cachedMetadata: asaRevision.get("metadata"),
+    forkedFrom: {
+      scoreId: asaSource,
+      revisionId: asaRevisionId,
+      projectId: "outro-projeto",
+    },
+    published: null,
+    createdAt: FieldValue.serverTimestamp(),
+    deletedAt: null,
+  });
+  const forkRevision = {
+    ...asaRevision.data(),
+    revisionNumber: 1,
+    prevRevisionId: null,
+    uploadedBy: uids.editor,
+    origin: forkOrigin,
+  };
+  await forkRef
+    .collection("scoreRevisions")
+    .doc("asa-branca-dev-fork1")
+    .set(forkRevision);
+  await forkRef
+    .collection("revisions")
+    .doc("asa-branca-dev-fork1")
+    .set({ ...forkRevision, isLatest: true });
+
   // One songbook, pinned to each score's first revision — so scores with a
   // second one ("Olha pro Céu", "Cidade Maravilhosa") show a newer version.
   const songbookId = "acervo-dev~carnaval-dev";
@@ -283,6 +333,7 @@ async function main(): Promise<void> {
       .get();
     pins[id] = first.docs[0].id;
   }
+  pins[asaSource] = asaRevisionId;
   const entries = [
     { type: "section", title: "Marchinhas", order: 0 },
     ...Object.keys(pins).map((scoreId, i) => ({

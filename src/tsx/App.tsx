@@ -28,7 +28,6 @@ import "../css/App.css";
 import { AuthButton } from "./AuthButton";
 import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { useAuth } from "../auth";
-import { UploadPage } from "./UploadPage";
 import { MyScoresPage } from "./MyScoresPage";
 import { ScorePage } from "./ScorePage";
 import { MeusProjetosPage } from "./MeusProjetosPage";
@@ -233,9 +232,6 @@ function App() {
             <Nav className="ms-auto d-flex align-items-center gap-2">
               {currentUser && (
                 <>
-                  <Nav.Link as={Link} to="/upload">
-                    Enviar
-                  </Nav.Link>
                   <Nav.Link as={Link} to="/my-scores">
                     Minhas partituras
                   </Nav.Link>
@@ -262,8 +258,6 @@ function App() {
         <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
         {FEATURE_FLAG_COLLAB_FLOW && (
           <>
-            <Route path="/upload" element={<UploadPage />} />
-            <Route path="/upload/:scoreId" element={<UploadPage />} />
             <Route path="/my-scores" element={<MyScoresPage />} />
             <Route path="/projects" element={<MeusProjetosPage />} />
             <Route path="/projects/new" element={<CreateProjectPage />} />
