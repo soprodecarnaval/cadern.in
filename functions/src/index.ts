@@ -15,6 +15,7 @@ initializeApp();
 setGlobalOptions({ region: "southamerica-east1", maxInstances: 10 });
 
 export { findUserForInvite } from "./findUserForInvite";
+export { swapSongbookEntryToFork } from "./swapSongbookEntry";
 
 // Keep scores.published in sync (collab-flow §2.2.1). The handlers ignore
 // writes to `published` itself, so their own updates don't loop.

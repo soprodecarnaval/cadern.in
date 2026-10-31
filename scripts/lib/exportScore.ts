@@ -9,6 +9,7 @@ import {
 } from "./mscoreEnvironment";
 import { copyMsczWithMeta, type MetadataTags } from "./msczMeta";
 import { assertSupportedMscz } from "./msczArchive";
+import { readMsczIdentity } from "./msczIdentity";
 import { ExportError } from "./exportError";
 import {
   METAJSON_VERSION,
@@ -291,8 +292,10 @@ export const exportScoreFolder = (options: RunExportOptions): ExportResult => {
       selectedInScoreOrder.map((part) => basenames.get(part.id)!),
     );
     const generatedNames = fs.readdirSync(stagingDirectory);
+    const source = readMsczIdentity(options.msczPath);
     const metajson: Metajson = {
       version: METAJSON_VERSION,
+      ...(source ? { source } : {}),
       composer: options.metadata.composer,
       previousSource: options.metadata.previousSource,
       poet: options.metadata.poet,

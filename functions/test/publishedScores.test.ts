@@ -66,7 +66,7 @@ const published = async (scoreId: string) =>
   (await db().collection("scores").doc(scoreId).get()).get("published");
 
 describe("onSongbookWritten", () => {
-  it("publishes the pinned versions, including linked scores", async () => {
+  it("publishes pinned versions, also of other projects' scores", async () => {
     const after = await songbook("A~sb", {
       pins: { a1: "a1-r1", b1: "b1-r2" },
     });

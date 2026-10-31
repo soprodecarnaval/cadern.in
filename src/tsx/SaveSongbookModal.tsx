@@ -100,9 +100,6 @@ export function SaveSongbookModal({
                     </option>
                   ))}
                 </Form.Select>
-                <Form.Text className="text-muted">
-                  Partituras de outros projetos ficam vinculadas a este.
-                </Form.Text>
               </Form.Group>
             </>
           )}

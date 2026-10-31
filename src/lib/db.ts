@@ -27,8 +27,6 @@ import {
   zScoreMetadata,
   zReviewCommentData,
   zReviewCommentDoc,
-  zScoreLinkData,
-  zScoreLinkDoc,
   zSongbookData,
   zSongbookDoc,
   zSongbookRevisionData,
@@ -43,10 +41,10 @@ import {
   zProjectMemberDoc,
   zUserProjectInvitationDoc,
   zUserProjectInvitationData,
+  type ScoreData,
   type ScoreDoc,
   type CommentAnchor,
   type ReviewCommentDoc,
-  type ScoreLinkDoc,
   type SongbookDoc,
   type SongbookRevisionContent,
   type SongbookRevisionDoc,
@@ -131,6 +129,18 @@ export async function getAllScores(): Promise<WithId<ScoreDoc>[]> {
   return snap.docs.map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }));
 }
 
+/** Live forks of a score, in any project. */
+export async function getScoreForks(
+  scoreId: string,
+): Promise<WithId<ScoreDoc>[]> {
+  const snap = await getDocs(
+    query(collection(db, "scores"), where("forkedFrom.scoreId", "==", scoreId)),
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }))
+    .filter((s) => !s.deletedAt);
+}
+
 /**
  * Scores some published songbook pins (collab-flow §4.4). `published` is
  * maintained by the syncPublishedScores functions.
@@ -165,7 +175,12 @@ function scoreRef(id: string) {
  */
 export async function createScore(
   id: string,
-  data: { projectId: string; uploadedBy: string; metadata: ScoreMetadata },
+  data: {
+    projectId: string;
+    uploadedBy: string;
+    metadata: ScoreMetadata;
+    forkedFrom?: ScoreData["forkedFrom"];
+  },
 ): Promise<void> {
   const metadata = zScoreMetadata.parse(data.metadata);
   await setDoc(scoreRef(id), {
@@ -175,6 +190,7 @@ export async function createScore(
       latestRevisionId: "",
       ...metadata,
       cachedMetadata: metadata,
+      ...(data.forkedFrom ? { forkedFrom: data.forkedFrom } : {}),
     }),
     published: null,
     createdAt: serverTimestamp(),
@@ -519,24 +535,6 @@ export async function findUserForInvite(
   return (await call({ projectId, displayName })).data;
 }
 
-// -- Score links --
-
-/** A score of another project, used by this one (collab-flow §2.1.3). */
-function scoreLinkRef(projectId: string, scoreId: string) {
-  return doc(db, "projects", projectId, "scoreLinks", scoreId);
-}
-
-export async function getProjectScoreLinks(
-  projectId: string,
-): Promise<ScoreLinkDoc[]> {
-  const snap = await getDocs(
-    collection(db, "projects", projectId, "scoreLinks"),
-  );
-  return snap.docs
-    .map((d) => zScoreLinkDoc.parse(d.data()))
-    .filter((link) => !link.deletedAt);
-}
-
 // -- Songbooks --
 
 export const newSongbookRevisionId = (title: string): string =>
@@ -620,28 +618,17 @@ export async function getSongbookRevisions(
     .sort((a, b) => b.revisionNumber - a.revisionNumber);
 }
 
-/**
- * Creates the songbook with its first revision, linking in the same batch
- * any scores that belong to other projects (`links`).
- */
+/** Creates the songbook with its first revision. */
 export async function createSongbook(input: {
   projectId: string;
   slug: string;
   title: string;
   content: SongbookRevisionContent;
   createdBy: string;
-  links: { scoreId: string; sourceProjectId: string }[];
 }): Promise<string> {
   const id = songbookId(input.projectId, input.slug);
   const revisionId = newSongbookRevisionId(input.title);
   const batch = writeBatch(db);
-  for (const link of input.links) {
-    batch.set(scoreLinkRef(input.projectId, link.scoreId), {
-      ...zScoreLinkData.parse({ ...link, addedBy: input.createdBy }),
-      addedAt: serverTimestamp(),
-      deletedAt: null,
-    });
-  }
   batch.set(songbookRef(id), {
     ...zSongbookData.parse({
       title: input.title,
@@ -809,5 +796,22 @@ export async function softDeleteComment(
   await updateDoc(doc(commentsRef(scoreId, revisionId), commentId), {
     deletedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Replaces a songbook entry's score with its fork, keeping the entry's place
+ * and number. Server-side: editors may only change pins, and rules cannot check
+ * a change to one list item (collab-flow §5.5).
+ */
+export async function swapSongbookEntryToFork(
+  songbookId: string,
+  scoreId: string,
+  forkId: string,
+): Promise<void> {
+  await httpsCallable(functions, "swapSongbookEntryToFork")({
+    songbookId,
+    scoreId,
+    forkId,
   });
 }

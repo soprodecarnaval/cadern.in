@@ -18,8 +18,17 @@ export const zMetajsonPart = z.object({
 });
 export type MetajsonPart = z.infer<typeof zMetajsonPart>;
 
+/** The score and version a .mscz was uploaded as. */
+export const zScoreIdentity = z.object({
+  scoreId: z.string(),
+  revisionId: z.string(),
+});
+export type ScoreIdentity = z.infer<typeof zScoreIdentity>;
+
 export const zMetajson = z.object({
   version: z.literal(METAJSON_VERSION),
+  /** The identity found in the exported .mscz, when it carries one. */
+  source: zScoreIdentity.optional(),
   composer: z.string(),
   previousSource: z.string(),
   poet: z.string(),

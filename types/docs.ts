@@ -236,16 +236,6 @@ export const zReviewCommentDoc = zReviewCommentData.extend({
 });
 export type ReviewCommentDoc = z.infer<typeof zReviewCommentDoc>;
 
-export const zScoreLinkData = z.object({
-  scoreId: z.string(),
-  sourceProjectId: z.string(),
-  addedBy: z.string(),
-});
-export const zScoreLinkDoc = zScoreLinkData.extend({
-  addedAt: zTimestamp,
-  deletedAt: zTimestamp.nullable(),
-});
-export type ScoreLinkDoc = z.infer<typeof zScoreLinkDoc>;
 
 export const zUserProjectInvitationData = z.object({
   fromUserId: z.string(),

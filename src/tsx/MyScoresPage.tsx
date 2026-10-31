@@ -66,11 +66,6 @@ function SongRow({
                 Ver
               </Button>
             </Link>
-            <Link to={`/upload/${encodeURIComponent(song.id)}`}>
-              <Button size="sm" variant="outline-primary">
-                Nova versão
-              </Button>
-            </Link>
             <Button
               size="sm"
               variant="outline-danger"
@@ -162,9 +157,6 @@ export function MyScoresPage() {
     <Container className="mt-4">
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>Minhas partituras</h2>
-        <Link to="/upload">
-          <Button variant="primary">Enviar partitura</Button>
-        </Link>
       </div>
 
       {loading ? (

@@ -753,52 +753,6 @@ describe("songbooks", () => {
   });
 });
 
-describe("score links", () => {
-  const OTHER = "outro";
-  const OTHER_SCORE = "outro-samba";
-  const link = (sourceProjectId = OTHER, addedBy = EDITOR) => ({
-    scoreId: OTHER_SCORE,
-    sourceProjectId,
-    addedBy,
-    deletedAt: null,
-  });
-  const ref = (db: Firestore, scoreId = OTHER_SCORE) =>
-    doc(db, "projects", PROJECT, "scoreLinks", scoreId);
-
-  async function seedOtherScore() {
-    await seedProject(testEnv());
-    await seed((db) =>
-      setDoc(doc(db, "scores", OTHER_SCORE), {
-        projectId: OTHER,
-        uploadedBy: OUTSIDER,
-        latestRevisionId: "1",
-      }),
-    );
-  }
-
-  it("lets an editor link another project's score", async () => {
-    await seedOtherScore();
-    await assertSucceeds(setDoc(ref(as(EDITOR)), link()));
-  });
-
-  it("denies linking the project's own score or misstating its source", async () => {
-    await seedOtherScore();
-    await assertFails(
-      setDoc(ref(as(EDITOR), SCORE), {
-        ...link(PROJECT),
-        scoreId: SCORE,
-      }),
-    );
-    await assertFails(setDoc(ref(as(EDITOR)), link("someone-else")));
-  });
-
-  it("denies reviewers and outsiders linking", async () => {
-    await seedOtherScore();
-    await assertFails(setDoc(ref(as(REVIEWER)), link(OTHER, REVIEWER)));
-    await assertFails(setDoc(ref(as(OUTSIDER)), link(OTHER, OUTSIDER)));
-  });
-});
-
 describe("invitations", () => {
   const invitation = (role = "editor") => ({
     fromUserId: ADMIN,
@@ -1066,5 +1020,67 @@ describe("review comments", () => {
       updateDoc(doc(db, "projects", PROJECT), { deletedAt: new Date() }),
     );
     await assertFails(setDoc(ref(as(REVIEWER)), comment(REVIEWER)));
+  });
+});
+
+describe("forks", () => {
+  const OTHER = "outro";
+  const SOURCE = "outro-samba";
+  const fork = (forkedFrom: Record<string, string>, projectId = PROJECT) => ({
+    projectId,
+    uploadedBy: EDITOR,
+    latestRevisionId: "",
+    title: "Samba",
+    composer: "",
+    sub: "",
+    tags: [],
+    forkedFrom,
+    published: null,
+    deletedAt: null,
+  });
+  const source = { scoreId: SOURCE, revisionId: "r1", projectId: OTHER };
+  const ref = (db: Firestore) => doc(db, "scores", "acervo-samba");
+
+  async function seedSource() {
+    await seedProject(testEnv());
+    await seed((db) =>
+      setDoc(doc(db, "scores", SOURCE), {
+        projectId: OTHER,
+        uploadedBy: OUTSIDER,
+        latestRevisionId: "r1",
+      }),
+    );
+  }
+
+  it("lets an editor fork another project's score", async () => {
+    await seedSource();
+    await assertSucceeds(setDoc(ref(as(EDITOR)), fork(source)));
+  });
+
+  it("denies a reviewer forking into the project", async () => {
+    await seedSource();
+    await assertFails(
+      setDoc(ref(as(REVIEWER)), { ...fork(source), uploadedBy: REVIEWER }),
+    );
+  });
+
+  it("denies a missing source or a misstated source project", async () => {
+    await seedSource();
+    await assertFails(
+      setDoc(ref(as(EDITOR)), fork({ ...source, scoreId: "nao-existe" })),
+    );
+    await assertFails(
+      setDoc(ref(as(EDITOR)), fork({ ...source, projectId: "outra-coisa" })),
+    );
+  });
+
+  it("denies forking a score of the same project", async () => {
+    await seedSource();
+    await assertFails(
+      setDoc(
+        ref(as(EDITOR)),
+        fork({ scoreId: SCORE, revisionId: "1", projectId: PROJECT }),
+      ),
+    );
   });
 });

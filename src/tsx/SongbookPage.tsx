@@ -18,15 +18,16 @@ import {
 import { useAuth } from "../auth";
 import {
   createSongbookRevision,
-  getProjectScoreLinks,
+  getAllProjects,
+  getAllScores,
   getProjectScores,
-  getScore,
   getScoreRevision,
   getSongbook,
   getSongbookRevision,
   getSongbookRevisions,
   setSongbookPublished,
   softDeleteSongbook,
+  swapSongbookEntryToFork,
   type WithId,
 } from "../lib/db";
 import {
@@ -48,7 +49,12 @@ import {
 import { loadPinnedScores } from "../lib/songbookScores";
 import { useMemberRole } from "../lib/useMemberRole";
 import { toScoreViewModel } from "../lib/viewModels";
-import type { SongbookDoc, SongbookRevisionDoc } from "../../types/docs";
+import { resolveScoreMetadata } from "../lib/scoreMetadata";
+import type {
+  ScoreDoc,
+  SongbookDoc,
+  SongbookRevisionDoc,
+} from "../../types/docs";
 import type {
   PlayingPartViewModel,
   ScoreViewModel,
@@ -107,6 +113,7 @@ export function SongbookPage() {
   const [loaded, setLoaded] = useState<Loaded | null | "loading">("loading");
   const [editing, setEditing] = useState<"contents" | "covers" | null>(null);
   const [reloads, setReloads] = useState(0);
+  const [forks, setForks] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     if (!projectId || !songbookSlug) {
@@ -115,6 +122,24 @@ export function SongbookPage() {
     setLoaded("loading");
     void load(projectId, songbookSlug, revisionParam).then(setLoaded);
   }, [projectId, songbookSlug, revisionParam, reloads]);
+
+  // This project's forks, by the score they derive from.
+  const isMember = role !== "loading" && isReviewer(role);
+  useEffect(() => {
+    if (!projectId || !isMember) {
+      setForks(new Map());
+      return;
+    }
+    void getProjectScores(projectId).then((scores) =>
+      setForks(
+        new Map(
+          scores.flatMap((s) =>
+            s.forkedFrom ? [[s.forkedFrom.scoreId, s.id] as const] : [],
+          ),
+        ),
+      ),
+    );
+  }, [projectId, isMember, reloads]);
 
   if (loaded === "loading" || role === "loading") {
     return (
@@ -154,6 +179,11 @@ export function SongbookPage() {
       createdBy: currentUser.uid,
       note,
     });
+    setReloads((n) => n + 1);
+  };
+
+  const handleSwap = async (scoreId: string, forkId: string) => {
+    await swapSongbookEntryToFork(songbook.id, scoreId, forkId);
     setReloads((n) => n + 1);
   };
 
@@ -239,6 +269,12 @@ export function SongbookPage() {
             items={items}
             showNewerVersions={isReviewer(role)}
             onRepin={canRepin ? (id) => void handleRepin([id]) : undefined}
+            forks={forks}
+            onSwap={
+              canRepin
+                ? (scoreId, forkId) => void handleSwap(scoreId, forkId)
+                : undefined
+            }
           />
           <PDFGenerator
             songBook={{ items }}
@@ -332,6 +368,8 @@ function SongbookContents({
   items,
   showNewerVersions,
   onRepin,
+  forks,
+  onSwap,
 }: {
   items: NumberedSongbookItemViewModel[];
   // Members see which scores have a newer version than the one pinned; the
@@ -339,6 +377,10 @@ function SongbookContents({
   showNewerVersions: boolean;
   // Given to editors and up: re-pins one score to its latest version.
   onRepin?: (scoreId: string) => void;
+  // This project's forks, by the score they derive from.
+  forks: Map<string, string>;
+  // Given to editors and up: replaces an entry's score with its fork.
+  onSwap?: (scoreId: string, forkId: string) => void;
 }) {
   const anyDeleted = items.some((i) => !isSongbookSection(i) && i.deleted);
   return (
@@ -369,6 +411,29 @@ function SongbookContents({
                 </td>
                 <td className="text-muted">{item.score.composer}</td>
                 <td className="text-end">
+                  {!item.deleted && forks.has(item.score.id) && (
+                    <>
+                      <Link
+                        to={`/score/${encodeURIComponent(forks.get(item.score.id)!)}`}
+                      >
+                        <Badge bg="info" text="dark">
+                          derivação disponível
+                        </Badge>
+                      </Link>
+                      {onSwap && (
+                        <Button
+                          size="sm"
+                          variant="link"
+                          className="py-0"
+                          onClick={() =>
+                            onSwap(item.score.id, forks.get(item.score.id)!)
+                          }
+                        >
+                          trocar pela derivação
+                        </Button>
+                      )}
+                    </>
+                  )}
                   {showNewerVersions && hasNewerVersion(item) && (
                     <>
                       <Link to={`/score/${encodeURIComponent(item.score.id)}`}>
@@ -455,8 +520,8 @@ function SongbookEditor({
       <SongBar info={playingPart} />
       <div className="row">
         <div className="col-sm-6">
-          <h5>Partituras do projeto</h5>
-          <ProjectScorePicker
+          <h5>Partituras</h5>
+          <ScorePicker
             projectId={projectId}
             selected={items}
             onAdd={(score) => handleSelect(score, true)}
@@ -496,8 +561,21 @@ function SongbookEditor({
   );
 }
 
-/** The project's own and linked scores, at their latest revision. */
-function ProjectScorePicker({
+interface PickerScore {
+  doc: WithId<ScoreDoc>;
+  title: string;
+  composer: string;
+  projectTitle: string;
+}
+
+// Enough to find a score by filtering; rendering every score would be slow.
+const PICKER_LIMIT = 100;
+
+/**
+ * Every live score of every live project, the project's own first. A score
+ * enters the songbook at its latest version.
+ */
+function ScorePicker({
   projectId,
   selected,
   onAdd,
@@ -506,26 +584,28 @@ function ProjectScorePicker({
   selected: SongbookItemViewModel[];
   onAdd: (score: ScoreViewModel) => void;
 }) {
-  const [scores, setScores] = useState<ScoreViewModel[] | null>(null);
+  const [scores, setScores] = useState<PickerScore[] | null>(null);
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
     void (async () => {
-      const [own, links] = await Promise.all([
-        getProjectScores(projectId),
-        getProjectScoreLinks(projectId),
+      const [docs, projects] = await Promise.all([
+        getAllScores(),
+        getAllProjects(),
       ]);
-      const linked = await Promise.all(links.map((l) => getScore(l.scoreId)));
-      const all = [...own, ...linked].filter(
-        (s): s is NonNullable<typeof s> => !!s && !s.deletedAt,
+      const titles = new Map(projects.map((p) => [p.id, p.title]));
+      const live = docs.flatMap((doc): PickerScore[] => {
+        const projectTitle = titles.get(doc.projectId);
+        return projectTitle && !doc.deletedAt && doc.latestRevisionId
+          ? [{ doc, ...resolveScoreMetadata(doc), projectTitle }]
+          : [];
+      });
+      const own = (s: PickerScore) => (s.doc.projectId === projectId ? 0 : 1);
+      setScores(
+        live.sort(
+          (a, b) => own(a) - own(b) || a.title.localeCompare(b.title, "pt-BR"),
+        ),
       );
-      const viewModels = await Promise.all(
-        all.map(async (s) => {
-          const rev = await getScoreRevision(s.id, s.latestRevisionId);
-          return rev ? toScoreViewModel(s, rev, s.projectId) : null;
-        }),
-      );
-      setScores(viewModels.filter((v): v is ScoreViewModel => v !== null));
     })();
   }, [projectId]);
 
@@ -537,14 +617,23 @@ function ProjectScorePicker({
     [selected],
   );
 
+  const handleAdd = async ({ doc, projectTitle }: PickerScore) => {
+    const revision = await getScoreRevision(doc.id, doc.latestRevisionId);
+    if (revision) {
+      onAdd(toScoreViewModel(doc, revision, projectTitle));
+    }
+  };
+
   if (!scores) {
     return <Spinner animation="border" size="sm" />;
   }
   const needle = filter.trim().toLocaleLowerCase("pt-BR");
-  const shown = scores.filter(
+  const matches = scores.filter(
     (s) =>
-      !selectedIds.has(s.id) &&
-      `${s.title} ${s.composer}`.toLocaleLowerCase("pt-BR").includes(needle),
+      !selectedIds.has(s.doc.id) &&
+      `${s.title} ${s.composer} ${s.projectTitle}`
+        .toLocaleLowerCase("pt-BR")
+        .includes(needle),
   );
 
   return (
@@ -553,32 +642,38 @@ function ProjectScorePicker({
         className="mb-2"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
-        placeholder="Filtrar"
+        placeholder="Filtrar por título, compositor ou projeto"
       />
       <ListGroup style={{ maxHeight: 480, overflowY: "auto" }}>
-        {shown.map((s) => (
+        {matches.slice(0, PICKER_LIMIT).map((s) => (
           <ListGroup.Item
-            key={s.id}
+            key={s.doc.id}
             className="d-flex justify-content-between align-items-center"
           >
             <span>
               {s.title} <span className="text-muted">{s.composer}</span>
-              {s.projectId !== projectId && (
+              {s.doc.projectId !== projectId && (
                 <Badge bg="light" text="dark" className="ms-2">
-                  vinculada
+                  {s.projectTitle}
                 </Badge>
               )}
             </span>
             <Button
               size="sm"
               variant="outline-primary"
-              onClick={() => onAdd(s)}
+              onClick={() => void handleAdd(s)}
             >
               Adicionar
             </Button>
           </ListGroup.Item>
         ))}
       </ListGroup>
+      {matches.length > PICKER_LIMIT && (
+        <p className="text-muted small mt-1">
+          Mostrando {PICKER_LIMIT} de {matches.length}. Filtre para ver as
+          outras.
+        </p>
+      )}
     </>
   );
 }
