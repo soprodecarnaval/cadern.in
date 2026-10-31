@@ -36,7 +36,6 @@ export-app release that changes the write path ships with its slice.
 | MEMBER | `projects/{projectSlug}/members/{uid}` | yes |
 | SCORE (container) | `scores/{scoreId}` | yes |
 | SCORE_REVISION | `scores/{scoreId}/scoreRevisions/{revisionId}` | **no** |
-| SCORE_LINK | `projects/{projectSlug}/scoreLinks/{scoreId}` | soft-delete only |
 | REVIEW_COMMENT | `scores/{scoreId}/scoreRevisions/{revisionId}/comments/{commentId}` | author edit / soft-delete only |
 | SONGBOOK (container) | `songbooks/{songbookId}` | yes |
 | SONGBOOK_REVISION | `songbooks/{songbookId}/songbookRevisions/{revisionId}` | **no** |
@@ -60,7 +59,6 @@ on score revisions at all (§2.3.1), so `scoreRevisions` gets no such rule.
 ```
 PROJECT ─┬─ members: {uid -> role}
          ├─ SCORES         (scores.projectId == project.slug)
-         ├─ SCORE_LINKS    (scores owned by other projects, by reference)
          └─ SONGBOOKS      (songbooks.projectId == project.slug)
 
 SCORE ── latestRevisionId ──> SCORE_REVISION ──prev──> SCORE_REVISION ──prev──> null
@@ -221,25 +219,6 @@ Username suggestions and email invites are future work (§8).
 > permits adding exactly `request.auth.uid` to `memberIds` when the invitee's
 > member document exists after the batch (`existsAfter`, §4.3).
 
-### 2.1.3 `projects/{projectSlug}/scoreLinks/{scoreId}`
-
-```ts
-{
-  scoreId: string           // == the document id
-  sourceProjectId: string   // the score's owning project; never == projectSlug
-  addedBy: uid
-  addedAt: Timestamp
-  deletedAt: Timestamp | null
-}
-```
-
-A project uses another project's score **by reference**: an EDITOR+ adds a link from
-the web (score page or search results → "Adicionar ao projeto"). A linked score
-appears in the project's score list and can be put in its songbooks like any owned
-score, but it is still owned and revised by its source project — the linking
-project cannot upload revisions to it. Wanting to change it is what a fork is for
-(§5.3). One link per (project, score); re-linking after removal clears `deletedAt`.
-
 ### 2.2 `scores/{scoreId}` (container)
 
 ```ts
@@ -258,8 +237,8 @@ project cannot upload revisions to it. Wanting to change it is what a fork is fo
   // Absent fields fall through to cachedMetadata.
   metadataOverride?: Partial<{ title, composer, sub, tags }>
 
-  // Set only when this score was forked from a score linked into this project
-  // (§5.3). `revisionId` is the source's latest revision at fork time.
+  // Set only on forks (§5.3). `revisionId` is the source version the uploaded
+  // file came from.
   forkedFrom?: { scoreId: string, revisionId: string, projectId: string }
 
   // Server-maintained publication marker — see 2.2.1. Never client-written.
@@ -277,7 +256,7 @@ Renames in later revisions do not change it.
 
 Answers "is this score public, and at which revision?" with one read, instead of
 searching songbooks for pins. Maintained by a Cloud Function (`syncPublishedScores`),
-not by clients: a songbook can pin a *linked* score owned by another project, whose
+not by clients: a songbook can pin a score owned by another project, whose
 container the songbook's admins must not be able to write.
 
 - `songbookIds` — published, live songbooks of live projects whose current revision
@@ -401,8 +380,8 @@ immutability — the revision document itself is untouched.
 
 Songbooks are created from a project's songbook list (empty), or by **saving the
 homepage builder** ("Salvar caderninho"): the user picks a project they
-administer — their Acervo by default — and scores from other projects are
-linked into it in the same batch (§2.1.3). Logged-out users go through login
+administer — their Acervo by default. Entries can be scores of any project,
+pinned to a version like any other. Logged-out users go through login
 first; the builder's list survives that, and reloads, in `localStorage`.
 
 ```ts
@@ -530,8 +509,8 @@ Roles are cumulative: OWNER ⊃ ADMIN ⊃ EDITOR ⊃ REVIEWER.
 | Edit / soft-delete **own** comments | ✅ | ✅ | ✅ | ✅ |
 | Create SCORE in project | ❌ | ✅ | ✅ | ✅ |
 | Upload new SCORE_REVISION | ❌ | ✅ | ✅ | ✅ |
-| Link / unlink another project's SCORE | ❌ | ✅ | ✅ | ✅ |
-| Fork a linked SCORE (by uploading a revision to it, §5.3) | ❌ | ✅ | ✅ | ✅ |
+| Fork another project's SCORE (by uploading an edited copy, §5.3) | ❌ | ✅ | ✅ | ✅ |
+| Swap a SONGBOOK entry to its fork (function, §5.5) | ❌ | ✅ | ✅ | ✅ |
 | Re-pin a score's revision in a SONGBOOK (`pins` only) | ❌ | ✅ | ✅ | ✅ |
 | Edit project title | ❌ | ✅ | ✅ | ✅ |
 | Edit score `metadataOverride` | ❌ | ❌ | ✅ | ✅ |
@@ -546,7 +525,7 @@ Roles are cumulative: OWNER ⊃ ADMIN ⊃ EDITOR ⊃ REVIEWER.
 | Soft-delete PROJECT | ❌ | ❌ | ❌ | ✅ |
 
 Non-members: read published songbooks (current revision only), read any score +
-score revision. They see no review UI (comments, counts). Linking and forking need
+score revision. They see no review UI (comments, counts). Forking needs
 EDITOR+ on the *target* project only — no role in the source project.
 
 ### 4.2 Deltas from the deployed `firestore.rules`
@@ -570,7 +549,7 @@ EDITOR+ on the *target* project only — no role in the source project.
 | 16 | invite-by-email queries `users`, which rules deny (and nothing writes) | invite by username via callable function `findUserForInvite` (§2.1.2) |
 | 17 | no collection-group rule for invitations | added, invitee-only (`toUserId == auth.uid`) |
 | 18 | owner may demote/remove themselves | owner may not write or delete **their own** member doc; ownership transfer is a deferred admin-panel operation (§8) |
-| 19 | no score links | `projects/{pid}/scoreLinks/{scoreId}` ← EDITOR+ of `pid`, only for scores of other projects; fork containers must name a live link (§2.1.3, §5.3) |
+| 19 | no forks | a fork's `forkedFrom` must name an existing score of another project, its real one (§5.3) |
 | 20 | no publication state on scores | `scores.published` written only by the `syncPublishedScores` function (admin SDK, bypasses rules); no client clause may touch it (§2.2.1) |
 
 ### 4.3 Rules sketch
@@ -614,9 +593,8 @@ match /scores/{scoreId} {
                 && request.resource.data.uploadedBy == request.auth.uid
                 && request.resource.data.deletedAt == null
                 && request.resource.data.published == null   // function-owned, 2.2.1
-                // a fork must come from a score linked into the target project
-                && (!('forkedFrom' in request.resource.data) ||
-                    get(/databases/$(db)/documents/projects/$(request.resource.data.projectId)/scoreLinks/$(request.resource.data.forkedFrom.scoreId)).data.deletedAt == null);
+                // a fork names its source's real project, never its own
+                && isValidFork(request.resource.data);
   allow update: if
     // new revision: editor bumps pointer + cache
     (isEditor(resource.data.projectId) && changed(['latestRevisionId','cachedMetadata'])) ||
@@ -728,15 +706,6 @@ match /projects/{pid} {
     allow delete: if isOwner(pid) && uid != request.auth.uid;
   }
 
-  match /scoreLinks/{scoreId} {
-    allow read: if true;
-    allow create, update: if isEditor(pid)
-                  && request.resource.data.scoreId == scoreId
-                  && request.resource.data.sourceProjectId == scoreProject(scoreId)
-                  && request.resource.data.sourceProjectId != pid;
-    allow delete: if false;   // unlink = deletedAt
-  }
-
   match /invitations/{uid} {
     allow read: if uid == request.auth.uid || isAdmin(pid);
     allow create, update: if isAdmin(pid)
@@ -804,7 +773,7 @@ live songbook of a live project. Scores outside any published songbook are not
 listed (they stay reachable by URL and on their project's page for members).
 
 The **project page** (`/projects/:slug`) follows the same rule. Non-members see only
-the project's published songbooks; members also see all its own and linked scores
+the project's published songbooks; members also see all its scores
 and its unpublished songbooks.
 
 Homepage loading (`CollectionContext`), via the `published` marker (§2.2.1):
@@ -822,7 +791,7 @@ Cost is 1 query + N reads per load (N listed scores), less than today's
 full-collection load.
 
 Scores themselves are not gated: `scores` and their revisions stay world-readable,
-which public songbook PDFs, links (§2.1.3) and forks (§5.3) all rely on.
+which public songbook PDFs, songbooks using other projects' scores and forks (§5.3) all rely on.
 
 ### 4.5 Storage rules (rewrite)
 
@@ -908,56 +877,44 @@ Same, but inside the transaction: read container `latestRevisionId` → that bec
 `uploadScore.ts:50`. `cachedMetadata` is refreshed from the new upload — fixing the
 current silent-discard bug where re-uploading never updates title/composer/tags.
 
-### 5.3 Links and forks (EDITOR+ of the target project)
+### 5.3 Forks and lineage (EDITOR+ of the target project)
 
-There is no "fork" button on the website. Forking is a side effect of uploading a
-new revision to a score the project only *links* to, and it happens in the export
-app.
+There are no links and no "fork" button: a songbook can use any project's score
+directly, and forking is a side effect of uploading an edited copy of another
+project's score from the export app. `UploadPage` is gone, so the export app is the
+only way to upload.
 
-**Linking (web).** From a score page or search result, "Adicionar ao projeto" lists
-projects where the user is EDITOR+ (excluding the score's own project); picking one
-writes `projects/{pid}/scoreLinks/{scoreId}` (§2.1.3). The linked score now shows in
-that project and can be put in its songbooks. Unlinking soft-deletes the link.
+**Identity in the file.** Every uploaded `.mscz` is stamped with its own score and
+version ids (`metaTag`s `cadernin-score-id` and `cadernin-revision-id`), and so is
+the user's local file afterwards. MuseScore keeps them when re-saving. Migration
+`202610311200` stamps the files uploaded before this. When exporting, the app copies
+the ids into `.metajson` as `source`.
 
-**Forking (export app).** The upload step resolves the exported score against the
-chosen target project:
+**The upload resolves its target from `source`** (`resolveUploadTarget`):
 
-| Match in target project | Outcome |
-|---|---|
-| own score with the derived `scoreId` | new revision (§5.2) |
-| a **linked** score whose resolved title slugifies to the same slug | **fork** — confirmation required |
-| neither | new score (§5.1) |
+| The file says | The target project has | Result |
+|---|---|---|
+| a score of **this** project (live) | — | new version of it, even if retitled |
+| a score of **another** project | a live fork of it | new version of that fork |
+| a score of **another** project | no fork of it | **fork** |
+| nothing, or an unknown score | a live score with the title's id | new version of it |
+| nothing, or an unknown score | none | new score |
 
-The fork confirmation states plainly that the source belongs to another project,
-that a new score will be created under the user's project, and that the link will be
-replaced by it. The user may instead choose "criar como partitura nova", which
-uploads without lineage.
+The export app states the outcome before sending; there is nothing to choose. Ids are
+never reused, so a new score or fork whose title's id is taken, deleted scores
+included, gets a numeric suffix.
 
-On confirmation:
+**A fork** is a new score with `forkedFrom: { scoreId, revisionId, projectId }` and a
+revision 1 with `origin: { type: "fork", sourceScoreId, sourceRevisionId,
+sourceProjectId }`. `revisionId` is the version the file came from (the source's
+latest, if that version is gone). The uploaded files *are* revision 1, so a fork never
+references another score's blobs.
 
-1. Create the container `scores/{targetProjectId}-{slugify(title)}` with
-   `forkedFrom: { scoreId, revisionId: source.latestRevisionId, projectId }`
-   (rules require a live link to `forkedFrom.scoreId`, §4.3).
-2. Upload blobs under the fork's own prefix and create revision 1 as in §5.1, with
-   `origin: { type: "fork", sourceScoreId, sourceRevisionId, sourceProjectId }`.
-3. Soft-delete the link in the same batch as the container update.
+**Songbooks keep pointing at the source** until an EDITOR+ uses "trocar pela
+derivação" on an entry whose score has a fork in the songbook's project (§5.5).
 
-**Nothing is shared with the source.** The uploaded files *are* revision 1, so a fork
-never references another score's blobs — no cross-score storage dependency, and
-purging (§8) needs no fork check. `sourceRevisionId` records the source's latest
-revision at fork time; the export app cannot know which revision the user actually
-edited from.
-
-**Songbooks keep pointing at the source.** The target project's songbooks may still
-pin the source score. They are not rewritten automatically (that would be an editor
-changing `entries`, §5.5); instead the songbook view shows a "derivação disponível
-neste projeto" badge on such entries, and an ADMIN can swap the entry to the fork in
-one action — a new songbook revision with the same `order`/`index`, new `scoreId` and
-pin.
-
-Lineage is traceable in both directions: `origin` on the revision (per the
-requirement that "its REVISION object should trace its lineage back") and
-`forkedFrom` on the container for cheap list-view display.
+Lineage shows both ways on the score page: "derivada de …" from `forkedFrom`, and
+"derivações: …" by querying `scores` on `forkedFrom.scoreId`.
 
 ### 5.4 Review comments
 
@@ -1063,7 +1020,7 @@ Cascade semantics:
 | Deleting | Effect |
 |---|---|
 | PROJECT | project hidden; its scores and songbooks become inaccessible (rules check `alive(pid)`) and drop off the homepage (`CollectionContext` filters by live project ids); no per-doc writes; **member documents are retained** so an owner can restore with roles intact |
-| SCORE | score hidden from homepage, project lists and search; blobs are **never** removed (songbook revisions still pin it); songbook entries pinning it render struck-through per §5.7; links to it in other projects render as removed |
+| SCORE | score hidden from homepage, project lists and search; blobs are **never** removed (songbook revisions still pin it); songbook entries pinning it render struck-through per §5.7 |
 | SONGBOOK | songbook hidden; **scores untouched** (explicit requirement) |
 | MEMBER removal | membership only; authored content untouched |
 
@@ -1090,6 +1047,7 @@ needs it (§9) — not as a block at the end.
 | M1c | Delete legacy top-level `invitations/{autoId}` | 001 | not carried over: pre-existing projects are deleted at the prod launch |
 | M3 | Add `prevRevisionId` + `slug` + `origin` to existing revisions | 002 | order by `revisionNumber`; `origin: {type:"upload"}` for all |
 | M4 | Move metadata onto revisions | 002 | copy `scores.{title,composer,sub,tags}` → every revision's `metadata`; write `cachedMetadata` and `published: null`; legacy top-level fields kept until M9 (flag-off code reads them) |
+| M2c | Stamp stored `.mscz` files with their own ids | 006 | migration `202610311200`; same paths and download tokens, metadata only |
 | ~~M5~~ | ~~Songbook containers → container + revision 1~~ | — | dropped: no songbook docs exist in prod or staging |
 | M6 | Identify the four PROJECTS — carnaval, garota, na tora, besourinhos | 007 | confirm which already exist; all owned by the CADERNIN uid |
 | M7 | Build SONGBOOKS per project-year | 007 | carnaval via `generateCarnivalSections`; others via `generateSectionsByStyle` (`src/utils/songBookRows.ts`); reorder manually; created with `isPublished: true`; pins = each score's latest revision. Since the homepage becomes songbook-driven, the dry run reports every score on today's homepage that no published songbook pins — those disappear at launch unless placed somewhere; then `rebuild:published` |
@@ -1185,9 +1143,9 @@ numbered files:
 | [001](001-members-invitations.md) | Members & invitations subcollections; fixes acceptance; invite by username | 000 |
 | [002](002-score-revisions.md) | Score revision linked list, transactional upload, metadata cache/override | 000 |
 | [003](003-soft-deletes.md) | Soft deletes for project / score; read-path filtering | 001, 002 |
-| [004](004-songbooks.md) | Songbooks, in 4 PRs: (a) model, editor, save from the homepage, score links; (b) PDFs from a revision, covers; (c) pins, publishing, public pages; (d) published marker + homepage | 001, 002, 003 |
+| [004](004-songbooks.md) | Songbooks, in 4 PRs: (a) model, editor, save from the homepage; (b) PDFs from a revision, covers; (c) pins, publishing, public pages; (d) published marker + homepage | 001, 002, 003 |
 | [005](005-review-comments.md) | Review comments with positional pins | 001, 002 |
-| [006](006-links-fork.md) | Linking UI (web) + fork-on-upload (export app); the link model lands in 004a | 001, 002, 004a |
+| [006](006-forks.md) | Identity in the `.mscz`, fork-on-upload, lineage, swapping forks into songbooks; no links | 001, 002, 004 |
 | [007](007-data-migration.md) | Real projects + songbooks, legacy cleanup, flag on in prod | all |
 
 001 and 002 are independent and can run in parallel; so can 005 and 006.
@@ -1211,12 +1169,8 @@ None blocking. Things to watch rather than decide now:
   the displayName-uniqueness item in `TECH_DEBT.md` already points at a function.
 - **Owners cannot leave or demote themselves** (§4.3.1). Until ownership transfer
   exists (§8), a sole owner is stuck with the project.
-- **Fork matching is by slugified title** (§5.3). A retitled export won't match its
-  linked score and uploads as a new score. If that happens often, let the user pick
-  the linked score explicitly in the export app.
-- **Fork lineage is approximate** (§5.3). `sourceRevisionId` is the source's latest
-  revision at fork time, not necessarily the one edited. Fix would be for exported
-  `.metajson` to carry `scoreId`/`revisionId` of the downloaded revision.
+- **Files with no identity** (old local copies never re-downloaded) can't fork: they
+  become new scores, or new versions when the title's id matches (§5.3).
 
 ---
 
@@ -1241,14 +1195,16 @@ None blocking. Things to watch rather than decide now:
 | Project page shows non-members only published songbooks | §4.4 |
 | `scores.published` marker maintained by a Cloud Function; homepage and score page read it instead of searching songbooks | §2.2.1, §4.4 |
 | Non-members see the published revision by default; members the latest | §4.4 |
-| Fork matching by slugified title and lineage at source's latest revision — good enough for v1 | §5.3, §10 |
 | `isLatest` dropped; score revisions fully immutable | §2.3.1 |
 | Until launch, uploads dual-write the legacy shape so exporter uploads reach flag-off prod | §0 |
-| Projects use other projects' scores via links; no web fork button | §2.1.3, §5.3 |
-| Fork = upload to a linked score from the export app, user-confirmed; uploaded files are revision 1, nothing shared with source | §5.3 |
+| Songbooks use any project's scores directly; no links, no web fork button | §5.3 |
+| Forks are implicit, resolved from ids stamped in the `.mscz`; uploaded files are revision 1, nothing shared with source | §5.3 |
+| Ids stamped on upload plus a one-time backfill of stored files, a metadata-only exception to immutability | §5.3 |
+| Web upload page removed; uploads only come from the export app | §5.3 |
+| Editors swap forks into songbooks through a callable function, keeping the entries rule strict | §5.5 |
 | Songbooks are not rewritten on fork; admin swaps the entry via a badge | §5.3 |
 | Review UI renders for project members only | §5.4 |
-| Songbook entries pin exact score revisions; stale badge + editor bump | §2.6.1 |
+| Songbook entries always pin exact score revisions; stale badge + editor bump | §2.6.1 |
 | Editor songbook revisions must build on the current revision | §4.3 |
 | INSTRUMENT_SONGBOOKs generated client-side, not persisted | §5.6, §8 |
 | Deleted score in a songbook: keep index, strike title, omit pages, add marker | §5.7 |

@@ -150,6 +150,18 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
 1. Merge → deploy ships hosting and rules. No migration.
 2. Verify (flag on, staging): as a member, pin a comment on a score page and reply.
 
+## 11. Task 006 — forks and lineage
+
+1. Merge → deploy ships hosting, rules and the `swapSongbookEntryToFork` function.
+2. Backfill: migrate to `202610311200` (dry run first). It rewrites every stored
+   `.mscz` at the same path, keeping its download token. It's safe to re-run, and
+   needs the key to read and write bucket objects. Have the backup of §0 current
+   first.
+3. Release the export app: it stamps uploads and resolves forks.
+4. Verify: an old score's `.mscz` still downloads, and carries
+   `cadernin-score-id` in its score properties; an edited copy uploaded into another
+   project becomes a fork.
+
 ## Open
 
 - **M1b semantics.** The export app has been creating `Acervo @<name>` projects in

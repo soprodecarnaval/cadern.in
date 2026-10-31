@@ -7,8 +7,8 @@ define the homepage.
 
 **Depends on:** 001, 002, 003.
 
-Spec: PLAN §2.1.3, §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`,
-`scoreLinks`), §4.4, §5.5–§5.7, §7.1.
+Spec: PLAN §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`), §4.4, §5.5–§5.7,
+§7.1.
 
 ## Decisions
 
@@ -22,9 +22,7 @@ Spec: PLAN §2.1.3, §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`,
   anything — unsaved lists are numbered before they reach it (004b).
 - **Songbook id is `${projectId}~${slug}`**, so a slug is unique per project; the
   slug is fixed at creation, only the title can be renamed.
-- **Entries come from the project's own scores plus its linked scores.** The link
-  model (`projects/{id}/scoreLinks/{scoreId}`) lands here, not in 006: saving the
-  homepage builder links any scores of other projects in the same batch.
+- **Entries can be scores of any project** (the editor picker's reach came with 006).
 - **The homepage builder stays** for everyone, and gets "Salvar caderninho" (flag
   on). Logged-out users log in first; the builder's list survives that — and
   reloads — in `localStorage`, for everyone.
@@ -37,16 +35,15 @@ Spec: PLAN §2.1.3, §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`,
 ## 004a — model, editor, save
 
 1. ✅ Schemas: songbook container (`currentRevisionId`, `deletedAt`), songbook
-   revision (`entries` with `index`, `pins`, `covers`, chain fields), score link.
+   revision (`entries` with `index`, `pins`, `covers`, chain fields).
    The old `"latest"` pin is gone.
-2. ✅ `db.ts`: `createSongbook` (container + revision 1 + links, one batch),
-   `createSongbookRevision` (transaction on the current revision), getters,
-   `getProjectScoreLinks`.
+2. ✅ `db.ts`: `createSongbook` (container + revision 1, one batch),
+   `createSongbookRevision` (transaction on the current revision), getters.
 3. ✅ Converters `toSongbookRevisionContent` / `fromSongbookRevision` (+ tests);
    `loadPinnedScores`; view-model factory shared with the homepage.
 4. ✅ Pages: `/projects/:slug/songbooks` (list; admins create) and
    `/projects/:slug/songbooks/:songbookSlug` (contents, PDF generation; admins
-   edit with the builder table and a project/linked score picker; members see the
+   edit with the builder table and a score picker; members see the
    history and older revisions via `?versao=`).
 5. ✅ Homepage: `localStorage` persistence; "Salvar caderninho" → project + title
    → songbook revision 1; login continues into the save.
@@ -54,8 +51,7 @@ Spec: PLAN §2.1.3, §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`,
    revision alongside); updates (editor pointer with a new revision, admin title,
    owner publish/delete); revisions immutable, extending the current one, editors
    only re-pin; non-members read only a published songbook's current revision and
-   may only list published ones; score links (editor+, other projects only, real
-   source).
+   may only list published ones.
 
 ## 004b — PDFs from a revision
 
@@ -90,15 +86,14 @@ Spec: PLAN §2.1.3, §2.5–§2.7, §4.3 (`songbooks`, `songbookRevisions`,
    current revision of a published songbook, PDFs, no history or controls.
    Behind `FEATURE_FLAG_COLLAB_FLOW` like the rest of the milestone.
 4. ✅ Project page: non-members see only published songbooks (linked to the public
-   URL), no score list; members see all songbooks and the scores. Linked scores
-   on the project page come with 006.
+   URL), no score list; members see all songbooks and the scores.
 
 ## 004d — published marker + homepage
 
 1. ✅ `syncPublishedScoresOnSongbook` / `…OnScore` / `…OnProject` (PLAN §2.2.1)
    over `recomputePublished`; emulator tests for publish, unpublish, re-pin,
    songbook / score / project delete and restore, newest songbook revision wins,
-   linked scores.
+   scores of other projects.
 2. ✅ `functions/scripts/rebuildPublishedScores.ts`
    (`npm --prefix functions run rebuild:published`), dry run by default; not
    deployed.

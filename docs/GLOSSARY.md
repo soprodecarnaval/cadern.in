@@ -8,6 +8,7 @@ Mappings between user-facing Portuguese (pt-BR) terminology and English code ide
 | Versão                    | Revision              | A versioned upload of a score, or a saved state of a songbook. **Never "revisão"** in the UI — "versão" is the user-facing term; code keeps `revision` |
 | Acervo @username          | Default project       | Auto-created personal project for each user; display name keeps pt-BR "Acervo @" prefix |
 | Projeto                   | Project               | A named collection of songs |
+| Derivação                 | Fork                  | A project's own copy of another project's score, with its lineage |
 | Compositor                | Composer              | |
 | Sub / Verso referência    | Sub                   | Reference verse field from MuseScore `source` |
 | Tags / Estilo             | Tags                  | First tag is the music style |
