@@ -4,6 +4,13 @@ Steps to take production through each merged slice. Staging goes first with the
 same steps (`.env.local` points at `cadernin-staging`); production repeats them with
 the prod key. Run everything from the repo root, in fish.
 
+**CI update:** deploy workflows now apply registered migrations **before** Firebase
+deployment, using environment-specific service-account keys. The per-slice
+merge-then-migrate instructions below describe the earlier manual rollout; do not
+repeat them after CI has migrated. Backups, dry-run review, exporter releases and
+verification remain operator steps. See [CI-DATA.md](CI-DATA.md) for credential
+setup, sequencing and the local production → staging clone script.
+
 Prod: project `cadernin-6c0d1`, bucket `cadernin-6c0d1.firebasestorage.app`,
 Firestore `(default)` in `southamerica-east1`. Prod schema version before this
 milestone: `202604271800`.

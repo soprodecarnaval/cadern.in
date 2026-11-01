@@ -7,6 +7,16 @@ songbooks, the flag turned on in prod, and legacy data removed.
 
 Spec: PLAN §7, §7.1.
 
+## Pre-launch tooling (in progress)
+
+- Deploy workflows authenticate with environment-specific service-account keys,
+  then build → migrate forward → deploy. Migration failures stop deployment.
+- Local production → staging clone script; dry run by default. Copies Firestore
+  and Storage, maps CADERNIN to the existing staging account, retains staging Auth.
+- Setup and operational limits: [CI-DATA.md](CI-DATA.md).
+- Validate this tooling before M6/M7 and production rollout. No rollout is implied
+  by adding the workflows.
+
 ## Steps
 
 1. M6: identify carnaval, garota, na tora, besourinhos; create or reconcile their

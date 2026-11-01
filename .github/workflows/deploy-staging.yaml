@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: "firebase-deploy-staging"
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -16,7 +16,6 @@ jobs:
     environment: staging
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
       FIREBASE_PROJECT_ALIAS: ${{ vars.FIREBASE_PROJECT_ALIAS }}
       VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
       VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
@@ -40,5 +39,21 @@ jobs:
         run: npm ci
       - name: Install functions dependencies
         run: npm ci --prefix functions
+      - name: Build
+        run: npm run build
+      - name: Check functions
+        run: |
+          npm --prefix functions run lint
+          npm --prefix functions run build
+      - name: Authenticate
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Migrate
+        env:
+          SCRIPTS_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          SCRIPTS_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+          SCRIPTS_CADERNIN_UID: ${{ vars.CADERNIN_UID }}
+        run: npx tsx scripts/migrate.ts --execute --forward-only
       - name: Deploy
-        run: npm run deploy -- --project $VITE_FIREBASE_PROJECT_ID
+        run: npx firebase-tools deploy --project "$VITE_FIREBASE_PROJECT_ID"

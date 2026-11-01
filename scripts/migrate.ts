@@ -17,6 +17,7 @@ import { getSchema, setVersion, setCleanedVersion } from "./lib/migration";
 import type { MigrationContext } from "./lib/migration";
 import { FIRESTORE_DATABASE_ID } from "./lib/env";
 import { initAdminApp } from "./lib/firebaseAdmin";
+import { migrationPlan } from "./lib/migrationPlan";
 
 const rawArgs = process.argv.slice(2);
 const isCleanup = rawArgs[0] === "cleanup";
@@ -32,41 +33,26 @@ async function runMigrations(
 ): Promise<void> {
   const { db, dryRun } = ctx;
 
-  const currentIdx = currentVersion
-    ? migrations.findIndex((m) => m.id === currentVersion)
-    : -1;
-
-  const targetIdx =
-    targetId !== null
-      ? migrations.findIndex((m) => m.id === targetId)
-      : migrations.length - 1;
-
-  if (targetId !== null && targetIdx === -1) {
-    throw new Error(`Migration not found: ${targetId}`);
-  }
-
-  if (currentIdx === targetIdx) {
+  const plan = migrationPlan(
+    migrations.map((migration) => migration.id), currentVersion, targetId,
+    args.includes("--forward-only"),
+  );
+  if (plan.ids.length === 0) {
     console.log("Already at target version, nothing to do.");
     return;
   }
-
-  if (targetIdx > currentIdx) {
-    for (let i = currentIdx + 1; i <= targetIdx; i++) {
-      const m = migrations[i];
-      console.log(`\n-> up: ${m.id} — ${m.description}`);
-      await m.up(ctx);
-      await setVersion(db, m.id, dryRun);
-      console.log(`   version -> ${m.id}`);
+  for (const id of plan.ids) {
+    const index = migrations.findIndex((migration) => migration.id === id);
+    const migration = migrations[index];
+    console.log(`\n${plan.direction}: ${id} — ${migration.description}`);
+    if (plan.direction === "up") {
+      await migration.up(ctx);
+    } else {
+      await migration.down(ctx);
     }
-  } else {
-    for (let i = currentIdx; i > targetIdx; i--) {
-      const m = migrations[i];
-      console.log(`\n<- down: ${m.id} — ${m.description}`);
-      await m.down(ctx);
-      const prevVersion = i > 0 ? migrations[i - 1].id : null;
-      await setVersion(db, prevVersion, dryRun);
-      console.log(`   version -> ${prevVersion ?? "(none)"}`);
-    }
+    const version = plan.direction === "up" ? id : migrations[index - 1]?.id ?? null;
+    await setVersion(db, version, dryRun);
+    console.log(`   version -> ${version ?? "(none)"}`);
   }
 }
 
@@ -110,6 +96,11 @@ async function main() {
   const bucket = getStorage().bucket();
   const dryRun = !execute;
   const ctx: MigrationContext = { db, bucket, dryRun };
+
+  const clone = await db.doc("_meta/stagingClone").get();
+  if (clone.get("status") === "running") {
+    throw new Error("Staging clone incomplete; rerun the clone before migrating");
+  }
 
   if (dryRun) console.log("DRY RUN — pass --execute to apply changes\n");
 
