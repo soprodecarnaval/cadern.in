@@ -169,6 +169,23 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
    `cadernin-score-id` in its score properties; an edited copy uploaded into another
    project becomes a fork.
 
+## 12. Task 007 — M6/M7 rehearsal (not launched)
+
+Migrations `202610311300` and `202610311301` are registered and therefore run on
+the next deploy of this branch. Before that, read [007-data-migration.md](007-data-migration.md),
+review its read-only mapping/omission report and take backups. Rehearse on the
+production clone in staging first. No flag change or M9 cleanup is included.
+
+M6 journals original assignments, reconciles band memberships, moves score
+containers and soft-deletes emptied source projects without removing their docs
+or members. M7 creates published `project/songbook` collections with exact pins,
+preserves existing journaled songbooks and rebuilds publication markers directly.
+Style inference evidence and the 193 deferred reviews are journaled separately.
+Madeira Pirata is archived without deleting its scores/files; Festa Junina becomes
+`carnaval-bh/festa-junina-2024`, retaining general style grouping.
+No exporter release is needed for M6/M7: score IDs and Storage paths stay stable,
+and legacy fields remain until M9. Rollback requires the pre-migration backup.
+
 ## Open
 
 - **M1b semantics.** The export app has been creating `Acervo @<name>` projects in

@@ -7,8 +7,13 @@ on:
       - "storage.rules"
       - "firebase.json"
       - "tests/rules/**"
+      - "tests/migrations/**"
+      - "scripts/lib/collab*.ts"
+      - "scripts/data/collabDeferredStyles.json"
+      - "scripts/migrations/**"
       - "functions/**"
       - "vitest.rules.config.ts"
+      - "vitest.migrations.config.ts"
       - "package.json"
       - "package-lock.json"
   workflow_dispatch:
@@ -45,3 +50,5 @@ jobs:
         run: npm run test:rules
       - name: Run functions tests
         run: npm run test:functions
+      - name: Run migration tests
+        run: npm run test:migrations

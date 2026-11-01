@@ -11,6 +11,8 @@ import dropLegacyInvitations from "./202610081202_drop_legacy_invitations";
 import revisionChain from "./202610081300_revision_chain";
 import revisionMetadata from "./202610081301_revision_metadata";
 import stampMsczIdentity from "./202610311200_stamp_mscz_identity";
+import collabProjects from "./202610311300_collab_projects";
+import collabSongbooks from "./202610311301_collab_songbooks";
 
 export const migrations: Migration[] = [
   songsToScores,
@@ -25,4 +27,6 @@ export const migrations: Migration[] = [
   revisionChain,
   revisionMetadata,
   stampMsczIdentity,
+  collabProjects,
+  collabSongbooks,
 ];
