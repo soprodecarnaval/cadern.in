@@ -5,6 +5,7 @@ import { migrateProjects } from "../lib/collabProjects";
 
 const migration: Migration = {
   id: "202610311300",
+  kind: "dataset",
   description: "M6: reconcile band projects, journal score assignments, archive empty sources",
   async up({ db, dryRun }) {
     const catalog = await loadCollabCatalog(db);

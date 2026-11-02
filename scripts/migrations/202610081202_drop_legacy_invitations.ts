@@ -4,12 +4,13 @@ import { commitInChunks } from "../lib/batches";
 /**
  * Deletes the legacy top-level `invitations/{autoId}` collection (collab-flow
  * M1c). Invitations now live at `projects/{id}/invitations/{invitee}`; the old
- * ones are not carried over, since every project that predates the
- * collaborative flow is deleted when it ships to production.
+ * ones are discarded under the original rollout's project-reset assumption.
+ * Review that dataset decision before explicitly opting in to execution.
  */
 
 const migration: Migration = {
   id: "202610081202",
+  kind: "dataset",
   description: "delete legacy top-level invitations",
 
   async up({ db, dryRun }: MigrationContext) {

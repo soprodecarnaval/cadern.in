@@ -5,6 +5,7 @@ import { migrateSongbooks } from "../lib/collabSongbooks";
 
 const migration: Migration = {
   id: "202610311301",
+  kind: "dataset",
   description: "M7: published songbooks per project/year, latest pins and frozen numbering",
   async up({ db, dryRun }) {
     await migrateSongbooks(db, await loadCollabCatalog(db), CADERNIN_UID, dryRun);

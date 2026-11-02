@@ -4,8 +4,10 @@ Steps to take production through each merged slice. Staging goes first with the
 same steps (`.env.local` points at `cadernin-staging`); production repeats them with
 the prod key. Run everything from the repo root, in fish.
 
-**CI update:** deploy workflows now apply registered migrations **before** Firebase
-deployment, using environment-specific service-account keys. The per-slice
+**CI update:** deploy workflows apply schema migrations **before** Firebase
+deployment, using environment-specific service-account keys. Pending dataset
+migrations block the whole path before any migration executes; apply them with
+a reviewed, bounded `--include-dataset --to <id> --execute` run first. The per-slice
 merge-then-migrate instructions below describe the earlier manual rollout; do not
 repeat them after CI has migrated. Backups, dry-run review, exporter releases and
 verification remain operator steps. See [CI-DATA.md](CI-DATA.md) for credential
@@ -41,7 +43,9 @@ An import overwrites documents with the same path and leaves newer ones in place
 ## 1. Migration environment
 
 Migrations run with `npm run migrate` (dry run) and `npm run migrate:up`
-(apply). For prod, use a separate env file so `.env.local` stays on staging:
+(schema execution). Dry runs preview both kinds; dataset execution additionally
+requires `--include-dataset --to <id>`. See [CI-DATA.md](CI-DATA.md) for the registry
+audit. For prod, use a separate env file so `.env.local` stays on staging:
 
 ```fish
 cp .env.local .env.prod-scripts.local   # gitignored by *.local
@@ -51,7 +55,7 @@ cp .env.local .env.prod-scripts.local   # gitignored by *.local
 #   SCRIPTS_CADERNIN_UID=<prod CADERNIN uid, from .env.production>
 #   GOOGLE_APPLICATION_CREDENTIALS=./secrets/service-account.cadernin-prod.json
 npx tsx --env-file=.env.prod-scripts.local scripts/migrate.ts             # dry run
-npx tsx --env-file=.env.prod-scripts.local scripts/migrate.ts --execute   # apply
+npx tsx --env-file=.env.prod-scripts.local scripts/migrate.ts --execute   # schema only; pending datasets block
 ```
 
 The scripts print `Firebase project: …` first and abort if the key or bucket
@@ -96,6 +100,8 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
    - `202610081200` M1 — `deletedAt: null` on projects and songbooks.
    - `202610081201` M1b — project member docs.
    - `202610081202` M1c — deletes legacy top-level invitations.
+   M1c is a dataset migration: review its invitation deletion and apply with
+   `--include-dataset --to=202610081202 --execute --forward-only`.
 3. Release the export app (reads roles from member docs).
 4. Verify: an export-app upload by a project editor succeeds; homepage unchanged.
 
@@ -171,10 +177,12 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
 
 ## 12. Task 007 — M6/M7 rehearsal (not launched)
 
-Migrations `202610311300` and `202610311301` are registered and therefore run on
-the next deploy of this branch. Before that, read [007-data-migration.md](007-data-migration.md),
-review its read-only mapping/omission report and take backups. Rehearse on the
-production clone in staging first. No flag change or M9 cleanup is included.
+Migrations `202610311300` and `202610311301` are registered as dataset migrations.
+They block deployment until explicitly applied with
+`--include-dataset --to=202610311301 --execute --forward-only`. Before that, read
+[007-data-migration.md](007-data-migration.md), incorporate the reviewed score-report
+decisions into M6/M7, review the mapping/omission report and take backups. Rehearse
+on the production clone in staging first. No flag change or M9 cleanup is included.
 
 M6 journals original assignments, reconciles band memberships, moves score
 containers and soft-deletes emptied source projects without removing their docs

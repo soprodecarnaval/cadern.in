@@ -26,6 +26,10 @@ Rotate keys according to your credential policy. Do not commit JSON credentials.
 
 Both workflows install dependencies, build, authenticate, run
 `npx tsx scripts/migrate.ts --execute --forward-only`, then deploy Firebase.
+Execution defaults to schema migrations. If any pending step is a dataset
+migration, the entire path fails preflight before any migration hook or checkpoint
+write. CI never skips dataset steps or advances past them. Apply reviewed dataset
+migrations separately, then rerun deployment.
 Unknown schema versions and rollbacks fail instead of replaying migrations.
 No cleanup migrations run automatically. If migration fails, deployment stops;
 the prior site remains live, but already-applied migrations are not rolled back.
@@ -40,6 +44,51 @@ migrations or deployments while a deploy workflow is running; local scripts do
 not share GitHub's concurrency lock.
 Review pending migrations and take the backups in DEPLOY.md before the first
 production deployment; automatic migration execution does not create backups.
+
+## Schema and dataset migrations
+
+`Migration.kind` is `schema` (the default) or `dataset`. Schema migrations adapt
+the stored model or file format for any installation. Dataset migrations encode
+decisions about this catalog or rollout. Both share the ordered registry and
+existing `_meta/schema` checkpoints; classification does not replay applied work.
+
+Audit of all 14 registered migrations:
+
+| ID | Kind | Reason |
+|---|---|---|
+| `20241015120000` | schema | Songs → scores and revisions; historical registry ID retained |
+| `202604201900` | schema | Project IDs and role representation |
+| `202604201901` | schema | Songbook project references |
+| `202604271800` | schema | Storage download URL representation |
+| `202609201500` | schema | Part-name format contract |
+| `202610041500` | schema | Revision subcollection rename |
+| `202610081200` | schema | Soft-delete fields |
+| `202610081201` | schema | Member map → member documents |
+| `202610081202` | dataset | Discard legacy invitations based on rollout assumptions |
+| `202610081300` | schema | Revision chain fields |
+| `202610081301` | schema | Revision metadata and cached metadata |
+| `202610311200` | schema | Embedded MSCZ identity required by the upload format |
+| `202610311300` | dataset | Curated project regrouping and ownership (M6) |
+| `202610311301` | dataset | Curated songbook creation and publication (M7) |
+
+Dry runs show both kinds and invoke their preview hooks without writing
+checkpoints. Dataset execution requires `--include-dataset` **and** an explicit
+`--to <id>`. This authorizes the ordered pending path through that ID, including
+schema prerequisites. The same guard applies to rollback and cleanup; cleanup
+targets must already be applied. Opt-in does not make irreversible hooks reversible.
+
+For example, after backups and report review, targeting staging:
+
+```sh
+npx tsx --env-file=.env.local scripts/migrate.ts --to=202610311301 --forward-only
+npx tsx --env-file=.env.local scripts/migrate.ts --include-dataset --to=202610311301 --forward-only --execute
+```
+
+Use a smaller target to stop before a dataset boundary. An unbounded schema-only
+run fails if a dataset appears anywhere in its pending path, even after schema
+steps. Already-applied dataset migrations do not block later schema deployment.
+The reviewed score-report decisions still need incorporating into M6/M7 before
+the dataset rehearsal; enabling this runner does not incorporate those decisions.
 
 ## Clone data between environments
 
@@ -68,8 +117,9 @@ Firestore reads and Storage listing/copies are not an atomic production snapshot
 Use a quiet production window for a reproducible rehearsal. A failed copy can leave
 the destination partially replaced; rerun it before using that environment. The clone writes a
 running marker, which prevents migration until cloning finishes successfully.
-The copied production schema version is committed at the end. Then dispatch the
-staging deploy workflow to migrate the copied data before reopening staging.
+The copied production schema version is committed at the end. Review and apply
+pending dataset migrations locally, then dispatch the staging deploy workflow
+before reopening staging.
 
 Keep clone credentials locally. The production reader needs
 `roles/datastore.viewer`, `roles/storage.objectViewer` on the production bucket,
@@ -116,8 +166,10 @@ After cloning, apply staging migrations locally (`.env.local` must point to stag
 npx tsx --env-file=.env.local scripts/migrate.ts --execute --forward-only
 ```
 
-Alternatively, dispatch the staging deploy workflow, which applies migrations
-before deploying. No clone-specific GitHub secrets or variables are needed.
+This command fails preflight if dataset steps are pending. Use the bounded opt-in
+above only after their review. Alternatively, dispatch the staging deploy workflow
+once dataset prerequisites are applied; it applies schema migrations before
+deploying. No clone-specific GitHub secrets or variables are needed.
 
 The script uses the databases and buckets configured in the selected files.
 Emulator variables are rejected.

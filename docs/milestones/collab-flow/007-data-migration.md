@@ -10,7 +10,12 @@ Spec: PLAN §7, §7.1.
 ## Pre-launch tooling (in progress)
 
 - Deploy workflows authenticate with environment-specific service-account keys,
-  then build → migrate forward → deploy. Migration failures stop deployment.
+  then build → migrate schema forward → deploy. Pending dataset migrations block
+  the entire migration path before any hooks or checkpoints; migration failures
+  stop deployment.
+- Registry audit: M1c (`202610081202`), M6 and M7 are dataset migrations; the other
+  eleven remain schema migrations. Dataset execution requires a bounded
+  `--include-dataset --to <id>` opt-in, including rollback and cleanup.
 - Local production → staging clone script; dry run by default. Copies Firestore
   and Storage, maps CADERNIN to the existing staging account, retains staging Auth.
 - Setup and operational limits: [CI-DATA.md](CI-DATA.md).
@@ -38,9 +43,10 @@ Spec: PLAN §7, §7.1.
 
 ## M6/M7 implementation (in progress)
 
-Registered migrations: `202610311300` (M6) and `202610311301` (M7). CI applies
-registered migrations before deployment; review the report and prepare backups
-before deploying this branch. Production launch and M9 are separate work.
+Registered dataset migrations: `202610311300` (M6) and `202610311301` (M7).
+CI refuses to execute them or skip past them. Incorporate the reviewed score-report
+decisions, review the mapping report and prepare backups before explicitly opting
+in to their staging rehearsal. Production launch and M9 are separate work.
 
 Explicit mapping in `scripts/lib/collabMapping.ts`:
 
@@ -129,7 +135,8 @@ After reviewing that report, a staging dry run of registered migrations is:
 npx tsx --env-file=.env.local scripts/migrate.ts --to 202610311301
 ```
 
-Applying requires a separate `--execute`. Stop writers/triggers during rehearsal
+Applying requires `--include-dataset --to=202610311301 --execute --forward-only`.
+Stop writers/triggers during rehearsal
 as described in [CI-DATA.md](CI-DATA.md). M6/M7 deliberately refuse automatic
 rollback: restoring a pre-migration backup avoids discarding later edits. Keep
 the assignment journals until rollout is verified.
