@@ -46,7 +46,7 @@ matters only if the upload UI wants to display part names.
 
 `parseUploadedFiles` wants browser `File[]` and the assets are on disk. The
 preferred option from the original plan is confirmed working:
-`scripts/lib/backfillMetajson.ts` already reads a folder into `File[]` under
+`scripts/maintenance/lib/backfillMetajson.ts` already reads a folder into `File[]` under
 Node and hands it to `parseUploadedFiles` unchanged. Node ≥ 20 has `File`.
 
 The bytes have to reach the renderer regardless — Firebase auth and Storage

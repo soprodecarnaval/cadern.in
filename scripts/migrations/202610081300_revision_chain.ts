@@ -1,5 +1,5 @@
 import { FieldValue, type Timestamp } from "firebase-admin/firestore";
-import type { Migration, MigrationContext } from "../lib/migration";
+import type { Migration, MigrationContext } from "./lib/migration";
 import { commitInChunks, type Write } from "../lib/batches";
 import { isLegacyRevisionId, revisionsByScore } from "../lib/scoreRevisions";
 import { revisionSlug } from "../../src/lib/revisionId";

@@ -14,6 +14,7 @@ export interface MigrationContext {
 export interface Migration {
   id: string;
   description: string;
+  kind?: "schema" | "dataset";
   up(this: void, ctx: MigrationContext): Promise<void>;
   down(this: void, ctx: MigrationContext): Promise<void>;
   cleanup?(this: void, ctx: MigrationContext): Promise<void>;

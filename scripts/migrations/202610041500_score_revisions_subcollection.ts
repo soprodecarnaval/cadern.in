@@ -1,4 +1,4 @@
-import type { Migration, MigrationContext } from "../lib/migration";
+import type { Migration, MigrationContext } from "./lib/migration";
 
 /**
  * Copies every `scores/{id}/revisions/{rev}` to `scores/{id}/scoreRevisions/{rev}`

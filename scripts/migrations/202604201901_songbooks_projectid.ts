@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Migration, MigrationContext } from "../lib/migration";
+import type { Migration, MigrationContext } from "./lib/migration";
 
 const zLegacySongbookDoc = z.object({
   title: z.string(),

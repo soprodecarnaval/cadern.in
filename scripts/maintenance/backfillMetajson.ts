@@ -5,7 +5,7 @@
  * web app stops inferring part names from filenames.
  *
  * Usage:
- *   tsx scripts/backfillMetajson.ts <folder> [--write]
+ *   tsx scripts/maintenance/backfillMetajson.ts <folder> [--write]
  *
  * Dry by default; pass --write to replace the .metajson in place.
  */
@@ -18,7 +18,7 @@ function parseArgs(argv: string[]): { folder: string; write: boolean } {
   const args = argv.slice(2);
   const folder = args.find((a) => !a.startsWith("--"));
   if (!folder) {
-    throw new Error("Usage: tsx scripts/backfillMetajson.ts <folder> [--write]");
+    throw new Error("Usage: tsx scripts/maintenance/backfillMetajson.ts <folder> [--write]");
   }
   return { folder, write: args.includes("--write") };
 }

@@ -39,7 +39,7 @@ export type Metajson = z.infer<typeof zMetajson>;
 /**
  * Pre-v2 sidecars carry only the metadata fields, leaving part names and
  * instruments to be guessed from filenames. Accepted on read so old exported
- * folders still upload; see scripts/backfillMetajson.ts.
+ * folders still upload; see scripts/maintenance/backfillMetajson.ts.
  */
 export const zLegacyMetajson = z.object({
   version: z.undefined(),

@@ -1,0 +1,93 @@
+# axé
+01 A Roda
+02 Alô Paixão
+03 Apocalipse do Amor
+04 Beija Flor
+05 Beijo na Boca
+06 Carrinho de Mão
+07 Chuva Suor e Cerveja
+08 Dança do Vampiro
+09 Faraó
+10 Flores
+11 Milla
+12 Requebra
+13 Sou 100% Você
+14 Tesouro do Pirata (Onda)
+15 Toda Menina Baiana
+16 Vem Meu Amor
+# beagá
+17 Aflorou
+18 Alcova Libertina
+19 Bloco do Peixoto
+20 Como te Lhama
+21 Filhos Tcha Tcha
+# arrasta-pé
+22 Hino do Elefante de Olinda
+23 Morena Tropicana
+24 Nagô Nagô
+25 Pagode Russo
+# odara
+26 Canto das Três Raças
+27 Canto de Xangô
+28 Maresia
+29 Odara
+# funk
+30 Agora vai Sentar
+31 Amor de Quê
+32 Baile de Favela
+33 Din Din Din
+34 Endereço dos Bailes
+35 Oh Juliana
+36 Rap da Felicidade
+37 Rap das Armas
+38 Tédio
+39 Tú tá na Gaiola
+40 Um Morto Muito Loco
+41 Vai Malandra
+42 Vermelho (Groove)
+# pisadinha
+43 Tá Rocheda
+44 Tapão na Raba
+# fanfarra
+45 Blues Cigano
+46 Buyo
+47 Soul Finger
+# brazuka
+48 Cotidiano
+49 Divino Maravilhoso
+50 Fé Cega Faca Amolada
+51 Mamãe Oxum
+52 Não Enche
+53 Não me Entrego pros Caretas
+54 Ombrim
+55 Pais Tropical
+# internacional
+56 Baila Comigo
+57 Bubamara
+58 Cumbia em Do Menor
+59 Despacito
+60 Hava Nagila
+61 Macarena
+62 Paint it, black
+63 Sonido Amazonico
+# tropicália
+64 Lennon and McCartney
+65 Reconvexo
+66 Sujeito de Sorte
+67 Tudo o que Você Podia Ser
+# technohell
+68 Children / Can't Get You Out of My Head
+69 Freed from Desire
+70 Jesus Humilha Satanás
+71 What is Love
+# manifestação
+72 Apesar de Você
+73 Bella Ciao
+74 Tá Escrito
+75 Tá na Hora do Jair
+76 Vermelho Vermelhaço
+# zoeira
+77 Eu sou um Cordeirinho
+78 Noiados da Encruzilhada
+79 Show de Calouros
+80 Undererê

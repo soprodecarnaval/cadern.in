@@ -1,4 +1,4 @@
-import type { MigrationContext } from "./migration";
+import type { MigrationContext } from "../migrations/lib/migration";
 
 export const REVISION_COLLECTIONS = ["revisions", "scoreRevisions"] as const;
 

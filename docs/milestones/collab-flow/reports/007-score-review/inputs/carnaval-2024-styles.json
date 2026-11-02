@@ -1,0 +1,978 @@
+[
+  {
+    "style": "marcha rancho",
+    "providedTitle": "Abre Alas",
+    "scoreId": "carnaval-bh-2024-abre-alas",
+    "storedTitle": "abre alas",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marcha rancho",
+    "providedTitle": "Bandeira Branca",
+    "scoreId": "carnaval-bh-2024-bandeira-branca",
+    "storedTitle": "bandeira branca",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marcha rancho",
+    "providedTitle": "Bloco na Rua",
+    "scoreId": "carnaval-bh-2024-bloco-na-rua",
+    "storedTitle": "bloco na rua",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marcha rancho",
+    "providedTitle": "Carinhoso",
+    "scoreId": "carnaval-bh-2024-carinhoso",
+    "storedTitle": "carinhoso",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marcha rancho",
+    "providedTitle": "Máscara Negra (Quanto Riso Oh!)",
+    "scoreId": "carnaval-bh-2024-mascara-negra",
+    "storedTitle": "máscara negra",
+    "matchBasis": "parenthetical annotation omitted",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marcha rancho",
+    "providedTitle": "Pastorinhas",
+    "scoreId": "carnaval-bh-2024-pastorinhas",
+    "storedTitle": "pastorinhas",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Alala-ô",
+    "scoreId": "carnaval-bh-2024-alala-o",
+    "storedTitle": "alala-ô",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Balancê",
+    "scoreId": "carnaval-bh-2024-balance",
+    "storedTitle": "balancê",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Cabeleira do Ed Marte",
+    "scoreId": "carnaval-bh-2024-cabeleira-do-ed-marte",
+    "storedTitle": "cabeleira do ed marte",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Cachaça",
+    "scoreId": "carnaval-bh-2024-cachaca",
+    "storedTitle": "cachaça",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Chiquita Bacana",
+    "scoreId": "carnaval-bh-2024-chiquita-bacana",
+    "storedTitle": "chiquita bacana",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Jardineira",
+    "scoreId": "carnaval-bh-2024-jardineira",
+    "storedTitle": "jardineira",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Mamãe eu Quero",
+    "scoreId": "carnaval-bh-2024-mamae-eu-quero",
+    "storedTitle": "mamãe eu quero",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Marcha do Remador",
+    "scoreId": "carnaval-bh-2024-marcha-do-remador",
+    "storedTitle": "marcha do remador",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Quem Sabe Sabe",
+    "scoreId": "carnaval-bh-2024-quem-sabe-sabe",
+    "storedTitle": "quem sabe, sabe",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Saca Rolhas",
+    "scoreId": "carnaval-bh-2024-saca-rolhas",
+    "storedTitle": "saca rolhas",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Taí",
+    "scoreId": "carnaval-bh-2024-tai",
+    "storedTitle": "taí",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Tem Nego Bêbo Aí",
+    "scoreId": "carnaval-bh-2024-tem-nego-bebo-ai",
+    "storedTitle": "tem nego bêbo aí",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Turma do Funil",
+    "scoreId": "carnaval-bh-2024-turma-do-funil",
+    "storedTitle": "turma do funil",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Vai com Jeito",
+    "scoreId": "carnaval-bh-2024-vai-com-jeito",
+    "storedTitle": "vai com jeito",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Alcova Libertina",
+    "scoreId": "carnaval-bh-2024-alcova-libertina",
+    "storedTitle": "alcova libertina",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Bloco do Peixoto",
+    "scoreId": "carnaval-bh-2024-bloco-do-peixoto",
+    "storedTitle": "bloco do peixoto",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Corte Devassa",
+    "scoreId": "carnaval-bh-2024-corte-devassa",
+    "storedTitle": "corte devassa",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Ladeira a Baixo",
+    "scoreId": "carnaval-bh-2024-ladeira-abaixo",
+    "storedTitle": "ladeira abaixo",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Mamá na Vaca",
+    "scoreId": "carnaval-bh-2024-mama-na-vaca",
+    "storedTitle": "mamá na vaca",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Manjericão",
+    "scoreId": "carnaval-bh-2024-manjericao",
+    "storedTitle": "manjericão",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Praia da Estação",
+    "scoreId": "carnaval-bh-2024-praia-da-estacao",
+    "storedTitle": "praia da estação",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Queima Largada",
+    "scoreId": "carnaval-bh-2024-queima-largada",
+    "storedTitle": "queima largada",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Tetê a Santa",
+    "scoreId": "carnaval-bh-2024-tete-a-santa",
+    "storedTitle": "tetê a santa",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "A Luz de Tieta",
+    "scoreId": "carnaval-bh-2024-a-luz-de-tieta",
+    "storedTitle": "a luz de tiêta",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Araketu é Bom Demais",
+    "scoreId": "carnaval-bh-2024-araketu-e-bom-demais",
+    "storedTitle": "araketu é bom demais",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Arerê-ê-ê",
+    "scoreId": "carnaval-bh-2024-arere-e-e",
+    "storedTitle": "arerê-ê-ê",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Baianidade Nagô",
+    "scoreId": "carnaval-bh-2024-baianidade-nago",
+    "storedTitle": "baianidade nagô",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Beija Flor (Timbalada)",
+    "scoreId": "carnaval-bh-2024-beija-flor",
+    "storedTitle": "beija flor",
+    "matchBasis": "parenthetical annotation omitted",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Beleza Rara (Hoje Sou Feliz)",
+    "scoreId": "carnaval-bh-2024-beleza-rara",
+    "storedTitle": "beleza rara",
+    "matchBasis": "parenthetical annotation omitted",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Deusa do Amor",
+    "scoreId": "carnaval-bh-2024-deusa-do-amor",
+    "storedTitle": "deusa do amor",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Eu Também Quero Beijar",
+    "scoreId": "carnaval-bh-2024-eu-tambem-quero-beijar",
+    "storedTitle": "eu tambem quero beijar",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Haja Amor",
+    "scoreId": "carnaval-bh-2024-haja-amor",
+    "storedTitle": "haja amor",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Pequena Eva",
+    "scoreId": "carnaval-bh-2024-pequena-eva",
+    "storedTitle": "pequena eva",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Prefixo de Verão",
+    "scoreId": "carnaval-bh-2024-prefixo-de-verao",
+    "storedTitle": "prefixo de verão",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Vem Meu Amor",
+    "scoreId": "carnaval-bh-2024-vem-meu-amor",
+    "storedTitle": "vem meu amor",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Xibom Bombom",
+    "scoreId": "carnaval-bh-2024-xibom-bombom",
+    "storedTitle": "xibom bombom",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "forró",
+    "providedTitle": "Anunciação",
+    "scoreId": "carnaval-bh-2024-anunciacao",
+    "storedTitle": "anunciação",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "forró",
+    "providedTitle": "Qui Nem Jiló",
+    "scoreId": "carnaval-bh-2024-qui-nem-jilo",
+    "storedTitle": "qui nem jiló",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "forró",
+    "providedTitle": "Morena Tropicana",
+    "scoreId": "carnaval-bh-2024-morena-tropicana",
+    "storedTitle": "morena tropicana",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "forró",
+    "providedTitle": "Pagode Russo",
+    "scoreId": "carnaval-bh-2024-pagode-russo",
+    "storedTitle": "pagode russo",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "frevo",
+    "providedTitle": "Cabelo de Fogo",
+    "scoreId": "carnaval-bh-2024-cabelo-de-fogo",
+    "storedTitle": "cabelo de fogo",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "frevo",
+    "providedTitle": "Ciranda de Maluco",
+    "scoreId": "carnaval-bh-2024-ciranda-de-maluco",
+    "storedTitle": "ciranda de maluco",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "frevo",
+    "providedTitle": "Frevo Mulher",
+    "scoreId": "carnaval-bh-2024-frevo-mulher",
+    "storedTitle": "frevo mulher",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "frevo",
+    "providedTitle": "Vassourinhas",
+    "scoreId": "carnaval-bh-2024-vassourinhas",
+    "storedTitle": "vassourinhas",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Água de Chuva no Mar",
+    "scoreId": "carnaval-bh-2024-agua-de-chuva-no-mar",
+    "storedTitle": "agua de chuva no mar",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Andança (Vim, Tanta Areia)",
+    "scoreId": "carnaval-bh-2024-andanca",
+    "storedTitle": "andança",
+    "matchBasis": "parenthetical annotation omitted",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Canto das Três Raças",
+    "scoreId": "carnaval-bh-2024-canto-das-tres-racas",
+    "storedTitle": "canto das tres raças",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Juízo Final (O Sol)",
+    "scoreId": "carnaval-bh-2024-juizo-final-o-sol",
+    "storedTitle": "juizo final (o sol)",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Não Deixe o Samba Morrer",
+    "scoreId": "carnaval-bh-2024-nao-deixe-o-samba-morrer",
+    "storedTitle": "não deixe o samba morrer",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "O Morro Não tem Vez",
+    "scoreId": "carnaval-bh-2024-o-morro-nao-tem-vez",
+    "storedTitle": "o morro não tem vez",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "O Sol Nascerá (A sorrir)",
+    "scoreId": "carnaval-bh-2024-o-sol-nascera-a-sorrir",
+    "storedTitle": "o sol nascerá (a sorrir)",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Retalhos de Cetim (Mas Chegou)",
+    "scoreId": "carnaval-bh-2024-retalhos-de-cetim",
+    "storedTitle": "retalhos de cetim",
+    "matchBasis": "parenthetical annotation omitted",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Tiro ao Álvaro",
+    "scoreId": "carnaval-bh-2024-tiro-ao-alvaro",
+    "storedTitle": "tiro ao alvaro",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Trem das Onze",
+    "scoreId": "carnaval-bh-2024-trem-das-onze",
+    "storedTitle": "trem das onze",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Tristeza",
+    "scoreId": "carnaval-bh-2024-tristeza",
+    "storedTitle": "tristeza",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Vou Festejar",
+    "scoreId": "carnaval-bh-2024-vou-festejar",
+    "storedTitle": "vou festejar",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "pagode",
+    "providedTitle": "Caçamba",
+    "scoreId": "carnaval-bh-2024-cacamba",
+    "storedTitle": "caçamba",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "pagode",
+    "providedTitle": "Cheia de Manias",
+    "scoreId": "carnaval-bh-2024-cheia-de-manias",
+    "storedTitle": "cheia de manias",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "pagode",
+    "providedTitle": "Cilada",
+    "scoreId": "carnaval-bh-2024-cilada",
+    "storedTitle": "cilada",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "pagode",
+    "providedTitle": "Mal Acostumado",
+    "scoreId": "carnaval-bh-2024-mal-acostumado",
+    "storedTitle": "mal acostumado",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "pagode",
+    "providedTitle": "Temporal",
+    "scoreId": "carnaval-bh-2024-temporal",
+    "storedTitle": "temporal",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "latina",
+    "providedTitle": "Besame Mucho",
+    "scoreId": "carnaval-bh-2024-besame-mucho",
+    "storedTitle": "besame mucho",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "latina",
+    "providedTitle": "Carinito",
+    "scoreId": "carnaval-bh-2024-carinito",
+    "storedTitle": "cariñito",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "latina",
+    "providedTitle": "Chorando se Foi",
+    "scoreId": "carnaval-bh-2024-chorando-se-foi",
+    "storedTitle": "chorando se foi",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "latina",
+    "providedTitle": "Sonido Amazônico",
+    "scoreId": "carnaval-bh-2024-sonido-amazonico",
+    "storedTitle": "sonido amazonico",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Agora vai Sentar",
+    "scoreId": "carnaval-bh-2024-agora-vai-sentar",
+    "storedTitle": "agora vai sentar",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Cheguei",
+    "scoreId": "carnaval-bh-2024-cheguei",
+    "storedTitle": "cheguei",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Combatchy",
+    "scoreId": "carnaval-bh-2024-combatchy",
+    "storedTitle": "combatchy",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Ela só Pensa em Beijar",
+    "scoreId": "carnaval-bh-2024-ela-so-pensa-em-beijar",
+    "storedTitle": "ela só pensa em beijar",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Feira de Acari",
+    "scoreId": "carnaval-bh-2024-feira-de-acari",
+    "storedTitle": "feira de acari",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Glamurosa",
+    "scoreId": "carnaval-bh-2024-glamurosa",
+    "storedTitle": "glamurosa",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Meu Jeito de Amar (Vai Descendo Devagar)",
+    "scoreId": "carnaval-bh-2024-meu-jeito-de-amar",
+    "storedTitle": "meu jeito de amar",
+    "matchBasis": "parenthetical annotation omitted",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Rap do Silva",
+    "scoreId": "carnaval-bh-2024-rap-do-silva",
+    "storedTitle": "rap do silva",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Se tá Solteira",
+    "scoreId": "carnaval-bh-2024-se-ta-solteira",
+    "storedTitle": "se tá solteira",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Tú tá na Gaiola",
+    "scoreId": "carnaval-bh-2024-tu-ta-na-gaiola",
+    "storedTitle": "tú tá na gaiola",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Vai Malandra",
+    "scoreId": "carnaval-bh-2024-vai-malandra",
+    "storedTitle": "vai malandra",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Verdinha",
+    "scoreId": "carnaval-bh-2024-verdinha",
+    "storedTitle": "verdinha",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Vermelho (Groove)",
+    "scoreId": "carnaval-bh-2024-vermelho",
+    "storedTitle": "vermelho",
+    "matchBasis": "parenthetical annotation omitted",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Abra Suas Asas",
+    "scoreId": "carnaval-bh-2024-abra-suas-asas",
+    "storedTitle": "abra suas asas",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Ando Meio Desligado",
+    "scoreId": "carnaval-bh-2024-ando-meio-desligado",
+    "storedTitle": "ando meio desligado",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Descobridor dos Sete Mares",
+    "scoreId": "carnaval-bh-2024-descobridor-dos-sete-mares",
+    "storedTitle": "descobridor dos sete mares",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Evidências",
+    "scoreId": "carnaval-bh-2024-evidencias",
+    "storedTitle": "evidências",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Forasteiro",
+    "scoreId": "carnaval-bh-2024-forasteiro",
+    "storedTitle": "forasteiro",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Lucro",
+    "scoreId": "carnaval-bh-2024-lucro",
+    "storedTitle": "lucro",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Não Quero Dinheiro (Só Quero Amar)",
+    "scoreId": "carnaval-bh-2024-nao-quero-dinheiro",
+    "storedTitle": "não quero dinheiro",
+    "matchBasis": "parenthetical annotation omitted",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Pais Tropical",
+    "scoreId": "carnaval-bh-2024-pais-tropical",
+    "storedTitle": "pais tropical",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Taj Mahal",
+    "scoreId": "carnaval-bh-2024-taj-mahal",
+    "storedTitle": "taj mahal",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Tempos Modernos",
+    "scoreId": "carnaval-bh-2024-tempos-modernos",
+    "storedTitle": "tempos modernos",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Voando pro Pará",
+    "scoreId": "carnaval-bh-2024-voando-pro-para",
+    "storedTitle": "voando pro pará",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "odara",
+    "providedTitle": "Cordeiro de Nanã",
+    "scoreId": "carnaval-bh-2024-cordeiro-de-nana",
+    "storedTitle": "cordeiro de nana",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "odara",
+    "providedTitle": "Deixa a Gira Girar",
+    "scoreId": "carnaval-bh-2024-deixa-a-gira-girar",
+    "storedTitle": "deixa a gira girar",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "odara",
+    "providedTitle": "É D'Oxum",
+    "scoreId": "carnaval-bh-2024-e-doxum",
+    "storedTitle": "é d'oxum",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "odara",
+    "providedTitle": "Emoriô",
+    "scoreId": "carnaval-bh-2024-emorio",
+    "storedTitle": "emoriô",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "odara",
+    "providedTitle": "Suíte dos Pescadores",
+    "scoreId": "carnaval-bh-2024-suite-dos-pescadores",
+    "storedTitle": "suíte dos pescadores",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "odara",
+    "providedTitle": "Varias Queixas",
+    "scoreId": "carnaval-bh-2024-varias-queixas",
+    "storedTitle": "varias queixas",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "A Banda Tá com Sede",
+    "scoreId": "carnaval-bh-2024-a-banda-ta-com-sede",
+    "storedTitle": "a banda tá com sede",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Buyo",
+    "scoreId": "carnaval-bh-2024-buyo",
+    "storedTitle": "buyo",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Montserrat, Serrat",
+    "scoreId": "carnaval-bh-2024-montserrat-serrat",
+    "storedTitle": "montserrat, serrat",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Não me Entrego pros Caretas",
+    "scoreId": "carnaval-bh-2024-nao-me-entrego-pros-caretas",
+    "storedTitle": "não me entrego pros caretas",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Oswaldo, o Pombo",
+    "scoreId": "carnaval-bh-2024-oswaldo-o-pombo",
+    "storedTitle": "oswaldo, o pombo",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Soul Finger",
+    "scoreId": "carnaval-bh-2024-soul-finger",
+    "storedTitle": "soul finger",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "technohell",
+    "providedTitle": "What is Love",
+    "scoreId": "carnaval-bh-2024-what-is-love",
+    "storedTitle": "what is love",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "piseiro",
+    "providedTitle": "Ameaça",
+    "scoreId": "carnaval-bh-2024-ameaca",
+    "storedTitle": "ameaça",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "piseiro",
+    "providedTitle": "Aquelas Coisas",
+    "scoreId": "carnaval-bh-2024-aquelas-coisas",
+    "storedTitle": "aquelas coisas",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "piseiro",
+    "providedTitle": "Lovezinho",
+    "scoreId": "carnaval-bh-2024-lovezinho",
+    "storedTitle": "lovezinho",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "piseiro",
+    "providedTitle": "Zona de Perigo",
+    "scoreId": "carnaval-bh-2024-zona-de-perigo",
+    "storedTitle": "zona de perigo",
+    "matchBasis": "normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Liberar Geral (Terrasamba)",
+    "scoreId": "carnaval-bh-2024-nada-mal-terrasamba",
+    "storedTitle": "nada mal (terrasamba)",
+    "matchBasis": "User confirmed Liberar Geral (Terrasamba) matches nada mal (terrasamba); stored title preserved",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Sou 100% Você",
+    "scoreId": "carnaval-bh-2024-sou-cem-por-cento-voce",
+    "storedTitle": "sou cem por cento você",
+    "matchBasis": "100% written as cem por cento",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Eu e Você (Aí que meu Barraco Desabou)",
+    "scoreId": "carnaval-bh-2024-eu-e-voce-sempre",
+    "storedTitle": "eu e você sempre",
+    "matchBasis": "Unique title prefix; stored title includes sempre",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "pagode",
+    "providedTitle": "Eu Me Apaixonei pela Pessoa Errada",
+    "scoreId": "carnaval-bh-2024-me-apaixonei-pela-pessoa-errada",
+    "storedTitle": "me apaixonei pela pessoa errada",
+    "matchBasis": "Leading pronoun omitted in stored title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "latina",
+    "providedTitle": "Cumbia em Dó Menor",
+    "scoreId": "carnaval-bh-2024-cumbia-en-do-menor",
+    "storedTitle": "cumbia en do menor",
+    "matchBasis": "em/en spelling variation",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Parado no Bailão",
+    "scoreId": "carnaval-bh-2024-parados-no-bailao",
+    "storedTitle": "parados no bailão",
+    "matchBasis": "Singular/plural spelling variation",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Não é Mole Não / Guadalupe",
+    "scoreId": "carnaval-bh-2024-nao-e-mole-nao-guadaloupe",
+    "storedTitle": "não é mole não + guadaloupe",
+    "matchBasis": "Previously approved Guadalupe/Guadaloupe variation",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Tom & Jerry em Guca",
+    "scoreId": "carnaval-bh-2024-tom-e-jerry-em-guca",
+    "storedTitle": "tom e jerry em guca",
+    "matchBasis": "Ampersand written as e",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "technohell",
+    "providedTitle": "Children / Can't Get You Out of My Head",
+    "scoreId": "carnaval-bh-2024-medley-technohell",
+    "storedTitle": "medley technohell",
+    "matchBasis": "Stored medley title; subtitle identifies the supplied medley",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "technohell",
+    "providedTitle": "Jesus Humilha Satanás",
+    "scoreId": "carnaval-bh-2024-jesus-humilha-o-satanas",
+    "storedTitle": "jesus humilha o satanas",
+    "matchBasis": "Article o included in stored title",
+    "matchStatus": "matched"
+  }
+]

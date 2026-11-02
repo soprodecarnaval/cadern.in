@@ -1,5 +1,5 @@
 import { FieldValue } from "firebase-admin/firestore";
-import type { Migration, MigrationContext } from "../lib/migration";
+import type { Migration, MigrationContext } from "./lib/migration";
 import { commitInChunks, type Write } from "../lib/batches";
 
 /**

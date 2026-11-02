@@ -3,7 +3,7 @@
  * migrations will meet (DEPLOY.md). Writes nothing.
  *
  * Usage:
- *   tsx --env-file=<env file> scripts/auditProjects.ts
+ *   tsx --env-file=<env file> scripts/maintenance/auditProjects.ts
  *
  * Reports, per project: owner(s) and members from the legacy `members` map,
  * member docs, and live/deleted scores. Flags projects CADERNIN does not own
@@ -11,9 +11,9 @@
  */
 
 import { getFirestore } from "firebase-admin/firestore";
-import { CADERNIN_UID, FIRESTORE_DATABASE_ID } from "./lib/env";
-import { initAdminApp } from "./lib/firebaseAdmin";
-import { authDisplayNames } from "./lib/authDisplayNames";
+import { CADERNIN_UID, FIRESTORE_DATABASE_ID } from "../lib/env";
+import { initAdminApp } from "../lib/firebaseAdmin";
+import { authDisplayNames } from "../lib/authDisplayNames";
 
 interface ProjectRow {
   id: string;

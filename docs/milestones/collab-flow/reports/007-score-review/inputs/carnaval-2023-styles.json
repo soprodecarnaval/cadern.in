@@ -1,0 +1,642 @@
+[
+  {
+    "style": "marchinha",
+    "providedTitle": "Alala-ô",
+    "scoreId": "carnaval-bh-2023-alala-o",
+    "storedTitle": "alala-ô",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Balancê",
+    "scoreId": "carnaval-bh-2023-balance",
+    "storedTitle": "balancê",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Cabeleira do Ed Marte",
+    "scoreId": "carnaval-bh-2023-cabeleira-do-ed-marte",
+    "storedTitle": "cabeleira do ed marte",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Cachaça",
+    "scoreId": "carnaval-bh-2023-cachaca",
+    "storedTitle": "cachaça",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Jardineira",
+    "scoreId": "carnaval-bh-2023-jardineira",
+    "storedTitle": "jardineira",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Mamãe eu Quero",
+    "scoreId": "carnaval-bh-2023-mamae-eu-quero",
+    "storedTitle": "mamãe eu quero",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Marcha do Remador",
+    "scoreId": "carnaval-bh-2023-marcha-do-remador",
+    "storedTitle": "marcha do remador",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Quem Sabe Sabe",
+    "scoreId": "carnaval-bh-2023-quem-sabe-sabe",
+    "storedTitle": "quem sabe, sabe",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Saca Rolhas",
+    "scoreId": "carnaval-bh-2023-saca-rolhas",
+    "storedTitle": "saca rolhas",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Sassaricando",
+    "scoreId": "carnaval-bh-2023-sassaricando",
+    "storedTitle": "sassaricando",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Taí",
+    "scoreId": "carnaval-bh-2023-tai",
+    "storedTitle": "taí",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Tem Nego Bêbo Aí",
+    "scoreId": "carnaval-bh-2023-tem-nego-bebo-ai",
+    "storedTitle": "tem nego bêbo aí",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Turma do Funil",
+    "scoreId": "carnaval-bh-2023-turma-do-funil",
+    "storedTitle": "turma do funil",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "marchinha",
+    "providedTitle": "Vai com Jeito",
+    "scoreId": "carnaval-bh-2023-vai-com-jeito",
+    "storedTitle": "vai com jeito",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "rancho",
+    "providedTitle": "Abre Alas",
+    "scoreId": "carnaval-bh-2023-abre-alas",
+    "storedTitle": "abre alas",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "rancho",
+    "providedTitle": "Bandeira Branca",
+    "scoreId": "carnaval-bh-2023-bandeira-branca",
+    "storedTitle": "bandeira branca",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "rancho",
+    "providedTitle": "Bloco na Rua",
+    "scoreId": "carnaval-bh-2023-bloco-na-rua",
+    "storedTitle": "bloco na rua",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "rancho",
+    "providedTitle": "Carinhoso",
+    "scoreId": "carnaval-bh-2023-carinhoso",
+    "storedTitle": "carinhoso",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "rancho",
+    "providedTitle": "Máscara Negra",
+    "scoreId": "carnaval-bh-2023-mascara-negra",
+    "storedTitle": "máscara negra",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "rancho",
+    "providedTitle": "Noite dos Mascarados",
+    "scoreId": "carnaval-bh-2023-noite-dos-mascarados",
+    "storedTitle": "noite dos mascarados",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "rancho",
+    "providedTitle": "Pastorinhas",
+    "scoreId": "carnaval-bh-2023-pastorinhas",
+    "storedTitle": "pastorinhas",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "rancho",
+    "providedTitle": "Tristeza",
+    "scoreId": "carnaval-bh-2023-tristeza",
+    "storedTitle": "tristeza",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "A Luz de Tieta",
+    "scoreId": "carnaval-bh-2023-a-luz-de-tieta",
+    "storedTitle": "a luz de tiêta",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Arerê-ê-ê",
+    "scoreId": "carnaval-bh-2023-arere-e-e",
+    "storedTitle": "arerê-ê-ê",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Baianidade Nagô",
+    "scoreId": "carnaval-bh-2023-baianidade-nago",
+    "storedTitle": "baianidade nagô",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Beleza Rara (Hoje Sou Feliz)",
+    "scoreId": "carnaval-bh-2023-beleza-rara",
+    "storedTitle": "beleza rara",
+    "matchBasis": "Parenthetical annotation omitted",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Deusa do Amor",
+    "scoreId": "carnaval-bh-2023-deusa-do-amor",
+    "storedTitle": "deusa do amor",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Eu Também Quero Beijar",
+    "scoreId": "carnaval-bh-2023-eu-tambem-quero-beijar",
+    "storedTitle": "eu tambem quero beijar",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Haja Amor",
+    "scoreId": "carnaval-bh-2023-haja-amor",
+    "storedTitle": "haja amor",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Mal Acostumado",
+    "scoreId": "carnaval-bh-2023-mal-acostumado",
+    "storedTitle": "mal acostumado",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Pequena Eva",
+    "scoreId": "carnaval-bh-2023-pequena-eva",
+    "storedTitle": "pequena eva",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Prefixo de Verão",
+    "scoreId": "carnaval-bh-2023-prefixo-de-verao",
+    "storedTitle": "prefixo de verão",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Feira de Acari",
+    "scoreId": "carnaval-bh-2023-feira-de-acari",
+    "storedTitle": "feira de acari",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Glamurosa",
+    "scoreId": "carnaval-bh-2023-glamurosa",
+    "storedTitle": "glamurosa",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Meu Jeito de Amar",
+    "scoreId": "carnaval-bh-2023-meu-jeito-de-amar",
+    "storedTitle": "meu jeito de amar",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Miss Beleza Universal",
+    "scoreId": "carnaval-bh-2023-miss-beleza-universal",
+    "storedTitle": "miss beleza universal",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Se tá Solteira",
+    "scoreId": "carnaval-bh-2023-se-ta-solteira",
+    "storedTitle": "se tá solteira",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Verdinha",
+    "scoreId": "carnaval-bh-2023-verdinha",
+    "storedTitle": "verdinha",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "frevo",
+    "providedTitle": "Cabelo de Fogo",
+    "scoreId": "carnaval-bh-2023-cabelo-de-fogo",
+    "storedTitle": "cabelo de fogo",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "frevo",
+    "providedTitle": "Ciranda de Maluco",
+    "scoreId": "carnaval-bh-2023-ciranda-de-maluco",
+    "storedTitle": "ciranda de maluco",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "frevo",
+    "providedTitle": "Frevo Mulher",
+    "scoreId": "carnaval-bh-2023-frevo-mulher",
+    "storedTitle": "frevo mulher",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "frevo",
+    "providedTitle": "Vassourinhas",
+    "scoreId": "carnaval-bh-2023-vassourinhas",
+    "storedTitle": "vassourinhas",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Corte Devassa",
+    "scoreId": "carnaval-bh-2023-corte-devassa",
+    "storedTitle": "corte devassa",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Ladeira a Baixo",
+    "scoreId": "carnaval-bh-2023-ladeira-abaixo",
+    "storedTitle": "ladeira abaixo",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Mamá na Vaca",
+    "scoreId": "carnaval-bh-2023-mama-na-vaca",
+    "storedTitle": "mamá na vaca",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Manjericão",
+    "scoreId": "carnaval-bh-2023-manjericao",
+    "storedTitle": "manjericão",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Praia da Estação",
+    "scoreId": "carnaval-bh-2023-praia-da-estacao",
+    "storedTitle": "praia da estação",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Queima Largada",
+    "scoreId": "carnaval-bh-2023-queima-largada",
+    "storedTitle": "queima largada",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "beagá",
+    "providedTitle": "Tetê a Santa",
+    "scoreId": "carnaval-bh-2023-tete-a-santa",
+    "storedTitle": "tetê a santa",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Caçamba",
+    "scoreId": "carnaval-bh-2023-cacamba",
+    "storedTitle": "caçamba",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Cheia de Manias",
+    "scoreId": "carnaval-bh-2023-cheia-de-manias",
+    "storedTitle": "cheia de manias",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Cilada",
+    "scoreId": "carnaval-bh-2023-cilada",
+    "storedTitle": "cilada",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Juízo Final (O Sol)",
+    "scoreId": "carnaval-bh-2023-juizo-final-o-sol",
+    "storedTitle": "juizo final (o sol)",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Não Deixe o Samba Morrer",
+    "scoreId": "carnaval-bh-2023-nao-deixe-o-samba-morrer",
+    "storedTitle": "não deixe o samba morrer",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "O Morro Não Tem Vez",
+    "scoreId": "carnaval-bh-2023-o-morro-nao-tem-vez",
+    "storedTitle": "o morro não tem vez",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "O Sol Nascerá (A sorrir)",
+    "scoreId": "carnaval-bh-2023-o-sol-nascera-a-sorrir",
+    "storedTitle": "o sol nascerá (a sorrir)",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "samba",
+    "providedTitle": "Retalhos de Cetim",
+    "scoreId": "carnaval-bh-2023-retalhos-de-cetim",
+    "storedTitle": "retalhos de cetim",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "odara",
+    "providedTitle": "Deixa a Gira Girar",
+    "scoreId": "carnaval-bh-2023-deixa-a-gira-girar",
+    "storedTitle": "deixa a gira girar",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "odara",
+    "providedTitle": "É D'Oxum",
+    "scoreId": "carnaval-bh-2023-e-doxum",
+    "storedTitle": "é d'oxum",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "odara",
+    "providedTitle": "Emoriô",
+    "scoreId": "carnaval-bh-2023-emorio",
+    "storedTitle": "emoriô",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "odara",
+    "providedTitle": "Suíte dos Pescadores",
+    "scoreId": "carnaval-bh-2023-suite-dos-pescadores",
+    "storedTitle": "suíte dos pescadores",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "odara",
+    "providedTitle": "Varias Queixas",
+    "scoreId": "carnaval-bh-2023-varias-queixas",
+    "storedTitle": "varias queixas",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "latina",
+    "providedTitle": "Besame Mucho",
+    "scoreId": "carnaval-bh-2023-besame-mucho",
+    "storedTitle": "besame mucho",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "latina",
+    "providedTitle": "Carinito",
+    "scoreId": "carnaval-bh-2023-carinito",
+    "storedTitle": "cariñito",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "latina",
+    "providedTitle": "Chorando se Foi",
+    "scoreId": "carnaval-bh-2023-chorando-se-foi",
+    "storedTitle": "chorando se foi",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Abra Suas Asas",
+    "scoreId": "carnaval-bh-2023-abra-suas-asas",
+    "storedTitle": "abra suas asas",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Anunciação",
+    "scoreId": "carnaval-bh-2023-anunciacao",
+    "storedTitle": "anunciação",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Lucro",
+    "scoreId": "carnaval-bh-2023-lucro",
+    "storedTitle": "lucro",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Não Quero Dinheiro",
+    "scoreId": "carnaval-bh-2023-nao-quero-dinheiro",
+    "storedTitle": "não quero dinheiro",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "brazuka",
+    "providedTitle": "Vaca Profana",
+    "scoreId": "carnaval-bh-2023-vaca-profana",
+    "storedTitle": "vaca profana",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Oswaldo, o Pombo",
+    "scoreId": "carnaval-bh-2023-oswaldo-o-pombo",
+    "storedTitle": "oswaldo, o pombo",
+    "matchBasis": "Normalized title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "rancho",
+    "providedTitle": "Touradas em Madri",
+    "scoreId": "carnaval-bh-2023-touradas-de-madri",
+    "storedTitle": "touradas de madri",
+    "matchBasis": "em/de title variation",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Araketu é Bom Demais",
+    "scoreId": null,
+    "storedTitle": "",
+    "matchBasis": "User confirmed axé classification; no 2023 source record identified. 2024 counterpart exists; reference choice pending.",
+    "matchStatus": "not found in 2023"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Liberar Geral (Terrasamba)",
+    "scoreId": "carnaval-bh-2023-nada-mal-terrasamba",
+    "storedTitle": "nada mal (terrasamba)",
+    "matchBasis": "User-confirmed Liberar Geral / nada mal title variation, also present in 2023",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "axé",
+    "providedTitle": "Nossa Gente (Avisa Lá)",
+    "scoreId": "carnaval-bh-2023-avisa-la-o-o-nossa-gente",
+    "storedTitle": "avisa la ô-ô (nossa gente)",
+    "matchBasis": "Same two title phrases, reordered with refrain spelling",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "funk",
+    "providedTitle": "Cheguei",
+    "scoreId": null,
+    "storedTitle": "",
+    "matchBasis": "User confirmed funk classification; no 2023 source record identified. 2024 counterpart exists; reference choice pending.",
+    "matchStatus": "not found in 2023"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Banda Tá com Sede",
+    "scoreId": "carnaval-bh-2023-a-banda-ta-com-sede",
+    "storedTitle": "a banda tá com sede",
+    "matchBasis": "Leading article a present in stored title",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Montserrat",
+    "scoreId": "carnaval-bh-2023-montserrat-serrat",
+    "storedTitle": "montserrat, serrat",
+    "matchBasis": "Shortened title; unique Montserrat entry",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Não é Mole Não / Guadalupe",
+    "scoreId": "carnaval-bh-2023-nao-e-mole-nao-guadaloupe",
+    "storedTitle": "não é mole não + guadaloupe",
+    "matchBasis": "Previously approved Guadalupe/Guadaloupe variation",
+    "matchStatus": "matched"
+  },
+  {
+    "style": "fanfarra",
+    "providedTitle": "Tom & Jerry em Guca",
+    "scoreId": "carnaval-bh-2023-tom-e-jerry-em-guca",
+    "storedTitle": "tom e jerry em guca",
+    "matchBasis": "Ampersand written as e",
+    "matchStatus": "matched"
+  }
+]

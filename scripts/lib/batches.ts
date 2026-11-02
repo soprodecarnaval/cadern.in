@@ -1,4 +1,4 @@
-import type { MigrationContext } from "./migration";
+import type { MigrationContext } from "../migrations/lib/migration";
 
 /** Firestore caps a batch at 500 writes. */
 const BATCH_LIMIT = 400;

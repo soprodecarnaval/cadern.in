@@ -1,8 +1,8 @@
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { zScoreRevisionDoc } from "../types/docs";
-import { FIRESTORE_DATABASE_ID } from "./lib/env";
-import { initAdminApp } from "./lib/firebaseAdmin";
+import { zScoreRevisionDoc } from "../../types/docs";
+import { FIRESTORE_DATABASE_ID } from "../lib/env";
+import { initAdminApp } from "../lib/firebaseAdmin";
 
 initAdminApp();
 

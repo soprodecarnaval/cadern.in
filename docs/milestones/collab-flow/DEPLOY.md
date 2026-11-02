@@ -4,11 +4,34 @@ Steps to take production through each merged slice. Staging goes first with the
 same steps (`.env.local` points at `cadernin-staging`); production repeats them with
 the prod key. Run everything from the repo root, in fish.
 
+**CI update:** deploy workflows apply schema migrations **before** Firebase
+deployment, using environment-specific service-account keys. Pending dataset
+migrations block the whole path before any migration executes; apply them with
+a reviewed, bounded `--include-dataset --to <id> --execute` run first. The per-slice
+merge-then-migrate instructions below describe the earlier manual rollout; do not
+repeat them after CI has migrated. Backups, dry-run review, exporter releases and
+verification remain operator steps. See [CI-DATA.md](CI-DATA.md) for credential
+setup, sequencing and the local production → staging clone script.
+
 Prod: project `cadernin-6c0d1`, bucket `cadernin-6c0d1.firebasestorage.app`,
 Firestore `(default)` in `southamerica-east1`. Prod schema version before this
 milestone: `202604271800`.
 
+Current rollout: the existing PR targets `main` and passes CI (confirmed by the
+user). Rehearse staging migrations after its verified backup, then merge the PR
+to `main` to trigger staging deployment. The production workflow runs on pushes
+to `production`; either workflow also supports manual dispatch. Follow the
+[remaining rollout steps](007-data-migration.md#steps); PR creation/CI setup are
+already complete.
+
 ## 0. Backup (before any migration)
+
+Run this backup step for **each environment before executing migrations**,
+including the staging rehearsal. Pause writers and Firestore triggers first.
+For staging, substitute its project, source bucket, backup bucket and Auth export
+path in the production example below. If replacing staging with a fresh clone,
+back up its existing data before cloning, then back up the completed clone before
+migrating it. Use a unique backup prefix per run; record all recovery paths.
 
 ```fish
 gcloud auth login
@@ -21,6 +44,9 @@ npx firebase auth:export secrets/auth-cadernin-6c0d1-YYYYMMDD.json --project cad
 
 Check it finished: `gcloud firestore operations list --filter="metadata.outputUriPrefix:pre-collab-flow-YYYYMMDD"`
 shows `SUCCESSFUL`, and `gcloud storage du --summarize` matches between source and backup.
+Verify the Auth export completed too. Do not execute migrations until every
+backup has completed successfully. Take a fresh verified backup again before
+production migration and before the later M9 cleanup.
 
 **Restore** (only if a migration goes wrong and its `down` is not enough):
 
@@ -34,7 +60,9 @@ An import overwrites documents with the same path and leaves newer ones in place
 ## 1. Migration environment
 
 Migrations run with `npm run migrate` (dry run) and `npm run migrate:up`
-(apply). For prod, use a separate env file so `.env.local` stays on staging:
+(schema execution). Dry runs preview both kinds; dataset execution additionally
+requires `--include-dataset --to <id>`. See [CI-DATA.md](CI-DATA.md) for the registry
+audit. For prod, use a separate env file so `.env.local` stays on staging:
 
 ```fish
 cp .env.local .env.prod-scripts.local   # gitignored by *.local
@@ -43,8 +71,8 @@ cp .env.local .env.prod-scripts.local   # gitignored by *.local
 #   SCRIPTS_FIREBASE_STORAGE_BUCKET=cadernin-6c0d1.firebasestorage.app
 #   SCRIPTS_CADERNIN_UID=<prod CADERNIN uid, from .env.production>
 #   GOOGLE_APPLICATION_CREDENTIALS=./secrets/service-account.cadernin-prod.json
-npx tsx --env-file=.env.prod-scripts.local scripts/migrate.ts             # dry run
-npx tsx --env-file=.env.prod-scripts.local scripts/migrate.ts --execute   # apply
+npx tsx --env-file=.env.prod-scripts.local scripts/migrations/migrate.ts             # dry run
+npx tsx --env-file=.env.prod-scripts.local scripts/migrations/migrate.ts --execute   # schema only; pending datasets block
 ```
 
 The scripts print `Firebase project: …` first and abort if the key or bucket
@@ -69,7 +97,7 @@ belongs to another project. **Always dry-run first and read the output.**
 — see "Open" below:
 
 ```fish
-npx tsx --env-file=.env.prod-scripts.local scripts/auditProjects.ts
+npx tsx --env-file=.env.prod-scripts.local scripts/maintenance/auditProjects.ts
 ```
 
 It lists each project's owners and members (legacy map and member docs) and its
@@ -89,6 +117,8 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
    - `202610081200` M1 — `deletedAt: null` on projects and songbooks.
    - `202610081201` M1b — project member docs.
    - `202610081202` M1c — deletes legacy top-level invitations.
+   M1c is a dataset migration: review its invitation deletion and apply with
+   `--include-dataset --to=202610081202 --execute --forward-only`.
 3. Release the export app (reads roles from member docs).
 4. Verify: an export-app upload by a project editor succeeds; homepage unchanged.
 
@@ -161,6 +191,29 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
 4. Verify: an old score's `.mscz` still downloads, and carries
    `cadernin-score-id` in its score properties; an edited copy uploaded into another
    project becomes a fork.
+
+## 12. Task 007 — M6/M7 rehearsal (staging migrated; production not launched)
+
+Staging backup and migrations through `202610311301` completed on 2026-11-02.
+See the [rehearsal report](reports/007-staging-rehearsal-2026-11-02.md) for backup
+locations, verification and the pending deployment/permission decisions.
+
+Migrations `202610311300` and `202610311301` are registered as dataset migrations.
+They block deployment until explicitly applied with
+`--include-dataset --to=202610311301 --execute --forward-only`. Before that, read
+[007-data-migration.md](007-data-migration.md), review the generated score-decision
+manifest and mapping/omission report, and take backups. Rehearse
+on the production clone in staging first. No flag change or M9 cleanup is included.
+
+M6 journals original assignments, reconciles band memberships, moves score
+containers and soft-deletes emptied source projects without removing their docs
+or members. M7 creates published `project/songbook` collections with exact pins,
+preserves existing journaled songbooks and rebuilds publication markers directly.
+Style inference evidence and the remaining 33 deferred reviews are journaled separately.
+Madeira Pirata is archived without deleting its scores/files; Festa Junina becomes
+`carnaval-bh/festa-junina-2024`, retaining general style grouping.
+No exporter release is needed for M6/M7: score IDs and Storage paths stay stable,
+and legacy fields remain until M9. Rollback requires the pre-migration backup.
 
 ## Open
 

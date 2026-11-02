@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
     define,
     test: {
       // Need the emulators; run with `npm run test:rules` / `test:functions`.
-      exclude: [...configDefaults.exclude, "tests/rules/**", "functions/**"],
+      exclude: [...configDefaults.exclude, "tests/rules/**", "tests/migrations/**", "functions/**"],
     },
   };
 });
