@@ -1,0 +1,102 @@
+{
+  "near": [
+    {
+      "title": "cabeleira do ed marte",
+      "count": 2,
+      "candidates": [
+        {
+          "ratio": 0.944,
+          "title": "cabeleira da ed marte",
+          "styles": [
+            "marchinha"
+          ],
+          "ids": [
+            "carnaval-bh-2025-cabeleiradaedmarte",
+            "carnaval-bh-2026-cabeleiradaedmarte",
+            "na-tora-2025-cabeleiradaedmarte"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "juizo final (o sol)",
+      "count": 2,
+      "candidates": [
+        {
+          "ratio": 0.833,
+          "title": "juizo final",
+          "styles": [
+            "samba"
+          ],
+          "ids": [
+            "carnaval-bh-2025-juizofinal",
+            "carnaval-bh-2026-juizofinal",
+            "garota-2025-juizofinal",
+            "garota-2026-juizofinal",
+            "na-tora-2025-juizofinal",
+            "na-tora-2026-juizofinal"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "não é mole não + guadaloupe",
+      "count": 2,
+      "candidates": [
+        {
+          "ratio": 0.976,
+          "title": "não é mole não guadalupe",
+          "styles": [
+            "moments"
+          ],
+          "ids": [
+            "carnaval-bh-2025-naoemolenaoguadalupe",
+            "carnaval-bh-2026-naoemolenaoguadalupe",
+            "garota-2025-naoemolenaoguadalupe",
+            "garota-2026-naoemolenaoguadalupe"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "prefixo de verão",
+      "count": 2,
+      "candidates": [
+        {
+          "ratio": 0.929,
+          "title": "prefixo do verão",
+          "styles": [
+            "axé"
+          ],
+          "ids": [
+            "carnaval-bh-2025-prefixodoverao",
+            "carnaval-bh-2026-prefixodoverao",
+            "garota-2025-prefixodoverao",
+            "garota-2026-prefixodoverao",
+            "na-tora-2025-prefixodoverao",
+            "na-tora-2026-prefixodoverao"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "descobridor dos sete mares",
+      "count": 1,
+      "candidates": [
+        {
+          "ratio": 0.957,
+          "title": "descobridos dos sete mares",
+          "styles": [
+            "brazuka"
+          ],
+          "ids": [
+            "carnaval-bh-2025-descobridosdossetemares",
+            "carnaval-bh-2026-descobridosdossetemares",
+            "garota-2025-descobridosdossetemares",
+            "garota-2026-descobridosdossetemares"
+          ]
+        }
+      ]
+    }
+  ]
+}

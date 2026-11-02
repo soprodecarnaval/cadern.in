@@ -1,0 +1,91 @@
+# marchinha
+01 Alala-ô
+02 Balancê
+03 Cabeleira do Ed Marte
+04 Cachaça
+05 Jardineira
+06 Mamãe eu Quero
+07 Marcha do Remador
+08 Quem Sabe Sabe
+09 Saca Rolhas
+10 Sassaricando
+11 Taí
+12 Tem Nego Bêbo Aí
+13 Turma do Funil
+14 Vai com Jeito
+# rancho
+15 Abre Alas
+16 Bandeira Branca
+17 Bloco na Rua
+18 Carinhoso
+19 Máscara Negra
+20 Noite dos Mascarados
+21 Pastorinhas
+22 Touradas em Madri
+23 Tristeza
+# axé
+24 A Luz de Tieta
+25 Araketu é Bom Demais
+26 Arerê-ê-ê
+27 Baianidade Nagô
+28 Beleza Rara (Hoje Sou Feliz)
+29 Deusa do Amor
+30 Eu Também Quero Beijar
+31 Haja Amor
+32 Liberar Geral (Terrasamba)
+33 Mal Acostumado
+34 Nossa Gente (Avisa Lá)
+35 Pequena Eva
+36 Prefixo de Verão
+# funk
+37 Cheguei
+38 Feira de Acari
+39 Glamurosa
+40 Meu Jeito de Amar
+41 Miss Beleza Universal
+42 Se tá Solteira
+43 Verdinha
+# frevo
+44 Cabelo de Fogo
+45 Ciranda de Maluco
+46 Frevo Mulher
+47 Vassourinhas
+# beagá
+48 Corte Devassa
+49 Ladeira a Baixo
+50 Mamá na Vaca
+51 Manjericão
+52 Praia da Estação
+53 Queima Largada
+54 Tetê a Santa
+# samba
+55 Caçamba
+56 Cheia de Manias
+57 Cilada
+58 Juízo Final (O Sol)
+59 Não Deixe o Samba Morrer
+60 O Morro Não Tem Vez
+61 O Sol Nascerá (A sorrir)
+62 Retalhos de Cetim
+# odara
+63 Deixa a Gira Girar
+64 É D'Oxum
+65 Emoriô
+66 Suíte dos Pescadores
+67 Varias Queixas
+# latina
+68 Besame Mucho
+69 Carinito
+70 Chorando se Foi
+# brazuka
+71 Abra Suas Asas
+72 Anunciação
+73 Lucro
+74 Não Quero Dinheiro
+75 Vaca Profana
+# fanfarra
+76 Banda Tá com Sede
+77 Montserrat
+78 Não é Mole Não / Guadalupe
+79 Oswaldo, o Pombo
+80 Tom & Jerry em Guca

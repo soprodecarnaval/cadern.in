@@ -147,6 +147,12 @@ M6/M7 migration has been applied to cloud data.
 
 ## Files
 
+- [Persisted score review](reports/007-score-review/README.md): interactive HTML,
+  Markdown, CSVs, source snapshot, review decisions and offline generator.
+  Report decisions are not yet applied to M6/M7 or cloud data. The report's
+  **Review required** filter exposes unresolved score rows and lists unmatched
+  index entries separately.
+
 - `scripts/migrations/` (M6, M7, M9), optional `scripts/rebuildSongbooksFromPdf.ts`
 - `firestore.rules`, `storage.rules`, `src/` legacy paths
 - `.env.production` / GitHub variable
