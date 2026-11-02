@@ -6,7 +6,7 @@
 
 The production metadata snapshot is read-only. Tags, predecessor links and
 exclusions recorded here are review decisions, not database changes. The offline
-generator exports them to `scripts/data/collabReviewedScores.json`, which M6/M7
+generator exports them to `scripts/collab/data/collabReviewedScores.json`, which M6/M7
 consume. No cloud migration is implied by generating or implementing that data.
 
 ## Review required
@@ -49,7 +49,7 @@ The generator resolves inputs relative to its own location, so it also works fro
 another working directory. It uses only Python's standard library, needs no
 credentials and performs no network requests. It recreates the HTML, Markdown,
 full-score CSV, all four downloadable index-matching CSVs and the executable
-decision manifest at `scripts/data/collabReviewedScores.json`.
+decision manifest at `scripts/collab/data/collabReviewedScores.json`.
 
 The source snapshot's `generatedAt` is the metadata read time, not a new cloud
 read on each generation. Rebuilding reproduces that snapshot with the recorded

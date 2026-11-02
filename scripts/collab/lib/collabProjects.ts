@@ -1,8 +1,8 @@
 import { FieldValue, Timestamp, type Firestore } from "firebase-admin/firestore";
-import type { UserProjectRole } from "../../types/docs";
+import type { UserProjectRole } from "../../../types/docs";
 import { catalogJournal, assertCatalog, type CollabCatalog } from "./collabCatalog";
-import { commitInChunks, type Write } from "./batches";
-import { authDisplayNames } from "./authDisplayNames";
+import { commitInChunks, type Write } from "../../lib/batches";
+import { authDisplayNames } from "../../lib/authDisplayNames";
 import { applyReviewedScores, planReviewedScores } from "./collabReview";
 
 const rank: Record<UserProjectRole, number> = { reviewer: 0, editor: 1, admin: 2, owner: 3 };

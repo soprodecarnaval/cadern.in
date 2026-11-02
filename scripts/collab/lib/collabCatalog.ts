@@ -1,8 +1,8 @@
 import { z } from "zod";
 import type { Firestore } from "firebase-admin/firestore";
-import { zProjectDoc, zScoreDoc, zScoreRevisionDoc, zSongbookDoc, zSongbookRevisionDoc, zProjectMemberDoc } from "../../types/docs";
-import { toScoreViewModel } from "../../src/lib/viewModels";
-import { revisionsByScore } from "./scoreRevisions";
+import { zProjectDoc, zScoreDoc, zScoreRevisionDoc, zSongbookDoc, zSongbookRevisionDoc, zProjectMemberDoc } from "../../../types/docs";
+import { toScoreViewModel } from "../../../src/lib/viewModels";
+import { revisionsByScore } from "../../lib/scoreRevisions";
 import { planAssignments, type SourceAssignment } from "./collabMapping";
 
 export const catalogJournal = (db: Firestore) => db.doc("_meta/collabFlow");

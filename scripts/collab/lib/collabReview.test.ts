@@ -6,7 +6,7 @@ import { planSongbooks } from "./collabSongbooks";
 import { planAssignments } from "./collabMapping";
 import type { CollabCatalog } from "./collabCatalog";
 
-const snapshot = JSON.parse(readFileSync(new URL("../../docs/milestones/collab-flow/reports/007-score-review/inputs/score-snapshot.json", import.meta.url), "utf8")) as {
+const snapshot = JSON.parse(readFileSync(new URL("../../../docs/milestones/collab-flow/reports/007-score-review/inputs/score-snapshot.json", import.meta.url), "utf8")) as {
   rows: { id: string; sourceProject: string; originalTitle: string; tags: string[]; latestRevisionId: string }[];
 };
 

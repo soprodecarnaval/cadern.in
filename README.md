@@ -70,6 +70,8 @@ musicoteca/
 └── dist/                 # Build de produção
 ```
 
+Veja [scripts/README.md](scripts/README.md) para os scripts organizados por finalidade.
+
 ## Quick Start
 
 ```bash

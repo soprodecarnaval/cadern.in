@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Migration, MigrationContext } from "../lib/migration";
+import type { Migration, MigrationContext } from "./lib/migration";
 import { partNameFromStem, stemFromPartName } from "../lib/partNames";
 
 /**

@@ -1,7 +1,7 @@
 /**
  * Usage:
- *   tsx --env-file=.env.local scripts/migrate.ts [--to <id>] [--include-dataset] [--execute]
- *   tsx --env-file=.env.local scripts/migrate.ts cleanup [--to <id>] [--include-dataset] [--execute]
+ *   tsx --env-file=.env.local scripts/migrations/migrate.ts [--to <id>] [--include-dataset] [--execute]
+ *   tsx --env-file=.env.local scripts/migrations/migrate.ts cleanup [--to <id>] [--include-dataset] [--execute]
  *
  * Required environment variables:
  *   SCRIPTS_FIREBASE_PROJECT_ID       Firebase project to migrate
@@ -12,11 +12,11 @@
 
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
-import { migrations } from "./migrations/index";
+import { migrations } from "./index";
 import { getSchema } from "./lib/migration";
 import type { MigrationContext } from "./lib/migration";
-import { FIRESTORE_DATABASE_ID } from "./lib/env";
-import { initAdminApp } from "./lib/firebaseAdmin";
+import { FIRESTORE_DATABASE_ID } from "../lib/env";
+import { initAdminApp } from "../lib/firebaseAdmin";
 import { parseMigrationOptions } from "./lib/migrationOptions";
 import { runMigrations } from "./lib/migrationRunner";
 

@@ -1,4 +1,4 @@
-import type { Migration, MigrationContext } from "../lib/migration";
+import type { Migration, MigrationContext } from "./lib/migration";
 import { readMsczIdentity, stampMsczIdentity } from "../lib/msczIdentity";
 import { revisionsByScore } from "../lib/scoreRevisions";
 

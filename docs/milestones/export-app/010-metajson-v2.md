@@ -73,7 +73,7 @@ This split is the substance of the milestone; everything else follows from it.
 3. `src/lib/uploadScore.ts` — key `fileMap` lookups off `basename`, not `name`.
 4. `src/instrument.ts` + `PdfGenerator` — use the explicit name for part labels;
    `extractPartLabel` remains only for pre-v2 data.
-5. `scripts/backfillMetajson.ts` — new. Points at an exported folder, applies the
+5. `scripts/maintenance/backfillMetajson.ts` — new. Points at an exported folder, applies the
    old inference rules once, offline, and writes a v2 metajson. The inference
    logic moves here and out of the web app.
 6. Add `METAJSON_MISSING_PARTS` to `WarningCode` (`src/lib/warningMessages.ts`)
@@ -118,7 +118,7 @@ write the pre-v2 sidecar in the first place.
 D2 therefore does not depend on 008, as previously recorded here. Nothing
 produces pre-v2 folders any more, so removing the inference path depends only on
 whether anyone still holds one they cannot re-export. The inference moved with D2 rather than being deleted: it lives in
-`scripts/lib/inferParts.ts` and serves only `scripts/backfillMetajson.ts`, which
+`scripts/lib/inferParts.ts` and serves only `scripts/maintenance/backfillMetajson.ts`, which
 is the one remaining way to upgrade a folder exported before the manifest
 existed.
 
@@ -134,7 +134,7 @@ dump as ours, so `zMetajson` requires `version: 2` as a literal discriminator.
 |---|---|---|
 | A | Exporter writes v2 | nothing |
 | B | Uploader accepts both: v2 uses the manifest, pre-v2 infers as today and warns | nothing |
-| C | `scripts/backfillMetajson.ts`; mark `exportMscz.ts` deprecated | nothing |
+| C | `scripts/maintenance/backfillMetajson.ts`; mark `exportMscz.ts` deprecated | nothing |
 | D1 | ✅ Retire `exportMscz.ts` — nothing produces pre-v2 sidecars any more | nothing |
 | D2 | ✅ Remove the inference path; pre-v2 is refused | pre-v2 folders still on disk, deliberately |
 

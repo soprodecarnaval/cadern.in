@@ -25,7 +25,7 @@ Rotate keys according to your credential policy. Do not commit JSON credentials.
 ## Deployment
 
 Both workflows install dependencies, build, authenticate, run
-`npx tsx scripts/migrate.ts --execute --forward-only`, then deploy Firebase.
+`npx tsx scripts/migrations/migrate.ts --execute --forward-only`, then deploy Firebase.
 Execution defaults to schema migrations. If any pending step is a dataset
 migration, the entire path fails preflight before any migration hook or checkpoint
 write. CI never skips dataset steps or advances past them. Apply reviewed dataset
@@ -80,8 +80,8 @@ targets must already be applied. Opt-in does not make irreversible hooks reversi
 For example, after backups and report review, targeting staging:
 
 ```sh
-npx tsx --env-file=.env.local scripts/migrate.ts --to=202610311301 --forward-only
-npx tsx --env-file=.env.local scripts/migrate.ts --include-dataset --to=202610311301 --forward-only --execute
+npx tsx --env-file=.env.local scripts/migrations/migrate.ts --to=202610311301 --forward-only
+npx tsx --env-file=.env.local scripts/migrations/migrate.ts --include-dataset --to=202610311301 --forward-only --execute
 ```
 
 Use a smaller target to stop before a dataset boundary. An unbounded schema-only
@@ -149,13 +149,13 @@ Use Node 20.12+ (CI uses Node 24). Install dependencies with `npm ci` if needed,
 then inspect a dry run:
 
 ```sh
-npx tsx scripts/cloneData.ts --from=production --to=staging
+npx tsx scripts/maintenance/cloneData.ts --from=production --to=staging
 ```
 
 To replace staging Firestore and Storage with production data:
 
 ```sh
-npx tsx scripts/cloneData.ts --from=production --to=staging --execute
+npx tsx scripts/maintenance/cloneData.ts --from=production --to=staging --execute
 ```
 
 Other allowed pairs work the same way, for example `--from=staging --to=local`. If
@@ -164,7 +164,7 @@ Other allowed pairs work the same way, for example `--from=staging --to=local`. 
 After cloning, apply staging migrations locally (`.env.local` must point to staging):
 
 ```sh
-npx tsx --env-file=.env.local scripts/migrate.ts --execute --forward-only
+npx tsx --env-file=.env.local scripts/migrations/migrate.ts --execute --forward-only
 ```
 
 This command fails preflight if dataset steps are pending. Use the bounded opt-in

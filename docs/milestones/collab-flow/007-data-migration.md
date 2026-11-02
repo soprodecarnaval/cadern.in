@@ -48,7 +48,7 @@ CI refuses to execute them or skip past them. Review the generated score-decisio
 manifest and mapping report and prepare backups before explicitly opting
 in to their staging rehearsal. Production launch and M9 are separate work.
 
-Explicit mapping in `scripts/lib/collabMapping.ts`:
+Explicit mapping in `scripts/collab/lib/collabMapping.ts`:
 
 | Source project | Destination songbook |
 |---|---|
@@ -103,27 +103,27 @@ creation happens before CI deploys the triggers.
 The read-only report simulates both steps without needing M6 applied:
 
 ```sh
-npx tsx --env-file=.env.local scripts/planCollabMigration.ts
+npx tsx --env-file=.env.local scripts/collab/planCollabMigration.ts
 ```
 
 For production, if `.env.production` has only `VITE_FIREBASE_PROJECT_ID`, supply
 the scripts project explicitly (the migration tooling requires it):
 
 ```sh
-SCRIPTS_FIREBASE_PROJECT_ID=cadernin-6c0d1 npx tsx --env-file=.env.production scripts/planCollabMigration.ts
+SCRIPTS_FIREBASE_PROJECT_ID=cadernin-6c0d1 npx tsx --env-file=.env.production scripts/collab/planCollabMigration.ts
 ```
 
 It reports every source/destination, exclusions and scores currently on the legacy
 homepage that no proposed published songbook covers. M7 refuses unreviewed
 omissions. The approved exceptions are the retired Madeira Pirata scores, the four
 rejected Garota duplicates and the remaining 33 deferred score IDs in the reviewed
-manifest. `scripts/data/collabDeferredStyles.json` retains the original 193-ID review
+manifest. `scripts/collab/data/collabDeferredStyles.json` retains the original 193-ID review
 baseline; direct decisions resolve 146 and chain evidence resolves 14. New unmatched scores,
 conflicts and missing revisions still block execution. Other explicit exceptions
 require a score ID and rationale in `APPROVED_HOMEPAGE_OMISSIONS` in
-`scripts/lib/collabSongbooks.ts`.
+`scripts/collab/lib/collabSongbooks.ts`.
 
-M6 also consumes `scripts/data/collabReviewedScores.json`, reproduced by the
+M6 also consumes `scripts/collab/data/collabReviewedScores.json`, reproduced by the
 [score-review generator](reports/007-score-review/README.md): 361 direct tag
 decisions, 14 unanimous chain-based tag inferences, 587 predecessor links and four
 duplicate exclusions. Tags update `metadataOverride.tags` and legacy display
@@ -152,7 +152,7 @@ songbook revisions; rerunning M7 preserves existing books.
 After reviewing that report, a staging dry run of registered migrations is:
 
 ```sh
-npx tsx --env-file=.env.local scripts/migrate.ts --to 202610311301
+npx tsx --env-file=.env.local scripts/migrations/migrate.ts --to 202610311301
 ```
 
 Applying requires `--include-dataset --to=202610311301 --execute --forward-only`.

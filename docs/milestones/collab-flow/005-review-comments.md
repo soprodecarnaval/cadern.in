@@ -43,7 +43,7 @@ Spec: PLAN §2.4, §4.3 (`comments`), §5.4.
 - `types/docs.ts`, `src/lib/db.ts`, `src/lib/comments.ts` (+ test)
 - `src/tsx/ScoreDisplay.tsx`, `src/tsx/ReviewCommentsPanel.tsx`,
   `src/tsx/ScorePage.tsx`, `src/tsx/ScoreRevisionList.tsx`
-- `firestore.rules`, `tests/rules/firestore.test.ts`, `scripts/seedEmulators.ts`
+- `firestore.rules`, `tests/rules/firestore.test.ts`, `scripts/dev/seedEmulators.ts`
 
 ## Acceptance
 

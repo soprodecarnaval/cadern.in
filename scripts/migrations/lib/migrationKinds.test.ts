@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { MigrationContext } from "./migration";
-import { migrations } from "../migrations/index";
+import { migrations } from "../index";
 import { runMigrations } from "./migrationRunner";
 import { parseMigrationOptions } from "./migrationOptions";
 
-vi.mock("./env", () => ({ CADERNIN_UID: "test-owner" }));
+vi.mock("../../lib/env", () => ({ CADERNIN_UID: "test-owner" }));
 
 describe("registered migration kind audit", () => {
   it("classifies rollout-specific invitation deletion and curated catalog migrations as datasets", () => {

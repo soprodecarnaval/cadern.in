@@ -54,6 +54,6 @@ jobs:
           SCRIPTS_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
           SCRIPTS_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
           SCRIPTS_CADERNIN_UID: ${{ vars.CADERNIN_UID }}
-        run: npx tsx scripts/migrate.ts --execute --forward-only
+        run: npx tsx scripts/migrations/migrate.ts --execute --forward-only
       - name: Deploy
         run: npx firebase-tools deploy --project "$VITE_FIREBASE_PROJECT_ID"

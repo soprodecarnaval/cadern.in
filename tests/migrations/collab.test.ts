@@ -1,11 +1,11 @@
 import { deleteApp, initializeApp } from "firebase-admin/app";
 import { getFirestore, Timestamp, type Firestore } from "firebase-admin/firestore";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadCollabCatalog, catalogJournal } from "../../scripts/lib/collabCatalog";
-import { migrateProjects } from "../../scripts/lib/collabProjects";
-import { migrateSongbooks, planSongbooks } from "../../scripts/lib/collabSongbooks";
-import { DEFERRED_STYLE_SCORES } from "../../scripts/lib/collabStyles";
-import { REVIEWED_SCORES } from "../../scripts/lib/collabReview";
+import { loadCollabCatalog, catalogJournal } from "../../scripts/collab/lib/collabCatalog";
+import { migrateProjects } from "../../scripts/collab/lib/collabProjects";
+import { migrateSongbooks, planSongbooks } from "../../scripts/collab/lib/collabSongbooks";
+import { DEFERRED_STYLE_SCORES } from "../../scripts/collab/lib/collabStyles";
+import { REVIEWED_SCORES } from "../../scripts/collab/lib/collabReview";
 
 vi.mock("../../scripts/lib/authDisplayNames", () => ({
   authDisplayNames: async (uids: string[]) => new Map(uids.map((uid) => [uid, `Name ${uid}`])),

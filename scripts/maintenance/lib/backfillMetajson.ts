@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { inferParts } from "./inferParts";
-import { partNameFromStem } from "./partNames";
-import { METAJSON_VERSION, type Metajson } from "../../types/metajson";
-import { translateWarning } from "../../src/lib/warningMessages";
+import { inferParts } from "../../lib/inferParts";
+import { partNameFromStem } from "../../lib/partNames";
+import { METAJSON_VERSION, type Metajson } from "../../../types/metajson";
+import { translateWarning } from "../../../src/lib/warningMessages";
 
 /** Reads a directory as the uploader would see it. */
 export function readFolder(folder: string): File[] {

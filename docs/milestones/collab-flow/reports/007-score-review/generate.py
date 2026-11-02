@@ -147,7 +147,7 @@ for row in snapshot['rows']:
                               revisionId=row['latestRevisionId'], originalTags=row['tags'], excluded=True,
                               style=None, styleKind=None, styleEvidence=[], deferred=False, predecessor=None))
 manifest = dict(snapshotAt=snapshot['generatedAt'], scores=sorted(decisions, key=lambda row: row['scoreId']))
-manifest_path = REPORT_DIR.parents[4] / 'scripts/data/collabReviewedScores.json'
+manifest_path = REPORT_DIR.parents[4] / 'scripts/collab/data/collabReviewedScores.json'
 manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
 
 unmatched_index_entries = [

@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
-import type { Migration, MigrationContext } from "../lib/migration";
+import type { Migration, MigrationContext } from "./lib/migration";
 import { authDisplayNames } from "../lib/authDisplayNames";
 import { commitInChunks, type Write } from "../lib/batches";
 

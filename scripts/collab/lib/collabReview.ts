@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { z } from "zod";
-import { zScoreDoc, type ScoreDoc } from "../../types/docs";
-import { resolveScoreMetadata } from "../../src/lib/scoreMetadata";
+import { zScoreDoc, type ScoreDoc } from "../../../types/docs";
+import { resolveScoreMetadata } from "../../../src/lib/scoreMetadata";
 import { assertCatalog, catalogJournal, type CollabCatalog } from "./collabCatalog";
 
 const zDecision = z.object({

@@ -13,9 +13,9 @@ import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getDownloadURL, getStorage } from "firebase-admin/storage";
-import type { Instrument } from "../types/instrument";
-import { revisionSlug } from "../src/lib/revisionId";
-import { slugify } from "../src/lib/slugify";
+import type { Instrument } from "../../types/instrument";
+import { revisionSlug } from "../../src/lib/revisionId";
+import { slugify } from "../../src/lib/slugify";
 
 const PROJECT_ID = "demo-cadernin";
 const BUCKET = `${PROJECT_ID}.appspot.com`;

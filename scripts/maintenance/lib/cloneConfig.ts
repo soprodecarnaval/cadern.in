@@ -5,7 +5,7 @@ import { parseEnv } from "node:util";
 
 const ENVIRONMENTS = ["local", "staging", "production"] as const;
 type Environment = typeof ENVIRONMENTS[number];
-const REPO_ROOT = fileURLToPath(new URL("../../", import.meta.url));
+const REPO_ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const USAGE = "Usage: cloneData.ts --from=<local|staging|production> --to=<local|staging> [--execute]";
 
 export interface CloneEnvironment {

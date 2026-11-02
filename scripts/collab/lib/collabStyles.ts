@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import { carnivalSectionOrder } from "../../src/utils/sort";
+import { carnivalSectionOrder } from "../../../src/utils/sort";
 
 export const DEFERRED_STYLE_SCORES = z.array(z.object({ scoreId: z.string(), title: z.string() })).parse(
   JSON.parse(readFileSync(new URL("../data/collabDeferredStyles.json", import.meta.url), "utf8")),

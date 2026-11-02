@@ -1,4 +1,4 @@
-import type { Migration, MigrationContext } from "../lib/migration";
+import type { Migration, MigrationContext } from "./lib/migration";
 import { commitInChunks } from "../lib/batches";
 
 /**

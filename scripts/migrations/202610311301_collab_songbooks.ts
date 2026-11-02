@@ -1,7 +1,7 @@
-import type { Migration } from "../lib/migration";
+import type { Migration } from "./lib/migration";
 import { CADERNIN_UID } from "../lib/env";
-import { loadCollabCatalog } from "../lib/collabCatalog";
-import { migrateSongbooks } from "../lib/collabSongbooks";
+import { loadCollabCatalog } from "../collab/lib/collabCatalog";
+import { migrateSongbooks } from "../collab/lib/collabSongbooks";
 
 const migration: Migration = {
   id: "202610311301",

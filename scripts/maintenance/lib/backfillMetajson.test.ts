@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildMetajson } from "./backfillMetajson";
-import { zMetajson } from "../../types/metajson";
+import { zMetajson } from "../../../types/metajson";
 
 const directories: string[] = [];
 

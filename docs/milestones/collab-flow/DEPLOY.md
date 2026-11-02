@@ -54,8 +54,8 @@ cp .env.local .env.prod-scripts.local   # gitignored by *.local
 #   SCRIPTS_FIREBASE_STORAGE_BUCKET=cadernin-6c0d1.firebasestorage.app
 #   SCRIPTS_CADERNIN_UID=<prod CADERNIN uid, from .env.production>
 #   GOOGLE_APPLICATION_CREDENTIALS=./secrets/service-account.cadernin-prod.json
-npx tsx --env-file=.env.prod-scripts.local scripts/migrate.ts             # dry run
-npx tsx --env-file=.env.prod-scripts.local scripts/migrate.ts --execute   # schema only; pending datasets block
+npx tsx --env-file=.env.prod-scripts.local scripts/migrations/migrate.ts             # dry run
+npx tsx --env-file=.env.prod-scripts.local scripts/migrations/migrate.ts --execute   # schema only; pending datasets block
 ```
 
 The scripts print `Firebase project: …` first and abort if the key or bucket
@@ -80,7 +80,7 @@ belongs to another project. **Always dry-run first and read the output.**
 — see "Open" below:
 
 ```fish
-npx tsx --env-file=.env.prod-scripts.local scripts/auditProjects.ts
+npx tsx --env-file=.env.prod-scripts.local scripts/maintenance/auditProjects.ts
 ```
 
 It lists each project's owners and members (legacy map and member docs) and its

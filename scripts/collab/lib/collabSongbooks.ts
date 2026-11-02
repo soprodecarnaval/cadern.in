@@ -1,12 +1,12 @@
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
-import { zSongbookDoc, zSongbookRevisionDoc, type SongbookRevisionContent } from "../../types/docs";
-import { songbookScore, toSongbookRevisionContent } from "../../src/lib/songbook";
-import { generateSectionsByStyle } from "../../src/utils/songBookRows";
-import { carnivalSectionOrder } from "../../src/utils/sort";
+import { zSongbookDoc, zSongbookRevisionDoc, type SongbookRevisionContent } from "../../../types/docs";
+import { songbookScore, toSongbookRevisionContent } from "../../../src/lib/songbook";
+import { generateSectionsByStyle } from "../../../src/utils/songBookRows";
+import { carnivalSectionOrder } from "../../../src/utils/sort";
 import { assertCatalog, catalogJournal, type CollabCatalog } from "./collabCatalog";
-import * as publishedScores from "../../functions/src/publishedScores";
+import * as publishedScores from "../../../functions/src/publishedScores";
 import { inferCarnivalStyle } from "./collabStyles";
-import { commitInChunks, type Write } from "./batches";
+import { commitInChunks, type Write } from "../../lib/batches";
 import { REVIEWED_SCORES, planReviewedScores, reviewedStyle } from "./collabReview";
 
 const styleKey = (value: string) => value.trim().toLowerCase().replace(/s$/, "");
