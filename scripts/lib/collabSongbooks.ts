@@ -1,11 +1,17 @@
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { zSongbookDoc, zSongbookRevisionDoc, type SongbookRevisionContent } from "../../types/docs";
 import { songbookScore, toSongbookRevisionContent } from "../../src/lib/songbook";
-import { generateCarnivalSections, generateSectionsByStyle } from "../../src/utils/songBookRows";
+import { generateSectionsByStyle } from "../../src/utils/songBookRows";
+import { carnivalSectionOrder } from "../../src/utils/sort";
 import { assertCatalog, catalogJournal, type CollabCatalog } from "./collabCatalog";
 import * as publishedScores from "../../functions/src/publishedScores";
-import { DEFERRED_STYLE_IDS, inferCarnivalStyle } from "./collabStyles";
+import { inferCarnivalStyle } from "./collabStyles";
 import { commitInChunks, type Write } from "./batches";
+import { REVIEWED_SCORES, planReviewedScores, reviewedStyle } from "./collabReview";
+
+const styleKey = (value: string) => value.trim().toLowerCase().replace(/s$/, "");
+const reviewedStyles = new Set([...REVIEWED_SCORES.values()].flatMap((row) => row.style ? [styleKey(row.style)] : []));
+const sectionOrder = carnivalSectionOrder.map(styleKey);
 
 // functions/ is CommonJS; tsx exposes its exports under default from this ESM script.
 const { rebuildPublished } = (publishedScores as typeof publishedScores & { default?: typeof publishedScores }).default ?? publishedScores;
@@ -14,15 +20,19 @@ const { rebuildPublished } = (publishedScores as typeof publishedScores & { defa
 export const APPROVED_HOMEPAGE_OMISSIONS: Record<string, string> = {};
 
 export function planSongbooks(catalog: CollabCatalog) {
-  const errors = [...catalog.errors];
+  const errors = [...catalog.errors, ...planReviewedScores(catalog).errors];
   const books: { id: string; project: string; slug: string; source: string; content: SongbookRevisionContent; existing: boolean }[] = [];
   const exclusions: { scoreId: string; songbook: string; reason: string }[] = [];
   const inferences: { scoreId: string; songbook: string; style: string; sourceScoreIds: string[] }[] = [];
   const deferred: { scoreId: string; title: string; songbook: string; reason: string }[] = [];
   const approvedOmissions = new Map(Object.entries(APPROVED_HOMEPAGE_OMISSIONS));
+  for (const row of REVIEWED_SCORES.values()) {
+    if (row.excluded) approvedOmissions.set(row.scoreId, "Rejected duplicate; soft-deleted with files/revisions retained");
+  }
   const candidates = [...catalog.views.values()].filter((view) =>
-    !catalog.scores.get(view.id)?.deletedAt && catalog.projects.has(view.projectId) && !catalog.projects.get(view.projectId)?.deletedAt,
-  );
+    !catalog.scores.get(view.id)?.deletedAt && !REVIEWED_SCORES.get(view.id)?.excluded &&
+    catalog.projects.has(view.projectId) && !catalog.projects.get(view.projectId)?.deletedAt,
+  ).map((view) => ({ ...view, tags: reviewedStyle(catalog, view.id) ? [reviewedStyle(catalog, view.id)!, ...view.tags.slice(1)] : view.tags }));
   const covered = new Set<string>();
   for (const { book, revision } of catalog.books.values()) {
     if (book.isPublished && !book.deletedAt && !catalog.projects.get(book.projectId)?.deletedAt && catalog.projects.has(book.projectId)) {
@@ -49,31 +59,45 @@ export function planSongbooks(catalog: CollabCatalog) {
     const views = row.scoreIds.flatMap((scoreId) => {
       const score = catalog.scores.get(scoreId);
       const view = catalog.views.get(scoreId);
-      if (score?.deletedAt) return [];
+      if (score?.deletedAt || REVIEWED_SCORES.get(scoreId)?.excluded) return [];
       if (!view) {
         exclusions.push({ scoreId, songbook: `${row.project}/${row.songbook}`, reason: "missing latest revision" });
         return [];
       }
-      let tags = view.tags[0]?.trim() ? view.tags : ["Sem estilo", ...view.tags.slice(1)];
+      const reviewed = reviewedStyle(catalog, scoreId);
+      let tags = reviewed ? [reviewed, ...view.tags.slice(1)] : view.tags[0]?.trim() ? view.tags : ["Sem estilo", ...view.tags.slice(1)];
       if (carnivalGrouping) {
-        const result = inferCarnivalStyle(view, candidates);
+        let result = reviewed || reviewedStyles.has(styleKey(tags[0]))
+          ? { status: "known", style: tags[0], sourceScoreIds: [] as string[] }
+          : inferCarnivalStyle(view, candidates);
+        if (REVIEWED_SCORES.get(scoreId)?.deferred && result.status === "inferred") {
+          result = { status: "missing", style: null, sourceScoreIds: [] };
+        }
         if (result.style) {
           tags = [result.style, ...view.tags.slice(1)];
           if (result.status === "inferred") inferences.push({ scoreId, songbook: `${row.project}/${row.songbook}`, style: result.style, sourceScoreIds: result.sourceScoreIds });
+          const decision = REVIEWED_SCORES.get(scoreId);
+          if (reviewed && decision?.styleKind === "inferred") inferences.push({ scoreId, songbook: `${row.project}/${row.songbook}`, style: reviewed, sourceScoreIds: decision.styleEvidence });
         } else {
           const reason = result.status === "conflict" ? `Conflicting styles from ${result.sourceScoreIds.join(", ")}` : "No matching style in existing live scores";
           exclusions.push({ scoreId, songbook: `${row.project}/${row.songbook}`, reason });
-          if (result.status === "missing" && DEFERRED_STYLE_IDS.has(scoreId)) {
+          if (result.status === "missing" && REVIEWED_SCORES.get(scoreId)?.deferred) {
             deferred.push({ scoreId, title: view.title, songbook: `${row.project}/${row.songbook}`, reason });
             approvedOmissions.set(scoreId, "Style review deferred by user; score retained in destination project");
           }
           return [];
         }
+        tags = [styleKey(tags[0]) === "forró" ? "forró" : tags[0], ...tags.slice(1)];
       }
       return [{ ...view, projectId: row.project, tags }];
     }).sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
-    const rows = views.map(songbookScore);
-    const grouped = carnivalGrouping ? generateCarnivalSections(rows) : generateSectionsByStyle(rows);
+    if (carnivalGrouping) views.sort((a, b) => {
+      const aIndex = sectionOrder.indexOf(styleKey(a.tags[0]));
+      const bIndex = sectionOrder.indexOf(styleKey(b.tags[0]));
+      return (aIndex < 0 ? sectionOrder.length : aIndex) - (bIndex < 0 ? sectionOrder.length : bIndex) ||
+        a.tags[0].localeCompare(b.tags[0]) || a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
+    });
+    const grouped = generateSectionsByStyle(views.map(songbookScore));
     const content = toSongbookRevisionContent(grouped);
     for (const view of views) {
       if (!(view.id in content.pins)) exclusions.push({ scoreId: view.id, songbook: `${row.project}/${row.songbook}`, reason: `unrecognized carnival style: ${view.tags[0]}` });
@@ -101,6 +125,7 @@ export async function migrateSongbooks(db: Firestore, catalog: CollabCatalog, ow
   if (dryRun) return;
   assertCatalog(plan.omissions.filter((id) => !plan.approvedOmissions.has(id)).map((id) => `Unreviewed homepage omission: ${id}`));
   if (catalog.assignments.some((row) => !catalog.savedSources.has(row.source))) throw new Error("Apply M6 before M7");
+  if (planReviewedScores(catalog).changes.length) throw new Error("M6 has not finished applying reviewed score decisions");
   for (const row of catalog.assignments) {
     if (row.scoreIds.some((id) => catalog.scores.get(id)?.projectId !== row.project)) throw new Error(`M6 has not finished moving scores: ${row.source}`);
   }

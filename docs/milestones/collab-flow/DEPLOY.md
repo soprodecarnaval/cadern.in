@@ -180,15 +180,15 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
 Migrations `202610311300` and `202610311301` are registered as dataset migrations.
 They block deployment until explicitly applied with
 `--include-dataset --to=202610311301 --execute --forward-only`. Before that, read
-[007-data-migration.md](007-data-migration.md), incorporate the reviewed score-report
-decisions into M6/M7, review the mapping/omission report and take backups. Rehearse
+[007-data-migration.md](007-data-migration.md), review the generated score-decision
+manifest and mapping/omission report, and take backups. Rehearse
 on the production clone in staging first. No flag change or M9 cleanup is included.
 
 M6 journals original assignments, reconciles band memberships, moves score
 containers and soft-deletes emptied source projects without removing their docs
 or members. M7 creates published `project/songbook` collections with exact pins,
 preserves existing journaled songbooks and rebuilds publication markers directly.
-Style inference evidence and the 193 deferred reviews are journaled separately.
+Style inference evidence and the remaining 33 deferred reviews are journaled separately.
 Madeira Pirata is archived without deleting its scores/files; Festa Junina becomes
 `carnaval-bh/festa-junina-2024`, retaining general style grouping.
 No exporter release is needed for M6/M7: score IDs and Storage paths stay stable,

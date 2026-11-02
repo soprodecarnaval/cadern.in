@@ -3,11 +3,12 @@ import type { UserProjectRole } from "../../types/docs";
 import { catalogJournal, assertCatalog, type CollabCatalog } from "./collabCatalog";
 import { commitInChunks, type Write } from "./batches";
 import { authDisplayNames } from "./authDisplayNames";
+import { applyReviewedScores, planReviewedScores } from "./collabReview";
 
 const rank: Record<UserProjectRole, number> = { reviewer: 0, editor: 1, admin: 2, owner: 3 };
 
 export function planProjectMembers(catalog: CollabCatalog, owner: string) {
-  const errors = [...catalog.errors];
+  const errors = [...catalog.errors, ...planReviewedScores(catalog).errors];
   const targets = new Map<string, { title: string; roles: Map<string, UserProjectRole> }>();
   for (const row of catalog.assignments) {
     const bookId = `${row.project}~${row.songbook}`;
@@ -41,7 +42,10 @@ export async function migrateProjects(db: Firestore, catalog: CollabCatalog, own
   const { targets, errors } = planProjectMembers(catalog, owner);
   assertCatalog(errors);
   console.log(`${targets.size} destination projects; source assignments journaled before score moves`);
-  if (dryRun) return;
+  if (dryRun) {
+    await applyReviewedScores(db, catalog, true);
+    return;
+  }
 
   const names = await authDisplayNames([...targets.values()].flatMap((target) => [...target.roles.keys()]));
   const timestamp = Timestamp.now();
@@ -104,4 +108,5 @@ export async function migrateProjects(db: Firestore, catalog: CollabCatalog, own
       if (!project.get("deletedAt")) transaction.update(ref, { deletedAt: timestamp });
     });
   }
+  await applyReviewedScores(db, catalog, false);
 }

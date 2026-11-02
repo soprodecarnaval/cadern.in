@@ -44,8 +44,8 @@ Spec: PLAN §7, §7.1.
 ## M6/M7 implementation (in progress)
 
 Registered dataset migrations: `202610311300` (M6) and `202610311301` (M7).
-CI refuses to execute them or skip past them. Incorporate the reviewed score-report
-decisions, review the mapping report and prepare backups before explicitly opting
+CI refuses to execute them or skip past them. Review the generated score-decision
+manifest and mapping report and prepare backups before explicitly opting
 in to their staging rehearsal. Production launch and M9 are separate work.
 
 Explicit mapping in `scripts/lib/collabMapping.ts`:
@@ -79,7 +79,8 @@ that journal even after source projects are archived. Unknown projects, scores
 without an assignment and ownership conflicts block execution. CADERNIN remains
 the sole owner; member roles are merged without demoting existing members.
 
-For moved scores, only the container's `projectId` changes. IDs, revision history, embedded file
+Moving a score changes its container's `projectId`. The reviewed corrections below
+add tags and lineage separately. IDs, revision history, embedded file
 identities, Storage paths and download URLs remain intact. Deleted scores also
 move, retaining their deletion markers. Previously deleted source projects and
 their scores are left alone. Once a source has no scores, M6 sets its `deletedAt`
@@ -94,8 +95,9 @@ exact latest revision IDs; numbering is fixed in the revision. Titles/references
 use `project/songbook`; internal IDs keep `project~songbook`. Existing journaled
 songbooks are preserved, including subsequent manual edits; unrelated songbook
 collisions fail. `carnaval-bh/festa-junina-2024` retains general style grouping,
-including its custom/blank legacy tags; moving it to Carnaval BH does not apply
-the carnival-only section filter. Publication markers are rebuilt directly after M7 because initial
+including its reviewed baião/xote/arrasta-pé tags; moving it to Carnaval BH does not
+apply the carnival-only section order. Reviewed custom styles in carnival books
+are retained after the standard sections. Publication markers are rebuilt directly after M7 because initial
 creation happens before CI deploys the triggers.
 
 The read-only report simulates both steps without needing M6 applied:
@@ -113,19 +115,37 @@ SCRIPTS_FIREBASE_PROJECT_ID=cadernin-6c0d1 npx tsx --env-file=.env.production sc
 
 It reports every source/destination, exclusions and scores currently on the legacy
 homepage that no proposed published songbook covers. M7 refuses unreviewed
-omissions. The approved exceptions are the retired Madeira Pirata scores and the
-exact 193 IDs in `scripts/data/collabDeferredStyles.json`; new unmatched scores,
+omissions. The approved exceptions are the retired Madeira Pirata scores, the four
+rejected Garota duplicates and the remaining 33 deferred score IDs in the reviewed
+manifest. `scripts/data/collabDeferredStyles.json` retains the original 193-ID review
+baseline; direct decisions resolve 146 and chain evidence resolves 14. New unmatched scores,
 conflicts and missing revisions still block execution. Other explicit exceptions
 require a score ID and rationale in `APPROVED_HOMEPAGE_OMISSIONS` in
 `scripts/lib/collabSongbooks.ts`.
 
-For carnival grouping, missing/unrecognized styles are inferred from other live
+M6 also consumes `scripts/data/collabReviewedScores.json`, reproduced by the
+[score-review generator](reports/007-score-review/README.md): 361 direct tag
+decisions, 14 unanimous chain-based tag inferences, 587 predecessor links and four
+duplicate exclusions. Tags update `metadataOverride.tags` and legacy display
+tags; latest revision metadata remains immutable. Links use `forkedFrom`, including
+historical same-project relationships, with exact source revisions and final
+project IDs. The admin import does not change the client cross-project fork rule.
+The duplicates are soft-deleted with revisions/files retained. Each correction and
+its original values commit atomically under `_meta/collabFlow/scores/{scoreId}`.
+Retries skip completed corrections, preserve later edits, and reject changes to
+applied decisions. Stale unapplied titles, tags, latest pointers or lineage block
+M6 before project writes. M7 refuses incomplete score corrections.
+
+For carnival grouping, the original missing/unrecognized styles are inferred from other live
 scores with the same normalized title (case, accents, whitespace and punctuation
 ignored). Evidence must agree on one recognized style; no fuzzy or majority-vote
 guess is made. Grouping uses the inferred style without modifying score or revision
-metadata. Evidence is saved in `_meta/collabFlow/styleInferences/{scoreId}`.
+metadata for those original grouping-only inferences. The frozen manifest retains
+that evidence. Evidence is saved in `_meta/collabFlow/styleInferences/{scoreId}`.
 Deferred style reviews are saved in `_meta/collabFlow/deferredStyles/{scoreId}`.
-Those scores remain live in their destination projects but are not initially
+The remaining 33 unresolved scores stay deferred; new tag corrections do not
+silently promote them based on fresh matching evidence. Those scores remain live
+in their destination projects but are not initially
 pinned by the migrated songbooks. Addressing them later requires reviewed
 songbook revisions; rerunning M7 preserves existing books.
 
@@ -148,15 +168,18 @@ conflicts, omissions and frozen version pins/numbering.
 
 Read-only production report on 2026-10-31: 20 source projects, 1,070 scores,
 10 destination projects and 19 proposed songbooks. Style evidence resolves 162
-previously unmatched scores. The 193 unresolved styles are explicitly deferred;
+previously unmatched scores. That original report deferred 193 styles;
 the three Madeira Pirata scores are excluded with their retired project. No
-M6/M7 migration has been applied to cloud data.
+M6/M7 migration has been applied to cloud data. The current offline plan covers
+1,030 scores in songbooks and reports 40 approved omissions: 33 deferred scores,
+three retained Madeira scores and four soft-deleted Garota duplicates.
 
 ## Files
 
 - [Persisted score review](reports/007-score-review/README.md): interactive HTML,
   Markdown, CSVs, source snapshot, review decisions and offline generator.
-  Report decisions are not yet applied to M6/M7 or cloud data. The report's
+  Report decisions are incorporated into M6/M7 through the generated manifest;
+  they have not been applied to cloud data. The report's
   **Review required** filter exposes unresolved score rows and lists unmatched
   index entries separately.
 

@@ -26,7 +26,7 @@ describe("catalog style inference", () => {
       { id: "missing", title: "Song", tags: [""] },
     ])).toEqual({ status: "missing", style: null, sourceScoreIds: [] });
   });
-  it("limits approved deferrals to the 193 reviewed score IDs", () => {
+  it("retains the original 193-score review baseline", () => {
     expect(DEFERRED_STYLE_SCORES).toHaveLength(193);
     expect(new Set(DEFERRED_STYLE_SCORES.map((score) => score.scoreId)).size).toBe(193);
   });

@@ -5,6 +5,7 @@ import { loadCollabCatalog, catalogJournal } from "../../scripts/lib/collabCatal
 import { migrateProjects } from "../../scripts/lib/collabProjects";
 import { migrateSongbooks, planSongbooks } from "../../scripts/lib/collabSongbooks";
 import { DEFERRED_STYLE_SCORES } from "../../scripts/lib/collabStyles";
+import { REVIEWED_SCORES } from "../../scripts/lib/collabReview";
 
 vi.mock("../../scripts/lib/authDisplayNames", () => ({
   authDisplayNames: async (uids: string[]) => new Map(uids.map((uid) => [uid, `Name ${uid}`])),
@@ -51,6 +52,15 @@ async function seedScore(id: string, project: string, title = id, tags = ["samba
 
 async function m6(dryRun = false) { await migrateProjects(db, await loadCollabCatalog(db), OWNER, dryRun); }
 async function m7(dryRun = false) { await migrateSongbooks(db, await loadCollabCatalog(db), OWNER, dryRun); }
+
+async function seedReviewedScore(id: string, seeded = new Set<string>()) {
+  if (seeded.has(id)) return;
+  seeded.add(id);
+  const row = REVIEWED_SCORES.get(id)!;
+  await seedProject(row.source);
+  await seedScore(id, row.source, row.title, row.originalTags);
+  if (row.predecessor) await seedReviewedScore(row.predecessor.scoreId, seeded);
+}
 
 describe("M6/M7 against Firestore", () => {
   it("moves containers, preserves versions/files, archives sources and publishes separate yearly books", async () => {
@@ -236,7 +246,7 @@ describe("M6/M7 against Firestore", () => {
     await m7();
     const version = await db.doc("songbooks/carnaval-bh~2023/songbookRevisions/1").get();
     expect(version.get("pins")).toEqual({ "old-score": "1" });
-    expect(version.get("entries")[0].title).toBe("forrós");
+    expect(version.get("entries")[0].title).toBe("forró");
     expect((await catalogJournal(db).collection("styleInferences").doc("old-score").get()).data()).toMatchObject({ style: "forrós", sourceScoreIds: ["evidence"] });
     expect((await db.doc("scores/old-score").get()).get("tags")).toEqual([""]);
     expect((await db.doc("scores/old-score/scoreRevisions/1").get()).data()).toEqual(before);
@@ -264,5 +274,94 @@ describe("M6/M7 against Firestore", () => {
     await seedScore("b", "blocae", deferred.title, ["axé"]);
     await m6();
     await expect(m7()).rejects.toThrow("Unreviewed homepage omission");
+  });
+
+  it("applies reviewed tags and historical lineage without changing titles, revisions or files", async () => {
+    const id = "carnaval-bh-2025-prefixodoverao";
+    await seedReviewedScore(id);
+    const before = (await db.doc(`scores/${id}/scoreRevisions/1`).get()).data();
+    const title = REVIEWED_SCORES.get(id)!.title;
+    const catalog = await loadCollabCatalog(db);
+    const preview = planSongbooks(catalog);
+    await m6(true);
+    expect((await catalogJournal(db).collection("scores").get()).empty).toBe(true);
+    await m6();
+    const score = await db.doc(`scores/${id}`).get();
+    expect(score.get("title")).toBe(title);
+    expect(score.get("forkedFrom")).toEqual(REVIEWED_SCORES.get(id)!.predecessor);
+    expect(score.get("projectId")).toBe("carnaval-bh");
+    expect((await db.doc(`scores/${id}/scoreRevisions/1`).get()).data()).toEqual(before);
+    expect((await catalogJournal(db).collection("scores").doc(id).get()).get("before.forkedFrom")).toBeNull();
+    await m7();
+    for (const book of preview.books) {
+      expect((await db.doc(`songbooks/${book.id}/songbookRevisions/1`).get()).get("pins")).toEqual(book.content.pins);
+    }
+  });
+
+  it("links reviewed cross-project fallbacks to the moved source project and exact revision", async () => {
+    const row = [...REVIEWED_SCORES.values()].find((row) => row.source === "na-tora-2025" && row.predecessor?.projectId === "carnaval-bh")!;
+    await seedReviewedScore(row.scoreId);
+    await m6();
+    expect((await db.doc(`scores/${row.scoreId}`).get()).get("forkedFrom")).toEqual(row.predecessor);
+    expect((await db.doc(`scores/${row.predecessor!.scoreId}`).get()).get("projectId")).toBe("carnaval-bh");
+  });
+
+  it("journals tag corrections, preserves immutable metadata and leaves later edits alone on retry", async () => {
+    const id = "carnaval-bh-2026-vaporbarato";
+    await seedReviewedScore(id);
+    const before = (await db.doc(`scores/${id}/scoreRevisions/1`).get()).data();
+    await m6();
+    const score = await db.doc(`scores/${id}`).get();
+    expect(score.get("metadataOverride.tags")).toEqual(["brazuka"]);
+    expect(score.get("tags")).toEqual(["brazuka"]);
+    expect((await db.doc(`scores/${id}/scoreRevisions/1`).get()).data()).toEqual(before);
+    const journal = (await catalogJournal(db).collection("scores").doc(id).get()).data();
+    await db.doc(`scores/${id}`).update({ "metadataOverride.tags": ["pagode"], tags: ["pagode"] });
+    await m6();
+    expect((await db.doc(`scores/${id}`).get()).get("metadataOverride.tags")).toEqual(["pagode"]);
+    expect((await catalogJournal(db).collection("scores").doc(id).get()).data()).toEqual(journal);
+    await db.doc(`scores/${id}`).update({ "metadataOverride.tags": [""], tags: [""] });
+    await expect(m7()).rejects.toThrow("Unreviewed homepage omission");
+  });
+
+  it("soft-deletes exactly the rejected Garota duplicates and retains their revision data", async () => {
+    for (const row of REVIEWED_SCORES.values()) if (row.excluded) await seedReviewedScore(row.scoreId);
+    await seedProject("garota-2026");
+    await seedScore("retained", "garota-2026", "Canonical copy", ["axé"]);
+    await m6();
+    await m7();
+    for (const row of REVIEWED_SCORES.values()) if (row.excluded) {
+      expect((await db.doc(`scores/${row.scoreId}`).get()).get("deletedAt")).toBeInstanceOf(Timestamp);
+      expect((await db.doc(`scores/${row.scoreId}/scoreRevisions/1`).get()).exists).toBe(true);
+      expect((await catalogJournal(db).collection("scores").doc(row.scoreId).get()).get("before.deletedAt")).toBeNull();
+    }
+    expect((await db.doc("scores/retained").get()).get("deletedAt")).toBeNull();
+    expect((await db.doc("songbooks/garota~2026/songbookRevisions/1").get()).get("pins")).toEqual({ retained: "1" });
+  });
+
+  it("resumes interrupted score corrections from atomic journals before publishing", async () => {
+    const rows = [...REVIEWED_SCORES.values()].filter((row) => row.source === "zagateile" && !row.predecessor).slice(0, 2);
+    for (const row of rows) await seedReviewedScore(row.scoreId);
+    const runTransaction = db.runTransaction.bind(db);
+    const fault = vi.spyOn(db, "runTransaction").mockImplementationOnce(runTransaction).mockRejectedValueOnce(new Error("interrupted"));
+    try { await expect(m6()).rejects.toThrow("interrupted"); }
+    finally { fault.mockRestore(); }
+    expect((await catalogJournal(db).collection("scores").get()).size).toBe(1);
+    await expect(m7()).rejects.toThrow("M6 has not finished applying reviewed score decisions");
+    expect((await db.collection("songbooks").get()).empty).toBe(true);
+    await m6();
+    expect((await catalogJournal(db).collection("scores").get()).size).toBe(2);
+    for (const row of rows) expect((await db.doc(`scores/${row.scoreId}`).get()).get("metadataOverride.tags")).toEqual(["axé"]);
+    await m7();
+    expect((await db.doc("songbooks/zagateile~acervo/songbookRevisions/1").get()).get("pins")).toEqual(Object.fromEntries(rows.map((row) => [row.scoreId, "1"])));
+  });
+
+  it("blocks stale reviewed data before project journals or moves", async () => {
+    const id = "carnaval-bh-2026-vaporbarato";
+    await seedReviewedScore(id);
+    await db.doc(`scores/${id}`).update({ latestRevisionId: "unexpected" });
+    await expect(m6()).rejects.toThrow("latest revision changed");
+    expect((await catalogJournal(db).collection("projects").get()).empty).toBe(true);
+    expect((await db.doc(`scores/${id}`).get()).get("projectId")).toBe("carnaval-bh-2026");
   });
 });

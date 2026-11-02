@@ -128,6 +128,28 @@ for row in rows:
     row['reviewReasons'] = reasons
     row['reviewRequired'] = bool(reasons)
 
+# Keep the executable decisions identical to the persisted review, without fuzzy matching at rollout time.
+decisions = []
+for row in sorted(rows, key=lambda row: row['id']):
+    previous = byid.get(row['reviewAnchorId'])
+    style = row['reviewedTag'] or row['chainStyleSuggestion'] or row['inferredStyle']
+    decisions.append(dict(
+        scoreId=row['id'], title=row['originalTitle'], source=row['sourceProject'], project=row['destinationProject'],
+        revisionId=row['latestRevisionId'], originalTags=row['tags'], excluded=False,
+        style=style, styleKind=('reviewed' if row['reviewedTag'] else 'chain' if row['chainStyleSuggestion'] else 'inferred' if row['inferredStyle'] else None),
+        styleEvidence=row['chainStyleEvidence'] if row['chainStyleSuggestion'] else row['inferenceSources'] if row['inferredStyle'] and not row['reviewedTag'] else [],
+        deferred=row['styleStatus']=='deferred' and not style,
+        predecessor=dict(scoreId=previous['id'], revisionId=previous['latestRevisionId'], projectId=previous['destinationProject']) if previous else None,
+    ))
+for row in snapshot['rows']:
+    if row['id'] in excluded_review_ids:
+        decisions.append(dict(scoreId=row['id'], title=row['originalTitle'], source=row['sourceProject'], project=row['destinationProject'],
+                              revisionId=row['latestRevisionId'], originalTags=row['tags'], excluded=True,
+                              style=None, styleKind=None, styleEvidence=[], deferred=False, predecessor=None))
+manifest = dict(snapshotAt=snapshot['generatedAt'], scores=sorted(decisions, key=lambda row: row['scoreId']))
+manifest_path = REPORT_DIR.parents[4] / 'scripts/data/collabReviewedScores.json'
+manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+
 unmatched_index_entries = [
     dict(match, source=source, sourceProject=source_project)
     for source, source_project, matches in [

@@ -5,8 +5,9 @@
 - [Complete Markdown report](cadernin-score-chain-review.md)
 
 The production metadata snapshot is read-only. Tags, predecessor links and
-exclusions recorded here are review decisions, not database changes. They have
-not yet been incorporated into the M6/M7 migration implementation.
+exclusions recorded here are review decisions, not database changes. The offline
+generator exports them to `scripts/data/collabReviewedScores.json`, which M6/M7
+consume. No cloud migration is implied by generating or implementing that data.
 
 ## Review required
 
@@ -47,7 +48,8 @@ python3 docs/milestones/collab-flow/reports/007-score-review/generate.py
 The generator resolves inputs relative to its own location, so it also works from
 another working directory. It uses only Python's standard library, needs no
 credentials and performs no network requests. It recreates the HTML, Markdown,
-full-score CSV and all four downloadable index-matching CSVs.
+full-score CSV, all four downloadable index-matching CSVs and the executable
+decision manifest at `scripts/data/collabReviewedScores.json`.
 
 The source snapshot's `generatedAt` is the metadata read time, not a new cloud
 read on each generation. Rebuilding reproduces that snapshot with the recorded
@@ -74,3 +76,24 @@ match remains flagged; it is never selected arbitrarily.
 
 Year-specific tags remain distinct. A style suggestion for an unreviewed score
 requires all reviewed style evidence in its linked component to agree.
+
+## Migration behavior
+
+The manifest records 587 predecessor links, 361 direct style decisions, 14
+unanimous chain-based style inferences, the four rejected duplicates and 33
+remaining deferrals. M6 applies direct/chain tags as metadata overrides and legacy
+display tags, and records predecessor links in `forkedFrom` with exact source
+revision IDs and final destination project IDs. Same-project historical links are
+imported by the admin migration; client-created forks retain their cross-project
+restriction. Score IDs, titles, revision origins, revision metadata and files stay
+intact. The four duplicates are soft-deleted; Madeira retains its existing
+project-archive treatment.
+
+Each score correction and its original values are journaled atomically under
+`_meta/collabFlow/scores/{scoreId}`. Retries preserve later edits to completed
+records, and changed decisions for already-applied records fail. Stale titles,
+tags, revision pointers, lineage and predecessor targets block unapplied work.
+M7 refuses to publish while M6 corrections are incomplete. It previews the same
+decisions before M6 and preserves custom reviewed styles in its sections. The
+original normalized-title style inferences remain grouping-only; the 33 unresolved
+scores remain deferred even when new tag corrections would supply new evidence.

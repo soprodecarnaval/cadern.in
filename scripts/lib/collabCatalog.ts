@@ -13,10 +13,11 @@ const zAssignment = z.object({
 });
 
 export async function loadCollabCatalog(db: Firestore) {
-  const [projectDocs, scoreDocs, revisions, journals, bookDocs, bookJournals, memberDocs] = await Promise.all([
+  const [projectDocs, scoreDocs, revisions, journals, bookDocs, bookJournals, memberDocs, scoreJournals] = await Promise.all([
     db.collection("projects").get(), db.collection("scores").get(), revisionsByScore(db),
     catalogJournal(db).collection("projects").get(), db.collection("songbooks").get(),
     catalogJournal(db).collection("songbooks").get(), db.collectionGroup("members").get(),
+    catalogJournal(db).collection("scores").get(),
   ]);
   const projects = new Map(projectDocs.docs.map((doc) => [doc.id, { id: doc.id, ...zProjectDoc.parse(doc.data()) }]));
   const scores = new Map(scoreDocs.docs.map((doc) => [doc.id, { id: doc.id, ...zScoreDoc.parse(doc.data()) }]));
@@ -46,6 +47,7 @@ export async function loadCollabCatalog(db: Firestore) {
     assignments: plan.assignments, errors: plan.errors,
     savedSources: new Set(saved.map((row) => row.source)),
     bookJournals: new Map(bookJournals.docs.map((doc) => [doc.id, doc.data()])),
+    scoreJournals: new Map(scoreJournals.docs.map((doc) => [doc.id, doc.data()])),
   };
 }
 
