@@ -17,7 +17,21 @@ Prod: project `cadernin-6c0d1`, bucket `cadernin-6c0d1.firebasestorage.app`,
 Firestore `(default)` in `southamerica-east1`. Prod schema version before this
 milestone: `202604271800`.
 
+Current rollout: the existing PR targets `main` and passes CI (confirmed by the
+user). Rehearse staging migrations after its verified backup, then merge the PR
+to `main` to trigger staging deployment. The production workflow runs on pushes
+to `production`; either workflow also supports manual dispatch. Follow the
+[remaining rollout steps](007-data-migration.md#steps); PR creation/CI setup are
+already complete.
+
 ## 0. Backup (before any migration)
+
+Run this backup step for **each environment before executing migrations**,
+including the staging rehearsal. Pause writers and Firestore triggers first.
+For staging, substitute its project, source bucket, backup bucket and Auth export
+path in the production example below. If replacing staging with a fresh clone,
+back up its existing data before cloning, then back up the completed clone before
+migrating it. Use a unique backup prefix per run; record all recovery paths.
 
 ```fish
 gcloud auth login
@@ -30,6 +44,9 @@ npx firebase auth:export secrets/auth-cadernin-6c0d1-YYYYMMDD.json --project cad
 
 Check it finished: `gcloud firestore operations list --filter="metadata.outputUriPrefix:pre-collab-flow-YYYYMMDD"`
 shows `SUCCESSFUL`, and `gcloud storage du --summarize` matches between source and backup.
+Verify the Auth export completed too. Do not execute migrations until every
+backup has completed successfully. Take a fresh verified backup again before
+production migration and before the later M9 cleanup.
 
 **Restore** (only if a migration goes wrong and its `down` is not enough):
 
@@ -175,7 +192,11 @@ gcloud services enable cloudfunctions.googleapis.com cloudbuild.googleapis.com a
    `cadernin-score-id` in its score properties; an edited copy uploaded into another
    project becomes a fork.
 
-## 12. Task 007 — M6/M7 rehearsal (not launched)
+## 12. Task 007 — M6/M7 rehearsal (staging migrated; production not launched)
+
+Staging backup and migrations through `202610311301` completed on 2026-11-02.
+See the [rehearsal report](reports/007-staging-rehearsal-2026-11-02.md) for backup
+locations, verification and the pending deployment/permission decisions.
 
 Migrations `202610311300` and `202610311301` are registered as dataset migrations.
 They block deployment until explicitly applied with

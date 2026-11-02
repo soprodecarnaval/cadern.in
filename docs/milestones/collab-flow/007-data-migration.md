@@ -24,22 +24,41 @@ Spec: PLAN §7, §7.1.
 
 ## Steps
 
-1. M6: reconcile carnaval-bh, garota, na-tora, besourinhos and the other independent
-   groups; create project/member docs, owned by CADERNIN until future transfers;
-   journal original score assignments, move scores, soft-delete emptied sources.
-2. M7: songbooks per project-year — carnaval-bh via `generateCarnivalSections`, others
-   via `generateSectionsByStyle` (`src/utils/songBookRows.ts`); published; manual
-   reordering afterwards in the UI.
-3. Staging dry run of the whole sequence on a prod snapshot. Homepage report: every
-   score on today's homepage that no published songbook pins — those drop off at
-   launch (PLAN §7.1). Review the list and place or accept each.
-4. Turn `FEATURE_FLAG_COLLAB_FLOW` on in prod.
-5. Remove flag-off code paths, dual-writes in `uploadScore`, and the legacy rules
+The existing PR targets `main` and passes CI (confirmed by the user). PR creation
+and CI setup are complete; continue with the rollout below.
+
+Staging checkpoint: [2026-11-02 rehearsal](reports/007-staging-rehearsal-2026-11-02.md)
+completed the verified backup and all migrations through M7. Merge/deployment
+await the dataset migration PR and CI deployment permissions; client writes remain paused.
+
+1. Confirm staging has a current production clone and the deploy credentials are
+   configured. If refreshing the clone, back up existing staging data before
+   replacing it. Pause writers and Firestore triggers for the rehearsal window.
+2. **Run and verify a staging backup before migrations:** export Firestore, copy
+   Storage and export Auth, following [DEPLOY.md §0](DEPLOY.md#0-backup-before-any-migration)
+   with staging resources. Record the backup paths and successful completion.
+3. Run the read-only catalog report and migration dry run on staging. Check for
+   stale reviewed data, ownership conflicts and unapproved homepage omissions.
+   Explicitly apply pending migrations through M7 (`202610311301`), including
+   reviewed M1c invitation deletion if still pending, with
+   `--include-dataset --to=202610311301 --execute --forward-only`.
+4. Merge the existing PR into `main` when staging migrations are complete; its
+   push triggers staging deployment. Smoke-test permissions, invitations,
+   uploads/exporter compatibility, historical links, songbooks, PDFs and homepage
+   coverage with the collab flag enabled on staging.
+5. **Run and verify a fresh production backup before production migrations:**
+   pause writers/triggers, export Firestore, copy Storage and export Auth. Record
+   recovery paths and verify completion. Then repeat the catalog report, migration
+   dry run and explicit bounded execution against production.
+6. Deploy production, verify the compatible exporter, then turn
+   `FEATURE_FLAG_COLLAB_FLOW` on in prod with a new build/deploy and verify the
+   live flows. Resume writers/triggers and check publication markers.
+7. After launch, remove flag-off code paths, dual-writes in `uploadScore`, and the legacy rules
    (`members` map helpers, `revisions` match + collection-group rule). Release an
    export-app build without dual-writes.
-6. M9: drop legacy data — score-level metadata fields, `projects.members`,
-   `scores/*/revisions`.
-7. (nice-to-have) PDF index-page → songbook reconstruction script.
+8. Take a fresh verified backup, then M9: drop legacy data — score-level metadata
+   fields, `projects.members`, `scores/*/revisions`.
+9. (nice-to-have) PDF index-page → songbook reconstruction script.
 
 ## M6/M7 implementation (in progress)
 
@@ -169,8 +188,9 @@ conflicts, omissions and frozen version pins/numbering.
 Read-only production report on 2026-10-31: 20 source projects, 1,070 scores,
 10 destination projects and 19 proposed songbooks. Style evidence resolves 162
 previously unmatched scores. That original report deferred 193 styles;
-the three Madeira Pirata scores are excluded with their retired project. No
-M6/M7 migration has been applied to cloud data. The current offline plan covers
+the three Madeira Pirata scores are excluded with their retired project.
+M6/M7 have since been applied and verified on staging; production is not migrated.
+The current offline plan covers
 1,030 scores in songbooks and reports 40 approved omissions: 33 deferred scores,
 three retained Madeira scores and four soft-deleted Garota duplicates.
 
@@ -179,7 +199,7 @@ three retained Madeira scores and four soft-deleted Garota duplicates.
 - [Persisted score review](reports/007-score-review/README.md): interactive HTML,
   Markdown, CSVs, source snapshot, review decisions and offline generator.
   Report decisions are incorporated into M6/M7 through the generated manifest;
-  they have not been applied to cloud data. The report's
+  they are applied on staging, with production still pending. The report's
   **Review required** filter exposes unresolved score rows and lists unmatched
   index entries separately.
 
