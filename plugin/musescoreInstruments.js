@@ -8,7 +8,7 @@ function hasEbInPartName(part) {
            part.shortName.indexOf("Eb") > -1 || part.shortName.indexOf("E♭") > -1;
 }
 
-function getGriffFn(instrumentId, part, oneChar, breakLine) {
+function getGriffFn(instrumentId, part, oneChar, breakLine, dynamicTrombone) {
     var griffFn, transposition;
     switch (instrumentId) {
     case "brass.trombone":
@@ -16,6 +16,12 @@ function getGriffFn(instrumentId, part, oneChar, breakLine) {
     case "brass.trombone.tenor":
         griffFn = Fingerings.griff_trombone;
         transposition = 2;
+        if (dynamicTrombone) {
+            var picker = Fingerings.newTrombonePicker();
+            return function (midi) {
+                return picker.pick(midi + 2);
+            };
+        }
         break;
     case "bb-tuba":
         griffFn = oneChar ? Fingerings.griff_tuba_onechar : Fingerings.griff_tuba;

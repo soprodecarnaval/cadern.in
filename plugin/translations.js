@@ -16,6 +16,8 @@ var _data = {
         "spatium": "Spatium:",
         "options": "Options:",
         "oneCharFingering": "Use one char fingering",
+        "dynamicTrombone": "Dynamic trombone fingering",
+        "dynamicTromboneTooltip": "Chooses the slide position closest to the previous note, avoiding 7th position when possible.",
         "debugMode": "Debug log",
         "export": "Export",
         "exportWindowTitle": "Export to cadern.in",
@@ -51,6 +53,8 @@ var _data = {
         "spatium": "Espaçamento:",
         "options": "Opções:",
         "oneCharFingering": "Pirata de número de posição",
+        "dynamicTrombone": "Trombone com pirata dinâmico",
+        "dynamicTromboneTooltip": "Escolhe a posição mais próxima da nota anterior, evitando a 7ª posição quando possível.",
         "debugMode": "Mostrar logs",
         "export": "Exportar",
         "exportWindowTitle": "Exportar para cadern.in",
@@ -67,7 +71,7 @@ var _data = {
         "exportingPart": "Parte",
         "exporting": "Exportando...",
         "selectMscz": "Selecione o arquivo .mscz da partitura",
-        "runCommand": "Erro ao exportar partitura. Execute no terminal:",
+        "runCommand": "Exportação automática falhou. Execute no terminal:",
         "copyCommand": "Copiar comando",
         "openFolder": "Abrir pasta"
     }

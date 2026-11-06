@@ -76,6 +76,48 @@ function griff_trombone(midi) {
     }
 }
 
+var trombonePositions = {
+    43: [6], 44: [5], 45: [4], 46: [3], 47: [2], 48: [1], 49: [7],
+    50: [6], 51: [5], 52: [4], 53: [3], 54: [2, 7], 55: [1, 6],
+    56: [5], 57: [4], 58: [3, 7], 59: [2, 6], 60: [1, 5], 61: [4, 7],
+    62: [3, 6], 63: [2, 5], 64: [1, 4], 65: [3], 66: [2, 7], 67: [1, 6],
+    68: [5, 7], 69: [4, 6], 70: [3, 5, 7], 71: [2, 4, 6], 72: [1, 3, 5],
+    73: [2, 4, 7], 74: [1, 3, 6], 75: [2, 5], 76: [1, 4]
+};
+
+function newTrombonePicker() {
+    var prev = null;
+    return {
+        pick: function (midi) {
+            var options = trombonePositions[midi];
+            if (!options)
+                return "";
+            if (options.length === 1) {
+                prev = options[0];
+                return String(options[0]);
+            }
+            var candidates = options.slice();
+            if (prev !== 6) {
+                candidates = candidates.filter(function (c) { return c !== 7; });
+                if (candidates.length === 0)
+                    candidates = options.slice();
+            }
+            var choice;
+            if (prev === null) {
+                choice = candidates[0];
+            } else {
+                choice = candidates[0];
+                for (var i = 1; i < candidates.length; i++) {
+                    if (Math.abs(candidates[i] - prev) < Math.abs(choice - prev))
+                        choice = candidates[i];
+                }
+            }
+            prev = choice;
+            return String(choice);
+        }
+    };
+}
+
 function griff_tuba(midi, breakLine) {
     var lb = breakLine ? "\n" : "";
     switch (midi) {
