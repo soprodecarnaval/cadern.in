@@ -1,6 +1,7 @@
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 import { slugify } from "./slugify";
+import { scoreRevisionStoragePath } from "./storagePaths";
 import { displayNameOf } from "./displayName";
 import type { ParsedScore } from "./parseUploadedFiles";
 import type { User } from "firebase/auth";
@@ -66,14 +67,10 @@ export async function uploadScore(
   // transaction in commitScoreRevision; the id only has to be unique.
   const slug = revisionSlug(parsed.title, new Date());
   const revId = newRevisionId(slug);
-  // `scores/`, not `songs/`: the collection was renamed by migration
-  // 202604201809_songs_to_scores, which moved the objects too.
-  const storageBase = `scores/${scoreId}/${revId}`;
+  const storageBase = scoreRevisionStoragePath(projectId, scoreId, revId);
 
-  // The score document is written before any file is. Both rule sets read it
-  // to resolve the project: storage.rules to authorise the upload,
-  // firestore.rules to authorise creating the revision. Creating it last — as
-  // this used to — left both with nothing to read on a first upload.
+  // Create the container first: Firestore rules need it when committing the
+  // revision, and failed uploads can soft-delete the unfinished container.
   const filesTotal = parsed.fileMap.size;
   const isNewScore = target.kind !== "version";
   if (isNewScore) {

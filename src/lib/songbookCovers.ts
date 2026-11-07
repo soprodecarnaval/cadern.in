@@ -6,6 +6,7 @@ import type { Instrument } from "../../types/instrument";
 import type { SongbookDoc, SongbookRevisionDoc } from "../../types/docs";
 import { createSongbookRevision, newSongbookRevisionId, type WithId } from "./db";
 import { slugify } from "./slugify";
+import { songbookRevisionStoragePath } from "./storagePaths";
 
 export const COVER_TYPES = ["image/png", "image/jpeg"];
 
@@ -47,13 +48,16 @@ export async function saveSongbookCovers(input: {
   user: User;
 }): Promise<void> {
   const revisionId = newSongbookRevisionId(input.songbook.title);
+  const base = songbookRevisionStoragePath(
+    input.songbook.projectId, input.songbook.id, revisionId,
+  );
   const covers = { ...input.current.covers };
   for (const instrument of input.removed) {
     delete covers[instrument];
   }
   for (const [instrument, file] of input.added) {
     const ext = file.type === "image/png" ? "png" : "jpg";
-    const path = `songbooks/${input.songbook.id}/${revisionId}/covers/${slugify(instrument)}.${ext}`;
+    const path = `${base}/covers/${slugify(instrument)}.${ext}`;
     const fileRef = ref(storage, path);
     await uploadBytes(fileRef, file, { contentType: file.type });
     covers[instrument] = { path, url: await getDownloadURL(fileRef) };

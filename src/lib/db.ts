@@ -170,8 +170,8 @@ function scoreRef(id: string) {
 }
 
 /**
- * Creates the container before any revision exists (`latestRevisionId: ""`),
- * so storage rules can resolve the project while its files upload.
+ * Creates the container before any revision exists (`latestRevisionId: ""`).
+ * Firestore rules read it when the first revision is committed.
  */
 export async function createScore(
   id: string,
