@@ -8,7 +8,7 @@ import "musescoreInstruments.js" as MsInstruments
 
 MuseScore {
     id: caderninhoFormatter
-    version: "3.3.1"
+    version: "3.3.2"
     description: "Different options for formatting the score for carnival"
     pluginType: "dialog"
     dockArea: "left"
@@ -297,6 +297,21 @@ MuseScore {
             }
         }
 
+        CheckBox {
+            id: dynamicTromboneCheckbox
+            checked: false
+            ToolTip.visible: hovered
+            ToolTip.text: t("dynamicTromboneTooltip")
+            ToolTip.delay: 400
+
+            Text {
+                text: t("dynamicTrombone")
+                color: textColor
+                anchors.left: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
         Text {
             text: "v" + version
             color: textColor
@@ -503,7 +518,7 @@ MuseScore {
             log("Part " + i + " - tracks " + startTrack + " to " + endTrack + ". Instrument ID: " + instrumentId);
             for (var j = 0; j < (endTrack - startTrack) / 4; j++) {
                 var staffIdx = startTrack / 4 + j;
-                var fn = MsInstruments.getGriffFn(instrumentId, part, oneChar, breakLine);
+                var fn = MsInstruments.getGriffFn(instrumentId, part, oneChar, breakLine, dynamicTromboneCheckbox.checked);
                 if (!fn)
                     continue;
                 log("instrumentId: " + instrumentId + "; oneChar: " + oneChar);
@@ -545,13 +560,18 @@ MuseScore {
         cursor.rewind(0);
         while (cursor.segment) {
             if (cursor.element && cursor.element.type == Element.CHORD) {
-                var fingering = newElement(Element.FINGERING);
                 var note = cursor.element.notes[0];
-                var pitchOffset = getNotePitchOffset(cursor, note.pitch, minPitch, maxPitch);
-                fingering.text = griffFn(note.pitch);
-                fingering.offsetY = pitchOffset;
-                if (note.tieBack == null && fingering.text != "")
-                    cursor.add(fingering);
+                // A note with tieBack is the continuation of a tie started on
+                // a previous note. It produces no new sound, so it must not
+                // get its own fingering — only the note starting the tie does.
+                if (note.tieBack == null) {
+                    var fingering = newElement(Element.FINGERING);
+                    var pitchOffset = getNotePitchOffset(cursor, note.pitch, minPitch, maxPitch);
+                    fingering.text = griffFn(note.pitch);
+                    fingering.offsetY = pitchOffset;
+                    if (fingering.text != "")
+                        cursor.add(fingering);
+                }
                 if (cursor.element.stem)
                     cursor.element.stem.stemDirection = 2;
             }
