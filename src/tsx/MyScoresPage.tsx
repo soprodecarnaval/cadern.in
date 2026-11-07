@@ -9,7 +9,8 @@ import {
   softDeleteScore,
   type WithId,
 } from "../lib/db";
-import type { ScoreDoc, RevisionDoc } from "../../types/docs";
+import type { ScoreDoc, ScoreRevisionDoc } from "../../types/docs";
+import { resolveScoreMetadata } from "../lib/scoreMetadata";
 
 function formatDate(timestamp: Timestamp | null | undefined): string {
   if (!timestamp) {
@@ -28,7 +29,7 @@ function SongRow({
   onDelete: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [revisions, setRevisions] = useState<WithId<RevisionDoc>[] | null>(
+  const [revisions, setRevisions] = useState<WithId<ScoreRevisionDoc>[] | null>(
     null,
   );
   const [loadingRevisions, setLoadingRevisions] = useState(false);
@@ -53,9 +54,9 @@ function SongRow({
           >
             {expanded ? "▾" : "▸"}
           </button>
-          {song.title}
+          {resolveScoreMetadata(song).title}
         </td>
-        <td>{song.composer}</td>
+        <td>{resolveScoreMetadata(song).composer}</td>
         <td>{formatDate(song.createdAt)}</td>
         <td>#{song.latestRevisionId}</td>
         <td>
@@ -63,11 +64,6 @@ function SongRow({
             <Link to={`/score/${encodeURIComponent(song.id)}`}>
               <Button size="sm" variant="outline-secondary">
                 Ver
-              </Button>
-            </Link>
-            <Link to={`/upload/${encodeURIComponent(song.id)}`}>
-              <Button size="sm" variant="outline-primary">
-                Nova revisão
               </Button>
             </Link>
             <Button
@@ -94,7 +90,7 @@ function SongRow({
                   {revisions?.map((rev) => (
                     <tr key={rev.id} className="border-top">
                       <td className="ps-4 text-muted">
-                        Revisão #{rev.revisionNumber}
+                        Versão #{rev.revisionNumber}
                       </td>
                       <td className="text-muted">
                         {formatDate(rev.uploadedAt)}
@@ -161,9 +157,6 @@ export function MyScoresPage() {
     <Container className="mt-4">
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>Minhas partituras</h2>
-        <Link to="/upload">
-          <Button variant="primary">Enviar partitura</Button>
-        </Link>
       </div>
 
       {loading ? (
@@ -177,7 +170,7 @@ export function MyScoresPage() {
               <th>Título</th>
               <th>Compositor</th>
               <th>Criado em</th>
-              <th>Revisão</th>
+              <th>Versão</th>
               <th>Ações</th>
             </tr>
           </thead>

@@ -297,7 +297,11 @@ function ExportApp({
           )}
 
           {exportResult && (
-            <UploadPanel user={user} directory={exportResult.directory} />
+            <UploadPanel
+              user={user}
+              directory={exportResult.directory}
+              msczPath={msczPath}
+            />
           )}
         </>
       )}

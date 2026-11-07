@@ -128,7 +128,7 @@ working on it, and the first one silently breaks uploads.
       updates `projects/{id}.members` as the invitee, who has no role yet, so the
       `projects` update rule evaluates `null in ['owner','admin']`. Currently
       masked by `FEATURE_FLAG_AUTH_ENABLED`.
-- [ ] `scripts/verifyAssets.ts:4` imports `../types/docs.js` — a `.js` extension
+- [ ] `scripts/maintenance/verifyAssets.ts:4` imports `../types/docs.js` — a `.js` extension
       in a local import path, which the project conventions forbid. Harmless,
       trivial.
 

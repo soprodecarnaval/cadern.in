@@ -9,6 +9,7 @@
   "include": [
     "vite.config.ts",
     "vite.electron.config.ts",
-    "vite.env.ts"
+    "vite.env.ts",
+    "vitest.rules.config.ts"
   ]
 }

@@ -22,6 +22,14 @@ contextBridge.exposeInMainWorld("api", {
       destinationPath,
       tags,
     ),
+  stampMsczBytes: (
+    bytes: Uint8Array,
+    identity: import("../types/metajson").ScoreIdentity,
+  ) => ipcRenderer.invoke("score:stampMsczBytes", bytes, identity),
+  stampMsczFile: (
+    msczPath: string,
+    identity: import("../types/metajson").ScoreIdentity,
+  ) => ipcRenderer.invoke("score:stampMsczFile", msczPath, identity),
   runExport: (
     options: Omit<
       import("../scripts/lib/exportScore").RunExportOptions,

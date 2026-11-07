@@ -8,7 +8,7 @@ export type PartViewModel = {
   midi: string;
 };
 
-export type RevisionViewModel = {
+export type ScoreRevisionViewModel = {
   id: string;
   revisionNumber: number;
   uploadedBy: string;
@@ -18,7 +18,6 @@ export type RevisionViewModel = {
   midi: string;
   parts: PartViewModel[];
   notes: string;
-  isLatest: boolean;
 };
 
 export type ScoreViewModel = {
@@ -27,14 +26,24 @@ export type ScoreViewModel = {
   composer: string;
   sub: string;
   tags: string[];
+  projectId: string;
   projectTitle: string;
-  latestRevision: RevisionViewModel;
+  latestRevision: ScoreRevisionViewModel;
 };
 
 export type SongbookScoreViewModel = {
   type: "score";
   score: ScoreViewModel;
-  revision?: RevisionViewModel;
+  revision?: ScoreRevisionViewModel;
+  // The score's number in the songbook: frozen in a saved revision, assigned by
+  // position for an unsaved list (numberSongbookItems).
+  index?: number;
+  // Soft-deleted since a saved revision pinned it: keeps its number, gets no
+  // pages (collab-flow §5.7).
+  deleted?: boolean;
+  // The score's current latest revision, when the item comes from a saved
+  // revision: differs from the pinned one when a newer version exists.
+  latestRevisionId?: string;
 };
 
 export type SongbookSectionViewModel = {
@@ -44,8 +53,16 @@ export type SongbookSectionViewModel = {
 
 export type SongbookItemViewModel = SongbookScoreViewModel | SongbookSectionViewModel;
 
+/** What PDF generation takes: every score numbered. */
+export type NumberedSongbookScoreViewModel = SongbookScoreViewModel & {
+  index: number;
+};
+export type NumberedSongbookItemViewModel =
+  | NumberedSongbookScoreViewModel
+  | SongbookSectionViewModel;
+
 export type SongbookViewModel = {
-  items: SongbookItemViewModel[];
+  items: NumberedSongbookItemViewModel[];
 };
 
 export type PlayingPartViewModel = {

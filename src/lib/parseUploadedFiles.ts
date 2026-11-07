@@ -1,6 +1,10 @@
 import z from "zod";
 import type { Instrument } from "../../types/instrument";
-import { zMetajson, type Metajson } from "../../types/metajson";
+import {
+  zMetajson,
+  type Metajson,
+  type ScoreIdentity,
+} from "../../types/metajson";
 import type { Warning } from "../result";
 
 export interface ParsedPart {
@@ -24,6 +28,8 @@ export interface ParsedScore {
   parts: ParsedPart[];
   fileMap: Map<string, File>;
   warnings: Warning[];
+  /** The score and version the exported .mscz came from, if it says. */
+  source?: ScoreIdentity;
 }
 
 interface MetajsonFields {
@@ -119,7 +125,8 @@ export async function parseUploadedFiles(files: File[]): Promise<ParsedScore> {
   warnings.push({ code: "METAJSON_LEGACY", meta: {} });
 
   // No manifest: nothing is inferred any more, so there is nothing to upload.
-  // UploadPage blocks on parts.length === 0, so this surfaces as a refusal.
+  // validateParsedScore rejects parts.length === 0, so this surfaces as a
+  // refusal.
   warnings.push({ code: "METAJSON_LEGACY", meta: {} });
   return {
     title,
@@ -200,6 +207,7 @@ function buildFromManifest(
     parts,
     fileMap,
     warnings,
+    source: manifest.source,
   };
 }
 

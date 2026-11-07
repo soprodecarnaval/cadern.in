@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState, ReactNode } from "react";
 import Fuse, { IFuseOptions } from "fuse.js";
-import { getAllProjects, getAllScores, getLatestRevisions } from "./lib/db";
-import { isOwner } from "./lib/roles";
-import type {
-  ScoreViewModel,
-  RevisionViewModel,
-  PartViewModel,
-} from "../types/viewModels";
-import { FEATURE_FLAG_AUTH_ENABLED } from "./featureFlags";
+import {
+  getAllProjects,
+  getAllScores,
+  getLatestScoreRevisions,
+  getPublishedScores,
+  getScoreRevision,
+} from "./lib/db";
+import { legacyIsOwner } from "./lib/roles";
+import { toScoreViewModel } from "./lib/viewModels";
+import type { ScoreViewModel } from "../types/viewModels";
+import { FEATURE_FLAG_COLLAB_FLOW } from "./featureFlags";
 import {
   CollectionContext,
   type CollectionStatus,
@@ -15,30 +18,63 @@ import {
 
 const CADERNIN_UID = import.meta.env.VITE_CADERNIN_UID;
 
+/**
+ * The homepage with the collab flow on: exactly the scores published
+ * songbooks pin, each at its published version (collab-flow §4.4).
+ */
+async function loadPublishedCollection(): Promise<ScoreViewModel[]> {
+  const [projectDocs, scoreDocs] = await Promise.all([
+    getAllProjects(),
+    getPublishedScores(),
+  ]);
+  const projectTitles = new Map(projectDocs.map((p) => [p.id, p.title]));
+  const viewModels = await Promise.all(
+    scoreDocs
+      .filter((s) => s.published && projectTitles.has(s.projectId))
+      .map(async (score) => {
+        const revision = await getScoreRevision(
+          score.id,
+          score.published!.revisionId,
+        );
+        return revision
+          ? toScoreViewModel(
+              score,
+              revision,
+              projectTitles.get(score.projectId)!,
+            )
+          : null;
+      }),
+  );
+  return viewModels.filter((v): v is ScoreViewModel => v !== null);
+}
+
 async function loadCollection(): Promise<ScoreViewModel[]> {
-  console.log(">>>> loadCollection");
+  if (FEATURE_FLAG_COLLAB_FLOW) {
+    return loadPublishedCollection();
+  }
   const [projectDocs, songDocs, revisionDocs] = await Promise.all([
     getAllProjects(),
     getAllScores(),
-    getLatestRevisions(),
+    getLatestScoreRevisions(),
   ]);
 
-  console.log(songDocs.length);
-
-  const filteredProjectDocs = FEATURE_FLAG_AUTH_ENABLED
-    ? projectDocs
-    : projectDocs.filter((p) => CADERNIN_UID && isOwner(p, CADERNIN_UID));
+  const filteredProjectDocs = projectDocs.filter(
+    (p) => CADERNIN_UID && legacyIsOwner(p, CADERNIN_UID),
+  );
 
   const projectTitles = new Map(
     filteredProjectDocs.map((p) => [p.id, p.title]),
   );
 
   const revisionsByScoreId = new Map(revisionDocs.map((r) => [r.scoreId, r]));
+  // getAllProjects returns live projects only; a deleted project hides its
+  // scores (collab-flow §6).
+  const liveProjectIds = new Set(projectDocs.map((p) => p.id));
 
   const scores: ScoreViewModel[] = [];
 
   for (const song of songDocs) {
-    if (song.deletedAt) {
+    if (song.deletedAt || !liveProjectIds.has(song.projectId)) {
       continue;
     }
     const revision = revisionsByScoreId.get(song.id);
@@ -46,34 +82,13 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
       continue;
     }
 
-    const parts: PartViewModel[] = revision.parts.map((p) => ({
-      ...p,
-      svg: p.svg.map((f) => f.url),
-      midi: p.midi.url,
-    }));
-
-    const latestRevision: RevisionViewModel = {
-      id: revision.id,
-      revisionNumber: revision.revisionNumber,
-      uploadedBy: revision.uploadedBy,
-      uploadedAt: revision.uploadedAt,
-      mscz: revision.mscz.url,
-      metajson: revision.metajson.url,
-      midi: revision.midi.url,
-      parts,
-      notes: revision.notes,
-      isLatest: revision.isLatest,
-    };
-
-    scores.push({
-      id: song.id,
-      title: song.title,
-      composer: song.composer,
-      sub: song.sub,
-      tags: song.tags,
-      projectTitle: projectTitles.get(song.projectId) ?? song.projectId,
-      latestRevision,
-    });
+    scores.push(
+      toScoreViewModel(
+        song,
+        revision,
+        projectTitles.get(song.projectId) ?? song.projectId,
+      ),
+    );
   }
 
   return scores;
@@ -114,7 +129,9 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
 
   const search = useCallback(
     (query: string): ScoreViewModel[] => {
-      if (!fuse || query === "") {return allScores;}
+      if (!fuse || query === "") {
+        return allScores;
+      }
       return fuse.search(query).map((r) => r.item);
     },
     [fuse, allScores],

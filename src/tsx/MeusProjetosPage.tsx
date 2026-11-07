@@ -16,7 +16,8 @@ import {
   getProjectScores,
   type WithId,
 } from "../lib/db";
-import { memberRole, isAdmin } from "../lib/roles";
+import { isAdmin } from "../lib/roles";
+import { useMemberRole } from "../lib/useMemberRole";
 import type { ProjectDoc, UserProjectRole } from "../../types/docs";
 
 const ROLE_LABELS: Record<UserProjectRole, string> = {
@@ -33,15 +34,8 @@ const ROLE_BADGE_VARIANTS: Record<UserProjectRole, string> = {
   reviewer: "secondary",
 };
 
-function ProjectCard({
-  project,
-  myRole,
-  canManage,
-}: {
-  project: WithId<ProjectDoc>;
-  myRole: UserProjectRole;
-  canManage: boolean;
-}) {
+function ProjectCard({ project }: { project: WithId<ProjectDoc> }) {
+  const myRole = useMemberRole(project.slug);
   const [scoreCount, setScoreCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -55,7 +49,9 @@ function ProjectCard({
       <Card.Body>
         <div className="d-flex justify-content-between align-items-start mb-2">
           <Card.Title className="mb-0">{project.title}</Card.Title>
-          <Badge bg={ROLE_BADGE_VARIANTS[myRole]}>{ROLE_LABELS[myRole]}</Badge>
+          {myRole && myRole !== "loading" && (
+            <Badge bg={ROLE_BADGE_VARIANTS[myRole]}>{ROLE_LABELS[myRole]}</Badge>
+          )}
         </div>
         <Card.Subtitle className="text-muted mb-3">
           <small>/{project.slug}</small>
@@ -73,7 +69,7 @@ function ProjectCard({
               Ver
             </Button>
           </Link>
-          {canManage && (
+          {myRole !== "loading" && isAdmin(myRole) && (
             <Link to={`/projects/${project.slug}/settings`}>
               <Button size="sm" variant="outline-primary">
                 Configurações
@@ -126,21 +122,11 @@ export function MeusProjetosPage() {
         </Alert>
       ) : (
         <Row xs={1} sm={2} lg={3} className="g-3">
-          {projects.map((project) => {
-            const myRole = memberRole(
-              project,
-              currentUser.uid,
-            ) as UserProjectRole;
-            return (
-              <Col key={project.id}>
-                <ProjectCard
-                  project={project}
-                  myRole={myRole}
-                  canManage={isAdmin(project, currentUser.uid)}
-                />
-              </Col>
-            );
-          })}
+          {projects.map((project) => (
+            <Col key={project.id}>
+              <ProjectCard project={project} />
+            </Col>
+          ))}
         </Row>
       )}
     </Container>

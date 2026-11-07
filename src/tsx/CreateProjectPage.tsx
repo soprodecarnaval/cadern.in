@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { createProject, getProjectBySlug } from "../lib/db";
 import { slugify } from "../lib/slugify";
+import { displayNameOf } from "../lib/displayName";
 
 export function CreateProjectPage() {
   const { currentUser } = useAuth();
@@ -29,10 +30,11 @@ export function CreateProjectPage() {
         setError(`O slug "${slug}" já está em uso. Escolha outro nome.`);
         return;
       }
-      await createProject(slug, {
-        title,
-        members: { [currentUser.uid]: "owner" },
-      });
+      await createProject(
+        slug,
+        { title },
+        { uid: currentUser.uid, displayName: displayNameOf(currentUser) },
+      );
       void navigate(`/projects/${slug}/settings`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erro ao criar projeto");

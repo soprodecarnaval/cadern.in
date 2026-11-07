@@ -11,13 +11,16 @@ import {
 } from "react-bootstrap";
 import React, { useState, useMemo } from "react";
 import type { Instrument } from "../../types/instrument";
-import type { ScoreViewModel, RevisionViewModel } from "../../types/viewModels";
+import type {
+  ScoreViewModel,
+  ScoreRevisionViewModel,
+} from "../../types/viewModels";
 import type {
   SongbookViewModel,
   SongbookItemViewModel,
   SongbookScoreViewModel,
 } from "../../types/viewModels";
-import { isSongbookSection, getRevision } from "../lib/songbook";
+import { isSongbookSection, getScoreRevision } from "../lib/songbook";
 import { createSongBook } from "../createSongBook";
 
 const allInstruments: Instrument[] = [
@@ -41,11 +44,17 @@ const instrumentFallbacks: Partial<Record<Instrument, Instrument>> = {
 
 interface PdfGeneratorProps {
   songBook: SongbookViewModel;
+  // A saved songbook's per-instrument covers (download URLs). When given, they
+  // replace the per-generation cover pickers.
+  covers?: Partial<Record<Instrument, string>>;
 }
 
 export type SectionScore = {
   score: ScoreViewModel;
-  revision: RevisionViewModel;
+  revision: ScoreRevisionViewModel;
+  index: number;
+  // Soft-deleted since the revision was saved: keeps its number, gets no pages.
+  deleted?: boolean;
 };
 
 export type Section = {
@@ -79,9 +88,10 @@ const HelpIcon = ({ tooltip }: { tooltip: JSX.Element }) => (
   </OverlayTrigger>
 );
 
-const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
+const PDFGenerator = ({ songBook, covers }: PdfGeneratorProps) => {
+  // Deleted scores keep their number but get no pages, so they don't count.
   const scores = songBook.items.filter(
-    (r: SongbookItemViewModel) => !isSongbookSection(r),
+    (r: SongbookItemViewModel) => !isSongbookSection(r) && !r.deleted,
   ) as SongbookScoreViewModel[];
 
   const [songbookTitle, setTitle] = useState("");
@@ -136,7 +146,7 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
 
     for (const instrument of allInstruments) {
       const count = scores.filter((s) =>
-        getRevision(s).parts?.some((p) => p.instrument === instrument),
+        getScoreRevision(s).parts?.some((p) => p.instrument === instrument),
       ).length;
 
       const fallback = instrumentFallbacks[instrument];
@@ -144,8 +154,8 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
       if (fallback) {
         countWithFallback = scores.filter(
           (s) =>
-            getRevision(s).parts?.some((p) => p.instrument === instrument) ||
-            getRevision(s).parts?.some((p) => p.instrument === fallback),
+            getScoreRevision(s).parts?.some((p) => p.instrument === instrument) ||
+            getScoreRevision(s).parts?.some((p) => p.instrument === fallback),
         ).length;
       }
 
@@ -242,7 +252,9 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
           }
           currentSection.scores.push({
             score: item.score,
-            revision: getRevision(item),
+            revision: getScoreRevision(item),
+            index: item.index,
+            deleted: item.deleted,
           });
         }
       }
@@ -261,7 +273,9 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
             : undefined,
           sections,
           title: songbookTitle,
-          coverImageUrl: instrumentCovers.get(instrument) || "",
+          coverImageUrl:
+            (covers ? covers[instrument] : instrumentCovers.get(instrument)) ||
+            "",
           carnivalMode,
           backSheetPageNumber,
           antiAssedioPages,
@@ -340,7 +354,9 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
                 const isCurrent = currentInstrument === instrument;
                 const isGreyedOut = isGenerating && !isSelected;
 
-                const hasCover = instrumentCovers.has(instrument);
+                const hasCover = covers
+                  ? !!covers[instrument]
+                  : instrumentCovers.has(instrument);
                 const fallback = instrumentFallbacks[instrument];
                 const hasFallback =
                   fallback && countWithFallback && countWithFallback > count;
@@ -396,7 +412,10 @@ const PDFGenerator = ({ songBook }: PdfGeneratorProps) => {
                       <span className="text-muted me-2">
                         ({displayCount}/{instrumentStats.totalScores})
                       </span>
-                      {!isGenerating && (
+                      {!isGenerating && covers && hasCover && (
+                        <span className="text-success small">✓ Capa</span>
+                      )}
+                      {!isGenerating && !covers && (
                         <>
                           <Form.Label
                             htmlFor={`cover-${instrument}`}

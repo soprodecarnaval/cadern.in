@@ -6,37 +6,59 @@ import {
   collectionGroup,
   deleteField,
   doc,
+  getCountFromServer,
   getDocs,
   getDoc,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
   where,
   writeBatch,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { FirebaseError } from "firebase/app";
+import { httpsCallable } from "firebase/functions";
+import { db, functions } from "../firebase";
+import { newRevisionId, revisionSlug } from "./revisionId";
 import {
   zScoreDoc,
   zScoreData,
-  zRevisionDoc,
-  zRevisionData,
+  zScoreMetadata,
+  zReviewCommentData,
+  zReviewCommentDoc,
+  zSongbookData,
+  zSongbookDoc,
+  zSongbookRevisionData,
+  zSongbookRevisionDoc,
+  zScoreRevisionDoc,
+  zNewScoreRevisionData,
+  zLegacyRevisionData,
   zProjectDoc,
   zProjectData,
   zProjectCreateData,
+  zProjectMemberData,
+  zProjectMemberDoc,
   zUserProjectInvitationDoc,
   zUserProjectInvitationData,
+  type ScoreData,
   type ScoreDoc,
-  type RevisionDoc,
+  type CommentAnchor,
+  type ReviewCommentDoc,
+  type SongbookDoc,
+  type SongbookRevisionContent,
+  type SongbookRevisionDoc,
+  type ScoreMetadata,
+  type NewScoreRevisionData,
+  type ScoreRevisionDoc,
   type ProjectDoc,
   type ProjectCreateData,
+  type ProjectMemberDoc,
   type UserProjectRole,
   type UserProjectInvitationDoc,
 } from "../../types/docs";
 import type z from "zod";
 
-type ScoreData = z.infer<typeof zScoreData>;
-type RevisionData = z.infer<typeof zRevisionData>;
 type UserProjectInvitationData = z.infer<typeof zUserProjectInvitationData>;
 
 export type WithId<T> = T & { id: string };
@@ -51,25 +73,34 @@ export async function getScore(id: string): Promise<WithId<ScoreDoc> | null> {
   return { id: snap.id, ...zScoreDoc.parse(snap.data()) };
 }
 
-export async function getRevision(
+// Score revisions live in two subcollections until the legacy one is dropped
+// (collab-flow M9). Every write goes to both, with the same data; reads stay on
+// the legacy one — the only one flag-off code and older export-app builds know —
+// until the launch (collab-flow 007).
+const SCORE_REVISIONS = "scoreRevisions";
+const LEGACY_REVISIONS = "revisions";
+
+export async function getScoreRevision(
   scoreId: string,
   revisionId: string,
-): Promise<WithId<RevisionDoc> | null> {
+): Promise<WithId<ScoreRevisionDoc> | null> {
   const snap = await getDoc(
-    doc(db, "scores", scoreId, "revisions", revisionId),
+    doc(db, "scores", scoreId, LEGACY_REVISIONS, revisionId),
   );
   if (!snap.exists()) {
     return null;
   }
-  return { id: snap.id, ...zRevisionDoc.parse(snap.data()) };
+  return { id: snap.id, ...zScoreRevisionDoc.parse(snap.data()) };
 }
 
 export async function getScoreRevisions(
   scoreId: string,
-): Promise<WithId<RevisionDoc>[]> {
-  const snap = await getDocs(collection(db, "scores", scoreId, "revisions"));
+): Promise<WithId<ScoreRevisionDoc>[]> {
+  const snap = await getDocs(
+    collection(db, "scores", scoreId, LEGACY_REVISIONS),
+  );
   return snap.docs
-    .map((d) => ({ id: d.id, ...zRevisionDoc.parse(d.data()) }))
+    .map((d) => ({ id: d.id, ...zScoreRevisionDoc.parse(d.data()) }))
     .sort((a, b) => b.revisionNumber - a.revisionNumber);
 }
 
@@ -98,32 +129,87 @@ export async function getAllScores(): Promise<WithId<ScoreDoc>[]> {
   return snap.docs.map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }));
 }
 
-export async function getLatestRevisions(): Promise<
-  (WithId<RevisionDoc> & { scoreId: string })[]
+/** Live forks of a score, in any project. */
+export async function getScoreForks(
+  scoreId: string,
+): Promise<WithId<ScoreDoc>[]> {
+  const snap = await getDocs(
+    query(collection(db, "scores"), where("forkedFrom.scoreId", "==", scoreId)),
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }))
+    .filter((s) => !s.deletedAt);
+}
+
+/**
+ * Scores some published songbook pins (collab-flow §4.4). `published` is
+ * maintained by the syncPublishedScores functions.
+ */
+export async function getPublishedScores(): Promise<WithId<ScoreDoc>[]> {
+  const snap = await getDocs(
+    query(collection(db, "scores"), where("published", "!=", null)),
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }));
+}
+
+export async function getLatestScoreRevisions(): Promise<
+  (WithId<ScoreRevisionDoc> & { scoreId: string })[]
 > {
   const snap = await getDocs(
-    query(collectionGroup(db, "revisions"), where("isLatest", "==", true)),
+    query(collectionGroup(db, LEGACY_REVISIONS), where("isLatest", "==", true)),
   );
   return snap.docs.map((d) => ({
     id: d.id,
     scoreId: d.ref.parent.parent!.id,
-    ...zRevisionDoc.parse(d.data()),
+    ...zScoreRevisionDoc.parse(d.data()),
   }));
 }
 
-export async function createScore(id: string, data: ScoreData): Promise<void> {
-  await setDoc(doc(db, "scores", id), {
-    ...zScoreData.parse(data),
+function scoreRef(id: string) {
+  return doc(db, "scores", id);
+}
+
+/**
+ * Creates the container before any revision exists (`latestRevisionId: ""`),
+ * so storage rules can resolve the project while its files upload.
+ */
+export async function createScore(
+  id: string,
+  data: {
+    projectId: string;
+    uploadedBy: string;
+    metadata: ScoreMetadata;
+    forkedFrom?: ScoreData["forkedFrom"];
+  },
+): Promise<void> {
+  const metadata = zScoreMetadata.parse(data.metadata);
+  await setDoc(scoreRef(id), {
+    ...zScoreData.parse({
+      projectId: data.projectId,
+      uploadedBy: data.uploadedBy,
+      latestRevisionId: "",
+      ...metadata,
+      cachedMetadata: metadata,
+      ...(data.forkedFrom ? { forkedFrom: data.forkedFrom } : {}),
+    }),
+    published: null,
     createdAt: serverTimestamp(),
     deletedAt: null,
   });
 }
 
-export async function updateScore(
+/**
+ * Sets the admin corrections over the score's revision metadata. Fields left
+ * out fall back to the latest revision's; an empty override is removed.
+ */
+export async function updateScoreMetadataOverride(
   id: string,
-  data: Partial<ScoreData>,
+  override: Partial<ScoreMetadata>,
 ): Promise<void> {
-  await updateDoc(doc(db, "scores", id), data);
+  const parsed = zScoreMetadata.partial().parse(override);
+  await updateDoc(scoreRef(id), {
+    metadataOverride: Object.keys(parsed).length > 0 ? parsed : deleteField(),
+  });
 }
 
 export async function softDeleteScore(id: string): Promise<void> {
@@ -132,23 +218,62 @@ export async function softDeleteScore(id: string): Promise<void> {
   });
 }
 
-export async function createRevision(
+/**
+ * Appends a revision to the score's chain, in one transaction: the new
+ * revision links to the current latest (`prevRevisionId`), takes the next
+ * `revisionNumber`, and becomes `latestRevisionId`, with its metadata cached on
+ * the container. Concurrent uploads retry rather than overwrite each other.
+ *
+ * Writes both revision subcollections; the legacy copy also carries `isLatest`
+ * and the container its legacy metadata fields (collab-flow §0).
+ */
+export async function commitScoreRevision(
   scoreId: string,
   revisionId: string,
-  data: RevisionData,
-): Promise<void> {
-  await setDoc(doc(db, "scores", scoreId, "revisions", revisionId), {
-    ...zRevisionData.parse(data),
-    uploadedAt: serverTimestamp(),
-  });
-}
+  data: Omit<NewScoreRevisionData, "revisionNumber" | "prevRevisionId">,
+): Promise<{ revisionNumber: number }> {
+  return runTransaction(db, async (tx) => {
+    const scoreSnap = await tx.get(scoreRef(scoreId));
+    if (!scoreSnap.exists()) {
+      throw new Error(`Score ${scoreId} not found`);
+    }
+    const prevRevisionId =
+      zScoreDoc.parse(scoreSnap.data()).latestRevisionId || null;
 
-export async function updateRevision(
-  scoreId: string,
-  revisionId: string,
-  data: Partial<RevisionData>,
-): Promise<void> {
-  await updateDoc(doc(db, "scores", scoreId, "revisions", revisionId), data);
+    let revisionNumber = 1;
+    if (prevRevisionId) {
+      const prevSnap = await tx.get(
+        doc(db, "scores", scoreId, LEGACY_REVISIONS, prevRevisionId),
+      );
+      revisionNumber =
+        zScoreRevisionDoc.parse(prevSnap.data()).revisionNumber + 1;
+    }
+
+    const revision = zNewScoreRevisionData.parse({
+      ...data,
+      revisionNumber,
+      prevRevisionId,
+    });
+    tx.set(doc(db, "scores", scoreId, SCORE_REVISIONS, revisionId), {
+      ...revision,
+      uploadedAt: serverTimestamp(),
+    });
+    tx.set(doc(db, "scores", scoreId, LEGACY_REVISIONS, revisionId), {
+      ...zLegacyRevisionData.parse({ ...revision, isLatest: true }),
+      uploadedAt: serverTimestamp(),
+    });
+    if (prevRevisionId) {
+      tx.update(doc(db, "scores", scoreId, LEGACY_REVISIONS, prevRevisionId), {
+        isLatest: false,
+      });
+    }
+    tx.update(scoreRef(scoreId), {
+      latestRevisionId: revisionId,
+      cachedMetadata: revision.metadata,
+      ...revision.metadata,
+    });
+    return { revisionNumber };
+  });
 }
 
 // -- Projects --
@@ -177,6 +302,10 @@ export async function getProjectBySlug(
 /** @deprecated use getProjectBySlug */
 export const getProject = getProjectBySlug;
 
+// Filtered in code, not with `where("deletedAt", "==", null)`: that would also
+// drop projects created before the field existed.
+const isLive = (project: ProjectDoc) => !project.deletedAt;
+
 export async function getUserMemberProjects(
   uid: string,
 ): Promise<WithId<ProjectDoc>[]> {
@@ -186,24 +315,59 @@ export async function getUserMemberProjects(
       where("memberIds", "array-contains", uid),
     ),
   );
-  return snap.docs.map(parseProject);
+  return snap.docs.map(parseProject).filter(isLive);
 }
 
 export async function getAllProjects(): Promise<WithId<ProjectDoc>[]> {
   const snap = await getDocs(collection(db, "projects"));
-  return snap.docs.map(parseProject);
+  return snap.docs.map(parseProject).filter(isLive);
 }
 
+function memberRef(slug: string, uid: string) {
+  return doc(db, "projects", slug, "members", uid);
+}
+
+/** Writes the project and its creator's owner member document together. */
 export async function createProject(
   slug: string,
   data: ProjectCreateData,
+  owner: { uid: string; displayName: string },
 ): Promise<void> {
-  const parsed = zProjectCreateData.parse(data);
-  const memberIds = Object.keys(parsed.members);
-  await setDoc(projectRef(slug), {
-    ...zProjectData.parse({ ...parsed, slug, memberIds }),
+  const { title } = zProjectCreateData.parse(data);
+  const batch = writeBatch(db);
+  batch.set(projectRef(slug), {
+    ...zProjectData.parse({ title, slug, memberIds: [owner.uid] }),
     createdAt: serverTimestamp(),
+    deletedAt: null,
   });
+  batch.set(memberRef(slug, owner.uid), {
+    ...zProjectMemberData.parse({
+      uid: owner.uid,
+      role: "owner",
+      displayName: owner.displayName,
+      addedBy: owner.uid,
+    }),
+    addedAt: serverTimestamp(),
+  });
+  await batch.commit();
+}
+
+/**
+ * Soft-deletes the project, cancelling its pending invitations in the same
+ * batch so they leave invitees' inboxes. Its scores and members stay; nothing
+ * under a deleted project can be written any more (firestore.rules `alive`).
+ */
+export async function softDeleteProject(slug: string): Promise<void> {
+  const pending = await getProjectUserProjectInvitations(slug);
+  const batch = writeBatch(db);
+  batch.update(projectRef(slug), { deletedAt: serverTimestamp() });
+  for (const inv of pending) {
+    batch.update(invitationRef(slug, inv.toUserId), {
+      deletedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+  await batch.commit();
 }
 
 export async function updateProjectTitle(
@@ -213,29 +377,21 @@ export async function updateProjectTitle(
   await updateDoc(projectRef(slug), { title });
 }
 
-export async function addProjectMember(
+// -- Members --
+
+export async function getProjectMembers(
   slug: string,
-  uid: string,
-  role: UserProjectRole,
-): Promise<void> {
-  const batch = writeBatch(db);
-  batch.update(projectRef(slug), {
-    [`members.${uid}`]: role,
-    memberIds: arrayUnion(uid),
-  });
-  await batch.commit();
+): Promise<ProjectMemberDoc[]> {
+  const snap = await getDocs(collection(db, "projects", slug, "members"));
+  return snap.docs.map((d) => zProjectMemberDoc.parse(d.data()));
 }
 
-export async function removeProjectMember(
+export async function getMemberRole(
   slug: string,
   uid: string,
-): Promise<void> {
-  const batch = writeBatch(db);
-  batch.update(projectRef(slug), {
-    [`members.${uid}`]: deleteField(),
-    memberIds: arrayRemove(uid),
-  });
-  await batch.commit();
+): Promise<UserProjectRole | undefined> {
+  const snap = await getDoc(memberRef(slug, uid));
+  return snap.exists() ? zProjectMemberDoc.parse(snap.data()).role : undefined;
 }
 
 export async function updateProjectMemberRole(
@@ -243,25 +399,44 @@ export async function updateProjectMemberRole(
   uid: string,
   role: UserProjectRole,
 ): Promise<void> {
-  await updateDoc(projectRef(slug), { [`members.${uid}`]: role });
+  await updateDoc(memberRef(slug, uid), { role });
+}
+
+export async function removeProjectMember(
+  slug: string,
+  uid: string,
+): Promise<void> {
+  const batch = writeBatch(db);
+  batch.delete(memberRef(slug, uid));
+  batch.update(projectRef(slug), { memberIds: arrayRemove(uid) });
+  await batch.commit();
 }
 
 // -- Invitations --
 
-function invitationsCol() {
-  return collection(db, "invitations");
+// One invitation per (project, invitee), keyed by the invitee, so security
+// rules can find it when the invitee accepts.
+function invitationRef(projectId: string, toUserId: string) {
+  return doc(db, "projects", projectId, "invitations", toUserId);
 }
 
+function parseInvitation(snap: {
+  id: string;
+  data(): Record<string, unknown>;
+}): WithId<UserProjectInvitationDoc> {
+  return { id: snap.id, ...zUserProjectInvitationDoc.parse(snap.data()) };
+}
+
+/** Re-inviting overwrites any earlier invitation to the same user. */
 export async function createUserProjectInvitation(
   data: UserProjectInvitationData,
-): Promise<string> {
-  const ref = await addDoc(invitationsCol(), {
+): Promise<void> {
+  await setDoc(invitationRef(data.projectId, data.toUserId), {
     ...zUserProjectInvitationData.parse(data),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     deletedAt: null,
   });
-  return ref.id;
 }
 
 export async function getPendingUserProjectInvitations(
@@ -269,16 +444,13 @@ export async function getPendingUserProjectInvitations(
 ): Promise<WithId<UserProjectInvitationDoc>[]> {
   const snap = await getDocs(
     query(
-      invitationsCol(),
+      collectionGroup(db, "invitations"),
       where("toUserId", "==", toUserId),
       where("accepted", "==", null),
       where("deletedAt", "==", null),
     ),
   );
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...zUserProjectInvitationDoc.parse(d.data()),
-  }));
+  return snap.docs.map(parseInvitation);
 }
 
 export async function getProjectUserProjectInvitations(
@@ -286,65 +458,360 @@ export async function getProjectUserProjectInvitations(
 ): Promise<WithId<UserProjectInvitationDoc>[]> {
   const snap = await getDocs(
     query(
-      invitationsCol(),
-      where("projectId", "==", projectId),
+      collection(db, "projects", projectId, "invitations"),
       where("deletedAt", "==", null),
     ),
   );
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...zUserProjectInvitationDoc.parse(d.data()),
-  }));
+  return snap.docs.map(parseInvitation);
 }
 
-export async function acceptUserProjectInvitation(id: string): Promise<void> {
-  const snap = await getDoc(doc(invitationsCol(), id));
-  if (!snap.exists()) {
-    throw new Error(`Invitation ${id} not found`);
-  }
-  const inv = zUserProjectInvitationDoc.parse(snap.data());
-
+/**
+ * The invitee closes the invitation, creates their own member document and
+ * adds themselves to `memberIds` — one batch, so rules see all three at once.
+ */
+export async function acceptUserProjectInvitation(
+  invitation: UserProjectInvitationDoc,
+  displayName: string,
+): Promise<void> {
+  const { projectId, toUserId } = invitation;
   const batch = writeBatch(db);
-  batch.update(doc(invitationsCol(), id), {
+  batch.update(invitationRef(projectId, toUserId), {
     accepted: true,
     updatedAt: serverTimestamp(),
     deletedAt: serverTimestamp(),
   });
-  batch.update(projectRef(inv.projectId), {
-    [`members.${inv.toUserId}`]: inv.role,
-    memberIds: arrayUnion(inv.toUserId),
+  batch.set(memberRef(projectId, toUserId), {
+    ...zProjectMemberData.parse({
+      uid: toUserId,
+      role: invitation.role,
+      displayName,
+      addedBy: invitation.fromUserId,
+    }),
+    addedAt: serverTimestamp(),
   });
+  batch.update(projectRef(projectId), { memberIds: arrayUnion(toUserId) });
   await batch.commit();
 }
 
-export async function denyUserProjectInvitation(id: string): Promise<void> {
-  await updateDoc(doc(invitationsCol(), id), {
+export async function denyUserProjectInvitation(
+  projectId: string,
+  toUserId: string,
+): Promise<void> {
+  await updateDoc(invitationRef(projectId, toUserId), {
     accepted: false,
     updatedAt: serverTimestamp(),
     deletedAt: serverTimestamp(),
   });
 }
 
-export async function cancelUserProjectInvitation(id: string): Promise<void> {
-  await updateDoc(doc(invitationsCol(), id), {
+export async function cancelUserProjectInvitation(
+  projectId: string,
+  toUserId: string,
+): Promise<void> {
+  await updateDoc(invitationRef(projectId, toUserId), {
     deletedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 }
 
-export async function getUserByEmail(
-  email: string,
-): Promise<WithId<{ displayName: string; email: string }> | null> {
-  const snap = await getDocs(
-    query(collection(db, "users"), where("email", "==", email)),
-  );
-  if (snap.empty) {
-    return null;
+/** Mirrors `FindUserForInviteResult` in functions/src/findUserForInvite.ts. */
+export type FindUserForInviteResult =
+  | { status: "found"; uid: string; displayName: string }
+  | { status: "not-found" }
+  | { status: "ambiguous" };
+
+/**
+ * Looks a user up by display name. Runs server-side: `users` is not readable
+ * by other users, and display names live in Firebase Auth.
+ */
+export async function findUserForInvite(
+  projectId: string,
+  displayName: string,
+): Promise<FindUserForInviteResult> {
+  const call = httpsCallable<
+    { projectId: string; displayName: string },
+    FindUserForInviteResult
+  >(functions, "findUserForInvite");
+  return (await call({ projectId, displayName })).data;
+}
+
+// -- Songbooks --
+
+export const newSongbookRevisionId = (title: string): string =>
+  newRevisionId(revisionSlug(title, new Date()));
+
+/** Deterministic, so a slug is unique within its project. */
+export function songbookId(projectId: string, slug: string): string {
+  return `${projectId}~${slug}`;
+}
+
+function songbookRef(id: string) {
+  return doc(db, "songbooks", id);
+}
+
+function songbookRevisionRef(songbookId: string, revisionId: string) {
+  return doc(db, "songbooks", songbookId, "songbookRevisions", revisionId);
+}
+
+const isPermissionDenied = (err: unknown) =>
+  err instanceof FirebaseError && err.code === "permission-denied";
+
+/**
+ * `null` when it doesn't exist or the caller may not see it (unpublished and
+ * not a member) — the two are indistinguishable by design.
+ */
+export async function getSongbook(
+  projectId: string,
+  slug: string,
+): Promise<WithId<SongbookDoc> | null> {
+  try {
+    const snap = await getDoc(songbookRef(songbookId(projectId, slug)));
+    return snap.exists()
+      ? { id: snap.id, ...zSongbookDoc.parse(snap.data()) }
+      : null;
+  } catch (err) {
+    if (isPermissionDenied(err)) {
+      return null;
+    }
+    throw err;
   }
-  const d = snap.docs[0];
-  return {
-    id: d.id,
-    email: d.data().email as string,
-    displayName: d.data().displayName as string,
-  };
+}
+
+/**
+ * A project's live songbooks. Non-members must pass `publishedOnly`: the
+ * rules only let them query what they can read.
+ */
+export async function getProjectSongbooks(
+  projectId: string,
+  { publishedOnly }: { publishedOnly: boolean },
+): Promise<WithId<SongbookDoc>[]> {
+  const constraints = [
+    where("projectId", "==", projectId),
+    where("deletedAt", "==", null),
+    ...(publishedOnly ? [where("isPublished", "==", true)] : []),
+  ];
+  const snap = await getDocs(
+    query(collection(db, "songbooks"), ...constraints),
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...zSongbookDoc.parse(d.data()) }));
+}
+
+export async function getSongbookRevision(
+  songbookId: string,
+  revisionId: string,
+): Promise<WithId<SongbookRevisionDoc> | null> {
+  const snap = await getDoc(songbookRevisionRef(songbookId, revisionId));
+  return snap.exists()
+    ? { id: snap.id, ...zSongbookRevisionDoc.parse(snap.data()) }
+    : null;
+}
+
+/** Newest first. Members only. */
+export async function getSongbookRevisions(
+  songbookId: string,
+): Promise<WithId<SongbookRevisionDoc>[]> {
+  const snap = await getDocs(
+    collection(db, "songbooks", songbookId, "songbookRevisions"),
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...zSongbookRevisionDoc.parse(d.data()) }))
+    .sort((a, b) => b.revisionNumber - a.revisionNumber);
+}
+
+/** Creates the songbook with its first revision. */
+export async function createSongbook(input: {
+  projectId: string;
+  slug: string;
+  title: string;
+  content: SongbookRevisionContent;
+  createdBy: string;
+}): Promise<string> {
+  const id = songbookId(input.projectId, input.slug);
+  const revisionId = newSongbookRevisionId(input.title);
+  const batch = writeBatch(db);
+  batch.set(songbookRef(id), {
+    ...zSongbookData.parse({
+      title: input.title,
+      projectId: input.projectId,
+      slug: input.slug,
+      currentRevisionId: revisionId,
+      isPublished: false,
+    }),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    deletedAt: null,
+  });
+  batch.set(songbookRevisionRef(id, revisionId), {
+    ...zSongbookRevisionData.parse({
+      ...input.content,
+      revisionNumber: 1,
+      prevRevisionId: null,
+      createdBy: input.createdBy,
+      note: "",
+    }),
+    createdAt: serverTimestamp(),
+  });
+  await batch.commit();
+  return id;
+}
+
+/**
+ * Copy-on-write: a new revision on top of the current one, which it then
+ * replaces as `currentRevisionId` — in one transaction, so concurrent edits
+ * retry instead of overwriting (collab-flow §5.5).
+ */
+export async function createSongbookRevision(
+  id: string,
+  content: SongbookRevisionContent,
+  input: {
+    createdBy: string;
+    note: string;
+    // Known up front when files are uploaded under the revision's path first.
+    revisionId?: string;
+  },
+): Promise<string> {
+  return runTransaction(db, async (tx) => {
+    const songbookSnap = await tx.get(songbookRef(id));
+    const songbook = zSongbookDoc.parse(songbookSnap.data());
+    const prevSnap = await tx.get(
+      songbookRevisionRef(id, songbook.currentRevisionId),
+    );
+    const prev = zSongbookRevisionDoc.parse(prevSnap.data());
+    const revisionId =
+      input.revisionId ?? newSongbookRevisionId(songbook.title);
+    tx.set(songbookRevisionRef(id, revisionId), {
+      ...zSongbookRevisionData.parse({
+        ...content,
+        revisionNumber: prev.revisionNumber + 1,
+        prevRevisionId: songbook.currentRevisionId,
+        createdBy: input.createdBy,
+        note: input.note,
+      }),
+      createdAt: serverTimestamp(),
+    });
+    tx.update(songbookRef(id), {
+      currentRevisionId: revisionId,
+      updatedAt: serverTimestamp(),
+    });
+    return revisionId;
+  });
+}
+
+/** Owner-only: makes the current revision readable by everyone, or not. */
+export async function setSongbookPublished(
+  id: string,
+  isPublished: boolean,
+): Promise<void> {
+  await updateDoc(songbookRef(id), {
+    isPublished,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Owner-only. The songbook's scores are untouched (collab-flow §6). */
+export async function softDeleteSongbook(id: string): Promise<void> {
+  await updateDoc(songbookRef(id), {
+    deletedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// -- Review comments --
+
+function commentsRef(scoreId: string, revisionId: string) {
+  return collection(
+    db,
+    "scores",
+    scoreId,
+    SCORE_REVISIONS,
+    revisionId,
+    "comments",
+  );
+}
+
+/** Oldest first. Project members only. */
+export async function getComments(
+  scoreId: string,
+  revisionId: string,
+): Promise<WithId<ReviewCommentDoc>[]> {
+  const snap = await getDocs(commentsRef(scoreId, revisionId));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...zReviewCommentDoc.parse(d.data()) }))
+    .sort(
+      (a, b) =>
+        (a.createdAt?.toMillis() ?? Infinity) -
+        (b.createdAt?.toMillis() ?? Infinity),
+    );
+}
+
+/** Live (not deleted) comments on one version. Members only. */
+export async function countComments(
+  scoreId: string,
+  revisionId: string,
+): Promise<number> {
+  const snap = await getCountFromServer(
+    query(commentsRef(scoreId, revisionId), where("deletedAt", "==", null)),
+  );
+  return snap.data().count;
+}
+
+/** A new thread (`parentId: null`, optional anchor) or a reply. */
+export async function addComment(
+  scoreId: string,
+  revisionId: string,
+  input: {
+    authorId: string;
+    authorName: string;
+    body: string;
+    parentId: string | null;
+    anchor: CommentAnchor | null;
+  },
+): Promise<string> {
+  const ref = await addDoc(commentsRef(scoreId, revisionId), {
+    ...zReviewCommentData.parse(input),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    deletedAt: null,
+  });
+  return ref.id;
+}
+
+export async function editComment(
+  scoreId: string,
+  revisionId: string,
+  commentId: string,
+  body: string,
+): Promise<void> {
+  await updateDoc(doc(commentsRef(scoreId, revisionId), commentId), {
+    body: zReviewCommentData.shape.body.parse(body),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function softDeleteComment(
+  scoreId: string,
+  revisionId: string,
+  commentId: string,
+): Promise<void> {
+  await updateDoc(doc(commentsRef(scoreId, revisionId), commentId), {
+    deletedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Replaces a songbook entry's score with its fork, keeping the entry's place
+ * and number. Server-side: editors may only change pins, and rules cannot check
+ * a change to one list item (collab-flow §5.5).
+ */
+export async function swapSongbookEntryToFork(
+  songbookId: string,
+  scoreId: string,
+  forkId: string,
+): Promise<void> {
+  await httpsCallable(functions, "swapSongbookEntryToFork")({
+    songbookId,
+    scoreId,
+    forkId,
+  });
 }

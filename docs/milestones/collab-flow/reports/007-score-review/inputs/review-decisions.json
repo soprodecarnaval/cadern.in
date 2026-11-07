@@ -1,0 +1,51 @@
+{
+  "excludedProjects": [
+    "madeira-pirata"
+  ],
+  "excludedScoreIds": [
+    "garota-2025-tapaonaraba",
+    "garota-2026-tapaonaraba",
+    "garota-2025-pequenaeva",
+    "garota-2026-pequenaeva"
+  ],
+  "projectStyles": {
+    "zagateile": "axé",
+    "besourinhos-2024": "beatles"
+  },
+  "festaStyles": {
+    "baião": [
+      "ai que saudade doce",
+      "asa branca",
+      "assum preto",
+      "coração bobo",
+      "la belle de jour",
+      "sanfona sentida"
+    ],
+    "xote": [
+      "nosso xote",
+      "abri a porta",
+      "morena tropicana",
+      "cajuína",
+      "esperando na janela",
+      "espumas ao vento",
+      "morango do nordeste"
+    ],
+    "arrasta-pé": [
+      "o sanfoneiro só tocava isso",
+      "olha pro céu",
+      "pula a fogueira",
+      "festa do interior"
+    ]
+  },
+  "crossProjectReferenceSources": [
+    "garota-2025",
+    "na-tora-2025",
+    "queimando-2024"
+  ],
+  "manualStyles": {
+    "carnaval-bh-2023-ze-pereira": "marchinha",
+    "carnaval-bh-2023-parados-no-bailao": "funk",
+    "carnaval-bh-2023-eu-so-quero-um-xodo": "forró",
+    "carnaval-bh-2026-vaporbarato": "brazuka"
+  }
+}

@@ -1,0 +1,53 @@
+name: Firebase emulator tests
+
+on:
+  pull_request:
+    paths:
+      - "firestore.rules"
+      - "storage.rules"
+      - "firebase.json"
+      - "tests/rules/**"
+      - "tests/migrations/**"
+      - "scripts/collab/**"
+      - "scripts/migrations/**"
+      - "functions/**"
+      - "vitest.rules.config.ts"
+      - "vitest.migrations.config.ts"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+jobs:
+  test-emulators:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "npm"
+      # The Firestore and Storage emulators need Java 21+.
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Cache emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('package-lock.json') }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Install functions dependencies
+        run: npm ci --prefix functions
+      - name: Run rules tests
+        run: npm run test:rules
+      - name: Run functions tests
+        run: npm run test:functions
+      - name: Run migration tests
+        run: npm run test:migrations

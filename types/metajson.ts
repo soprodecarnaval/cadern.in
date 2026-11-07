@@ -18,8 +18,17 @@ export const zMetajsonPart = z.object({
 });
 export type MetajsonPart = z.infer<typeof zMetajsonPart>;
 
+/** The score and version a .mscz was uploaded as. */
+export const zScoreIdentity = z.object({
+  scoreId: z.string(),
+  revisionId: z.string(),
+});
+export type ScoreIdentity = z.infer<typeof zScoreIdentity>;
+
 export const zMetajson = z.object({
   version: z.literal(METAJSON_VERSION),
+  /** The identity found in the exported .mscz, when it carries one. */
+  source: zScoreIdentity.optional(),
   composer: z.string(),
   previousSource: z.string(),
   poet: z.string(),
@@ -30,7 +39,7 @@ export type Metajson = z.infer<typeof zMetajson>;
 /**
  * Pre-v2 sidecars carry only the metadata fields, leaving part names and
  * instruments to be guessed from filenames. Accepted on read so old exported
- * folders still upload; see scripts/backfillMetajson.ts.
+ * folders still upload; see scripts/maintenance/backfillMetajson.ts.
  */
 export const zLegacyMetajson = z.object({
   version: z.undefined(),

@@ -6,10 +6,10 @@ import {
   getPendingUserProjectInvitations,
   acceptUserProjectInvitation,
   denyUserProjectInvitation,
-  getProjectBySlug,
   type WithId,
 } from "../lib/db";
-import type { UserProjectInvitationDoc, ProjectDoc } from "../../types/docs";
+import { displayNameOf } from "../lib/displayName";
+import type { UserProjectInvitationDoc } from "../../types/docs";
 
 interface ProfileModalProps {
   show: boolean;
@@ -36,9 +36,6 @@ export function ProfileModal({
   const [invitations, setInvitations] = useState<
     WithId<UserProjectInvitationDoc>[]
   >([]);
-  const [inviteProjects, setInviteProjects] = useState<
-    Record<string, WithId<ProjectDoc> | null>
-  >({});
   const [inboxLoading, setInboxLoading] = useState(false);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
 
@@ -47,31 +44,22 @@ export function ProfileModal({
       return;
     }
     setInboxLoading(true);
-    void getPendingUserProjectInvitations(currentUser.uid).then(
-      async (invs) => {
-        setInvitations(invs);
-        const projectEntries = await Promise.all(
-          invs.map(async (inv) => [
-            inv.projectId,
-            await getProjectBySlug(inv.projectId),
-          ]),
-        );
-        setInviteProjects(
-          Object.fromEntries(projectEntries) as Record<
-            string,
-            WithId<ProjectDoc> | null
-          >,
-        );
-        setInboxLoading(false);
-      },
-    );
+    void getPendingUserProjectInvitations(currentUser.uid).then((invs) => {
+      setInvitations(invs);
+      setInboxLoading(false);
+    });
   }, [currentUser, tab]);
 
-  const handleAccept = async (id: string) => {
-    setRespondingTo(id);
+  // Invitations are keyed by invitee, so within one user's inbox the project
+  // is what tells them apart.
+  const respond = async (
+    inv: UserProjectInvitationDoc,
+    action: (inv: UserProjectInvitationDoc) => Promise<void>,
+  ) => {
+    setRespondingTo(inv.projectId);
     try {
-      await acceptUserProjectInvitation(id);
-      const updated = invitations.filter((inv) => inv.id !== id);
+      await action(inv);
+      const updated = invitations.filter((i) => i.projectId !== inv.projectId);
       setInvitations(updated);
       onInboxCountChange?.(updated.length);
     } finally {
@@ -79,17 +67,13 @@ export function ProfileModal({
     }
   };
 
-  const handleDeny = async (id: string) => {
-    setRespondingTo(id);
-    try {
-      await denyUserProjectInvitation(id);
-      const updated = invitations.filter((inv) => inv.id !== id);
-      setInvitations(updated);
-      onInboxCountChange?.(updated.length);
-    } finally {
-      setRespondingTo(null);
-    }
-  };
+  const handleAccept = (inv: UserProjectInvitationDoc) =>
+    respond(inv, (i) =>
+      acceptUserProjectInvitation(i, displayNameOf(currentUser!)),
+    );
+
+  const handleDeny = (inv: UserProjectInvitationDoc) =>
+    respond(inv, (i) => denyUserProjectInvitation(i.projectId, i.toUserId));
 
   const [displayName, setDisplayName] = useState(
     currentUser?.displayName ?? "",
@@ -280,36 +264,33 @@ export function ProfileModal({
               <Alert variant="info">Nenhum convite pendente.</Alert>
             ) : (
               <div className="d-flex flex-column gap-3">
-                {invitations.map((inv) => {
-                  const projectTitle =
-                    inviteProjects[inv.projectId]?.title ?? inv.projectId;
-                  return (
-                    <div key={inv.id} className="border rounded p-3">
-                      <p className="mb-1">
-                        Convite para <strong>{projectTitle}</strong> como{" "}
-                        <strong>{inv.role}</strong>
-                      </p>
-                      <div className="d-flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="success"
-                          disabled={respondingTo === inv.id}
-                          onClick={() => void handleAccept(inv.id)}
-                        >
-                          Aceitar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline-danger"
-                          disabled={respondingTo === inv.id}
-                          onClick={() => void handleDeny(inv.id)}
-                        >
-                          Recusar
-                        </Button>
-                      </div>
+                {invitations.map((inv) => (
+                  <div key={inv.projectId} className="border rounded p-3">
+                    <p className="mb-1">
+                      <strong>{inv.fromDisplayName}</strong> convidou você para{" "}
+                      <strong>{inv.projectTitle}</strong> como{" "}
+                      <strong>{inv.role}</strong>
+                    </p>
+                    <div className="d-flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="success"
+                        disabled={respondingTo === inv.projectId}
+                        onClick={() => void handleAccept(inv)}
+                      >
+                        Aceitar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline-danger"
+                        disabled={respondingTo === inv.projectId}
+                        onClick={() => void handleDeny(inv)}
+                      >
+                        Recusar
+                      </Button>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             )}
           </Tab>

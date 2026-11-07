@@ -3,28 +3,50 @@ rules_version='2'
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function projectData(projectId) {
-      return get(/databases/$(database)/documents/projects/$(projectId)).data;
+    function projectPath(projectId) {
+      return /databases/$(database)/documents/projects/$(projectId);
     }
 
+    function memberPath(projectId, uid) {
+      return /databases/$(database)/documents/projects/$(projectId)/members/$(uid);
+    }
+
+    function invitationPath(projectId, uid) {
+      return /databases/$(database)/documents/projects/$(projectId)/invitations/$(uid);
+    }
+
+    // Roles come from projects/{id}/members/{uid} (collab-flow §2.1.1). The
+    // legacy `members` map on the project doc grants nothing.
     function memberRole(projectId) {
-      return projectData(projectId).members[request.auth.uid];
+      return request.auth != null && exists(memberPath(projectId, request.auth.uid))
+        ? get(memberPath(projectId, request.auth.uid)).data.role
+        : 'none';
+    }
+
+    // A soft-deleted project freezes everything under it: no role grants any
+    // write, the owner's included, so restoring is a console operation
+    // (collab-flow §6, §8). `get` with a default tolerates projects created
+    // before `deletedAt` existed.
+    function alive(projectId) {
+      return get(projectPath(projectId)).data.get('deletedAt', null) == null;
     }
 
     function isReviewer(projectId) {
-      return memberRole(projectId) in ['owner', 'admin', 'editor', 'reviewer'];
+      return alive(projectId) &&
+        memberRole(projectId) in ['owner', 'admin', 'editor', 'reviewer'];
     }
 
     function isEditor(projectId) {
-      return memberRole(projectId) in ['owner', 'admin', 'editor'];
+      return alive(projectId) &&
+        memberRole(projectId) in ['owner', 'admin', 'editor'];
     }
 
     function isAdmin(projectId) {
-      return memberRole(projectId) in ['owner', 'admin'];
+      return alive(projectId) && memberRole(projectId) in ['owner', 'admin'];
     }
 
     function isOwner(projectId) {
-      return memberRole(projectId) == 'owner';
+      return alive(projectId) && memberRole(projectId) == 'owner';
     }
 
     match /users/{uid} {
@@ -34,36 +56,233 @@ service cloud.firestore {
 
     match /projects/{projectId} {
       allow read: if true;
+      // The creator's owner member doc is written in the same batch (see
+      // `members` below).
       allow create: if request.auth != null &&
-        // Creator must set themselves as owner
-        request.resource.data.members[request.auth.uid] == 'owner' &&
-        request.auth.uid in request.resource.data.memberIds;
+        request.resource.data.memberIds == [request.auth.uid] &&
+        request.resource.data.deletedAt == null &&
+        !('members' in request.resource.data);
       allow update: if request.auth != null && (
-        // Editors+ can update title and score-related fields
         (isEditor(projectId) && onlyUpdatingFields(['title'])) ||
-        // Admins+ can add/update members
-        (isAdmin(projectId) && onlyUpdatingFields(['members', 'memberIds', 'title'])) ||
-        // Owners can do anything
+        // memberIds is a query index only; admins keep it in sync with the
+        // member docs, and it grants nothing.
+        (isAdmin(projectId) && onlyUpdatingFields(['memberIds'])) ||
+        isJoiningByInvitation(projectId) ||
         isOwner(projectId)
       );
-      allow delete: if request.auth != null && isOwner(projectId);
+      // Soft deletes only: the owner sets `deletedAt` (update, above).
+      allow delete: if false;
+
+      // An invitee accepting adds exactly themselves to memberIds, in the
+      // batch that creates their member doc.
+      function isJoiningByInvitation(projectId) {
+        let before = resource.data.memberIds.toSet();
+        let after = request.resource.data.memberIds.toSet();
+        return onlyUpdatingFields(['memberIds']) &&
+          after.difference(before) == [request.auth.uid].toSet() &&
+          before.difference(after).size() == 0 &&
+          existsAfter(memberPath(projectId, request.auth.uid));
+      }
+
+      match /members/{uid} {
+        allow read: if true;
+        allow create: if request.auth != null &&
+          request.resource.data.uid == uid && (
+            isCreatorBootstrap(projectId, uid) ||
+            // Owners add anyone but themselves, never as a second owner.
+            (isOwner(projectId) && uid != request.auth.uid &&
+              request.resource.data.role != 'owner') ||
+            (isAdmin(projectId) &&
+              request.resource.data.role in ['editor', 'reviewer']) ||
+            isAcceptingInvitation(projectId, uid)
+          );
+        allow update: if request.auth != null &&
+          onlyUpdatingFields(['role']) && (
+            (isOwner(projectId) && uid != request.auth.uid &&
+              resource.data.role != 'owner' &&
+              request.resource.data.role != 'owner') ||
+            (isAdmin(projectId) &&
+              resource.data.role in ['editor', 'reviewer'] &&
+              request.resource.data.role in ['editor', 'reviewer'])
+          );
+        // Owners can't remove themselves: a project always keeps its owner.
+        allow delete: if request.auth != null &&
+          isOwner(projectId) && uid != request.auth.uid;
+
+        // The project and its creator's owner doc are written in one batch.
+        // `exists` sees the pre-batch state, `getAfter` the post-batch one.
+        function isCreatorBootstrap(projectId, uid) {
+          return uid == request.auth.uid &&
+            request.resource.data.role == 'owner' &&
+            !exists(projectPath(projectId)) &&
+            getAfter(projectPath(projectId)).data.memberIds == [uid];
+        }
+
+        // The invitee creates their own doc at exactly the invited role, in
+        // the batch that closes the invitation.
+        function isAcceptingInvitation(projectId, uid) {
+          let invitation = invitationPath(projectId, uid);
+          return uid == request.auth.uid &&
+            alive(projectId) &&
+            exists(invitation) &&
+            get(invitation).data.accepted == null &&
+            get(invitation).data.deletedAt == null &&
+            get(invitation).data.role == request.resource.data.role &&
+            getAfter(invitation).data.accepted == true;
+        }
+      }
+
+      // Keyed by invitee, so the accept rule above can find it.
+      match /invitations/{uid} {
+        allow read: if request.auth != null &&
+          (uid == request.auth.uid || isAdmin(projectId));
+        // (Re-)invite: overwrites any earlier invitation to the same user.
+        allow create, update: if request.auth != null &&
+          isAdmin(projectId) &&
+          request.resource.data.role in ['editor', 'reviewer'] &&
+          request.resource.data.toUserId == uid &&
+          request.resource.data.projectId == projectId &&
+          request.resource.data.fromUserId == request.auth.uid &&
+          request.resource.data.accepted == null &&
+          request.resource.data.deletedAt == null;
+        // Invitee accepts or declines, once.
+        allow update: if request.auth != null &&
+          uid == request.auth.uid &&
+          resource.data.accepted == null &&
+          request.resource.data.accepted is bool &&
+          onlyUpdatingFields(['accepted', 'updatedAt', 'deletedAt']);
+        // Admin cancels.
+        allow update: if request.auth != null &&
+          isAdmin(projectId) &&
+          onlyUpdatingFields(['deletedAt', 'updatedAt']);
+        allow delete: if false;
+      }
+    }
+
+    // "My pending invitations" across projects.
+    match /{path=**}/invitations/{invitationId} {
+      allow read: if request.auth != null &&
+        resource.data.toUserId == request.auth.uid;
+    }
+
+    function scorePath(scoreId) {
+      return /databases/$(database)/documents/scores/$(scoreId);
+    }
+
+    // A fork names its source's real project, which can't be its own.
+    function isValidFork(score) {
+      return !('forkedFrom' in score) || (
+        exists(scorePath(score.forkedFrom.scoreId)) &&
+        get(scorePath(score.forkedFrom.scoreId)).data.projectId == score.forkedFrom.projectId &&
+        score.forkedFrom.projectId != score.projectId
+      );
     }
 
     match /scores/{scoreId} {
       allow read: if true;
+      // Created before its first revision, so storage rules can resolve the
+      // project while files upload (collab-flow §5.1).
       allow create: if request.auth != null &&
-        isEditor(request.resource.data.projectId);
-      allow update: if request.auth != null &&
-        isEditor(resource.data.projectId);
-      allow delete: if request.auth != null &&
-        isAdmin(resource.data.projectId);
+        isEditor(request.resource.data.projectId) &&
+        request.resource.data.uploadedBy == request.auth.uid &&
+        request.resource.data.latestRevisionId == '' &&
+        request.resource.data.published == null &&
+        request.resource.data.deletedAt == null &&
+        isValidFork(request.resource.data);
+      allow update: if request.auth != null && (
+        // A new revision moves the pointer and refreshes the cached (and
+        // legacy) metadata, committed together with the revision itself.
+        (isEditor(resource.data.projectId) &&
+          onlyUpdatingFields(['latestRevisionId', 'cachedMetadata',
+                              'title', 'composer', 'sub', 'tags']) &&
+          existsAfter(/databases/$(database)/documents/scores/$(scoreId)/scoreRevisions/$(request.resource.data.latestRevisionId))) ||
+        // The creator abandons a score whose first upload failed.
+        (isEditor(resource.data.projectId) &&
+          resource.data.uploadedBy == request.auth.uid &&
+          resource.data.latestRevisionId == '' &&
+          onlyUpdatingFields(['deletedAt'])) ||
+        (isAdmin(resource.data.projectId) &&
+          onlyUpdatingFields(['metadataOverride'])) ||
+        (isOwner(resource.data.projectId) && onlyUpdatingFields(['deletedAt']))
+      );
+      // Soft deletes only (`deletedAt`, above).
+      allow delete: if false;
 
+      // Legacy copy, read by flag-off code until collab-flow M9. Same data as
+      // `scoreRevisions`, plus `isLatest`, the only field that ever changes.
       match /revisions/{revisionId} {
         allow read: if true;
         allow create: if request.auth != null &&
-          isEditor(get(/databases/$(database)/documents/scores/$(scoreId)).data.projectId);
+          isEditor(get(scorePath(scoreId)).data.projectId) &&
+          request.resource.data.uploadedBy == request.auth.uid;
         allow update: if request.auth != null &&
-          isEditor(get(/databases/$(database)/documents/scores/$(scoreId)).data.projectId);
+          isEditor(get(scorePath(scoreId)).data.projectId) &&
+          onlyUpdatingFields(['isLatest']);
+      }
+
+      // Immutable. Each revision links to the one it supersedes and becomes
+      // the score's latest in the same commit, so the chain can neither fork
+      // nor skip (collab-flow §2.3).
+      match /scoreRevisions/{revisionId} {
+        allow read: if true;
+        allow create: if request.auth != null &&
+          isEditor(get(scorePath(scoreId)).data.projectId) &&
+          request.resource.data.uploadedBy == request.auth.uid &&
+          extendsChain(scoreId, revisionId);
+        allow update, delete: if false;
+
+        function extendsChain(scoreId, revisionId) {
+          let latest = get(scorePath(scoreId)).data.latestRevisionId;
+          return (latest == ''
+              ? request.resource.data.prevRevisionId == null
+              : request.resource.data.prevRevisionId == latest) &&
+            getAfter(scorePath(scoreId)).data.latestRevisionId == revisionId;
+        }
+
+        // Review comments on this version (collab-flow §2.4): members only.
+        // Threads are one level deep; only roots may carry an anchor.
+        match /comments/{commentId} {
+          allow read: if isReviewer(get(scorePath(scoreId)).data.projectId);
+          allow create: if isReviewer(get(scorePath(scoreId)).data.projectId) &&
+            request.resource.data.keys().hasOnly(['authorId', 'authorName',
+              'body', 'parentId', 'anchor', 'createdAt', 'updatedAt',
+              'deletedAt']) &&
+            request.resource.data.authorId == request.auth.uid &&
+            validBody() &&
+            request.resource.data.deletedAt == null &&
+            (isValidRoot() || isValidReply(scoreId, revisionId));
+          // Authors edit or soft-delete their own; nobody else writes.
+          allow update: if request.auth != null &&
+            resource.data.authorId == request.auth.uid &&
+            isReviewer(get(scorePath(scoreId)).data.projectId) &&
+            onlyUpdatingFields(['body', 'updatedAt', 'deletedAt']) &&
+            validBody();
+          allow delete: if false;
+
+          function validBody() {
+            return request.resource.data.body is string &&
+              request.resource.data.body.size() > 0 &&
+              request.resource.data.body.size() <= 5000;
+          }
+
+          function isValidRoot() {
+            let anchor = request.resource.data.anchor;
+            return request.resource.data.parentId == null && (anchor == null || (
+              anchor.keys().hasOnly(['partName', 'page', 'x', 'y']) &&
+              anchor.partName is string &&
+              anchor.page is int && anchor.page >= 1 &&
+              anchor.x is number && anchor.x >= 0 && anchor.x <= 1 &&
+              anchor.y is number && anchor.y >= 0 && anchor.y <= 1));
+          }
+
+          function isValidReply(scoreId, revisionId) {
+            let parent = /databases/$(database)/documents/scores/$(scoreId)/scoreRevisions/$(revisionId)/comments/$(request.resource.data.parentId);
+            return request.resource.data.parentId is string &&
+              request.resource.data.anchor == null &&
+              exists(parent) &&
+              get(parent).data.parentId == null;
+          }
+        }
       }
     }
 
@@ -72,34 +291,74 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    match /songbooks/{songbookId} {
-      allow read: if resource.data.isPublished == true || (
-        request.auth != null &&
-        isReviewer(resource.data.projectId)
-      );
-      allow create: if request.auth != null &&
-        isEditor(request.resource.data.projectId);
-      allow update: if request.auth != null &&
-        isEditor(resource.data.projectId);
-      allow delete: if request.auth != null &&
-        isAdmin(resource.data.projectId);
+    function songbookPath(songbookId) {
+      return /databases/$(database)/documents/songbooks/$(songbookId);
     }
 
-    match /invitations/{invitationId} {
-      // Recipient can read their own invitations; admins can read project invitations
-      allow read: if request.auth != null && (
-        resource.data.toUserId == request.auth.uid ||
-        isAdmin(resource.data.projectId)
-      );
-      // Admins+ can send invitations
+    function songbookRevisionPath(songbookId, revisionId) {
+      return /databases/$(database)/documents/songbooks/$(songbookId)/songbookRevisions/$(revisionId);
+    }
+
+    // Changes always come with a new revision (collab-flow §5.5): the
+    // container only ever moves `currentRevisionId` to one committed alongside.
+    match /songbooks/{songbookId} {
+      allow read: if (resource.data.isPublished == true &&
+          resource.data.deletedAt == null) ||
+        isReviewer(resource.data.projectId);
+      // The id is `${projectId}~${slug}`, so slugs are unique per project.
       allow create: if request.auth != null &&
         isAdmin(request.resource.data.projectId) &&
-        request.resource.data.fromUserId == request.auth.uid;
-      // Recipient can accept/deny; admins can cancel (set deletedAt)
+        songbookId == request.resource.data.projectId + '~' + request.resource.data.slug &&
+        request.resource.data.isPublished == false &&
+        request.resource.data.deletedAt == null &&
+        existsAfter(songbookRevisionPath(songbookId, request.resource.data.currentRevisionId));
       allow update: if request.auth != null && (
-        resource.data.toUserId == request.auth.uid ||
-        isAdmin(resource.data.projectId)
+        (isEditor(resource.data.projectId) &&
+          onlyUpdatingFields(['currentRevisionId', 'updatedAt']) &&
+          existsAfter(songbookRevisionPath(songbookId, request.resource.data.currentRevisionId))) ||
+        (isAdmin(resource.data.projectId) &&
+          onlyUpdatingFields(['title', 'updatedAt'])) ||
+        (isOwner(resource.data.projectId) &&
+          onlyUpdatingFields(['isPublished', 'deletedAt', 'updatedAt']))
       );
+      allow delete: if false;
+
+      // Immutable. Non-members see only the revision a published songbook
+      // currently points at.
+      match /songbookRevisions/{revisionId} {
+        allow read: if isReviewer(get(songbookPath(songbookId)).data.projectId) || (
+          get(songbookPath(songbookId)).data.isPublished == true &&
+          get(songbookPath(songbookId)).data.deletedAt == null &&
+          get(songbookPath(songbookId)).data.currentRevisionId == revisionId
+        );
+        allow create: if request.auth != null &&
+          request.resource.data.createdBy == request.auth.uid &&
+          getAfter(songbookPath(songbookId)).data.currentRevisionId == revisionId &&
+          (isFirstRevision(songbookId) || extendsCurrent(songbookId));
+        allow update, delete: if false;
+
+        // Written in the batch that creates the songbook.
+        function isFirstRevision(songbookId) {
+          return !exists(songbookPath(songbookId)) &&
+            request.resource.data.prevRevisionId == null &&
+            request.resource.data.revisionNumber == 1 &&
+            isAdmin(getAfter(songbookPath(songbookId)).data.projectId);
+        }
+
+        // Builds on the current revision. Admins change anything; editors only
+        // re-pin, so `entries` and `covers` must match the current revision.
+        function extendsCurrent(songbookId) {
+          let songbook = get(songbookPath(songbookId)).data;
+          let current = get(songbookRevisionPath(songbookId, songbook.currentRevisionId)).data;
+          return request.resource.data.prevRevisionId == songbook.currentRevisionId &&
+            request.resource.data.revisionNumber == current.revisionNumber + 1 &&
+            (isAdmin(songbook.projectId) || (
+              isEditor(songbook.projectId) &&
+              request.resource.data.entries == current.entries &&
+              request.resource.data.covers == current.covers
+            ));
+        }
+      }
     }
 
     function onlyUpdatingFields(fields) {

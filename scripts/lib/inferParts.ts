@@ -7,7 +7,7 @@ import type { Warning } from "../../src/result";
  * before metajson v2 carried an explicit manifest.
  *
  * This is offline tooling now: the website refuses pre-v2 folders, and the only
- * remaining job is upgrading one in place via scripts/backfillMetajson.ts.
+ * remaining job is upgrading one in place via scripts/maintenance/backfillMetajson.ts.
  * Nothing new should be built on filename inference.
  */
 

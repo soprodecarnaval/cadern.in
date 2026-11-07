@@ -6,14 +6,13 @@ import {
   type UploadProgress,
 } from "../../lib/uploadScore";
 import {
-  getScore,
-  getScoreRevisions,
+  getMemberRole,
   getUserMemberProjects,
   type WithId,
 } from "../../lib/db";
 import type { ProjectDoc } from "../../../types/docs";
 import { isEditor } from "../../lib/roles";
-import { slugify } from "../../lib/slugify";
+import { resolveUploadTarget, type UploadTarget } from "../../lib/uploadTarget";
 import {
   parseUploadedFiles,
   validateParsedScore,
@@ -26,21 +25,23 @@ interface Props {
   user: User;
   /** Folder produced by the export step. */
   directory: string;
+  /** The user's own file, which gets the uploaded identity written back. */
+  msczPath: string;
 }
 
 type Status =
   | { kind: "idle" }
   | { kind: "reading" }
   | { kind: "uploading"; progress: UploadProgress }
-  | { kind: "done"; scoreId: string; revision: number }
+  | { kind: "done"; scoreId: string; localStamped: boolean }
   | { kind: "error"; message: string };
 
-export function UploadPanel({ user, directory }: Props) {
+export function UploadPanel({ user, directory, msczPath }: Props) {
   const [projects, setProjects] = useState<WithId<ProjectDoc>[]>([]);
   const [projectId, setProjectId] = useState("");
   const [parsed, setParsed] = useState<ParsedScore | null>(null);
   const [warnings, setWarnings] = useState<Warning[]>([]);
-  const [existingRevisions, setExistingRevisions] = useState<number | null>(null);
+  const [target, setTarget] = useState<UploadTarget | null>(null);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
   // Every user gets an Acervo, so the list is never empty and there is always
@@ -48,9 +49,11 @@ export function UploadPanel({ user, directory }: Props) {
   useEffect(() => {
     void (async () => {
       const defaultId = await getOrCreateDefaultProject(user);
-      const mine = (await getUserMemberProjects(user.uid)).filter((p) =>
-        isEditor(p, user.uid),
+      const memberOf = await getUserMemberProjects(user.uid);
+      const roles = await Promise.all(
+        memberOf.map((p) => getMemberRole(p.id, user.uid)),
       );
+      const mine = memberOf.filter((_, i) => isEditor(roles[i]));
       setProjects(mine);
       setProjectId(defaultId);
     })();
@@ -76,56 +79,69 @@ export function UploadPanel({ user, directory }: Props) {
     })();
   }, [directory]);
 
-  // uploadScore derives the id the same way; overwriting silently would
-  // destroy the existing revision, so surface it before anything is written.
-  const scoreId = parsed && projectId ? `${projectId}-${slugify(parsed.title)}` : "";
+  // What the upload will do is stated before anything is written.
+  const title = parsed?.title;
+  const source = parsed?.source;
   useEffect(() => {
-    void (async () => {
-      if (!scoreId) {
-        setExistingRevisions(null);
-        return;
-      }
-      const existing = await getScore(scoreId);
-      setExistingRevisions(
-        existing && !existing.deletedAt
-          ? (await getScoreRevisions(scoreId)).length
-          : null,
-      );
-    })();
-  }, [scoreId]);
+    let current = true;
+    setTarget(null);
+    if (title && projectId) {
+      void resolveUploadTarget({ title, source }, projectId).then((t) => {
+        if (current) {
+          setTarget(t);
+        }
+      });
+    }
+    return () => {
+      current = false;
+    };
+  }, [title, source, projectId]);
 
   const upload = useCallback(async () => {
-    if (!parsed || !projectId) {
+    if (!parsed || !projectId || !target) {
       return;
     }
     try {
-      const id = await uploadScore(
-        parsed,
-        projectId,
-        user,
-        (progress) => setStatus({ kind: "uploading", progress }),
-        existingRevisions !== null ? scoreId : undefined,
-      );
-      setStatus({
-        kind: "done",
-        scoreId: id,
-        revision: (existingRevisions ?? 0) + 1,
+      const identity = await uploadScore(parsed, projectId, target, user, {
+        onProgress: (progress) => setStatus({ kind: "uploading", progress }),
+        stampMscz: async (file, ids) =>
+          new File(
+            [
+              await window.api.stampMsczBytes(
+                new Uint8Array(await file.arrayBuffer()),
+                ids,
+              ),
+            ],
+            file.name,
+            { type: file.type },
+          ),
       });
+      // The upload already succeeded: a file MuseScore has locked only costs
+      // the next upload's identity, so it's reported, not fatal.
+      const localStamped = await window.api
+        .stampMsczFile(msczPath, identity)
+        .then(() => true)
+        .catch(() => false);
+      setStatus({ kind: "done", scoreId: identity.scoreId, localStamped });
     } catch (e) {
       setStatus({
         kind: "error",
         message: e instanceof Error ? e.message : String(e),
       });
     }
-  }, [parsed, projectId, user, existingRevisions, scoreId]);
+  }, [parsed, projectId, target, user, msczPath]);
 
   if (status.kind === "done") {
     return (
       <section className="upload-panel">
         <strong>Enviado para o cadern.in</strong>
-        <span>
-          {status.scoreId} — revisão {status.revision}
-        </span>
+        <span>{status.scoreId}</span>
+        {!status.localStamped && (
+          <p className="upload-notice">
+            Não foi possível atualizar o arquivo original. Feche-o no MuseScore;
+            sem isso, o próximo envio pode não reconhecer esta partitura.
+          </p>
+        )}
       </section>
     );
   }
@@ -157,10 +173,15 @@ export function UploadPanel({ user, directory }: Props) {
         </p>
       )}
 
-      {existingRevisions !== null && (
+      {target?.kind === "version" && (
         <p className="upload-notice">
-          Esta partitura já existe neste projeto com {existingRevisions}{" "}
-          revisão(ões). O envio criará a revisão {existingRevisions + 1}.
+          Versão nova de «{target.title}» neste projeto.
+        </p>
+      )}
+      {target?.kind === "fork" && (
+        <p className="upload-notice">
+          «{target.sourceTitle}» é do projeto {target.sourceProjectTitle}. O envio
+          cria uma derivação neste projeto.
         </p>
       )}
 
@@ -180,7 +201,11 @@ export function UploadPanel({ user, directory }: Props) {
 
       {status.kind === "error" && <p className="error">{status.message}</p>}
 
-      <button type="button" disabled={!parsed || busy} onClick={() => void upload()}>
+      <button
+        type="button"
+        disabled={!parsed || !target || busy}
+        onClick={() => void upload()}
+      >
         {status.kind === "uploading" ? "Enviando…" : "Enviar"}
       </button>
     </section>

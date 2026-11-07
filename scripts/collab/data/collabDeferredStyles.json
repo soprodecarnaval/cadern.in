@@ -1,0 +1,774 @@
+[
+  {
+    "scoreId": "carnaval-bh-2020-me-da-um-dinheiro-ai",
+    "title": "me dá um dinheiro aí"
+  },
+  {
+    "scoreId": "carnaval-bh-2020-voce-partiu-meu-coracao",
+    "title": "você partiu meu coração"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-a-roda",
+    "title": "a roda"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-abra-suas-asas",
+    "title": "abra suas asas"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-aflorou",
+    "title": "aflorou"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-alo-paixao",
+    "title": "alô paixao"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-amor-de-que",
+    "title": "amor de que"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-apesar-de-voce",
+    "title": "apesar de voce"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-apocalipse-do-amor",
+    "title": "apocalipse do amor"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-avisa-la-o-o-nossa-gente",
+    "title": "avisa la ô-ô (nossa gente)"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-baile-de-favela",
+    "title": "baile de favela"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-beija-flor",
+    "title": "beija flor"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-beijo-na-boca",
+    "title": "beijo na boca"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-bella-ciao",
+    "title": "bella ciao"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-blue-cigano",
+    "title": "blue cigano"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-cabeleira-do-ed-marte",
+    "title": "cabeleira do ed marte"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-canto-das-tres-racas",
+    "title": "canto das tres raças"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-canto-de-xango",
+    "title": "canto de xango"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-carrinho-de-mao",
+    "title": "carrinho de mao"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-chorando-se-foi",
+    "title": "chorando se foi"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-chuva-suor-e-cerveja",
+    "title": "chuva suor e cerveja"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-como-te-lhama",
+    "title": "como te lhama"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-cotidiano",
+    "title": "cotidiano"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-danca-do-vampiro",
+    "title": "danca do vampiro"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-din-din-din",
+    "title": "din din din"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-divino-maravilhoso",
+    "title": "divino maravilhoso"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-endereco-dos-bailes",
+    "title": "endereco dos bailes"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-eu-so-quero-um-xodo",
+    "title": "eu só quero um xodó"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-eu-sou-um-cordeirinho",
+    "title": "eu sou um cordeirinho"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-farao",
+    "title": "farao"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-fe-cega-faca-amolada",
+    "title": "fe cega faca amolada"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-feira-de-acari",
+    "title": "feira de acari"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-flores",
+    "title": "flores"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-glamurosa",
+    "title": "glamurosa"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-hino-do-elefante-de-olinda",
+    "title": "hino do elefante de olinda"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-juizo-final-o-sol",
+    "title": "juizo final (o sol)"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-lennon-and-mccartney",
+    "title": "lennon and mccartney"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-mamae-oxum",
+    "title": "mamãe oxum"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-maresia",
+    "title": "maresia"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-medley-technohell",
+    "title": "medley technohell"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-meu-jeito-de-amar",
+    "title": "meu jeito de amar"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-miss-beleza-universal",
+    "title": "miss beleza universal"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-nada-mal-terrasamba",
+    "title": "nada mal (terrasamba)"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-nago-nago",
+    "title": "nagô nagô"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-nao-e-mole-nao-guadaloupe",
+    "title": "não é mole não + guadaloupe"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-nao-enche",
+    "title": "nao enche"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-noiados-da-encruzilhada",
+    "title": "noiados da encruzilhada"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-noite-dos-mascarados",
+    "title": "noite dos mascarados"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-o-sol-nascera-a-sorrir",
+    "title": "o sol nascerá (a sorrir)"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-odara",
+    "title": "odara"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-oh-juliana",
+    "title": "oh juliana"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-olha-a-onda",
+    "title": "olha a onda"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-ombrim",
+    "title": "ombrim"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-paint-in-black",
+    "title": "paint in black"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-prefixo-de-verao",
+    "title": "prefixo de verão"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-rap-da-felicidade",
+    "title": "rap da felicidade"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-rap-das-armas",
+    "title": "rap das armas"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-requebra",
+    "title": "requebra"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-sassaricando",
+    "title": "sassaricando"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-se-ta-solteira",
+    "title": "se tá solteira"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-show-de-calouros-pedro-de-lara",
+    "title": "show de calouros (pedro de lara)"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-sou-cem-por-cento-voce",
+    "title": "sou cem por cento você"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-suite-dos-pescadores",
+    "title": "suíte dos pescadores"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-sujeito-de-sorte",
+    "title": "sujeito de sorte"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-ta-escrito",
+    "title": "tá escrito"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-ta-na-hora-do-jair",
+    "title": "ta na hora do jair"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-ta-rocheda",
+    "title": "ta rocheda"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-tapao-na-raba",
+    "title": "tapao na raba"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-tedio",
+    "title": "tedio"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-tem-nego-bebo-ai",
+    "title": "tem nego bêbo aí"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-toda-menina-baiana",
+    "title": "toda menina baiana"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-tu-ta-na-gaiola",
+    "title": "tú tá na gaiola"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-tudo-o-que-voce-podia-ser",
+    "title": "tudo o que voce podia ser"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-um-morto-muito-louco",
+    "title": "um morto muito louco"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-underere",
+    "title": "undererê"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-vaca-profana",
+    "title": "vaca profana"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-vai-malandra",
+    "title": "vai malandra"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-verdinha",
+    "title": "verdinha"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-vermelho-vermelhaco",
+    "title": "vermelho vermelhaço"
+  },
+  {
+    "scoreId": "carnaval-bh-2023-what-is-love",
+    "title": "what is love"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-abra-suas-asas",
+    "title": "abra suas asas"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-ameaca",
+    "title": "ameaça"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-aquelas-coisas",
+    "title": "aquelas coisas"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-beija-flor",
+    "title": "beija flor"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-cabeleira-do-ed-marte",
+    "title": "cabeleira do ed marte"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-canto-das-tres-racas",
+    "title": "canto das tres raças"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-chiquita-bacana",
+    "title": "chiquita bacana"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-chorando-se-foi",
+    "title": "chorando se foi"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-combatchy",
+    "title": "combatchy"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-cumbia-en-do-menor",
+    "title": "cumbia en do menor"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-descobridor-dos-sete-mares",
+    "title": "descobridor dos sete mares"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-ela-so-pensa-em-beijar",
+    "title": "ela só pensa em beijar"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-evidencias",
+    "title": "evidências"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-feira-de-acari",
+    "title": "feira de acari"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-glamurosa",
+    "title": "glamurosa"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-jesus-humilha-o-satanas",
+    "title": "jesus humilha o satanas"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-juizo-final-o-sol",
+    "title": "juizo final (o sol)"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-lovezinho",
+    "title": "lovezinho"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-me-apaixonei-pela-pessoa-errada",
+    "title": "me apaixonei pela pessoa errada"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-medley-technohell",
+    "title": "medley technohell"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-meu-jeito-de-amar",
+    "title": "meu jeito de amar"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-nada-mal-terrasamba",
+    "title": "nada mal (terrasamba)"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-nao-e-mole-nao-guadaloupe",
+    "title": "não é mole não + guadaloupe"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-o-sol-nascera-a-sorrir",
+    "title": "o sol nascerá (a sorrir)"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-prefixo-de-verao",
+    "title": "prefixo de verão"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-qui-nem-jilo",
+    "title": "qui nem jiló"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-se-ta-solteira",
+    "title": "se tá solteira"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-sonido-amazonico",
+    "title": "sonido amazonico"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-sou-cem-por-cento-voce",
+    "title": "sou cem por cento você"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-suite-dos-pescadores",
+    "title": "suíte dos pescadores"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-taj-mahal",
+    "title": "taj mahal"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-tem-nego-bebo-ai",
+    "title": "tem nego bêbo aí"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-tiro-ao-alvaro",
+    "title": "tiro ao alvaro"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-trem-das-onze",
+    "title": "trem das onze"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-tu-ta-na-gaiola",
+    "title": "tú tá na gaiola"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-vai-malandra",
+    "title": "vai malandra"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-verdinha",
+    "title": "verdinha"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-what-is-love",
+    "title": "what is love"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-xibom-bombom",
+    "title": "xibom bombom"
+  },
+  {
+    "scoreId": "carnaval-bh-2024-zona-de-perigo",
+    "title": "zona de perigo"
+  },
+  {
+    "scoreId": "carnaval-bh-2026-historiadeumagata",
+    "title": "história de uma gata"
+  },
+  {
+    "scoreId": "carnaval-bh-2026-vaporbarato",
+    "title": "vapor barato"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-abrasuasasas",
+    "title": "abra suas asas"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-annajulia",
+    "title": "anna julia"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-apocalipsedoamor",
+    "title": "apocalipse do amor"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-bailedefavela",
+    "title": "baile de favela"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-baileinolvidable",
+    "title": "baile inolvidable"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-basketcase",
+    "title": "basket case"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-batman",
+    "title": "batman"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-bellaciao",
+    "title": "bella ciao"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-californiadreamin",
+    "title": "california dreamin"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-cantodastresracas",
+    "title": "canto das tres raças"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-carinitoedarthvader",
+    "title": "carinito e darth vader"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-carrinhodemao",
+    "title": "carrinho de mao"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-chorandosefoi",
+    "title": "chorando se foi"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-chuvasuorcerveja",
+    "title": "chuva suor cerveja"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-comotelhama",
+    "title": "como te lhama"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-comoumaondanomar",
+    "title": "como uma onda no mar"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-cumbiaendomenor",
+    "title": "cumbia en do menor"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-derepentecalifornia",
+    "title": "de repente califórnia"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-divinomaravilhoso",
+    "title": "divino maravilhoso"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-dontlookbackinanger",
+    "title": "don't look back in anger"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-eladisseadeus",
+    "title": "ela disse adeus"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-enderecodosbailes",
+    "title": "endereco dos bailes"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-espumasaovento",
+    "title": "espumas ao vento"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-flinstones",
+    "title": "flinstones"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-fogoepaixao",
+    "title": "fogo e paixão"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-glamurosa",
+    "title": "glamurosa"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-hawaiifive-o",
+    "title": "hawaii five-o"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-hipsdontlie",
+    "title": "hips dont lie"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-indianajones",
+    "title": "indiana jones"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-jesushumilhaosatanas",
+    "title": "jesus humilha o satanas"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-lacanciocita",
+    "title": "la canciocita"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-lacancionita",
+    "title": "la cancionita"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-lancaperfume",
+    "title": "lança perfume"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-lovezinho",
+    "title": "lovezinho"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-luadesaojorge",
+    "title": "lua de sao jorge"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-medleytechnohell",
+    "title": "medley technohell"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-meupedacodepecado",
+    "title": "meu pedaço de pecado"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-morangodonordeste",
+    "title": "morango do nordeste"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-naoenche",
+    "title": "nao enche"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-noiadosdaencruzilhada",
+    "title": "noiados da encruzilhada"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-odara",
+    "title": "odara"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-olhaaonda",
+    "title": "olha a onda"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-paintinblack",
+    "title": "paint in black"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-panteracorderosa",
+    "title": "pantera cor de rosa"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-pinturaintima",
+    "title": "pintura íntima"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-pulpfiction",
+    "title": "pulp fiction"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-qualquercoisa",
+    "title": "qualquer coisa"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-ragatanga",
+    "title": "ragatanga"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-rapdasarmas",
+    "title": "rap das armas"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-rockybalboa",
+    "title": "rocky balboa"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-sanfonasentida",
+    "title": "sanfona sentida"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-sassaricando",
+    "title": "sassaricando"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-showdecalourospedrodelara",
+    "title": "show de calouros (pedro de lara)"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-soucemporcentovoce",
+    "title": "sou cem por cento você"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-sujeitodesorte",
+    "title": "sujeito de sorte"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-tajmahal",
+    "title": "taj mahal"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-tapaonaraba",
+    "title": "tapao na raba"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-tarocheda",
+    "title": "ta rocheda"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-tedio",
+    "title": "tedio"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-tenteoutravez",
+    "title": "tente outra vez"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-tudooquevocepodiaser",
+    "title": "tudo o que voce podia ser"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-umabrasileira",
+    "title": "uma brasileira"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-umgirassoldacordoseucabelo",
+    "title": "um girassol da cor do seu cabelo"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-underere",
+    "title": "undererê"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-vacaprofana",
+    "title": "vaca profana"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-vaidarpt",
+    "title": "vai dar pt"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-verdinha",
+    "title": "verdinha"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-vermelhovermelhaco",
+    "title": "vermelho vermelhaço"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-whatislove",
+    "title": "what is love"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-xibombombom",
+    "title": "xibom bombom"
+  },
+  {
+    "scoreId": "crack-carnaval-bh-2026-zonadeperigo",
+    "title": "zona de perigo"
+  }
+]

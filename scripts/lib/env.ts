@@ -1,4 +1,5 @@
 const REQUIRED_KEYS = [
+  "SCRIPTS_FIREBASE_PROJECT_ID",
   "SCRIPTS_FIREBASE_STORAGE_BUCKET",
   "SCRIPTS_CADERNIN_UID",
 ] as const;
@@ -22,6 +23,7 @@ const resolvedOptionals = Object.fromEntries(
   }),
 );
 
+export const FIREBASE_PROJECT_ID = process.env.SCRIPTS_FIREBASE_PROJECT_ID!;
 export const FIREBASE_STORAGE_BUCKET = process.env.SCRIPTS_FIREBASE_STORAGE_BUCKET!;
 export const CADERNIN_UID = process.env.SCRIPTS_CADERNIN_UID!;
 export const FIRESTORE_DATABASE_ID = resolvedOptionals.SCRIPTS_FIRESTORE_DATABASE_ID;

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getDownloadURL } from "firebase-admin/storage";
-import type { Migration, MigrationContext } from "../lib/migration";
+import type { Migration, MigrationContext } from "./lib/migration";
 
 const zPartData = z.object({
   name: z.string(),
