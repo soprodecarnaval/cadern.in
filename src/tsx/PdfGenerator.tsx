@@ -21,7 +21,7 @@ import type {
   SongbookScoreViewModel,
 } from "../../types/viewModels";
 import { isSongbookSection, getScoreRevision } from "../lib/songbook";
-import { createSongBook } from "../createSongBook";
+import { createSongBook, PdfAssetError } from "../createSongBook";
 
 const allInstruments: Instrument[] = [
   "trompete",
@@ -289,7 +289,9 @@ const PDFGenerator = ({ songBook, covers }: PdfGeneratorProps) => {
       console.log("Terminei");
     } catch (error) {
       console.error("Error generating PDFs:", error);
-      alert("Ocorreu um erro ao gerar os PDFs. Por favor, tente novamente.");
+      alert(error instanceof PdfAssetError
+        ? error.message
+        : "Ocorreu um erro ao gerar os PDFs. Por favor, tente novamente.");
     } finally {
       setIsGenerating(false);
       setCurrentInstrument(null);

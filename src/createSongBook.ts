@@ -1,7 +1,7 @@
 import SVGtoPDF from "svg-to-pdfkit";
 import type { Instrument } from "../types/instrument";
 import type { ScoreViewModel, PartViewModel } from "../types/viewModels";
-import { Section } from "./tsx/PdfGenerator";
+import type { Section } from "./tsx/PdfGenerator";
 import { REMOVED_SCORES_NOTE } from "./lib/songbook";
 
 interface PDFBlobStream extends NodeJS.WritableStream {
@@ -13,6 +13,18 @@ declare const window: Window &
     PDFDocument: new (options: PDFKit.PDFDocumentOptions) => PDFKit.PDFDocument;
     blobStream: () => PDFBlobStream;
   };
+
+type PdfTask = () => Promise<void>;
+
+export class PdfAssetError extends Error {
+  constructor(scoreTitle: string, partName: string, page: number, status?: number) {
+    super(
+      `Não foi possível carregar "${scoreTitle}" (${partName}, página ${page}` +
+      `${status ? `; HTTP ${status}` : ""}). Tente gerar novamente.`,
+    );
+    this.name = "PdfAssetError";
+  }
+}
 
 const cm2pt = 28.3465;
 
@@ -67,18 +79,18 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
   const { title, instrument, sections, coverImageUrl, carnivalMode } = opts;
   let pageNumber = 0;
-  const promises: Promise<void>[] = [];
+  const tasks: PdfTask[] = [];
 
   if (coverImageUrl != "") {
-    promises.push(drawImage(doc, coverImageUrl, 0));
+    tasks.push(imageTask(doc, coverImageUrl, 0));
     doc
       .fontSize(25)
       .text(title.toUpperCase(), 120, 100)
       .fontSize(22)
       .text(instrument.toUpperCase(), 120, 125);
   } else if (carnivalMode) {
-    promises.push(
-      drawImage(
+    tasks.push(
+      imageTask(
         doc,
         `/assets/capa_carnaval_2026_${instrument.replace(/[ ]/g, "_")}.png`,
         pageNumber,
@@ -112,7 +124,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
     doc.addPage();
     pageNumber++;
-    promises.push(drawImage(doc, "/assets/anti_assedio_2026_1.png", pageNumber));
+    tasks.push(imageTask(doc, "/assets/anti_assedio_2026_1.png", pageNumber));
 
     if (addBlank) {
       doc.addPage();
@@ -121,7 +133,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
     doc.addPage();
     pageNumber++;
-    promises.push(drawImage(doc, "/assets/anti_assedio_2026_2.png", pageNumber));
+    tasks.push(imageTask(doc, "/assets/anti_assedio_2026_2.png", pageNumber));
 
     if (addBlank) {
       doc.addPage();
@@ -130,7 +142,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
     doc.addPage();
     pageNumber++;
-    promises.push(drawImage(doc, "/assets/anti_assedio_2026_3.png", pageNumber));
+    tasks.push(imageTask(doc, "/assets/anti_assedio_2026_3.png", pageNumber));
 
     if (addBlank) {
       doc.addPage();
@@ -139,7 +151,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
     doc.addPage();
     pageNumber++;
-    promises.push(drawImage(doc, "/assets/anti_assedio_2026_4.png", pageNumber));
+    tasks.push(imageTask(doc, "/assets/anti_assedio_2026_4.png", pageNumber));
   }
 
   const { outline } = doc;
@@ -176,7 +188,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
             : `${songPageIndex}`;
           const destId = isMultiPart ? `${score.id}_${partIdx}` : score.id;
 
-          const [pageCount, addSongPagePromises] = await addSongPage(
+          const [pageCount, songTasks] = await addSongPage(
             doc,
             score,
             part,
@@ -189,14 +201,15 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
             opts,
           );
           pageNumber += pageCount;
-          promises.push(...addSongPagePromises);
+          tasks.push(...songTasks);
         }
       }
     }
   }
-  const nonNullPromises = promises.filter((promise) => promise !== null);
-  if (nonNullPromises.length > 0) {
-    await Promise.all(nonNullPromises);
+  if (tasks.length > 0) {
+    // Start queued assets after layout, attaching rejection handlers before
+    // yielding so an early failure cannot become an unhandled rejection.
+    await Promise.all(tasks.map((task) => task()));
     download(doc, createFileName(opts));
   }
 };
@@ -218,9 +231,19 @@ const download = (doc: PDFKit.PDFDocument, file_name: string) => {
   doc.end();
 };
 
-const drawSvg = async (doc: PDFKit.PDFDocument, url: string, page: number): Promise<void> => {
+const drawSvg = async (
+  doc: PDFKit.PDFDocument,
+  url: string,
+  page: number,
+  scoreTitle: string,
+  partName: string,
+  svgPage: number,
+): Promise<void> => {
   try {
     const resp = await fetch(url);
+    if (!resp.ok) {
+      throw new PdfAssetError(scoreTitle, partName, svgPage, resp.status);
+    }
     const svg = await resp.text();
     doc.switchToPage(page);
     const width = 17.17 * cm2pt;
@@ -230,8 +253,11 @@ const drawSvg = async (doc: PDFKit.PDFDocument, url: string, page: number): Prom
       height: height,
       preserveAspectRatio: `${width}x${height}`,
     });
-  } catch (e) {
-    console.error(e);
+  } catch (error) {
+    if (error instanceof PdfAssetError) {
+      throw error;
+    }
+    throw new PdfAssetError(scoreTitle, partName, svgPage);
   }
 };
 
@@ -273,6 +299,9 @@ const drawImage = (
   });
 };
 
+const imageTask = (doc: PDFKit.PDFDocument, url: string, page: number): PdfTask =>
+  () => drawImage(doc, url, page);
+
 const createDoc = () => {
   return new window.PDFDocument({
     layout: "landscape",
@@ -306,9 +335,9 @@ const addSongPage = async (
     backSheetPageNumber,
     debugBoundingBoxes,
   }: CreateSongBookOptions,
-): Promise<[number, Promise<void>[]]> => {
+): Promise<[number, PdfTask[]]> => {
   const initialPage = currentPage;
-  const promises: Promise<void>[] = [];
+  const tasks: PdfTask[] = [];
 
   // Title with optional part label
   const displayTitle = partLabel
@@ -531,12 +560,13 @@ const addSongPage = async (
         },
       );
 
-    promises.push(
-      drawSvg(doc, part.svg[svgPageIdx], currentPage),
-    );
+    const page = currentPage;
+    tasks.push(() => drawSvg(
+      doc, part.svg[svgPageIdx], page, score.title, part.name, svgPageIdx + 1,
+    ));
   }
 
-  return [currentPage - initialPage, promises];
+  return [currentPage - initialPage, tasks];
 };
 
 const createFileName = ({ title, instrument }: CreateSongBookOptions) => {
