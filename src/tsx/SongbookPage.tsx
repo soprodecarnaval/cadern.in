@@ -21,6 +21,8 @@ import {
   getAllProjects,
   getAllScores,
   getProjectScores,
+  getProjectSongbooks,
+  getMemberRole,
   getScoreRevision,
   getSongbook,
   getSongbookRevision,
@@ -46,6 +48,7 @@ import {
   songbookScore,
   toSongbookRevisionContent,
 } from "../lib/songbook";
+import { groupScoreVersions, scoreSongbookSources } from "../lib/scorePicker";
 import { loadPinnedScores } from "../lib/songbookScores";
 import { useMemberRole } from "../lib/useMemberRole";
 import { toScoreViewModel } from "../lib/viewModels";
@@ -566,14 +569,14 @@ interface PickerScore {
   title: string;
   composer: string;
   projectTitle: string;
+  songbooks: string[];
 }
 
 // Enough to find a score by filtering; rendering every score would be slow.
 const PICKER_LIMIT = 100;
 
 /**
- * Every live score of every live project, the project's own first. A score
- * enters the songbook at its latest version.
+ * Linked scores are grouped per project, with the newest descendant first.
  */
 function ScorePicker({
   projectId,
@@ -584,30 +587,63 @@ function ScorePicker({
   selected: SongbookItemViewModel[];
   onAdd: (score: ScoreViewModel) => void;
 }) {
-  const [scores, setScores] = useState<PickerScore[] | null>(null);
+  const { currentUser } = useAuth();
+  const uid = currentUser?.uid;
+  const [groups, setGroups] = useState<PickerScore[][] | null>(null);
+  const [error, setError] = useState("");
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+    setGroups(null);
+    setError("");
     void (async () => {
       const [docs, projects] = await Promise.all([
         getAllScores(),
         getAllProjects(),
       ]);
+      const books = (
+        await Promise.all(projects.map(async (project) => {
+          const role = uid ? await getMemberRole(project.id, uid) : undefined;
+          return getProjectSongbooks(project.id, {
+            publishedOnly: !isReviewer(role),
+          });
+        }))
+      ).flat();
+      const sources = scoreSongbookSources(
+        await Promise.all(books.map(async (book) => ({
+          book,
+          revision: await getSongbookRevision(book.id, book.currentRevisionId),
+        }))),
+      );
       const titles = new Map(projects.map((p) => [p.id, p.title]));
       const live = docs.flatMap((doc): PickerScore[] => {
         const projectTitle = titles.get(doc.projectId);
         return projectTitle && !doc.deletedAt && doc.latestRevisionId
-          ? [{ doc, ...resolveScoreMetadata(doc), projectTitle }]
+          ? [{
+            doc,
+            ...resolveScoreMetadata(doc),
+            projectTitle,
+            songbooks: sources.get(doc.id) ?? [],
+          }]
           : [];
       });
       const own = (s: PickerScore) => (s.doc.projectId === projectId ? 0 : 1);
-      setScores(
-        live.sort(
-          (a, b) => own(a) - own(b) || a.title.localeCompare(b.title, "pt-BR"),
-        ),
+      const grouped = groupScoreVersions(live, docs).sort(
+        (a, b) => own(a[0]) - own(b[0]) || a[0].title.localeCompare(b[0].title, "pt-BR"),
       );
-    })();
-  }, [projectId]);
+      if (!cancelled) {
+        setGroups(grouped);
+      }
+    })().catch(() => {
+      if (!cancelled) {
+        setError("Não foi possível carregar as músicas. Tente novamente.");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, uid]);
 
   const selectedIds = useMemo(
     () =>
@@ -619,21 +655,20 @@ function ScorePicker({
 
   const handleAdd = async ({ doc, projectTitle }: PickerScore) => {
     const revision = await getScoreRevision(doc.id, doc.latestRevisionId);
-    if (revision) {
-      onAdd(toScoreViewModel(doc, revision, projectTitle));
-    }
+    if (!revision) {throw new Error("Score revision not found");}
+    onAdd(toScoreViewModel(doc, revision, projectTitle));
   };
 
-  if (!scores) {
-    return <Spinner animation="border" size="sm" />;
-  }
+  if (error) {return <Alert variant="danger">{error}</Alert>;}
+  if (!groups) {return <Spinner animation="border" size="sm" />;}
   const needle = filter.trim().toLocaleLowerCase("pt-BR");
-  const matches = scores.filter(
-    (s) =>
-      !selectedIds.has(s.doc.id) &&
-      `${s.title} ${s.composer} ${s.projectTitle}`
+  const matches = groups.filter((versions) =>
+    versions.some((s) => !selectedIds.has(s.doc.id)) &&
+    versions.some((s) =>
+      `${s.title} ${s.composer} ${s.projectTitle} ${s.songbooks.join(" ")}`
         .toLocaleLowerCase("pt-BR")
         .includes(needle),
+    ),
   );
 
   return (
@@ -642,30 +677,16 @@ function ScorePicker({
         className="mb-2"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
-        placeholder="Filtrar por título, compositor ou projeto"
+        placeholder="Filtrar por título, compositor, projeto ou caderninho"
       />
       <ListGroup style={{ maxHeight: 480, overflowY: "auto" }}>
-        {matches.slice(0, PICKER_LIMIT).map((s) => (
-          <ListGroup.Item
-            key={s.doc.id}
-            className="d-flex justify-content-between align-items-center"
-          >
-            <span>
-              {s.title} <span className="text-muted">{s.composer}</span>
-              {s.doc.projectId !== projectId && (
-                <Badge bg="light" text="dark" className="ms-2">
-                  {s.projectTitle}
-                </Badge>
-              )}
-            </span>
-            <Button
-              size="sm"
-              variant="outline-primary"
-              onClick={() => void handleAdd(s)}
-            >
-              Adicionar
-            </Button>
-          </ListGroup.Item>
+        {matches.slice(0, PICKER_LIMIT).map((versions) => (
+          <ScorePickerVersions
+            key={versions[0].doc.id}
+            versions={versions}
+            selectedIds={selectedIds}
+            onAdd={handleAdd}
+          />
         ))}
       </ListGroup>
       {matches.length > PICKER_LIMIT && (
@@ -675,6 +696,63 @@ function ScorePicker({
         </p>
       )}
     </>
+  );
+}
+
+function ScorePickerVersions({ versions, selectedIds, onAdd }: {
+  versions: PickerScore[];
+  selectedIds: Set<string>;
+  onAdd: (score: PickerScore) => Promise<void>;
+}) {
+  const [chosenId, setChosenId] = useState(versions[0].doc.id);
+  const [expanded, setExpanded] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState("");
+  const chosen = versions.find((s) => s.doc.id === chosenId) ?? versions[0];
+  const add = async () => {
+    setAdding(true);
+    setError("");
+    try {
+      await onAdd(chosen);
+    } catch {
+      setError("Não foi possível adicionar a música. Tente novamente.");
+    } finally {
+      setAdding(false);
+    }
+  };
+  return (
+    <ListGroup.Item>
+      <div className="d-flex justify-content-between align-items-center gap-2">
+        <div>
+          {chosen.title} <span className="text-muted">{chosen.composer}</span>
+          <Badge bg="light" text="dark" className="ms-2">{chosen.projectTitle}</Badge>
+          <div className="text-muted small">
+            {chosen.songbooks.join(", ") || "Sem caderninho"}
+          </div>
+        </div>
+        <Button size="sm" variant="outline-primary"
+          disabled={adding || selectedIds.has(chosen.doc.id)}
+          onClick={() => void add()}>
+          {selectedIds.has(chosen.doc.id) ? "Adicionada" : adding ? "Adicionando…" : "Adicionar"}
+        </Button>
+      </div>
+      {versions.length > 1 && <>
+        <Button size="sm" variant="link" className="px-0"
+          aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+          {expanded ? "Ocultar versões" : `Outras versões (${versions.length - 1})`}
+        </Button>
+        {expanded && <Form.Select
+          aria-label={`Versão de ${versions[0].title} (${chosen.projectTitle})`}
+          value={chosen.doc.id} onChange={(e) => setChosenId(e.target.value)}>
+          {versions.map((s, index) => <option key={s.doc.id} value={s.doc.id}>
+            {s.title} — {s.songbooks.join(", ") || "Sem caderninho"}
+            {index === 0 ? " · mais recente" : ""}
+            {selectedIds.has(s.doc.id) ? " · adicionada" : ""}
+          </option>)}
+        </Form.Select>}
+      </>}
+      {error && <Alert variant="danger" className="mt-2 mb-0">{error}</Alert>}
+    </ListGroup.Item>
   );
 }
 
