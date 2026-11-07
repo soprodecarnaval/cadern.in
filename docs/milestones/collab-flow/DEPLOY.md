@@ -246,3 +246,29 @@ write to the legacy paths. Preserve explicit legacy-file coverage in rules tests
 The Storage emulator did not enforce the live service's two-document limit.
 The rules test suite includes a lookup-budget guard; verify score and cover
 uploads against staging after rule changes.
+
+
+## Storage CORS for PDF generation
+
+PDF generation fetches SVG parts and loads covers into a canvas across origins.
+Storage rules and valid download tokens do not supply the browser's CORS headers.
+Both deployment workflows apply the tracked `cors.json` to their environment's
+bucket before Firebase deployment. The deployment account needs
+`storage.buckets.update` (included in its Storage Admin role).
+
+For a direct staging setup or repair, run from the repository root:
+
+```sh
+gcloud storage buckets update gs://cadernin-staging.firebasestorage.app \
+  --project cadernin-staging --cors-file=cors.json
+```
+
+The tracked policy permits cross-origin `GET` requests from any origin, matching
+the existing public-read assets. It changes neither Storage permissions nor
+object contents. Cloning objects does not copy bucket CORS settings; run the
+setup when provisioning a destination bucket, even if its data was cloned.
+
+Verify an SVG and a cover using an `Origin` header for both
+`https://cadernin-staging.firebaseapp.com` and
+`https://cadernin-staging.web.app`. HTTP 200 alone is insufficient: the response
+must include `Access-Control-Allow-Origin` matching the origin or `*`.
