@@ -2,20 +2,8 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    function scoreProjectId(scoreId) {
-      return firestore.get(
-        /databases/(default)/documents/scores/$(scoreId)
-      ).data.projectId;
-    }
-
-    function songbookProjectId(songbookId) {
-      return firestore.get(
-        /databases/(default)/documents/songbooks/$(songbookId)
-      ).data.projectId;
-    }
-
-    // Roles come from projects/{id}/members/{uid}, and a soft-deleted project
-    // grants nothing — as in firestore.rules.
+    // Storage permits only two Firestore document reads per request. The
+    // project namespace avoids a third lookup through a score or songbook.
     function memberRole(projectId) {
       return firestore.get(
         /databases/(default)/documents/projects/$(projectId)
@@ -26,27 +14,28 @@ service firebase.storage {
         : 'none';
     }
 
-    // Any project editor may write its score assets — not only whoever
-    // uploaded the first revision.
-    function canWriteScore(scoreId) {
-      return memberRole(scoreProjectId(scoreId)) in ['owner', 'admin', 'editor'];
-    }
-
-    match /scores/{scoreId}/{allPaths=**} {
-      allow read: if true;
-
-      // uploadScore creates scores/{scoreId} before writing any file, so this
-      // always has a document to resolve the project from — including on a
-      // first upload.
-      allow write: if request.auth != null && canWriteScore(scoreId);
-    }
-
-    // Songbook covers (collab-flow §2.7): admins of the songbook's project,
-    // like the revisions that reference them.
-    match /songbooks/{songbookId}/{allPaths=**} {
+    match /projects/{projectId}/scores/{scoreId}/{revisionId}/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null &&
-        memberRole(songbookProjectId(songbookId)) in ['owner', 'admin'];
+        memberRole(projectId) in ['owner', 'admin', 'editor'];
+    }
+
+    match /projects/{projectId}/songbooks/{songbookId}/{revisionId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        memberRole(projectId) in ['owner', 'admin'];
+    }
+
+    // Existing revisions keep their paths and download URLs. New client
+    // uploads must use a project namespace, including new versions of these.
+    match /scores/{scoreId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /songbooks/{songbookId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
     }
 
     match /avatars/{userId} {

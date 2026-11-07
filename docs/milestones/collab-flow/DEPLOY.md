@@ -222,3 +222,27 @@ and legacy fields remain until M9. Rollback requires the pre-migration backup.
   "CADERNIN sole owner of every project" and converting each project's map.
   No migration deletes scores or blobs either way.
 - Later slices (002–007) append their steps here as they are merged.
+
+
+## Storage upload authorization
+
+New score assets and covers use project-scoped object paths:
+
+- `projects/{projectId}/scores/{scoreId}/{revisionId}/…`
+- `projects/{projectId}/songbooks/{songbookId}/{revisionId}/covers/…`
+
+Storage rules read only the project and the current user's membership, staying
+within the live service's two-Firestore-document limit. Scores allow owners,
+admins and editors to write; covers allow owners and admins. Deleted projects
+freeze both. Entity existence is enforced when saving Firestore records, not
+when uploading files into the authorized project's Storage namespace.
+
+Existing `scores/…` and `songbooks/…` objects remain readable at their original
+paths and URLs; client writes to those prefixes are denied. No asset migration
+is required. Deploy Storage rules and the updated staging website together.
+Export-app upload users also need a rebuilt export app: older versions still
+write to the legacy paths. Preserve explicit legacy-file coverage in rules tests.
+
+The Storage emulator did not enforce the live service's two-document limit.
+The rules test suite includes a lookup-budget guard; verify score and cover
+uploads against staging after rule changes.

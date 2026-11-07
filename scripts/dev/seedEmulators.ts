@@ -16,6 +16,7 @@ import { getDownloadURL, getStorage } from "firebase-admin/storage";
 import type { Instrument } from "../../types/instrument";
 import { revisionSlug } from "../../src/lib/revisionId";
 import { slugify } from "../../src/lib/slugify";
+import { scoreRevisionStoragePath } from "../../src/lib/storagePaths";
 
 const PROJECT_ID = "demo-cadernin";
 const BUCKET = `${PROJECT_ID}.appspot.com`;
@@ -207,7 +208,7 @@ async function main(): Promise<void> {
         const date = new Date(Date.UTC(2026, 0, n, 12));
         const slug = revisionSlug(score.title, date);
         const revisionId = `${slug}-dev${n}`;
-        const base = `scores/${scoreId}/${revisionId}`;
+        const base = scoreRevisionStoragePath(project.id, scoreId, revisionId);
         const parts = await Promise.all(
           PARTS.map(async (part) => ({
             name: part.name,
