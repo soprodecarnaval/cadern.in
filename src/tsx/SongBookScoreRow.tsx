@@ -1,8 +1,6 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   BsTriangleFill,
-  BsArrowDown,
-  BsArrowUp,
   BsFillTrashFill,
   BsPencilFill,
 } from "react-icons/bs";
@@ -17,7 +15,8 @@ import "../css/ScoreRow.css";
 interface Props {
   handleDelete: (score: ScoreViewModel, checked: boolean) => void;
   handlePlayingSong: (score: PlayingPartViewModel) => void;
-  handleMove: (steps: number) => void;
+  dragHandle: ReactNode;
+  hideDetails: boolean;
   handleUpdateScore: (update: ScoreEditUpdate) => void;
   score: ScoreViewModel;
 }
@@ -26,7 +25,8 @@ const SongBookScoreRow = ({
   handleDelete,
   score,
   handlePlayingSong,
-  handleMove,
+  dragHandle,
+  hideDetails,
   handleUpdateScore,
 }: Props) => {
   const [expand, setExpand] = useState(false);
@@ -39,21 +39,17 @@ const SongBookScoreRow = ({
   return (
     <>
       <tr className="cursor">
+        <td className="songbook-handle-cell">{dragHandle}</td>
         <td className="action-cell">
-          <BsTriangleFill
-            onClick={() => setExpand(!expand)}
-            className={`arrow ${expand ? "arrow-down" : "arrow-right"}`}
-          />
+          <button type="button" className="btn btn-link p-0"
+            aria-label={`${expand ? "Recolher" : "Expandir"} ${score.title}`}
+            aria-expanded={expand} onClick={() => setExpand(!expand)}>
+            <BsTriangleFill aria-hidden="true" className={`arrow ${expand ? "arrow-down" : "arrow-right"}`} />
+          </button>
         </td>
         <td onClick={() => setExpand(!expand)}>{score.title}</td>
         <td onClick={() => setExpand(!expand)}>{score.projectTitle}</td>
         <td onClick={() => setExpand(!expand)}>{score.tags.join(", ")}</td>
-        <td>
-          <BsArrowUp onClick={() => handleMove(-1)} />
-        </td>
-        <td>
-          <BsArrowDown onClick={() => handleMove(1)} />
-        </td>
         <td>
           <BsFillTrashFill onClick={onDelete} />
         </td>
@@ -75,11 +71,11 @@ const SongBookScoreRow = ({
           )}
         </td>
       </tr>
-      {expand && (
+      {expand && !hideDetails && (
         <>
           <tr className="metadata-row">
             <td></td>
-            <td colSpan={9} className="text-muted" style={{ fontSize: "0.85em" }}>
+            <td colSpan={8} className="text-muted" style={{ fontSize: "0.85em" }}>
               <strong>Compositor:</strong> {score.composer || "(vazio)"} |{" "}
               <strong>Subtitulo:</strong> {score.sub || "(vazio)"} |{" "}
               <strong>Partes:</strong> {score.latestRevision.parts.length}
@@ -91,6 +87,7 @@ const SongBookScoreRow = ({
               part={part}
               handlePlayingSong={handlePlayingSong}
               key={part.name}
+              colSpan={9}
             />
           ))}
         </>

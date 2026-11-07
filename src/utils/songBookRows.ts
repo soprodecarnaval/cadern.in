@@ -8,20 +8,6 @@ import {
   carnivalSectionOrder,
 } from "./sort";
 
-// moves a row up or down, swapping it with the row in the new position
-export const moveRow = (rows: SongbookItemViewModel[], idx: number, steps: number) => {
-  if (idx + steps < 0 || idx + steps >= rows.length) {
-    return rows;
-  }
-
-  // move the rows
-  const newRows = [...rows];
-  const temp = newRows[idx];
-  newRows[idx] = newRows[idx + steps];
-  newRows[idx + steps] = temp;
-  return newRows;
-};
-
 export const deleteRow = (rows: SongbookItemViewModel[], idx: number) => {
   const newRows = [...rows];
   newRows.splice(idx, 1);
