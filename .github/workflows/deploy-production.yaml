@@ -49,11 +49,17 @@ jobs:
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
       - name: Migrate schema
         env:
           SCRIPTS_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
           SCRIPTS_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
           SCRIPTS_CADERNIN_UID: ${{ vars.CADERNIN_UID }}
         run: npx tsx scripts/migrations/migrate.ts --execute --forward-only
+      - name: Configure Storage CORS
+        run: >-
+          gcloud storage buckets update "gs://$VITE_FIREBASE_STORAGE_BUCKET"
+          --project "$VITE_FIREBASE_PROJECT_ID" --cors-file=cors.json
       - name: Deploy
         run: npx firebase-tools deploy --project "$VITE_FIREBASE_PROJECT_ID"
