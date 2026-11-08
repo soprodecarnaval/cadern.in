@@ -1,4 +1,4 @@
-# 008 — Songbook drag-and-drop editor
+# 000 — Songbook drag-and-drop editor
 
 Status: completed
 
@@ -6,9 +6,9 @@ Status: completed
 
 Replace reorder arrow buttons in the shared songbook editor with drag handles.
 This applies to saved songbooks and the homepage builder. Dragging a section
-moves only its header; songs remain in their existing relative order. Songs and
-headers may be inserted between any rows, including before the first header or
-into an empty section.
+moves its header and every following score up to the next section. Section blocks
+drop between complete sections, preserving leading unsectioned scores. Individual
+songs may still be inserted between any rows or into an empty section.
 
 Support pointer, touch and keyboard operation, a compact drag preview, insertion
 feedback, auto-scroll, and cancel/outside-drop restoring the original order.
@@ -33,7 +33,7 @@ reordering. No backend, permission or schema changes.
 
 ## Validation
 
-Test forward/backward insertion, header-only movement, canceled/invalid drops,
+Test forward/backward insertion, whole-section movement, canceled/invalid drops,
 stable IDs, duplicate headings, and revision-pin preservation. Run relevant unit
 checks, TypeScript, lint and builds. Browser-check pointer/touch/keyboard moves,
 expanded state, cancellation, builder persistence and saved-songbook save/reload.
@@ -44,7 +44,7 @@ Started from updated `main` at `718685ef`. PRs #403/#404 were merged into former
 stack parents and their changes were not yet on main when this feature started.
 Those changes are not folded into this branch implicitly.
 
-## Implementation and verification
+## Initial header-only implementation and verification
 
 Implemented on `feat/songbook-drag-and-drop`. The sortable layer uses dnd-kit
 0.5.3 with its optimistic DOM reordering disabled: React owns the item order and
@@ -75,3 +75,37 @@ Checks passed:
 No schema migration is required. The browser profile and local test services
 were removed/stopped after verification. Implementation completed following human
 review; direct staging Hosting deployment and its smoke check follow PR creation.
+
+
+## Section-block variant
+
+Approved change on the same branch: section drags carry the header and all its
+scores. The pure move helper preserves entry objects, pins and internal order,
+rejects drops inside the carried range and prevents splitting destination
+sections. Empty/duplicate-titled sections remain independent. Leading unsectioned
+scores stay outside moved sections; the first legal section position follows them.
+
+Pointer drops snap to boundaries of complete sections. Keyboard section moves
+skip score targets. The preview announces the song count, carried rows highlight
+together, and Save/Cancel and individual-song dragging retain their behavior.
+
+Section keyboard navigation uses a dedicated sensor that selects and scrolls to
+adjacent headers, including headers outside the viewport. Individual songs retain
+the default keyboard sensor behavior.
+
+Validation passed for the revised behavior:
+
+- 219 unit tests, including whole-block ordering, empty/duplicate sections,
+  unsectioned prefixes, invalid drops and preservation of entry metadata.
+- TypeScript, targeted lint, staging website and export-app builds.
+- Fifteen Chrome checks against demo emulators: keyboard movement to an offscreen
+  section, focus/expansion, Escape, pointer/touch, self/outside drops, individual
+  songs, empty/duplicate sections, pins, save/reload, Cancel, builder persistence
+  and Portuguese accessible instructions. No console errors.
+
+Direct staging Hosting deployment passed. Both staging domains serve the exact
+built bundle. Five live checks in an unsaved draft confirmed preview/payload,
+whole-block movement and cancellation; the saved revision remained unchanged and
+there were no browser errors. Temporary browser profiles were removed.
+
+Implementation reviewed and approved for completion, commit and PR update.

@@ -3,7 +3,7 @@ import { BsGripVertical } from "react-icons/bs";
 
 export function DragHandle({ label, handleRef, onPrepareDrag }: {
   label: string;
-  onPrepareDrag: () => void;
+  onPrepareDrag: (keyboard: boolean) => void;
   handleRef: Ref<HTMLButtonElement>;
 }) {
   return (
@@ -14,11 +14,11 @@ export function DragHandle({ label, handleRef, onPrepareDrag }: {
       aria-label={label}
       title="Arraste para mover; use Espaço e as setas pelo teclado"
       onPointerDownCapture={(event) => {
-        if (event.button === 0) { onPrepareDrag(); }
+        if (event.button === 0) { onPrepareDrag(false); }
       }}
       onKeyDownCapture={(event) => {
         if (!event.defaultPrevented && (event.key === " " || event.key === "Enter")) {
-          onPrepareDrag();
+          onPrepareDrag(true);
         }
       }}
       onClick={(event) => event.stopPropagation()}

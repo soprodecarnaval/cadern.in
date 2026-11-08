@@ -80,3 +80,16 @@
   text-overflow: ellipsis;
   pointer-events: none;
 }
+
+
+.songbook-row-carried > tr > * {
+  background-color: #edf4ff;
+}
+
+.songbook-row-carried:not(.songbook-row-dragging) > tr > * {
+  opacity: 0.55;
+}
+
+.songbook-row-carried > tr > :first-child {
+  box-shadow: inset 3px 0 #0d6efd;
+}

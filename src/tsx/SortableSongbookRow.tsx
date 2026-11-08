@@ -8,14 +8,17 @@ import { SongBookSectionRow } from "./SongBookSectionRow";
 import type { ScoreEditUpdate } from "./ScoreEditModal";
 
 export function SortableSongbookRow({ entry, index, sorting, insertion, emptySection, onDelete,
-  onSelect, onPlay, onUpdate, onPrepareDrag }: {
+  onSelect, onPlay, onUpdate, onPrepareDrag, carried, disableDrop, scoreCount }: {
   entry: SongbookEditorItem;
   index: number;
   sorting: boolean;
   emptySection: boolean;
   insertion?: "before" | "after";
   onDelete: () => void;
-  onPrepareDrag: () => void;
+  onPrepareDrag: (keyboard: boolean) => void;
+  carried: boolean;
+  disableDrop: boolean;
+  scoreCount: number;
   onSelect: (score: ScoreViewModel, checked: boolean) => void;
   onPlay: (part: PlayingPartViewModel) => void;
   onUpdate: (update: ScoreEditUpdate) => void;
@@ -23,11 +26,13 @@ export function SortableSongbookRow({ entry, index, sorting, insertion, emptySec
   const { ref, handleRef, isDragSource } = useSortable({
     id: entry.id,
     index,
+    data: { itemType: entry.item.type },
+    disabled: { droppable: disableDrop },
     plugins: (defaults) => defaults.filter((plugin) => plugin !== OptimisticSortingPlugin),
   });
   const { item } = entry;
   const section = item.type === "section";
-  const label = section ? `Mover seção ${item.title || "sem título"}` : `Mover música ${item.score.title}`;
+  const label = section ? `Mover seção ${item.title || "sem título"} (${scoreCount} música${scoreCount === 1 ? "" : "s"})` : `Mover música ${item.score.title}`;
   const handle = <DragHandle label={label} handleRef={handleRef} onPrepareDrag={onPrepareDrag} />;
   return (
     <tbody ref={ref} data-editor-id={entry.id} data-item-type={item.type}
@@ -35,6 +40,7 @@ export function SortableSongbookRow({ entry, index, sorting, insertion, emptySec
         "songbook-row-group",
         index % 2 === 0 ? "songbook-row-striped" : "",
         isDragSource ? "songbook-row-dragging" : "",
+        carried ? "songbook-row-carried" : "",
         insertion ? `songbook-insert-${insertion}` : "",
       ].join(" ")}>
       {section ? (
