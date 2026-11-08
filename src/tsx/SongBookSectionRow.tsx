@@ -1,37 +1,24 @@
-import { BsArrowDown, BsArrowUp, BsFillTrashFill } from "react-icons/bs";
-
-import "../css/ScoreRow.css";
+import type { ReactNode } from "react";
+import { BsFillTrashFill } from "react-icons/bs";
 
 interface SongBookSectionRowProps {
   handleDelete: () => void;
-  handleMove: (steps: number) => void;
+  dragHandle: ReactNode;
   title: string;
 }
 
-const SongBookSectionTableRow = ({
-  handleDelete,
-  handleMove,
-  title,
-}: SongBookSectionRowProps) => {
+export function SongBookSectionRow({ handleDelete, dragHandle, title }: SongBookSectionRowProps) {
   return (
-    <>
-      <tr className="section-title">
-        <td>{title}</td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td>
-          <BsArrowUp onClick={() => handleMove(-1)} />
-        </td>
-        <td>
-          <BsArrowDown onClick={() => handleMove(1)} />
-        </td>
-        <td>
-          <BsFillTrashFill onClick={handleDelete} />
-        </td>
-      </tr>
-    </>
+    <tr className="section-title">
+      <td className="songbook-handle-cell">{dragHandle}</td>
+      <th scope="row" colSpan={4}>{title || "Seção sem título"}</th>
+      <td>
+        <button type="button" className="btn btn-link p-0" onClick={handleDelete}
+          aria-label={`Remover seção ${title || "sem título"}`}>
+          <BsFillTrashFill aria-hidden="true" />
+        </button>
+      </td>
+      <td colSpan={3} />
+    </tr>
   );
-};
-
-export { SongBookSectionTableRow as SongBookSectionRow };
+}

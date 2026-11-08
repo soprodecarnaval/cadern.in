@@ -11,12 +11,13 @@ import { SiMidi } from "react-icons/si";
 import { midiPlayer, playMidiPart } from "../utils/playMidi";
 
 interface PartItemProps {
+  colSpan?: number;
   score: ScoreViewModel;
   part: PartViewModel;
   handlePlayingSong: (info: PlayingPartViewModel) => void;
 }
 
-const PartItem = ({ score, part, handlePlayingSong }: PartItemProps) => {
+const PartItem = ({ score, part, handlePlayingSong, colSpan = 4 }: PartItemProps) => {
   const [showPreview, setShowPreview] = useState(false);
 
   const hasSvg = part.svg.length > 0;
@@ -33,7 +34,7 @@ const PartItem = ({ score, part, handlePlayingSong }: PartItemProps) => {
   return (
     hasSvg && (
       <tr className="instrument cursor">
-        <td colSpan={4}>
+        <td colSpan={colSpan}>
           <Row>
             <Col sm={4} onClick={() => setShowPreview(true)}>
               <AiFillEye className="visualize-icon" />

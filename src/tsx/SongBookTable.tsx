@@ -5,7 +5,6 @@ import {
   ListGroup,
   OverlayTrigger,
   Row,
-  Table,
   Tooltip,
 } from "react-bootstrap";
 
@@ -13,15 +12,13 @@ import type { ScoreViewModel, PlayingPartViewModel, SongbookItemViewModel, Songb
 import { isSongbookSection, songbookSection } from "../lib/songbook";
 import type { ScoreEditUpdate } from "./ScoreEditModal";
 
-import { SongBookScoreRow } from "./SongBookScoreRow";
-import { SongBookSectionRow } from "./SongBookSectionRow";
+import { SongbookSortableList } from "./SongbookSortableList";
 import { ChangeEvent, useState } from "react";
 import { Sort } from "./Sort";
 import {
   deleteRow,
   generateCarnivalSections,
   generateSectionsByStyle,
-  moveRow,
   sortSongsWithinSections,
 } from "../utils/songBookRows";
 import { carnivalSectionOrder } from "../utils/sort";
@@ -32,11 +29,6 @@ interface SongBookTableProps {
   handleSelect: (song: ScoreViewModel, checked: boolean) => void;
   onSetPlayingPart: (song: PlayingPartViewModel) => void;
   handleClear: () => void;
-}
-
-interface SongBookTableRowProps {
-  row: SongbookItemViewModel;
-  idx: number;
 }
 
 const SongBookTable = ({
@@ -90,30 +82,8 @@ const SongBookTable = ({
         })),
       },
     };
-    newRows[idx] = { type: "score", score: updatedScore };
+    newRows[idx] = { ...existing, score: updatedScore };
     setRows(newRows);
-  };
-
-  const SongBookTableRow = ({ row, idx }: SongBookTableRowProps) => {
-    if (isSongbookSection(row)) {
-      return (
-        <SongBookSectionRow
-          handleDelete={() => setRows(deleteRow(rows, idx))}
-          handleMove={(steps) => setRows(moveRow(rows, idx, steps))}
-          title={row.title}
-        />
-      );
-    }
-    return (
-      <SongBookScoreRow
-        score={row.score}
-        handleDelete={handleSelect}
-        key={row.score.id}
-        handlePlayingSong={handlePlayingSong}
-        handleMove={(steps) => setRows(moveRow(rows, idx, steps))}
-        handleUpdateScore={(update) => handleUpdateScore(idx, update)}
-      />
-    );
   };
 
   return (
@@ -142,21 +112,9 @@ const SongBookTable = ({
           </Form>
         </Col>
       </Row>
-      <Table striped borderless hover>
-        <thead>
-          <tr>
-            <th></th>
-            <th>Título</th>
-            <th>Arranjo</th>
-            <th>Tags</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, idx) => (
-            <SongBookTableRow key={idx} row={row} idx={idx} />
-          ))}
-        </tbody>
-      </Table>
+      <SongbookSortableList rows={rows} onReorder={setRows}
+        onDelete={(index) => setRows(deleteRow(rows, index))}
+        onSelect={handleSelect} onPlay={handlePlayingSong} onUpdate={handleUpdateScore} />
       <Row className="mt-4">
         <Col>
           <p>
