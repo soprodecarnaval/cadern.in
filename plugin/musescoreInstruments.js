@@ -23,6 +23,8 @@ function getGriffFn(instrumentId, part, oneChar, breakLine, dynamicTrombone) {
             };
         }
         break;
+    case "sousaphone":
+    case "bb-sousaphone":
     case "bb-tuba":
         griffFn = oneChar ? Fingerings.griff_tuba_onechar : Fingerings.griff_tuba;
         transposition = 2;

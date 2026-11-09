@@ -312,6 +312,23 @@ MuseScore {
             }
         }
 
+        CheckBox {
+            id: debugModeCheckbox
+            checked: debugMode
+            onCheckedChanged: {
+                debugMode = checked;
+                if (!checked)
+                    logText = "";
+            }
+
+            Text {
+                text: t("debugMode")
+                color: textColor
+                anchors.left: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
         Text {
             text: "v" + version
             color: textColor
@@ -341,7 +358,8 @@ MuseScore {
 
     function log(msg) {
         if (verbose) {
-            logText += msg + "\n";
+            if (debugMode)
+                logText += msg + "\n";
             console.log(msg);
         }
     }
