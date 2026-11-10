@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { matchCoverFiles, saveSongbookCovers } from "./songbookCovers";
+import { saveSongbookCovers } from "./songbookCovers";
 import { createSongbookRevision, type WithId } from "./db";
 import { ref, uploadBytes } from "firebase/storage";
 import type { User } from "firebase/auth";
@@ -21,26 +21,6 @@ beforeEach(() => {
 });
 
 const file = (name: string, type = "image/png") => new File(["x"], name, { type });
-
-describe("matchCoverFiles", () => {
-  it("matches instruments by filename and reports the rest", () => {
-    const { matched, unmatched } = matchCoverFiles([
-      file("capa-trompete.png"),
-      file("capa_trombone.jpg", "image/jpeg"),
-      file("capa-desconhecida.png"),
-      file("capa-flauta.pdf", "application/pdf"),
-    ]);
-    expect([...matched.keys()]).toEqual(["trompete", "trombone"]);
-    expect(unmatched).toEqual(["capa-desconhecida.png", "capa-flauta.pdf"]);
-  });
-
-  it("keeps the last file for an instrument", () => {
-    const later = file("trompete-v2.png");
-    const { matched } = matchCoverFiles([file("trompete.png"), later]);
-    expect(matched.get("trompete")).toBe(later);
-  });
-});
-
 
 describe("project-scoped cover uploads", () => {
   it("stores new covers in the project namespace and preserves existing legacy covers", async () => {

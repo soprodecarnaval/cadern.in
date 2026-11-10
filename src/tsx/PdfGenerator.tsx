@@ -12,35 +12,18 @@ import {
 import React, { useState, useMemo } from "react";
 import type { Instrument } from "../../types/instrument";
 import type {
-  ScoreViewModel,
-  ScoreRevisionViewModel,
-} from "../../types/viewModels";
-import type {
   SongbookViewModel,
   SongbookItemViewModel,
   SongbookScoreViewModel,
 } from "../../types/viewModels";
-import { isSongbookSection, getScoreRevision } from "../lib/songbook";
-import { createSongBook } from "../createSongBook";
-
-const allInstruments: Instrument[] = [
-  "trompete",
-  "trombone",
-  "sax alto",
-  "sax soprano",
-  "sax tenor",
-  "sax baritono",
-  "flauta",
-  "tuba",
-  "tuba eb",
-  "bombardino",
-  "clarinete",
-];
-
-// Fallback instrument mapping: when primary instrument is missing, use fallback
-const instrumentFallbacks: Partial<Record<Instrument, Instrument>> = {
-  clarinete: "sax tenor",
-};
+import { isSongbookSection } from "../lib/songbook";
+import {
+  buildSongbookSections,
+  computeInstrumentStats,
+  instrumentFallbacks,
+  type Section,
+} from "../lib/pdfGeneration";
+import { generateSongbookPdfs } from "../lib/generateSongbookPdfs";
 
 interface PdfGeneratorProps {
   songBook: SongbookViewModel;
@@ -49,18 +32,7 @@ interface PdfGeneratorProps {
   covers?: Partial<Record<Instrument, string>>;
 }
 
-export type SectionScore = {
-  score: ScoreViewModel;
-  revision: ScoreRevisionViewModel;
-  index: number;
-  // Soft-deleted since the revision was saved: keeps its number, gets no pages.
-  deleted?: boolean;
-};
-
-export type Section = {
-  title: string;
-  scores: SectionScore[];
-};
+export type { Section };
 
 const CarnivalModeTooltip = (
   <Tooltip id="carnival-tooltip">
@@ -136,39 +108,7 @@ const PDFGenerator = ({ songBook, covers }: PdfGeneratorProps) => {
   };
 
   // Calculate which instruments have parts and how many scores have each
-  const instrumentStats = useMemo(() => {
-    const totalScores = scores.length;
-    const stats: {
-      instrument: Instrument;
-      count: number;
-      countWithFallback?: number;
-    }[] = [];
-
-    for (const instrument of allInstruments) {
-      const count = scores.filter((s) =>
-        getScoreRevision(s).parts?.some((p) => p.instrument === instrument),
-      ).length;
-
-      const fallback = instrumentFallbacks[instrument];
-      let countWithFallback: number | undefined;
-      if (fallback) {
-        countWithFallback = scores.filter(
-          (s) =>
-            getScoreRevision(s).parts?.some((p) => p.instrument === instrument) ||
-            getScoreRevision(s).parts?.some((p) => p.instrument === fallback),
-        ).length;
-      }
-
-      if (count > 0 || (countWithFallback && countWithFallback > 0)) {
-        stats.push({ instrument, count, countWithFallback });
-      }
-    }
-
-    // Sort by count descending
-    stats.sort((a, b) => b.count - a.count);
-
-    return { stats, totalScores };
-  }, [scores]);
+  const instrumentStats = useMemo(() => computeInstrumentStats(scores), [scores]);
 
   const toggleInstrument = (instrument: Instrument) => {
     setSelectedInstruments((prev) => {
@@ -231,60 +171,25 @@ const PDFGenerator = ({ songBook, covers }: PdfGeneratorProps) => {
     setCurrentInstrument(null);
 
     try {
-      // Create sections from songbook rows
-      const sections: Section[] = [];
-      let currentSection: Section | null = null;
-
-      for (const item of songBook.items) {
-        if (isSongbookSection(item)) {
-          currentSection = {
-            title: item.title,
-            scores: [],
-          };
-          sections.push(currentSection);
-        } else {
-          if (!currentSection) {
-            currentSection = {
-              title: "",
-              scores: [],
-            };
-            sections.push(currentSection);
-          }
-          currentSection.scores.push({
-            score: item.score,
-            revision: getScoreRevision(item),
-            index: item.index,
-            deleted: item.deleted,
-          });
-        }
-      }
-
+      const sections = buildSongbookSections(songBook.items);
       const instrumentsToGenerate = Array.from(selectedInstruments);
-      const totalInstruments = instrumentsToGenerate.length;
 
-      for (let i = 0; i < instrumentsToGenerate.length; i++) {
-        const instrument = instrumentsToGenerate[i];
-        setCurrentInstrument(instrument);
-
-        await createSongBook({
-          instrument,
-          fallbackInstrument: enabledFallbacks.has(instrument)
-            ? instrumentFallbacks[instrument]
-            : undefined,
-          sections,
-          title: songbookTitle,
-          coverImageUrl:
-            (covers ? covers[instrument] : instrumentCovers.get(instrument)) ||
-            "",
-          carnivalMode,
-          backSheetPageNumber,
-          antiAssedioPages,
-          debugBoundingBoxes,
-        });
-
-        setCompletedInstruments((prev) => new Set(prev).add(instrument));
-        setGenerationProgress(((i + 1) / totalInstruments) * 100);
-      }
+      await generateSongbookPdfs({
+        sections,
+        instruments: instrumentsToGenerate,
+        title: songbookTitle,
+        covers: covers ?? Object.fromEntries(instrumentCovers),
+        fallbackInstruments: enabledFallbacks,
+        carnivalMode,
+        backSheetPageNumber,
+        antiAssedioPages,
+        debugBoundingBoxes,
+        onStart: setCurrentInstrument,
+        onComplete: (instrument, index, total) => {
+          setCompletedInstruments((prev) => new Set(prev).add(instrument));
+          setGenerationProgress(((index + 1) / total) * 100);
+        },
+      });
 
       console.log("Terminei");
     } catch (error) {

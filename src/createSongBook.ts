@@ -1,7 +1,7 @@
 import SVGtoPDF from "svg-to-pdfkit";
 import type { Instrument } from "../types/instrument";
 import type { ScoreViewModel, PartViewModel } from "../types/viewModels";
-import { Section } from "./tsx/PdfGenerator";
+import { Section } from "./lib/pdfGeneration";
 import { REMOVED_SCORES_NOTE } from "./lib/songbook";
 
 interface PDFBlobStream extends NodeJS.WritableStream {
