@@ -60,6 +60,12 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
   const [restored, setRestored] = useState(false);
   const [showSave, setShowSave] = useState(false);
   const songbookRef = useRef<SongbookSortableListHandle>(null);
+  // The library's active sort, so a removed/cleared score can be reinserted
+  // at its correct position instead of just prepended.
+  const [sort, setSort] = useState<{
+    column: SortColumn;
+    direction: SortDirection;
+  } | null>(null);
 
   // The list survives reloads and logins: restored once the collection is
   // loaded, then stored on every change.
@@ -96,7 +102,16 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
     checked ? handleAddScore(song) : handleRemoveScore(song);
   };
 
+  const restoreToLibrary = (scores: ScoreViewModel[]) =>
+    sort
+      ? sortByColumn([...results, ...scores], sort.column, sort.direction).slice()
+      : [...scores, ...results];
+
   const clearSelected = () => {
+    const removedScores = items.flatMap((r) =>
+      isSongbookSection(r) ? [] : [r.score],
+    );
+    setResults(restoreToLibrary(removedScores));
     setItems([]);
   };
 
@@ -113,13 +128,14 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
     setItems(
       items.filter((r) => isSongbookSection(r) || r.score.id !== score.id),
     );
-    setResults([score, ...results]);
+    setResults(restoreToLibrary([score]));
   };
 
   const handleResultsSortBy = (
     column: SortColumn,
     direction: SortDirection,
   ) => {
+    setSort({ column, direction });
     setResults(sortByColumn(results, column, direction).slice());
   };
 
