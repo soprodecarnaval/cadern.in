@@ -1,24 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Table } from "react-bootstrap";
-import { DragDropProvider, DragOverlay, type DragEndEvent, type DragStartEvent, type DragOverEvent } from "@dnd-kit/react";
-import { Accessibility, PointerActivationConstraints, PointerSensor } from "@dnd-kit/dom";
+import { useDroppable, type DragEndEvent, type DragStartEvent, type DragMoveEvent, type DragOverEvent } from "@dnd-kit/react";
 import type { PlayingPartViewModel, ScoreViewModel, SongbookItemViewModel } from "../../types/viewModels";
 import { insertionIndex, moveSongbookEntry, songbookDragRange, songbookSectionRange } from "../lib/songbookReorder";
-import { SongbookKeyboardSensor } from "../lib/songbookKeyboardSensor";
+import { destinationForIncomingScore, SONGBOOK_APPEND_ID } from "../lib/crossColumnDnd";
 import { useSongbookEditorItems } from "../lib/useSongbookEditorItems";
 import { SortableSongbookRow } from "./SortableSongbookRow";
 import type { ScoreEditUpdate } from "./ScoreEditModal";
 import "../css/SongbookSortableList.css";
-
-const sensors = [
-  PointerSensor.configure({
-    activationConstraints: (event) => event.pointerType === "touch"
-      ? [new PointerActivationConstraints.Delay({ value: 200, tolerance: 8 })]
-      : [new PointerActivationConstraints.Distance({ value: 6 })],
-  }),
-  SongbookKeyboardSensor,
-];
 
 interface DropPosition {
   target: string;
@@ -27,14 +17,43 @@ interface DropPosition {
   boundary: number;
 }
 
-export function SongbookSortableList({ rows, onReorder, onDelete, onSelect, onPlay, onUpdate }: {
+/** Imperatively driven by SongbookDragProvider, which owns the single shared
+ * DragDropProvider spanning this list and the available-scores column. */
+export interface SongbookSortableListHandle {
+  handleDragStart: (event: DragStartEvent) => void;
+  handleDragMove: (event: DragMoveEvent) => void;
+  handleDragOver: (event: DragOverEvent) => void;
+  handleDragEnd: (event: DragEndEvent) => void;
+  /** Where an incoming (not-yet-in-list) score should land, given the drop target. */
+  resolveIncomingDrop: (operation: DragEndEvent["operation"]) => number;
+  label: (id: string | number | undefined) => string;
+  instructions: Record<string, string>;
+  announcements: {
+    dragstart: (event: DragStartEvent) => string;
+    dragover: (event: DragOverEvent) => string | undefined;
+    dragend: (event: DragEndEvent) => string;
+  };
+}
+
+function EmptySongbookDropzone() {
+  const { ref } = useDroppable({ id: SONGBOOK_APPEND_ID, data: { group: "songbook" } });
+  return (
+    <tbody ref={ref}>
+      <tr><td colSpan={9} className="text-muted py-3">
+        Adicione músicas ou seções para montar o caderninho.
+      </td></tr>
+    </tbody>
+  );
+}
+
+export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
   rows: SongbookItemViewModel[];
   onReorder: (rows: SongbookItemViewModel[]) => void;
   onDelete: (index: number) => void;
   onSelect: (score: ScoreViewModel, checked: boolean) => void;
   onPlay: (part: PlayingPartViewModel) => void;
   onUpdate: (index: number, update: ScoreEditUpdate) => void;
-}) {
+}>(function SongbookSortableList({ rows, onReorder, onDelete, onSelect, onPlay, onUpdate }, ref) {
   const entries = useSongbookEditorItems(rows);
   const table = useRef<HTMLTableElement>(null);
   const [preparingId, setPreparingId] = useState<string | null>(null);
@@ -122,6 +141,30 @@ export function SongbookSortableList({ rows, onReorder, onDelete, onSelect, onPl
     };
   };
 
+  /** Where an incoming score (not yet in `rows`) should land — same edge
+   * geometry as destination(), without the from/carried-range exclusion. */
+  const resolveIncomingDrop = (operation: DragEndEvent["operation"]): number => {
+    const target = operation.target;
+    if (!target || target.id === SONGBOOK_APPEND_ID) { return rows.length; }
+    const to = entries.findIndex((entry) => entry.id === target.id);
+    if (to < 0) { return rows.length; }
+    const point = operation.position.current;
+    if (rows[to].type === "section") {
+      const group = songbookSectionRange(rows, to)!;
+      const bodies = [...(table.current?.tBodies ?? [])];
+      const first = bodies.find((body) => body.dataset.editorId === entries[group.start].id);
+      const last = bodies.find((body) => body.dataset.editorId === entries[group.end - 1].id);
+      const top = first?.getBoundingClientRect().top ?? 0;
+      const bottom = last?.getBoundingClientRect().bottom ?? 0;
+      const edge = rows[group.start].type !== "section" ? "after"
+        : point.y >= (top + bottom) / 2 ? "after" : "before";
+      return destinationForIncomingScore(rows, entries, target.id, edge);
+    }
+    const targetBounds = target.element?.getBoundingClientRect();
+    const edge = targetBounds && point.y >= targetBounds.top + targetBounds.height / 2 ? "after" : "before";
+    return destinationForIncomingScore(rows, entries, target.id, edge);
+  };
+
   const placement = (operation: DragEndEvent["operation"], next: DropPosition) => {
     const from = entries.findIndex((entry) => entry.id === operation.source?.id);
     if (rows[from]?.type !== "section") {
@@ -143,43 +186,44 @@ export function SongbookSortableList({ rows, onReorder, onDelete, onSelect, onPl
     draggable: "Para mover, pressione Espaço. Use as setas para escolher a posição, Espaço para soltar e Escape para cancelar.",
   }), []);
 
+  const announcements = {
+    dragstart: ({ operation }: DragStartEvent) => `Movendo ${label(operation.source?.id)}.`,
+    dragover: ({ operation }: DragOverEvent) => {
+      const next = destination(operation);
+      return next ? `${label(operation.source?.id)}, ${placement(operation, next)}.` : undefined;
+    },
+    dragend: ({ operation, canceled }: DragEndEvent) => canceled || !destination(operation)
+      ? "Movimento cancelado."
+      : `${label(operation.source?.id)}: ${placement(operation, destination(operation)!)}.`,
+  };
+
+  const handleDragStart = ({ operation }: DragStartEvent) => {
+    setActiveId(operation.source ? String(operation.source.id) : null);
+    setKeyboardDrag(operation.activatorEvent instanceof KeyboardEvent);
+    setPreparingId(null);
+  };
+  const handleDragMove = ({ operation }: DragMoveEvent) => updateDrop(operation);
+  const handleDragOver = ({ operation }: DragOverEvent) => updateDrop(operation);
+  const handleDragEnd = ({ operation, canceled }: DragEndEvent) => {
+    const next = !canceled ? destination(operation) : null;
+    if (next && operation.source) {
+      const from = entries.findIndex((entry) => entry.id === operation.source?.id);
+      const reordered = moveSongbookEntry(rows, from, next.boundary);
+      if (reordered !== rows) { onReorder(reordered); }
+    }
+    setActiveId(null);
+    setPreparingId(null);
+    setKeyboardDrag(false);
+    setDrop(null);
+  };
+
+  useImperativeHandle(ref, () => ({
+    handleDragStart, handleDragMove, handleDragOver, handleDragEnd,
+    resolveIncomingDrop, label, instructions, announcements,
+  }));
+
   return (
-    <DragDropProvider sensors={sensors}
-      plugins={(defaults) => [
-        ...defaults.filter((plugin) => plugin !== Accessibility),
-        Accessibility.configure({
-          screenReaderInstructions: instructions,
-          announcements: {
-            dragstart: ({ operation }: DragStartEvent) => `Movendo ${label(operation.source?.id)}.`,
-            dragover: ({ operation }: DragOverEvent) => {
-              const next = destination(operation);
-              return next ? `${label(operation.source?.id)}, ${placement(operation, next)}.` : undefined;
-            },
-            dragend: ({ operation, canceled }: DragEndEvent) => canceled || !destination(operation)
-              ? "Movimento cancelado."
-              : `${label(operation.source?.id)}: ${placement(operation, destination(operation)!)}.`,
-          },
-        }),
-      ]}
-      onDragStart={({ operation }) => {
-        setActiveId(operation.source ? String(operation.source.id) : null);
-        setKeyboardDrag(operation.activatorEvent instanceof KeyboardEvent);
-        setPreparingId(null);
-      }}
-      onDragMove={({ operation }) => updateDrop(operation)}
-      onDragOver={({ operation }) => updateDrop(operation)}
-      onDragEnd={({ operation, canceled }) => {
-        const next = !canceled ? destination(operation) : null;
-        if (next && operation.source) {
-          const from = entries.findIndex((entry) => entry.id === operation.source?.id);
-          const reordered = moveSongbookEntry(rows, from, next.boundary);
-          if (reordered !== rows) { onReorder(reordered); }
-        }
-        setActiveId(null);
-        setPreparingId(null);
-        setKeyboardDrag(false);
-        setDrop(null);
-      }}>
+    <>
       <p className="text-muted small mt-2 mb-1">
         Arraste pela alça. Seções levam suas músicas. Teclado: Espaço, setas e Escape.
       </p>
@@ -210,14 +254,9 @@ export function SongbookSortableList({ rows, onReorder, onDelete, onSelect, onPl
               onDelete={() => onDelete(index)} onSelect={onSelect} onPlay={onPlay}
               onUpdate={(update) => onUpdate(index, update)} />
           ))}
-          {entries.length === 0 && <tbody><tr><td colSpan={9} className="text-muted py-3">
-            Adicione músicas ou seções para montar o caderninho.
-          </td></tr></tbody>}
+          {entries.length === 0 && <EmptySongbookDropzone />}
         </Table>
       </div>
-      <DragOverlay dropAnimation={null}>
-        {(source) => <div className="songbook-drag-preview" aria-hidden="true">{label(source.id)}</div>}
-      </DragOverlay>
-    </DragDropProvider>
+    </>
   );
-}
+});
