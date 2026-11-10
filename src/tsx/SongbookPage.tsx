@@ -67,14 +67,13 @@ import type {
   NumberedSongbookScoreViewModel,
   SongbookItemViewModel,
 } from "../../types/viewModels";
-import { PDFGenerator } from "./PdfGenerator";
 import { SongBar } from "./PlayerBar";
 import { DragHandle } from "./DragHandle";
 import { ScoreCard } from "./ScoreCard";
 import { SongBookTable } from "./SongBookTable";
+import { SongbookGenerationPanel } from "./SongbookGenerationPanel";
 import { SongbookDragProvider } from "./SongbookDragProvider";
 import type { SongbookSortableListHandle } from "./SongbookSortableList";
-import { SongbookCoversEditor } from "./SongbookCoversEditor";
 
 interface Loaded {
   songbook: WithId<SongbookDoc>;
@@ -120,7 +119,7 @@ export function SongbookPage() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [loaded, setLoaded] = useState<Loaded | null | "loading">("loading");
-  const [editing, setEditing] = useState<"contents" | "covers" | null>(null);
+  const [editing, setEditing] = useState<"contents" | null>(null);
   const [reloads, setReloads] = useState(0);
   const [forks, setForks] = useState<Map<string, string>>(new Map());
 
@@ -228,22 +227,13 @@ export function SongbookPage() {
           {isCurrent && editing === null && (
             <div className="d-flex gap-2 mb-3">
               {canEditSongbook(role) && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline-primary"
-                    onClick={() => setEditing("contents")}
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline-primary"
-                    onClick={() => setEditing("covers")}
-                  >
-                    Capas
-                  </Button>
-                </>
+                <Button
+                  size="sm"
+                  variant="outline-primary"
+                  onClick={() => setEditing("contents")}
+                >
+                  Editar
+                </Button>
               )}
               {canRepin && stale.length > 0 && (
                 <Button
@@ -267,13 +257,6 @@ export function SongbookPage() {
               )}
             </div>
           )}
-          {editing === "covers" && (
-            <SongbookCoversEditor
-              songbook={songbook}
-              revision={revision}
-              onDone={handleEditDone}
-            />
-          )}
           <SongbookContents
             items={items}
             showNewerVersions={isReviewer(role)}
@@ -285,11 +268,12 @@ export function SongbookPage() {
                 : undefined
             }
           />
-          <PDFGenerator
-            songBook={{ items }}
-            covers={Object.fromEntries(
-              Object.entries(revision.covers).map(([i, f]) => [i, f.url]),
-            )}
+          <SongbookGenerationPanel
+            songbook={songbook}
+            revision={revision}
+            items={items}
+            canEditCovers={isCurrent && canEditSongbook(role)}
+            onCoversSaved={() => setReloads((n) => n + 1)}
           />
           {isReviewer(role) && (
             <SongbookHistory

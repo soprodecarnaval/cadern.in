@@ -1,7 +1,6 @@
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import type { User } from "firebase/auth";
 import { storage } from "../firebase";
-import { parseInstrument } from "../instrument";
 import type { Instrument } from "../../types/instrument";
 import type { SongbookDoc, SongbookRevisionDoc } from "../../types/docs";
 import { createSongbookRevision, newSongbookRevisionId, type WithId } from "./db";
@@ -9,31 +8,6 @@ import { slugify } from "./slugify";
 import { songbookRevisionStoragePath } from "./storagePaths";
 
 export const COVER_TYPES = ["image/png", "image/jpeg"];
-
-/**
- * Matches cover images to instruments by filename (`capa-trompete.png` →
- * trompete), like part files on upload. Files that aren't PNG/JPEG or name no
- * known instrument come back in `unmatched`; a later file for the same
- * instrument wins.
- */
-export function matchCoverFiles(files: File[]): {
-  matched: Map<Instrument, File>;
-  unmatched: string[];
-} {
-  const matched = new Map<Instrument, File>();
-  const unmatched: string[] = [];
-  for (const file of files) {
-    const instrument = COVER_TYPES.includes(file.type)
-      ? parseInstrument(file.name.replace(/\.[^.]+$/, ""))
-      : undefined;
-    if (instrument) {
-      matched.set(instrument, file);
-    } else {
-      unmatched.push(file.name);
-    }
-  }
-  return { matched, unmatched };
-}
 
 /**
  * Uploads the new covers under the next revision's path, then creates that
