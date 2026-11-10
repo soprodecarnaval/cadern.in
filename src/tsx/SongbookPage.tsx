@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDraggable, useDroppable } from "@dnd-kit/react";
+import { PointerSensor } from "@dnd-kit/dom";
 import {
   Alert,
   Badge,
@@ -66,8 +68,12 @@ import type {
   SongbookItemViewModel,
 } from "../../types/viewModels";
 import { SongBar } from "./PlayerBar";
+import { DragHandle } from "./DragHandle";
+import { ScoreCard } from "./ScoreCard";
 import { SongBookTable } from "./SongBookTable";
 import { SongbookGenerationPanel } from "./SongbookGenerationPanel";
+import { SongbookDragProvider } from "./SongbookDragProvider";
+import type { SongbookSortableListHandle } from "./SongbookSortableList";
 
 interface Loaded {
   songbook: WithId<SongbookDoc>;
@@ -473,12 +479,17 @@ function SongbookEditor({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSelect = (score: ScoreViewModel, checked: boolean) =>
-    setItems((prev) =>
-      checked
-        ? [...prev, songbookScore(score)]
-        : prev.filter((r) => isSongbookSection(r) || r.score.id !== score.id),
-    );
+  const songbookRef = useRef<SongbookSortableListHandle>(null);
+
+  const handleSelect = (score: ScoreViewModel, checked: boolean, index?: number) =>
+    setItems((prev) => {
+      if (!checked) {
+        return prev.filter((r) => isSongbookSection(r) || r.score.id !== score.id);
+      }
+      const next = [...prev];
+      next.splice(index ?? next.length, 0, songbookScore(score));
+      return next;
+    });
 
   const handleSave = async () => {
     if (!currentUser) {
@@ -505,24 +516,37 @@ function SongbookEditor({
   return (
     <>
       <SongBar info={playingPart} />
-      <div className="row">
-        <div className="col-sm-6">
-          <h5>Partituras</h5>
-          <ScorePicker
-            projectId={projectId}
-            selected={items}
-            onAdd={(score) => handleSelect(score, true)}
-          />
+      <SongbookDragProvider
+        songbookRef={songbookRef}
+        onAddAt={(score, index) => handleSelect(score, true, index)}
+        onRemove={(score) => handleSelect(score, false)}
+      >
+        <div className="row">
+          <div className="col-sm-6">
+            <h5>Partituras</h5>
+            <ScorePicker
+              projectId={projectId}
+              selected={items}
+              onAdd={(score) => handleSelect(score, true)}
+              onPlay={setPlayingPart}
+            />
+          </div>
+          <div className="col-sm-6">
+            <h5>Caderninho</h5>
+            <SongBookTable
+              ref={songbookRef}
+              rows={items}
+              setItems={setItems}
+              handleSelect={handleSelect}
+              handleClear={() => setItems([])}
+              onSetPlayingPart={setPlayingPart}
+            />
+          </div>
         </div>
+      </SongbookDragProvider>
+      <div className="row">
+        <div className="col-sm-6" />
         <div className="col-sm-6">
-          <h5>Caderninho</h5>
-          <SongBookTable
-            rows={items}
-            setItems={setItems}
-            handleSelect={handleSelect}
-            handleClear={() => setItems([])}
-            onSetPlayingPart={setPlayingPart}
-          />
           <Form.Control
             className="mt-3"
             value={note}
@@ -566,10 +590,12 @@ function ScorePicker({
   projectId,
   selected,
   onAdd,
+  onPlay,
 }: {
   projectId: string;
   selected: SongbookItemViewModel[];
   onAdd: (score: ScoreViewModel) => void;
+  onPlay: (info: PlayingPartViewModel) => void;
 }) {
   const { currentUser } = useAuth();
   const uid = currentUser?.uid;
@@ -643,6 +669,16 @@ function ScorePicker({
     onAdd(toScoreViewModel(doc, revision, projectTitle));
   };
 
+  // Drop zone for songbook cards dragged back out: removes them, regardless
+  // of where in this list they're dropped.
+  const { ref: dropRef } = useDroppable({
+    id: "available-dropzone",
+    data: { group: "available" },
+    accept: (source) =>
+      (source.data as { group?: string; itemType?: string }).group === "songbook" &&
+      (source.data as { itemType?: string }).itemType === "score",
+  });
+
   if (error) {return <Alert variant="danger">{error}</Alert>;}
   if (!groups) {return <Spinner animation="border" size="sm" />;}
   const needle = filter.trim().toLocaleLowerCase("pt-BR");
@@ -663,16 +699,19 @@ function ScorePicker({
         onChange={(e) => setFilter(e.target.value)}
         placeholder="Filtrar por título, compositor, projeto ou caderninho"
       />
-      <ListGroup style={{ maxHeight: 480, overflowY: "auto" }}>
-        {matches.slice(0, PICKER_LIMIT).map((versions) => (
-          <ScorePickerVersions
-            key={versions[0].doc.id}
-            versions={versions}
-            selectedIds={selectedIds}
-            onAdd={handleAdd}
-          />
-        ))}
-      </ListGroup>
+      <div style={{ maxHeight: 480, overflowY: "auto" }}>
+        <Table ref={dropRef} size="sm" borderless hover>
+          {matches.slice(0, PICKER_LIMIT).map((versions) => (
+            <ScorePickerVersions
+              key={versions[0].doc.id}
+              versions={versions}
+              selectedIds={selectedIds}
+              onAdd={handleAdd}
+              onPlay={onPlay}
+            />
+          ))}
+        </Table>
+      </div>
       {matches.length > PICKER_LIMIT && (
         <p className="text-muted small mt-1">
           Mostrando {PICKER_LIMIT} de {matches.length}. Filtre para ver as
@@ -683,16 +722,46 @@ function ScorePicker({
   );
 }
 
-function ScorePickerVersions({ versions, selectedIds, onAdd }: {
+function ScorePickerVersions({ versions, selectedIds, onAdd, onPlay }: {
   versions: PickerScore[];
   selectedIds: Set<string>;
   onAdd: (score: PickerScore) => Promise<void>;
+  onPlay: (info: PlayingPartViewModel) => void;
 }) {
   const [chosenId, setChosenId] = useState(versions[0].doc.id);
-  const [expanded, setExpanded] = useState(false);
+  const [mode, setMode] = useState<"compact" | "expanded">("compact");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+  const [score, setScore] = useState<ScoreViewModel | null>(null);
   const chosen = versions.find((s) => s.doc.id === chosenId) ?? versions[0];
+
+  // Fetched lazily per row (not for the whole PICKER_LIMIT list at once) —
+  // needed for ScoreCard's parts/midi/mscz, re-fetched when the chosen
+  // version changes.
+  useEffect(() => {
+    let cancelled = false;
+    setScore(null);
+    void getScoreRevision(chosen.doc.id, chosen.doc.latestRevisionId).then(
+      (revision) => {
+        if (!cancelled && revision) {
+          setScore(toScoreViewModel(chosen.doc, revision, chosen.projectTitle));
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [chosen]);
+
+  // Pointer-only: no stable order to preserve, so no keyboard drag affordance
+  // here — keyboard users add via the "Adicionar" button instead.
+  const { ref, handleRef } = useDraggable({
+    id: `available:${chosen.doc.id}`,
+    data: { group: "available", score: score ?? undefined },
+    sensors: [PointerSensor],
+    disabled: !score,
+  });
+
   const add = async () => {
     setAdding(true);
     setError("");
@@ -704,39 +773,60 @@ function ScorePickerVersions({ versions, selectedIds, onAdd }: {
       setAdding(false);
     }
   };
+
+  if (!score) {
+    return (
+      <tbody>
+        <tr>
+          <td colSpan={9} className="text-muted">
+            <Spinner animation="border" size="sm" /> {chosen.title}
+          </td>
+        </tr>
+      </tbody>
+    );
+  }
+
   return (
-    <ListGroup.Item>
-      <div className="d-flex justify-content-between align-items-center gap-2">
-        <div>
-          {chosen.title} <span className="text-muted">{chosen.composer}</span>
-          <Badge bg="light" text="dark" className="ms-2">{chosen.projectTitle}</Badge>
-          <div className="text-muted small">
-            {chosen.songbooks.join(", ") || "Sem caderninho"}
-          </div>
-        </div>
-        <Button size="sm" variant="outline-primary"
-          disabled={adding || selectedIds.has(chosen.doc.id)}
-          onClick={() => void add()}>
-          {selectedIds.has(chosen.doc.id) ? "Adicionada" : adding ? "Adicionando…" : "Adicionar"}
-        </Button>
-      </div>
-      {versions.length > 1 && <>
-        <Button size="sm" variant="link" className="px-0"
-          aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-          {expanded ? "Ocultar versões" : `Outras versões (${versions.length - 1})`}
-        </Button>
-        {expanded && <Form.Select
-          aria-label={`Versão de ${versions[0].title} (${chosen.projectTitle})`}
-          value={chosen.doc.id} onChange={(e) => setChosenId(e.target.value)}>
-          {versions.map((s, index) => <option key={s.doc.id} value={s.doc.id}>
-            {s.title} — {s.songbooks.join(", ") || "Sem caderninho"}
-            {index === 0 ? " · mais recente" : ""}
-            {selectedIds.has(s.doc.id) ? " · adicionada" : ""}
-          </option>)}
-        </Form.Select>}
-      </>}
-      {error && <Alert variant="danger" className="mt-2 mb-0">{error}</Alert>}
-    </ListGroup.Item>
+    <tbody ref={ref}>
+    <ScoreCard
+      score={score}
+      mode={mode}
+      onToggleMode={() => setMode(mode === "compact" ? "expanded" : "compact")}
+      onPlay={onPlay}
+      leading={<DragHandle label={`Arraste ${score.title} para o caderninho`} handleRef={handleRef} onPrepareDrag={() => undefined} />}
+      trailing={
+        <td>
+          <Button size="sm" variant="outline-primary"
+            disabled={adding || selectedIds.has(chosen.doc.id)}
+            onClick={() => void add()}>
+            {selectedIds.has(chosen.doc.id) ? "Adicionada" : adding ? "Adicionando…" : "Adicionar"}
+          </Button>
+          {error && <div className="text-danger small">{error}</div>}
+        </td>
+      }
+      details={
+        <tr>
+          <td></td>
+          <td colSpan={8}>
+            <div className="text-muted small mb-1">
+              {chosen.songbooks.join(", ") || "Sem caderninho"}
+            </div>
+            {versions.length > 1 && (
+              <Form.Select size="sm"
+                aria-label={`Versão de ${versions[0].title} (${chosen.projectTitle})`}
+                value={chosenId} onChange={(e) => setChosenId(e.target.value)}>
+                {versions.map((s, index) => <option key={s.doc.id} value={s.doc.id}>
+                  {s.title} — {s.songbooks.join(", ") || "Sem caderninho"}
+                  {index === 0 ? " · mais recente" : ""}
+                  {selectedIds.has(s.doc.id) ? " · adicionada" : ""}
+                </option>)}
+              </Form.Select>
+            )}
+          </td>
+        </tr>
+      }
+    />
+    </tbody>
   );
 }
 

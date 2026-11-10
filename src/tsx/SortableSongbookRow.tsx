@@ -1,11 +1,68 @@
+import { useState, type ReactNode } from "react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { OptimisticSortingPlugin } from "@dnd-kit/dom/sortable";
+import { BsFillTrashFill, BsPencilFill } from "react-icons/bs";
 import type { PlayingPartViewModel, ScoreViewModel } from "../../types/viewModels";
 import type { SongbookEditorItem } from "../lib/songbookReorder";
 import { DragHandle } from "./DragHandle";
-import { SongBookScoreRow } from "./SongBookScoreRow";
+import { ScoreCard } from "./ScoreCard";
 import { SongBookSectionRow } from "./SongBookSectionRow";
-import type { ScoreEditUpdate } from "./ScoreEditModal";
+import { ScoreEditModal, type ScoreEditUpdate } from "./ScoreEditModal";
+
+function SongbookScoreCard({
+  score,
+  dragHandle,
+  hideDetails,
+  handleDelete,
+  handlePlayingSong,
+  handleUpdateScore,
+}: {
+  score: ScoreViewModel;
+  dragHandle: ReactNode;
+  hideDetails: boolean;
+  handleDelete: (score: ScoreViewModel, checked: boolean) => void;
+  handlePlayingSong: (info: PlayingPartViewModel) => void;
+  handleUpdateScore: (update: ScoreEditUpdate) => void;
+}) {
+  const [mode, setMode] = useState<"compact" | "expanded">("compact");
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  return (
+    <>
+      <ScoreCard
+        score={score}
+        mode={hideDetails ? "compact" : mode}
+        onToggleMode={() => setMode(mode === "compact" ? "expanded" : "compact")}
+        onPlay={handlePlayingSong}
+        leading={dragHandle}
+        trailing={
+          <>
+            <td>
+              <button type="button" className="btn btn-link p-0"
+                aria-label={`Remover ${score.title}`}
+                onClick={() => handleDelete(score, false)}>
+                <BsFillTrashFill aria-hidden="true" />
+              </button>
+            </td>
+            <td>
+              <button type="button" className="btn btn-link p-0"
+                aria-label={`Editar ${score.title}`}
+                onClick={() => setShowEditModal(true)}>
+                <BsPencilFill aria-hidden="true" />
+              </button>
+            </td>
+          </>
+        }
+      />
+      <ScoreEditModal
+        show={showEditModal}
+        score={score}
+        onHide={() => setShowEditModal(false)}
+        onSave={handleUpdateScore}
+      />
+    </>
+  );
+}
 
 export function SortableSongbookRow({ entry, index, sorting, insertion, emptySection, onDelete,
   onSelect, onPlay, onUpdate, onPrepareDrag, carried, disableDrop, scoreCount }: {
@@ -26,7 +83,11 @@ export function SortableSongbookRow({ entry, index, sorting, insertion, emptySec
   const { ref, handleRef, isDragSource } = useSortable({
     id: entry.id,
     index,
-    data: { itemType: entry.item.type },
+    data: {
+      itemType: entry.item.type,
+      group: "songbook",
+      score: entry.item.type === "score" ? entry.item.score : undefined,
+    },
     disabled: { droppable: disableDrop },
     plugins: (defaults) => defaults.filter((plugin) => plugin !== OptimisticSortingPlugin),
   });
@@ -51,7 +112,7 @@ export function SortableSongbookRow({ entry, index, sorting, insertion, emptySec
           </td></tr>}
         </>
       ) : (
-        <SongBookScoreRow score={item.score} dragHandle={handle} hideDetails={sorting}
+        <SongbookScoreCard score={item.score} dragHandle={handle} hideDetails={sorting}
           handleDelete={onSelect} handlePlayingSong={onPlay} handleUpdateScore={onUpdate} />
       )}
     </tbody>
