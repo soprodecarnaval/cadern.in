@@ -10,107 +10,18 @@ import {
 } from "react-bootstrap";
 import { useAuth } from "../auth";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  getComments,
-  getMemberRole,
-  getScore,
-  getScoreRevision,
-  getProject,
-  softDeleteScore,
-  type WithId,
-} from "../lib/db";
+import { softDeleteScore, getComments, type WithId } from "../lib/db";
 import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { canDeleteScore, canEditScoreMetadata, isReviewer } from "../lib/roles";
-import {
-  resolveScoreMetadata,
-  uploadedScoreMetadata,
-} from "../lib/scoreMetadata";
+import { loadScore, type LoadedScore } from "../lib/loadScore";
 import { useMemberRole } from "../lib/useMemberRole";
 import { commentThreads } from "../lib/comments";
-import type {
-  CommentAnchor,
-  ReviewCommentDoc,
-  ScoreData,
-  ScoreMetadata,
-} from "../../types/docs";
+import type { CommentAnchor, ReviewCommentDoc } from "../../types/docs";
 import { ReviewCommentsPanel } from "./ReviewCommentsPanel";
-import {
-  ScoreDisplay,
-  type ScoreDisplayPart,
-  type ScorePin,
-} from "./ScoreDisplay";
+import { ScoreDisplay, type ScorePin } from "./ScoreDisplay";
 import { ScoreLineage } from "./ScoreLineage";
 import { ScoreMetadataEditor } from "./ScoreMetadataEditor";
 import { ScoreRevisionList } from "./ScoreRevisionList";
-
-interface LoadedScore extends ScoreMetadata {
-  scoreId: string;
-  revisionId: string;
-  latestRevisionId: string;
-  publishedRevisionId: string | null;
-  forkedFrom: ScoreData["forkedFrom"];
-  revisionNumber: number;
-  uploaded: ScoreMetadata;
-  projectId: string;
-  projectTitle: string;
-  msczUrl: string;
-  arrangementMidiUrl: string | null;
-  parts: ScoreDisplayPart[];
-}
-
-async function loadScore(
-  scoreId: string,
-  revisionId: string | undefined,
-  uid: string | undefined,
-): Promise<LoadedScore> {
-  const song = await getScore(scoreId);
-  if (!song || song.deletedAt) {
-    throw new Error("Partitura não encontrada");
-  }
-
-  // Without a version in the URL, members get the latest and everyone else
-  // the published one, when there is one (collab-flow §4.4).
-  const isMember =
-    !!uid && isReviewer(await getMemberRole(song.projectId, uid));
-  const publishedId =
-    FEATURE_FLAG_COLLAB_FLOW && !isMember
-      ? song.published?.revisionId
-      : undefined;
-  const resolvedRevisionId = revisionId ?? publishedId ?? song.latestRevisionId;
-  const [rev, project] = await Promise.all([
-    getScoreRevision(scoreId, resolvedRevisionId),
-    getProject(song.projectId),
-  ]);
-  if (!rev) {
-    throw new Error("Versão não encontrada");
-  }
-  // A deleted project hides its scores (collab-flow §6).
-  if (project?.deletedAt) {
-    throw new Error("Partitura não encontrada");
-  }
-  const projectTitle = project?.title ?? song.projectId;
-
-  return {
-    scoreId,
-    revisionId: resolvedRevisionId,
-    latestRevisionId: song.latestRevisionId,
-    publishedRevisionId: song.published?.revisionId ?? null,
-    forkedFrom: song.forkedFrom,
-    revisionNumber: rev.revisionNumber,
-    ...resolveScoreMetadata(song),
-    uploaded: uploadedScoreMetadata(song),
-    projectId: song.projectId,
-    projectTitle,
-    msczUrl: rev.mscz.url,
-    arrangementMidiUrl: rev.midi.url || null,
-    parts: rev.parts.map((part) => ({
-      name: part.name,
-      instrument: part.instrument,
-      svgUrls: part.svg.map((f) => f.url),
-      midiUrl: part.midi.url || null,
-    })),
-  };
-}
 
 export function ScorePage() {
   const { scoreId, revisionId } = useParams<{

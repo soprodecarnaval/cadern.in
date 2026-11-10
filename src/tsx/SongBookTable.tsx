@@ -12,8 +12,8 @@ import type { ScoreViewModel, PlayingPartViewModel, SongbookItemViewModel, Songb
 import { isSongbookSection, songbookSection } from "../lib/songbook";
 import type { ScoreEditUpdate } from "./ScoreEditModal";
 
-import { SongbookSortableList } from "./SongbookSortableList";
-import { ChangeEvent, useState } from "react";
+import { SongbookSortableList, type SongbookSortableListHandle } from "./SongbookSortableList";
+import { ChangeEvent, forwardRef, useState } from "react";
 import { Sort } from "./Sort";
 import {
   deleteRow,
@@ -31,13 +31,13 @@ interface SongBookTableProps {
   handleClear: () => void;
 }
 
-const SongBookTable = ({
+const SongBookTable = forwardRef<SongbookSortableListHandle, SongBookTableProps>(({
   rows,
   setItems: setRows,
   handleSelect,
   handleClear,
   onSetPlayingPart: handlePlayingSong,
-}: SongBookTableProps) => {
+}, ref) => {
   const [newSection, setNewSection] = useState<string>("");
 
   const onInputNewSection = (e: ChangeEvent<HTMLInputElement>) =>
@@ -112,7 +112,7 @@ const SongBookTable = ({
           </Form>
         </Col>
       </Row>
-      <SongbookSortableList rows={rows} onReorder={setRows}
+      <SongbookSortableList ref={ref} rows={rows} onReorder={setRows}
         onDelete={(index) => setRows(deleteRow(rows, index))}
         onSelect={handleSelect} onPlay={handlePlayingSong} onUpdate={handleUpdateScore} />
       <Row className="mt-4">
@@ -144,6 +144,6 @@ const SongBookTable = ({
       </Row>
     </>
   );
-};
+});
 
 export { SongBookTable };

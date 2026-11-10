@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Col, Container, Nav, Navbar, Row } from "react-bootstrap";
 import { Link, Route, Routes } from "react-router-dom";
 import { AuthModal } from "./AuthModal";
@@ -7,6 +7,8 @@ import { ProfileModal } from "./ProfileModal";
 import { SearchBar } from "./SearchBar";
 import { ScoreSearchResults } from "./ScoreSearchResults";
 import { SongBookTable } from "./SongBookTable";
+import { SongbookDragProvider } from "./SongbookDragProvider";
+import type { SongbookSortableListHandle } from "./SongbookSortableList";
 import { PDFGenerator } from "./PdfGenerator";
 import { sortByColumn, SortColumn, SortDirection } from "../utils/sort";
 import { SongBar } from "./PlayerBar";
@@ -57,6 +59,7 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
   const { currentUser } = useAuth();
   const [restored, setRestored] = useState(false);
   const [showSave, setShowSave] = useState(false);
+  const songbookRef = useRef<SongbookSortableListHandle>(null);
 
   // The list survives reloads and logins: restored once the collection is
   // loaded, then stored on every change.
@@ -97,8 +100,12 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
     setItems([]);
   };
 
-  const handleAddScore = (score: ScoreViewModel) => {
-    setItems([...items, songbookScore(score)]);
+  const handleAddScore = (score: ScoreViewModel, index?: number) => {
+    setItems((prev) => {
+      const next = [...prev];
+      next.splice(index ?? next.length, 0, songbookScore(score));
+      return next;
+    });
     setResults(results.filter((r) => r.id !== score.id));
   };
 
@@ -147,47 +154,54 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
           </Col>
         </Row>
         <SongBar info={playingPart} />
-        <Row className="mt-4">
-          <Col sm={6}>
-            <ScoreSearchResults
-              results={results}
-              onSortBy={handleResultsSortBy}
-              onAddAll={handleAddAllSongs}
-              onSelectSong={handleSelectSong}
-              onSetPlayingPart={setPlayingPart}
-            />
-          </Col>
-          <Col sm={6}>
-            <div className="d-flex justify-content-between align-items-baseline">
-              <h3 className="results">Caderninho</h3>
-              {FEATURE_FLAG_COLLAB_FLOW && (
-                <Button
-                  size="sm"
-                  variant="outline-primary"
-                  disabled={items.length === 0}
-                  onClick={handleSave}
-                >
-                  Salvar caderninho
-                </Button>
-              )}
-            </div>
-            {currentUser && showSave && (
-              <SaveSongbookModal
-                show
-                user={currentUser}
-                items={items}
-                onHide={() => setShowSave(false)}
+        <SongbookDragProvider
+          songbookRef={songbookRef}
+          onAddAt={handleAddScore}
+          onRemove={handleRemoveScore}
+        >
+          <Row className="mt-4">
+            <Col sm={6}>
+              <ScoreSearchResults
+                results={results}
+                onSortBy={handleResultsSortBy}
+                onAddAll={handleAddAllSongs}
+                onSelectSong={handleSelectSong}
+                onSetPlayingPart={setPlayingPart}
               />
-            )}
-            <SongBookTable
-              rows={items}
-              setItems={setItems}
-              onSetPlayingPart={setPlayingPart}
-              handleSelect={handleSelectSong}
-              handleClear={clearSelected}
-            />
-          </Col>
-        </Row>
+            </Col>
+            <Col sm={6}>
+              <div className="d-flex justify-content-between align-items-baseline">
+                <h3 className="results">Caderninho</h3>
+                {FEATURE_FLAG_COLLAB_FLOW && (
+                  <Button
+                    size="sm"
+                    variant="outline-primary"
+                    disabled={items.length === 0}
+                    onClick={handleSave}
+                  >
+                    Salvar caderninho
+                  </Button>
+                )}
+              </div>
+              {currentUser && showSave && (
+                <SaveSongbookModal
+                  show
+                  user={currentUser}
+                  items={items}
+                  onHide={() => setShowSave(false)}
+                />
+              )}
+              <SongBookTable
+                ref={songbookRef}
+                rows={items}
+                setItems={setItems}
+                onSetPlayingPart={setPlayingPart}
+                handleSelect={handleSelectSong}
+                handleClear={clearSelected}
+              />
+            </Col>
+          </Row>
+        </SongbookDragProvider>
       </Container>
     </>
   );
