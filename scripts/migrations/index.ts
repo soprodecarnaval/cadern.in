@@ -13,6 +13,7 @@ import revisionMetadata from "./202610081301_revision_metadata";
 import stampMsczIdentity from "./202610311200_stamp_mscz_identity";
 import collabProjects from "./202610311300_collab_projects";
 import collabSongbooks from "./202610311301_collab_songbooks";
+import firstPublishedBackfill from "./202611101500_first_published_backfill";
 
 export const migrations: Migration[] = [
   songsToScores,
@@ -29,4 +30,5 @@ export const migrations: Migration[] = [
   stampMsczIdentity,
   collabProjects,
   collabSongbooks,
+  firstPublishedBackfill,
 ];

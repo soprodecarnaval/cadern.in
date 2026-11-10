@@ -65,6 +65,9 @@ async function songbook(
 const published = async (scoreId: string) =>
   (await db().collection("scores").doc(scoreId).get()).get("published");
 
+const firstPublished = async (scoreId: string) =>
+  (await db().collection("scores").doc(scoreId).get()).get("firstPublished");
+
 describe("onSongbookWritten", () => {
   it("publishes pinned versions, also of other projects' scores", async () => {
     const after = await songbook("A~sb", {
@@ -180,6 +183,59 @@ describe("onScoreWritten and onProjectWritten", () => {
       expect(await published("a1")).not.toBeNull();
       expect(await published("b1")).not.toBeNull();
     });
+});
+
+describe("firstPublished", () => {
+  it("is set the first time a score becomes published", async () => {
+    const sb = await songbook("A~sb", { pins: { a1: "a1-r1" } });
+    await onSongbookWritten(db(), "A~sb", undefined, sb);
+    const marker = await firstPublished("a1");
+    expect(marker.songbookId).toBe("A~sb");
+    expect(marker.projectId).toBe("A");
+    expect(marker.publishedAt).toBeTruthy();
+    // a2 was never published.
+    expect(await firstPublished("a2")).toBeFalsy();
+  });
+
+  it("is never overwritten by unpublish, re-pin or a second songbook",
+    async () => {
+      const before = await songbook("A~sb", { pins: { a1: "a1-r1" } });
+      await onSongbookWritten(db(), "A~sb", undefined, before);
+      const original = await firstPublished("a1");
+
+      // Unpublish, then republish from a different songbook.
+      const unpublished = { ...before, isPublished: false };
+      await db().collection("songbooks").doc("A~sb").set(unpublished);
+      await onSongbookWritten(db(), "A~sb", before, unpublished);
+      expect(await firstPublished("a1")).toEqual(original);
+
+      const other = await songbook("B~sb", {
+        projectId: "B", pins: { a1: "a1-r1" }, createdAt: 500,
+      });
+      await onSongbookWritten(db(), "B~sb", undefined, other);
+      expect(await published("a1")).not.toBeNull();
+      expect(await firstPublished("a1")).toEqual(original);
+
+      // Re-pin a newer revision: `published` changes, `firstPublished` doesn't.
+      const repinned = await songbook("B~sb", {
+        projectId: "B", pins: { a1: "a1-r2" }, revision: "r2", createdAt: 1500,
+      });
+      await onSongbookWritten(db(), "B~sb", other, repinned);
+      expect((await published("a1")).revisionId).toBe("a1-r2");
+      expect(await firstPublished("a1")).toEqual(original);
+    });
+
+  it("is untouched by dry runs", async () => {
+    const sb = await songbook("A~sb", { pins: { a1: "a1-r1" } });
+    await onSongbookWritten(db(), "A~sb", undefined, sb);
+    await rebuildPublished(db(), true);
+    expect(await firstPublished("a1")).not.toBeNull();
+    // Delete and dry-run restore to make sure a dry run never sets it fresh.
+    await db().collection("scores").doc("a2").update({ firstPublished: null });
+    const changes = await rebuildPublished(db(), true);
+    expect(changes.some((c) => c.scoreId === "a2")).toBe(false);
+    expect(await firstPublished("a2")).toBeNull();
+  });
 });
 
 describe("rebuildPublished", () => {
