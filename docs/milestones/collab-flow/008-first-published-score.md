@@ -66,36 +66,30 @@ field's purpose (display, not audit) tolerates it.
 **Scope and honesty check:** there is no history of `isPublished` toggles —
 it's a plain boolean on the current `songbooks/{id}` doc, never revisioned.
 So for any score, we can know *whether* a songbook is published **now**, but
-never whether it was published at some point in the past. This means:
+never whether it was published at some point in the past.
 
-- For scores **currently published** (`scores/{id}.published != null`): we
-  can at least identify, among the songbooks currently crediting it, which
-  one's revision history pinned the score earliest — that revision's
-  `createdAt` is used as `publishedAt`. This is a reasonable proxy under the
-  working assumption that a songbook is normally published close to when its
-  revisions are created, but it is **not proof** the songbook was published
-  specifically on that date — only that it was published by migration time
-  and had pinned the score since (at least) then.
-- For scores **not currently published**: we have **no reliable signal at
-  all**. The score may never have been published, or may have been published
-  by a songbook that was since unpublished or deleted — those two cases are
-  indistinguishable from history. The migration leaves `firstPublished: null`
-  for these rather than guess. This under-counts true history but never
-  fabricates a fact.
+**Decision (resolves the open question below): treat every score as
+published for backfill purposes.** A songbook's current `isPublished` value
+is ignored entirely; credit is based only on which songbook's revision
+history pinned the score earliest, full stop. This deliberately over-claims
+in one direction (a songbook that pinned a score early but was never
+actually published gets credited as if it had been) in exchange for never
+under-claiming — every score that was ever pinned by any songbook ends up
+with a `firstPublished`, instead of only the subset currently published. The
+"proof" caveat on `publishedAt` still applies (see Decisions above): it's a
+proxy for "earliest known pin", not a verified publish date.
 
 **Algorithm** (`scripts/migrations/202611101500_first_published_backfill.ts`):
 
-1. Load every score with `published != null` and no `firstPublished` yet.
-2. For each songbook id in that score's `published.songbookIds`, fetch the
-   songbook's **entire `songbookRevisions` history** (not just the current
-   revision) and find the earliest revision (by `createdAt`) whose `pins`
-   includes the score.
-3. Across all candidate songbooks, take the overall earliest such revision;
-   credit its songbook (and that songbook's `projectId`) with `publishedAt`
-   = that revision's `createdAt`.
-4. Write `firstPublished` for that score. Scores already carrying
-   `firstPublished` (re-run) and scores with `published == null` are
-   skipped and reported separately.
+1. Scan **every songbook's entire `songbookRevisions` history** (current
+   `isPublished` ignored) and build a map from score id to the earliest
+   revision (by `createdAt`) whose `pins` include it, across all songbooks.
+2. For every score without a `firstPublished` yet, look it up in that map
+   and write `{ songbookId, projectId, publishedAt: <that revision's
+   createdAt> }`. A score absent from the map (never pinned by any songbook,
+   ever) is left `firstPublished: null` — there's nothing to credit.
+3. Scores already carrying `firstPublished` (re-run, or the live trigger got
+   there first) are skipped; write-once applies here too.
 
 This is a **schema migration** (dry-run by default via the existing
 `scripts/migrations/migrate.ts` runner), registered in
@@ -105,14 +99,10 @@ field, not something anything else depends on.
 
 ## Open questions
 
-- Should scores that are **not currently published** but clearly have
-  historical signal (e.g. a soft-deleted songbook whose last revision still
-  pins them) get a best-effort backfill too? Decided against it here: a
-  deleted songbook could itself have never been published, and we can't tell.
-  Flagging for product: if this matters, `firstPublished` could be backfilled
-  more aggressively from *any* songbook revision that ever pinned the score,
-  dropping the "currently published" requirement — at the cost of crediting
-  songbooks that may never have gone live. Left out for now as over-claiming.
+- ~~Should scores that are not currently published get a best-effort
+  backfill too?~~ **Resolved:** yes — see Decision above. Every score gets
+  backfilled from whichever songbook's history pinned it earliest,
+  regardless of that songbook's current publish state.
 - `publishedAt` precision for backfilled records is inherently an
   approximation. If that's unacceptable for the "first published on this
   date" messaging, product should decide whether to display it with lower

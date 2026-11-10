@@ -3,20 +3,20 @@ import type { Migration, MigrationContext } from "./lib/migration";
 import { commitInChunks, type Write } from "../lib/batches";
 
 /**
- * Backfills `scores/{id}.firstPublished` (collab-flow §008) for every score
- * currently published (`published != null`). There is no history of
- * `songbooks.isPublished` toggles, so "first published" can only be
- * approximated for scores published *right now*: among the songbooks
- * currently crediting a score, this finds the earliest `songbookRevisions`
- * doc (across that songbook's *entire* history, not just its current
- * revision) whose `pins` include the score, and credits that songbook with
- * that revision's `createdAt` as `publishedAt`.
+ * Backfills `scores/{id}.firstPublished` (collab-flow §008). There is no
+ * history of `songbooks.isPublished` toggles, so "was this songbook
+ * published back then" can never be reconstructed. Rather than only credit
+ * the subset of scores that happen to be published *right now*, every score
+ * is treated as published for backfill purposes: this scans the *entire*
+ * revision history of *every* songbook (current `isPublished` value
+ * ignored) and credits, per score, whichever songbook's earliest
+ * `songbookRevisions` doc pinned it, using that revision's `createdAt` as
+ * `publishedAt`.
  *
- * Scores that are not currently published are left untouched (`null`) —
- * there is no reliable signal to reconstruct whether they were ever
- * published and by whom. Scores that already carry `firstPublished` (a
- * re-run, or one the live trigger already set) are skipped; write-once
- * applies here too.
+ * A score never pinned by any songbook revision gets `firstPublished: null`
+ * — there's genuinely nothing to credit. Scores that already carry
+ * `firstPublished` (a re-run, or one the live trigger already set) are
+ * skipped; write-once applies here too.
  */
 
 interface Candidate {
@@ -26,77 +26,58 @@ interface Candidate {
 }
 
 /**
- * The earliest `songbookRevisions` doc of `songbookId` whose pins include
- * `scoreId`, if any.
+ * Per score id, the earliest `songbookRevisions` doc across every songbook
+ * (regardless of its current `isPublished`) whose pins include it.
  * @param {MigrationContext["db"]} db The database.
- * @param {string} songbookId The songbook.
- * @param {string} scoreId The score.
- * @return {Promise<Candidate | null>} The earliest match, or null.
+ * @return {Promise<Map<string, Candidate>>} Earliest candidate per score id.
  */
-async function earliestPin(
+async function earliestPinsByScore(
   db: MigrationContext["db"],
-  songbookId: string,
-  scoreId: string,
-): Promise<Candidate | null> {
-  const songbook = await db.collection("songbooks").doc(songbookId).get();
-  if (!songbook.exists) {
-    return null;
-  }
-  const revisions = await songbook.ref.collection("songbookRevisions").get();
-  let earliest: { createdAt: number } | null = null;
-  for (const revision of revisions.docs) {
-    const pins = (revision.get("pins") ?? {}) as Record<string, string>;
-    if (!(scoreId in pins)) {
-      continue;
+): Promise<Map<string, Candidate>> {
+  const songbooks = await db.collection("songbooks").get();
+  const earliest = new Map<string, Candidate>();
+
+  for (const songbook of songbooks.docs) {
+    const projectId = songbook.get("projectId") as string;
+    const revisions = await songbook.ref.collection("songbookRevisions").get();
+    for (const revision of revisions.docs) {
+      const pins = (revision.get("pins") ?? {}) as Record<string, string>;
+      const createdAt =
+        (revision.get("createdAt") as Timestamp | undefined)?.toMillis() ?? 0;
+      for (const scoreId of Object.keys(pins)) {
+        const current = earliest.get(scoreId);
+        if (!current || createdAt < current.createdAt) {
+          earliest.set(scoreId, { songbookId: songbook.id, projectId, createdAt });
+        }
+      }
     }
-    const createdAt =
-      (revision.get("createdAt") as Timestamp | undefined)?.toMillis() ?? 0;
-    if (!earliest || createdAt < earliest.createdAt) {
-      earliest = { createdAt };
-    }
   }
-  if (!earliest) {
-    return null;
-  }
-  return {
-    songbookId,
-    projectId: songbook.get("projectId") as string,
-    createdAt: earliest.createdAt,
-  };
+  return earliest;
 }
 
 const migration: Migration = {
   id: "202611101500",
-  description:
-    "scores: backfill firstPublished from currently-published songbooks' history",
+  description: "scores: backfill firstPublished from all songbook revision history",
 
   async up({ db, dryRun }: MigrationContext) {
-    const scores = await db.collection("scores").get();
+    const [scores, earliestByScore] = await Promise.all([
+      db.collection("scores").get(),
+      earliestPinsByScore(db),
+    ]);
     const writes: Write[] = [];
     let skippedAlreadySet = 0;
-    let unresolved = 0;
-    let notPublished = 0;
+    let neverPinned = 0;
 
     for (const score of scores.docs) {
-      const published = score.get("published") as
-        { songbookIds: string[] } | null;
-      if (!published) {
-        notPublished++;
-        continue;
-      }
       if (score.get("firstPublished")) {
         skippedAlreadySet++;
         continue;
       }
-      const candidates = (await Promise.all(
-        (published?.songbookIds ?? []).map((id) => earliestPin(db, id, score.id)),
-      )).filter((c): c is Candidate => c !== null);
-      if (candidates.length === 0) {
-        unresolved++;
+      const earliest = earliestByScore.get(score.id);
+      if (!earliest) {
+        neverPinned++;
         continue;
       }
-      const earliest = candidates.reduce((a, b) =>
-        b.createdAt < a.createdAt ? b : a);
       const fields = {
         firstPublished: {
           songbookId: earliest.songbookId,
@@ -112,9 +93,8 @@ const migration: Migration = {
 
     console.log(
       `\n${writes.length} scores to backfill firstPublished, ` +
-        `${skippedAlreadySet} already set, ${unresolved} published but ` +
-        `unresolved (no matching songbook revision found), ${notPublished} ` +
-        "not currently published (left null)",
+        `${skippedAlreadySet} already set, ${neverPinned} never pinned by ` +
+        "any songbook revision (left null)",
     );
     if (!dryRun) {
       await commitInChunks(db, writes);

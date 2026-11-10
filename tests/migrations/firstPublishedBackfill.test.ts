@@ -24,8 +24,8 @@ beforeEach(async () => {
 async function seedSongbook(
   id: string,
   revisions: { id: string; pins: Record<string, string>; createdAt: number }[],
-  { projectId: owner = "A", currentRevisionId }: {
-    projectId?: string; currentRevisionId: string;
+  { projectId: owner = "A", currentRevisionId, isPublished = true }: {
+    projectId?: string; currentRevisionId: string; isPublished?: boolean;
   },
 ) {
   for (const revision of revisions) {
@@ -35,7 +35,7 @@ async function seedSongbook(
     });
   }
   await db.doc(`songbooks/${id}`).set({
-    projectId: owner, currentRevisionId, isPublished: true, deletedAt: null,
+    projectId: owner, currentRevisionId, isPublished, deletedAt: null,
   });
 }
 
@@ -75,7 +75,23 @@ describe("202611101500_first_published_backfill", () => {
     });
   });
 
-  it("leaves scores that aren't currently published as null", async () => {
+  it("credits a songbook that is currently unpublished, since isPublished is ignored", async () => {
+    await seedSongbook("A~sbA", [
+      { id: "r1", pins: { s1: "s1-r1" }, createdAt: 100 },
+    ], { projectId: "A", currentRevisionId: "r1", isPublished: false });
+    // `published` cache is null (the songbook isn't published), but the
+    // migration treats every score as published for backfill purposes.
+    await seedScore("s1", null);
+
+    await up();
+    expect(await firstPublished("s1")).toEqual({
+      songbookId: "A~sbA",
+      projectId: "A",
+      publishedAt: Timestamp.fromMillis(100),
+    });
+  });
+
+  it("leaves a score never pinned by any songbook revision as null", async () => {
     await seedScore("s2", null);
     await up();
     expect(await firstPublished("s2")).toBeFalsy();
