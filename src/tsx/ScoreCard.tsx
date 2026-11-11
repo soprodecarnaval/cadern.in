@@ -3,9 +3,18 @@ import { BsChevronDown, BsChevronRight } from "react-icons/bs";
 import { SiMidi, SiMusescore } from "react-icons/si";
 import { PartItem } from "./PartItem";
 import { LineageBadge } from "./LineageBadge";
+import { highlightRanges, type HighlightRanges } from "../lib/highlight";
 import type { ScoreViewModel, PlayingPartViewModel } from "../../types/viewModels";
 
 import "../css/ScoreRow.css";
+
+/** Per-field search-match ranges — library cards only (see ScoreCard's `highlight` prop). */
+export interface ScoreCardHighlight {
+  title?: HighlightRanges;
+  projectTitle?: HighlightRanges;
+  composer?: HighlightRanges;
+  tags?: HighlightRanges;
+}
 
 interface ScoreCardProps {
   score: ScoreViewModel;
@@ -18,6 +27,8 @@ interface ScoreCardProps {
   trailing: ReactNode;
   /** Extra content shown only when expanded — e.g. the project picker's version selector. */
   details?: ReactNode;
+  /** Search-match ranges to highlight — only ever passed for library/available cards. */
+  highlight?: ScoreCardHighlight;
 }
 
 const ScoreCard = ({
@@ -28,18 +39,19 @@ const ScoreCard = ({
   leading,
   trailing,
   details,
+  highlight,
 }: ScoreCardProps) => {
   const expanded = mode === "expanded";
   const parts = score.latestRevision.parts;
   // Field priority: title → owning project (stand-in for "first published
   // songbook" until that data exists) → composer → tags.
-  const metaLine = [
-    score.projectTitle,
-    score.composer || undefined,
-    score.tags.length > 0 ? score.tags.join(", ") : undefined,
-  ]
-    .filter((part): part is string => !!part)
-    .join(" · ");
+  const metaFields: { text: string; ranges?: HighlightRanges }[] = [
+    { text: score.projectTitle, ranges: highlight?.projectTitle },
+    ...(score.composer ? [{ text: score.composer, ranges: highlight?.composer }] : []),
+    ...(score.tags.length > 0
+      ? [{ text: score.tags.join(", "), ranges: highlight?.tags }]
+      : []),
+  ];
 
   return (
     <div className="score-card">
@@ -59,8 +71,17 @@ const ScoreCard = ({
           )}
         </button>
         <div className="score-card-main" onClick={onToggleMode}>
-          <div className="score-card-title">{score.title}</div>
-          {metaLine && <div className="score-card-meta text-muted small">{metaLine}</div>}
+          <div className="score-card-title">{highlightRanges(score.title, highlight?.title)}</div>
+          {metaFields.length > 0 && (
+            <div className="score-card-meta text-muted small">
+              {metaFields.map((field, i) => (
+                <span key={i}>
+                  {i > 0 && " · "}
+                  {highlightRanges(field.text, field.ranges)}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="score-card-links">
           {score.latestRevision.midi != "" && (

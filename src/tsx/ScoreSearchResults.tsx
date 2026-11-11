@@ -8,6 +8,7 @@ import type { SortColumn, SortDirection } from "../utils/sort";
 
 interface ScoreSearchResultsProps {
   results: ScoreViewModel[];
+  searchQuery: string;
   onSortBy: (column: SortColumn, direction: SortDirection) => void;
   onAddAll: () => void;
   onSelectSong: (song: ScoreViewModel, checked: boolean) => void;
@@ -16,6 +17,7 @@ interface ScoreSearchResultsProps {
 
 const ScoreSearchResults = ({
   results,
+  searchQuery,
   onSortBy,
   onAddAll,
   onSelectSong,
@@ -43,6 +45,7 @@ const ScoreSearchResults = ({
       </Row>
       <ScoreSearchResultTable
         scores={results}
+        searchQuery={searchQuery}
         onSetPlayingPart={onSetPlayingPart}
         handleSelect={onSelectSong}
       />
