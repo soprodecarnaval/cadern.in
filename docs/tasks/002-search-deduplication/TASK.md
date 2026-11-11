@@ -1,6 +1,6 @@
 ---
 title: Deduplicate published search results by project and fork chain
-status: open
+status: completed
 type: feature
 milestone: ux-improvements
 ---
@@ -108,3 +108,39 @@ Plan approved, including removal of “add all.” Implement on
 This task belongs to the [UX improvements milestone](../../milestones/ux-improvements/PLAN.md).
 Commit the plan before implementation; leave implementation changes uncommitted
 until reviewed.
+
+
+## Implementation and verification
+
+Implemented after plan commit `e2a7b389`; reviewed and approved for completion,
+commit, push and PR creation.
+
+- `publishedCollection` resolves published pins once, keeps all renderable
+  published scores for restoration, and uses existing project/ancestry grouping
+  to choose searchable representatives. The full lineage includes ineligible
+  intermediates without exposing them as candidates.
+- `collectionSearch` retains Fuse configuration and indexes representatives only.
+  Legacy flag-off loading continues to index its complete collection.
+- Homepage results derive from the active search, selected IDs and active sort;
+  removal/clear cannot reinsert superseded or nonmatching scores. Removed the
+  “add all” component, props and handler.
+- Pagination uses ceiling division, clamps pages after selection changes, and
+  resets on query changes.
+
+Checks passed:
+
+- 249 unit tests, including seven new collection/search/restoration cases and
+  existing project-picker tests.
+- App TypeScript, targeted ESLint and staging-mode app build.
+- Fourteen headless Chrome checks against only a local `demo-cadernin` Firestore
+  emulator: old-selection restoration, no “add all,” three project cards for
+  “Abre Alas,” highlighting, removal without resurrection, individual addition,
+  removal respecting the query, sorting, card-body drag-to-add, reload persistence,
+  representative pagination, query page reset, superseded metadata exclusion and
+  no browser errors.
+- Separate flag-off browser check retains all six seeded “Abre Alas” scores,
+  including unpublished descendants, and confirms “add all” is absent.
+
+The browser harness blocked the unrelated external Cloudflare analytics beacon
+because it produces CORS errors on localhost. No staging data was written.
+Existing dependency-engine, protobuf eval and bundle-size warnings remain.

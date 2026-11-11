@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useState, ReactNode } from "react";
-import Fuse, { IFuseOptions } from "fuse.js";
+import { useEffect, useMemo, useState, ReactNode } from "react";
 import {
   getAllProjects,
   getAllScores,
   getLatestScoreRevisions,
-  getPublishedScores,
   getScoreRevision,
 } from "./lib/db";
 import { legacyIsOwner } from "./lib/roles";
+import { buildPublishedCollection, type LoadedCollection } from "./lib/publishedCollection";
+import { createCollectionSearch } from "./lib/collectionSearch";
 import { toScoreViewModel } from "./lib/viewModels";
 import type { ScoreViewModel } from "../types/viewModels";
 import { FEATURE_FLAG_COLLAB_FLOW } from "./featureFlags";
@@ -18,37 +18,12 @@ import {
 
 const CADERNIN_UID = import.meta.env.VITE_CADERNIN_UID;
 
-/**
- * The homepage with the collab flow on: exactly the scores published
- * songbooks pin, each at its published version (collab-flow §4.4).
- */
-async function loadPublishedCollection(): Promise<ScoreViewModel[]> {
-  const [projectDocs, scoreDocs] = await Promise.all([
-    getAllProjects(),
-    getPublishedScores(),
-  ]);
-  const projectTitles = new Map(projectDocs.map((p) => [p.id, p.title]));
-  const viewModels = await Promise.all(
-    scoreDocs
-      .filter((s) => s.published && projectTitles.has(s.projectId))
-      .map(async (score) => {
-        const revision = await getScoreRevision(
-          score.id,
-          score.published!.revisionId,
-        );
-        return revision
-          ? toScoreViewModel(
-              score,
-              revision,
-              projectTitles.get(score.projectId)!,
-            )
-          : null;
-      }),
-  );
-  return viewModels.filter((v): v is ScoreViewModel => v !== null);
+async function loadPublishedCollection(): Promise<LoadedCollection> {
+  const [projects, lineage] = await Promise.all([getAllProjects(), getAllScores()]);
+  return buildPublishedCollection(projects, lineage, getScoreRevision);
 }
 
-async function loadCollection(): Promise<ScoreViewModel[]> {
+async function loadCollection(): Promise<LoadedCollection> {
   if (FEATURE_FLAG_COLLAB_FLOW) {
     return loadPublishedCollection();
   }
@@ -91,35 +66,20 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
     );
   }
 
-  return scores;
-}
-
-const fuseOptions: IFuseOptions<ScoreViewModel> = {
-  keys: ["title", "composer", "tags", "projectTitle"],
-  includeScore: true,
-  includeMatches: true,
-  shouldSort: true,
-  threshold: 0.1,
-  useExtendedSearch: true,
-  ignoreDiacritics: true,
-  ignoreLocation: true,
-};
-
-function buildFuse(scores: ScoreViewModel[]): Fuse<ScoreViewModel> {
-  const index = Fuse.createIndex(fuseOptions.keys as string[], scores);
-  return new Fuse(scores, fuseOptions, index);
+  return { allScores: scores, searchScores: scores };
 }
 
 export function CollectionProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<CollectionStatus>("loading");
   const [allScores, setAllScores] = useState<ScoreViewModel[]>([]);
-  const [fuse, setFuse] = useState<Fuse<ScoreViewModel> | null>(null);
+  const [searchScores, setSearchScores] = useState<ScoreViewModel[]>([]);
+  const { search, getMatches } = useMemo(() => createCollectionSearch(searchScores), [searchScores]);
 
   useEffect(() => {
     loadCollection()
-      .then((scores) => {
-        setAllScores(scores);
-        setFuse(buildFuse(scores));
+      .then((collection) => {
+        setAllScores(collection.allScores);
+        setSearchScores(collection.searchScores);
         setStatus("ready");
       })
       .catch((err) => {
@@ -127,26 +87,6 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
         setStatus("error");
       });
   }, []);
-
-  const search = useCallback(
-    (query: string): ScoreViewModel[] => {
-      if (!fuse || query === "") {
-        return allScores;
-      }
-      return fuse.search(query).map((r) => r.item);
-    },
-    [fuse, allScores],
-  );
-
-  const getMatches = useCallback(
-    (query: string, scoreId: string) => {
-      if (!fuse || query === "") {
-        return undefined;
-      }
-      return fuse.search(query).find((r) => r.item.id === scoreId)?.matches;
-    },
-    [fuse],
-  );
 
   return (
     <CollectionContext.Provider value={{ status, allScores, search, getMatches }}>

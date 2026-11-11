@@ -2,7 +2,6 @@ import { Spinner, Row, Col } from "react-bootstrap";
 import { useCollectionContext } from "../useCollectionContext";
 import type { ScoreViewModel } from "../../types/viewModels";
 import { Sort } from "./Sort";
-import { AddAllSongsButton } from "./AddAllScoresButton";
 import { ScoreSearchResultTable } from "./ScoreSearchResultTable";
 import type { SortColumn, SortDirection } from "../utils/sort";
 
@@ -10,7 +9,6 @@ interface ScoreSearchResultsProps {
   results: ScoreViewModel[];
   searchQuery: string;
   onSortBy: (column: SortColumn, direction: SortDirection) => void;
-  onAddAll: () => void;
   onSelectSong: (song: ScoreViewModel, checked: boolean) => void;
 }
 
@@ -18,7 +16,6 @@ const ScoreSearchResults = ({
   results,
   searchQuery,
   onSortBy,
-  onAddAll,
   onSelectSong,
 }: ScoreSearchResultsProps) => {
   const { status } = useCollectionContext();
@@ -36,12 +33,9 @@ const ScoreSearchResults = ({
         <Col sm="6">
           <Sort onSortBy={onSortBy} />
         </Col>
-        <Col sm="2" />
-        <Col sm="4">
-          <AddAllSongsButton count={results.length} onAddAllScores={onAddAll} />
-        </Col>
       </Row>
       <ScoreSearchResultTable
+        key={searchQuery}
         scores={results}
         searchQuery={searchQuery}
         handleSelect={onSelectSong}
