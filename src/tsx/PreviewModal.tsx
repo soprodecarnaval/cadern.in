@@ -1,16 +1,18 @@
-import { Modal, Image, Carousel } from "react-bootstrap";
-import { useEffect, useState } from "react";
+import { Button, Modal, Image, Carousel } from "react-bootstrap";
+import { useEffect, useState, type ChangeEvent } from "react";
 import type { PartViewModel } from "../../types/viewModels";
 
 import "../css/PreviewModal.css";
 import RangeSlider from "react-bootstrap-range-slider";
-import { BsFillPauseCircleFill, BsPlayCircleFill } from "react-icons/bs";
+import { BsChevronLeft, BsChevronRight, BsFillPauseCircleFill, BsPlayCircleFill } from "react-icons/bs";
 import { midiPlayer, playMidiPart, removeToastPlayer } from "../utils/playMidi";
 
 interface PreviewModalProps {
   show: boolean;
   handleShow: (show: boolean) => void;
-  part: PartViewModel;
+  parts: PartViewModel[];
+  activeIndex: number;
+  onIndexChange: (index: number) => void;
 }
 
 interface SvgCarouselProps {
@@ -24,7 +26,10 @@ const FilesCarousel = ({ svgs }: SvgCarouselProps) => {
     setIndex(selectedIndex);
   };
   return (
-    <Carousel activeIndex={index} onSelect={handleSelect}>
+    // Keyboard is reserved for switching parts (below) — intra-part page
+    // paging uses the carousel's own click/dot controls only, so the two
+    // don't both react to the same arrow keypress.
+    <Carousel activeIndex={index} onSelect={handleSelect} keyboard={false}>
       {svgs.map((svg) => (
         <Carousel.Item key={svg}>
           <Image src={svg} />
@@ -34,12 +39,28 @@ const FilesCarousel = ({ svgs }: SvgCarouselProps) => {
   );
 };
 
-const PreviewModal = ({ show, handleShow, part }: PreviewModalProps) => {
+const PreviewModal = ({ show, handleShow, parts, activeIndex, onIndexChange }: PreviewModalProps) => {
   const [value, setValue] = useState(0);
+  const part = parts[activeIndex];
 
   useEffect(() => {
     removeToastPlayer();
   });
+
+  useEffect(() => {
+    if (!show) {
+      return;
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft" && activeIndex > 0) {
+        onIndexChange(activeIndex - 1);
+      } else if (event.key === "ArrowRight" && activeIndex < parts.length - 1) {
+        onIndexChange(activeIndex + 1);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [show, activeIndex, parts.length, onIndexChange]);
 
   const handleClose = () => {
     handleShow(false);
@@ -54,11 +75,15 @@ const PreviewModal = ({ show, handleShow, part }: PreviewModalProps) => {
     midiPlayer?.pause();
   };
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setValue(event.currentTarget.valueAsNumber);
     midiPlayer?.skipToPercent(event.currentTarget.valueAsNumber);
     midiPlayer?.play();
   };
+
+  if (!part) {
+    return null;
+  }
 
   return (
     <Modal show={show} onHide={handleClose} backdrop="static" keyboard={false}>
@@ -85,6 +110,29 @@ const PreviewModal = ({ show, handleShow, part }: PreviewModalProps) => {
         />
         <small id="song-time-preview"></small>
         <FilesCarousel svgs={part.svg} />
+        {parts.length > 1 && (
+          <div className="d-flex justify-content-between align-items-center mt-2">
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              disabled={activeIndex === 0}
+              onClick={() => onIndexChange(activeIndex - 1)}
+            >
+              <BsChevronLeft aria-hidden="true" /> Anterior
+            </Button>
+            <span className="text-muted small">
+              {activeIndex + 1} / {parts.length}
+            </span>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              disabled={activeIndex === parts.length - 1}
+              onClick={() => onIndexChange(activeIndex + 1)}
+            >
+              Próxima <BsChevronRight aria-hidden="true" />
+            </Button>
+          </div>
+        )}
       </Modal.Body>
     </Modal>
   );
