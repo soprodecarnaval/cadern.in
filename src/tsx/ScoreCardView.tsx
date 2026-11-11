@@ -1,0 +1,165 @@
+import { useState, type ReactNode } from "react";
+import { BsChevronDown, BsChevronRight } from "react-icons/bs";
+import { SiMidi, SiMusescore } from "react-icons/si";
+import { PartItemView } from "./PartItemView";
+import { highlightRanges, type HighlightRanges } from "../lib/highlight";
+import type {
+  ScoreViewModel,
+  PlayingPartViewModel,
+  PartViewModel,
+} from "../../types/viewModels";
+
+import "../css/ScoreRow.css";
+
+/** Per-field search-match ranges — library cards only (see ScoreCard's `highlight` prop). */
+export interface ScoreCardHighlight {
+  title?: HighlightRanges;
+  projectTitle?: HighlightRanges;
+  composer?: HighlightRanges;
+  tags?: HighlightRanges;
+}
+
+export interface ScoreCardProps {
+  score: ScoreViewModel;
+  mode: "compact" | "expanded";
+  onToggleMode: () => void;
+  onPlay: (info: PlayingPartViewModel) => void;
+  /** Drag-handle, songbook column only. */
+  leading?: ReactNode;
+  /** Column-specific action(s): delete+edit (songbook) or an add button (available). */
+  trailing: ReactNode;
+  /** Extra content shown only when expanded — e.g. the project picker's version selector. */
+  details?: ReactNode;
+  /** Search-match ranges to highlight — only ever passed for library/available cards. */
+  highlight?: ScoreCardHighlight;
+}
+
+interface ScoreCardViewProps extends ScoreCardProps {
+  lineage?: ReactNode;
+  play: (part: PartViewModel) => Promise<void>;
+  stop: () => void;
+  renderPreview: (
+    parts: PartViewModel[],
+    index: number,
+    setIndex: (index: number | null) => void,
+  ) => ReactNode;
+}
+
+const ScoreCardView = ({
+  score,
+  mode,
+  onToggleMode,
+  onPlay,
+  leading,
+  trailing,
+  details,
+  highlight,
+  lineage,
+  play,
+  stop,
+  renderPreview,
+}: ScoreCardViewProps) => {
+  const expanded = mode === "expanded";
+  const parts = score.latestRevision.parts;
+  const previewableParts = parts.filter((p) => p.svg.length > 0);
+  const [openPartIndex, setOpenPartIndex] = useState<number | null>(null);
+  // Field priority: title → owning project (stand-in for "first published
+  // songbook" until that data exists) → composer → tags.
+  const metaFields: { text: string; ranges?: HighlightRanges }[] = [
+    { text: score.projectTitle, ranges: highlight?.projectTitle },
+    ...(score.composer
+      ? [{ text: score.composer, ranges: highlight?.composer }]
+      : []),
+    ...(score.tags.length > 0
+      ? [{ text: score.tags.join(", "), ranges: highlight?.tags }]
+      : []),
+  ];
+
+  return (
+    <div className="score-card">
+      <div className="score-card-row">
+        {leading}
+        <button
+          type="button"
+          className="btn btn-link p-0 score-card-toggle"
+          aria-label={`${expanded ? "Recolher" : "Expandir"} ${score.title}`}
+          aria-expanded={expanded}
+          onClick={onToggleMode}
+        >
+          {expanded ? (
+            <BsChevronDown aria-hidden="true" />
+          ) : (
+            <BsChevronRight aria-hidden="true" />
+          )}
+        </button>
+        <div className="score-card-main" onClick={onToggleMode}>
+          <div className="score-card-title">
+            {highlightRanges(score.title, highlight?.title)}
+          </div>
+          {metaFields.length > 0 && (
+            <div className="score-card-meta text-muted small">
+              {metaFields.map((field, i) => (
+                <span key={i}>
+                  {i > 0 && " · "}
+                  {highlightRanges(field.text, field.ranges)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="score-card-links">
+          {score.latestRevision.midi != "" && (
+            <a
+              href={score.latestRevision.midi}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="MIDI"
+            >
+              <SiMidi />
+            </a>
+          )}
+          {score.latestRevision.mscz != "" && (
+            <a
+              href={score.latestRevision.mscz}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="MuseScore"
+            >
+              <SiMusescore />
+            </a>
+          )}
+        </div>
+        {trailing}
+      </div>
+      {expanded && (
+        <div className="score-card-details">
+          {(score.sub || parts.length > 0) && (
+            <div className="text-muted small score-card-subline">
+              {score.sub && <>{score.sub} · </>}
+              {parts.length} parte{parts.length === 1 ? "" : "s"}
+            </div>
+          )}
+          {lineage}
+          {details}
+          <div className="score-card-parts">
+            {previewableParts.map((part, i) => (
+              <PartItemView
+                play={play}
+                stop={stop}
+                key={part.name}
+                score={score}
+                part={part}
+                handlePlayingSong={onPlay}
+                onOpenPreview={() => setOpenPartIndex(i)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {openPartIndex !== null &&
+        renderPreview(previewableParts, openPartIndex, setOpenPartIndex)}
+    </div>
+  );
+};
+
+export { ScoreCardView };
