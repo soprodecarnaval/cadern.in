@@ -10,6 +10,7 @@ import {
   EmailAuthProvider,
   onAuthStateChanged,
   reauthenticateWithCredential,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
@@ -22,6 +23,7 @@ import { auth, storage } from "./firebase";
 
 interface AuthContextValue {
   currentUser: User | null;
+  pendingUser: User | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -30,6 +32,8 @@ interface AuthContextValue {
     password: string,
     displayName: string,
   ) => Promise<void>;
+  resendVerificationEmail: () => Promise<void>;
+  refreshVerificationStatus: () => Promise<void>;
   updateDisplayName: (name: string) => Promise<void>;
   updateAvatar: (blob: Blob) => Promise<void>;
   changePassword: (current: string, newPass: string) => Promise<void>;
@@ -38,10 +42,22 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  // A signed-in Firebase user whose email isn't verified yet is not
+  // considered logged in: currentUser stays null, and the raw user sits in
+  // pendingUser so the UI can show a "verify your email" screen with resend.
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setCurrentUser);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user && !user.emailVerified) {
+        setCurrentUser(null);
+        setPendingUser(user);
+      } else {
+        setCurrentUser(user);
+        setPendingUser(null);
+      }
+    });
     return unsubscribe;
   }, []);
 
@@ -68,7 +84,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
     );
     await updateProfile(user, { displayName });
-    setCurrentUser({ ...user, displayName });
+    await sendEmailVerification(user);
+    setPendingUser({ ...user });
+  };
+
+  const resendVerificationEmail = async () => {
+    if (!pendingUser) {return;}
+    await sendEmailVerification(pendingUser);
+  };
+
+  const refreshVerificationStatus = async () => {
+    if (!auth.currentUser) {return;}
+    await auth.currentUser.reload();
+    if (auth.currentUser.emailVerified) {
+      setCurrentUser(auth.currentUser);
+      setPendingUser(null);
+    }
   };
 
   const updateDisplayName = async (name: string) => {
@@ -97,10 +128,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         currentUser,
+        pendingUser,
         login,
         logout,
         resetPassword,
         register,
+        resendVerificationEmail,
+        refreshVerificationStatus,
         updateDisplayName,
         updateAvatar,
         changePassword,

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal, Tab, Tabs } from "react-bootstrap";
+import type { User } from "firebase/auth";
 
 export interface AuthModalViewProps {
   login: (email: string, password: string) => Promise<void>;
@@ -9,6 +10,10 @@ export interface AuthModalViewProps {
     displayName: string,
   ) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  pendingUser: User | null;
+  resendVerificationEmail: () => Promise<void>;
+  refreshVerificationStatus: () => Promise<void>;
+  logout: () => Promise<void>;
   show: boolean;
   onHide: () => void;
 }
@@ -19,6 +24,10 @@ export function AuthModalView({
   login,
   register,
   resetPassword,
+  pendingUser,
+  resendVerificationEmail,
+  refreshVerificationStatus,
+  logout,
 }: AuthModalViewProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,10 +39,22 @@ export function AuthModalView({
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [tab, setTab] = useState<string>("login");
 
+  const [resendSent, setResendSent] = useState(false);
+  const [resendPending, setResendPending] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const resendCountdownRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
+  const [verifyError, setVerifyError] = useState("");
+  const [refreshPending, setRefreshPending] = useState(false);
+
   useEffect(() => {
     return () => {
       if (countdownRef.current) {
         clearInterval(countdownRef.current);
+      }
+      if (resendCountdownRef.current) {
+        clearInterval(resendCountdownRef.current);
       }
     };
   }, []);
@@ -99,11 +120,104 @@ export function AuthModalView({
     setError("");
     try {
       await register(email, password, displayName);
-      handleHide();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erro ao criar conta");
     }
   };
+
+  const startResendCountdown = () => {
+    setResendCountdown(90);
+    resendCountdownRef.current = setInterval(() => {
+      setResendCountdown((n) => {
+        if (n <= 1) {
+          clearInterval(resendCountdownRef.current!);
+          resendCountdownRef.current = null;
+          return 0;
+        }
+        return n - 1;
+      });
+    }, 1000);
+  };
+
+  const handleResendVerification = async () => {
+    setVerifyError("");
+    setResendPending(true);
+    try {
+      await resendVerificationEmail();
+      setResendSent(true);
+      startResendCountdown();
+    } catch (err: unknown) {
+      setVerifyError(err instanceof Error ? err.message : "Erro ao reenviar");
+    } finally {
+      setResendPending(false);
+    }
+  };
+
+  const handleRefreshVerification = async () => {
+    setVerifyError("");
+    setRefreshPending(true);
+    try {
+      await refreshVerificationStatus();
+    } catch (err: unknown) {
+      setVerifyError(err instanceof Error ? err.message : "Erro ao verificar");
+    } finally {
+      setRefreshPending(false);
+    }
+  };
+
+  if (pendingUser) {
+    return (
+      <Modal show={show} onHide={onHide}>
+        <Modal.Header closeButton>
+          <Modal.Title>Verifique seu email</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            Enviamos um link de confirmação para{" "}
+            <strong>{pendingUser.email}</strong>. Clique no link e depois
+            volte aqui.
+          </p>
+          <div className="d-flex align-items-center gap-3">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => void handleRefreshVerification()}
+              disabled={refreshPending}
+            >
+              Já verifiquei
+            </button>
+            <button
+              type="button"
+              className="btn btn-link p-0"
+              onClick={() => void handleResendVerification()}
+              disabled={resendPending || resendCountdown > 0}
+            >
+              {resendCountdown > 0
+                ? `Reenviar email (${resendCountdown}s)`
+                : "Reenviar email"}
+            </button>
+          </div>
+          <button
+            type="button"
+            className="btn btn-link p-0 mt-3"
+            onClick={() => void logout()}
+          >
+            Usar outra conta
+          </button>
+          {resendSent && (
+            <div className="alert alert-success mt-3" role="alert">
+              Email reenviado!
+            </div>
+          )}
+          {verifyError && (
+            <div className="alert alert-danger mt-3" role="alert">
+              {verifyError}
+            </div>
+          )}
+        </Modal.Body>
+      </Modal>
+    );
+  }
 
   return (
     <Modal show={show} onHide={handleHide}>
