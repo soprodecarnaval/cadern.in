@@ -1,0 +1,199 @@
+import type { Timestamp } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { Alert, Button, Container, Spinner, Table } from "react-bootstrap";
+import { Link } from "react-router-dom";
+
+import type { ScoreDoc, ScoreRevisionDoc } from "../../types/docs";
+import type { WithId } from "../lib/db";
+import { resolveScoreMetadata } from "../lib/scoreMetadata";
+
+function formatDate(timestamp: Timestamp | null | undefined): string {
+  if (!timestamp) {
+    return "—";
+  }
+  return timestamp.toDate().toLocaleDateString("pt-BR");
+}
+
+function SongRow({
+  services,
+  song,
+  deleting,
+  onDelete,
+}: {
+  services: MyScoresPageServices;
+  song: WithId<ScoreDoc>;
+  deleting: boolean;
+  onDelete: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [revisions, setRevisions] = useState<WithId<ScoreRevisionDoc>[] | null>(
+    null,
+  );
+  const [loadingRevisions, setLoadingRevisions] = useState(false);
+
+  const handleToggle = async () => {
+    if (!expanded && revisions === null) {
+      setLoadingRevisions(true);
+      setRevisions(await services.getScoreRevisions(song.id));
+      setLoadingRevisions(false);
+    }
+    setExpanded((v) => !v);
+  };
+
+  return (
+    <>
+      <tr>
+        <td>
+          <button
+            className="btn btn-link btn-sm p-0 me-2"
+            onClick={() => void handleToggle()}
+            aria-label={expanded ? "Recolher" : "Expandir"}
+          >
+            {expanded ? "▾" : "▸"}
+          </button>
+          {resolveScoreMetadata(song).title}
+        </td>
+        <td>{resolveScoreMetadata(song).composer}</td>
+        <td>{formatDate(song.createdAt)}</td>
+        <td>#{song.latestRevisionId}</td>
+        <td>
+          <div className="d-flex gap-2">
+            <Link to={`/score/${encodeURIComponent(song.id)}`}>
+              <Button size="sm" variant="outline-secondary">
+                Ver
+              </Button>
+            </Link>
+            <Button
+              size="sm"
+              variant="outline-danger"
+              disabled={deleting}
+              onClick={onDelete}
+            >
+              {deleting ? "Excluindo..." : "Excluir"}
+            </Button>
+          </div>
+        </td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td colSpan={5} className="p-0">
+            {loadingRevisions ? (
+              <div className="p-2">
+                <Spinner animation="border" size="sm" />
+              </div>
+            ) : (
+              <Table size="sm" className="mb-0" borderless>
+                <tbody>
+                  {revisions?.map((rev) => (
+                    <tr key={rev.id} className="border-top">
+                      <td className="ps-4 text-muted">
+                        Versão #{rev.revisionNumber}
+                      </td>
+                      <td className="text-muted">
+                        {formatDate(rev.uploadedAt)}
+                      </td>
+                      <td>
+                        <Link
+                          to={`/score/${encodeURIComponent(song.id)}/${rev.id}`}
+                        >
+                          <Button size="sm" variant="outline-secondary">
+                            Ver
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+export type MyScoresPageServices = Pick<
+  typeof import("../lib/db"),
+  "getUserScores" | "getScoreRevisions" | "softDeleteScore"
+>;
+
+export function MyScoresPageView({
+  services,
+  currentUser,
+}: {
+  services: MyScoresPageServices;
+  currentUser: import("firebase/auth").User | null;
+}) {
+  const [songs, setSongs] = useState<WithId<ScoreDoc>[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+    void services.getUserScores(currentUser.uid).then((results) => {
+      setSongs(results);
+      setLoading(false);
+    });
+  }, [currentUser, services]);
+
+  if (!currentUser) {
+    return (
+      <Container className="mt-4">
+        <Alert variant="warning">Faça login para ver suas partituras.</Alert>
+      </Container>
+    );
+  }
+
+  const handleDelete = async (scoreId: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta partitura?")) {
+      return;
+    }
+    setDeleting(scoreId);
+    try {
+      await services.softDeleteScore(scoreId);
+      setSongs((prev) => prev.filter((s) => s.id !== scoreId));
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  return (
+    <Container className="mt-4">
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h2>Minhas partituras</h2>
+      </div>
+
+      {loading ? (
+        <Spinner animation="border" />
+      ) : songs.length === 0 ? (
+        <Alert variant="info">Você ainda não enviou nenhuma partitura.</Alert>
+      ) : (
+        <Table bordered hover>
+          <thead>
+            <tr>
+              <th>Título</th>
+              <th>Compositor</th>
+              <th>Criado em</th>
+              <th>Versão</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {songs.map((song) => (
+              <SongRow
+                services={services}
+                key={song.id}
+                song={song}
+                deleting={deleting === song.id}
+                onDelete={() => void handleDelete(song.id)}
+              />
+            ))}
+          </tbody>
+        </Table>
+      )}
+    </Container>
+  );
+}
