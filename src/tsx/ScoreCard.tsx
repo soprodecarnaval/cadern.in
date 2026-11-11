@@ -1,7 +1,8 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { BsChevronDown, BsChevronRight } from "react-icons/bs";
 import { SiMidi, SiMusescore } from "react-icons/si";
 import { PartItem } from "./PartItem";
+import { PreviewModal } from "./PreviewModal";
 import { LineageBadge } from "./LineageBadge";
 import type { ScoreViewModel, PlayingPartViewModel } from "../../types/viewModels";
 
@@ -31,6 +32,8 @@ const ScoreCard = ({
 }: ScoreCardProps) => {
   const expanded = mode === "expanded";
   const parts = score.latestRevision.parts;
+  const previewableParts = parts.filter((p) => p.svg.length > 0);
+  const [openPartIndex, setOpenPartIndex] = useState<number | null>(null);
   // Field priority: title → owning project (stand-in for "first published
   // songbook" until that data exists) → composer → tags.
   const metaLine = [
@@ -87,11 +90,26 @@ const ScoreCard = ({
           <LineageBadge scoreId={score.id} />
           {details}
           <div className="score-card-parts">
-            {parts.map((part) => (
-              <PartItem key={part.name} score={score} part={part} handlePlayingSong={onPlay} />
+            {previewableParts.map((part, i) => (
+              <PartItem
+                key={part.name}
+                score={score}
+                part={part}
+                handlePlayingSong={onPlay}
+                onOpenPreview={() => setOpenPartIndex(i)}
+              />
             ))}
           </div>
         </div>
+      )}
+      {openPartIndex !== null && (
+        <PreviewModal
+          show
+          handleShow={(show) => setOpenPartIndex(show ? openPartIndex : null)}
+          parts={previewableParts}
+          activeIndex={openPartIndex}
+          onIndexChange={setOpenPartIndex}
+        />
       )}
     </div>
   );
