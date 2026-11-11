@@ -1,139 +1,29 @@
-import { useState, type ReactNode } from "react";
-import { BsChevronDown, BsChevronRight } from "react-icons/bs";
-import { SiMidi, SiMusescore } from "react-icons/si";
-import { PartItem } from "./PartItem";
-import { PreviewModal } from "./PreviewModal";
+import { ScoreCardView, type ScoreCardProps } from "./ScoreCardView";
 import { LineageBadge } from "./LineageBadge";
-import { highlightRanges, type HighlightRanges } from "../lib/highlight";
-import type { ScoreViewModel, PlayingPartViewModel } from "../../types/viewModels";
+import { PreviewModal } from "./PreviewModal";
+import { midiPlayer, playMidiPart } from "../utils/playMidi";
+export type { ScoreCardHighlight } from "./ScoreCardView";
 
-import "../css/ScoreRow.css";
-
-/** Per-field search-match ranges — library cards only (see ScoreCard's `highlight` prop). */
-export interface ScoreCardHighlight {
-  title?: HighlightRanges;
-  projectTitle?: HighlightRanges;
-  composer?: HighlightRanges;
-  tags?: HighlightRanges;
-}
-
-interface ScoreCardProps {
-  score: ScoreViewModel;
-  mode: "compact" | "expanded";
-  onToggleMode: () => void;
-  onPlay: (info: PlayingPartViewModel) => void;
-  /** Drag-handle, songbook column only. */
-  leading?: ReactNode;
-  /** Column-specific action(s): delete+edit (songbook) or an add button (available). */
-  trailing: ReactNode;
-  /** Extra content shown only when expanded — e.g. the project picker's version selector. */
-  details?: ReactNode;
-  /** Search-match ranges to highlight — only ever passed for library/available cards. */
-  highlight?: ScoreCardHighlight;
-}
-
-const ScoreCard = ({
-  score,
-  mode,
-  onToggleMode,
-  onPlay,
-  leading,
-  trailing,
-  details,
-  highlight,
-}: ScoreCardProps) => {
-  const expanded = mode === "expanded";
-  const parts = score.latestRevision.parts;
-  const previewableParts = parts.filter((p) => p.svg.length > 0);
-  const [openPartIndex, setOpenPartIndex] = useState<number | null>(null);
-  // Field priority: title → owning project (stand-in for "first published
-  // songbook" until that data exists) → composer → tags.
-  const metaFields: { text: string; ranges?: HighlightRanges }[] = [
-    { text: score.projectTitle, ranges: highlight?.projectTitle },
-    ...(score.composer ? [{ text: score.composer, ranges: highlight?.composer }] : []),
-    ...(score.tags.length > 0
-      ? [{ text: score.tags.join(", "), ranges: highlight?.tags }]
-      : []),
-  ];
-
+export function ScoreCard(props: ScoreCardProps) {
   return (
-    <div className="score-card">
-      <div className="score-card-row">
-        {leading}
-        <button
-          type="button"
-          className="btn btn-link p-0 score-card-toggle"
-          aria-label={`${expanded ? "Recolher" : "Expandir"} ${score.title}`}
-          aria-expanded={expanded}
-          onClick={onToggleMode}
-        >
-          {expanded ? (
-            <BsChevronDown aria-hidden="true" />
-          ) : (
-            <BsChevronRight aria-hidden="true" />
-          )}
-        </button>
-        <div className="score-card-main" onClick={onToggleMode}>
-          <div className="score-card-title">{highlightRanges(score.title, highlight?.title)}</div>
-          {metaFields.length > 0 && (
-            <div className="score-card-meta text-muted small">
-              {metaFields.map((field, i) => (
-                <span key={i}>
-                  {i > 0 && " · "}
-                  {highlightRanges(field.text, field.ranges)}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="score-card-links">
-          {score.latestRevision.midi != "" && (
-            <a href={score.latestRevision.midi} target="_blank" rel="noreferrer" aria-label="MIDI">
-              <SiMidi />
-            </a>
-          )}
-          {score.latestRevision.mscz != "" && (
-            <a href={score.latestRevision.mscz} target="_blank" rel="noreferrer" aria-label="MuseScore">
-              <SiMusescore />
-            </a>
-          )}
-        </div>
-        {trailing}
-      </div>
-      {expanded && (
-        <div className="score-card-details">
-          {(score.sub || parts.length > 0) && (
-            <div className="text-muted small score-card-subline">
-              {score.sub && <>{score.sub} · </>}
-              {parts.length} parte{parts.length === 1 ? "" : "s"}
-            </div>
-          )}
-          <LineageBadge scoreId={score.id} />
-          {details}
-          <div className="score-card-parts">
-            {previewableParts.map((part, i) => (
-              <PartItem
-                key={part.name}
-                score={score}
-                part={part}
-                handlePlayingSong={onPlay}
-                onOpenPreview={() => setOpenPartIndex(i)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-      {openPartIndex !== null && (
+    <ScoreCardView
+      {...props}
+      lineage={
+        props.mode === "expanded" ? (
+          <LineageBadge scoreId={props.score.id} />
+        ) : null
+      }
+      play={(part) => playMidiPart(part.midi, part.instrument)}
+      stop={() => midiPlayer?.stop()}
+      renderPreview={(parts, index, setIndex) => (
         <PreviewModal
           show
-          handleShow={(show) => setOpenPartIndex(show ? openPartIndex : null)}
-          parts={previewableParts}
-          activeIndex={openPartIndex}
-          onIndexChange={setOpenPartIndex}
+          handleShow={(show) => setIndex(show ? index : null)}
+          parts={parts}
+          activeIndex={index}
+          onIndexChange={setIndex}
         />
       )}
-    </div>
+    />
   );
-};
-
-export { ScoreCard };
+}

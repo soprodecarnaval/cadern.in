@@ -53,3 +53,6 @@ secrets
 
 # Ephemeral credentials written by google-github-actions/auth
 gha-creds-*.json
+
+# Storybook build output
+storybook-static/
