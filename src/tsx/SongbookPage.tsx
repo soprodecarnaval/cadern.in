@@ -76,6 +76,13 @@ import { SongBookTable } from "./SongBookTable";
 import { SongbookGenerationPanel } from "./SongbookGenerationPanel";
 import { SongbookDragProvider } from "./SongbookDragProvider";
 import type { SongbookSortableListHandle } from "./SongbookSortableList";
+import { SongbookReader } from "./SongbookReader";
+import { buildSongbookSections } from "../lib/pdfGeneration";
+import { generateSongbookPdfs } from "../lib/generateSongbookPdfs";
+
+// The songbook's table, PDF generation and member tools live under ?detalhes;
+// the reader is the landing view.
+const DETAILS_PARAM = "detalhes";
 
 interface Loaded {
   songbook: WithId<SongbookDoc>;
@@ -202,15 +209,63 @@ export function SongbookPage() {
     setReloads((n) => n + 1);
   };
 
+  // Keeps ?versao= when switching between the reader and the details page.
+  const withDetails = (on: boolean) => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("musica");
+    if (on) {
+      next.set(DETAILS_PARAM, "");
+    } else {
+      next.delete(DETAILS_PARAM);
+    }
+    const query = next.toString().replace(/=(?=&|$)/g, "");
+    return query ? `?${query}` : "?";
+  };
+
+  const badges = (
+    <>
+      {!songbook.isPublished && <Badge bg="secondary">não publicado</Badge>}
+      {!isCurrent && <Badge bg="warning">versão antiga</Badge>}
+    </>
+  );
+
+  if (!searchParams.has(DETAILS_PARAM)) {
+    return (
+      <SongbookReader
+        title={songbook.title}
+        badges={badges}
+        items={items}
+        actions={
+          <Link to={withDetails(true)}>
+            Detalhes, PDF e versões
+          </Link>
+        }
+        onDownloadPdf={(instrument) =>
+          generateSongbookPdfs({
+            sections: buildSongbookSections(items),
+            instruments: [instrument],
+            title: songbook.title,
+            covers: { [instrument]: revision.covers[instrument]?.url ?? "" },
+            fallbackInstruments: new Set(),
+            carnivalMode: false,
+            backSheetPageNumber: false,
+            antiAssedioPages: false,
+          })
+        }
+      />
+    );
+  }
+
   return (
     <Container className="mt-4">
       <div className="d-flex align-items-baseline gap-2 mb-1">
         <h2 className="mb-0">{songbook.title}</h2>
         <span className="text-muted">versão #{revision.revisionNumber}</span>
-        {!songbook.isPublished && <Badge bg="secondary">não publicado</Badge>}
-        {!isCurrent && <Badge bg="warning">versão antiga</Badge>}
+        {badges}
       </div>
       <p className="text-muted">
+        <Link to={withDetails(false)}>abrir caderninho</Link>
+        {" · "}
         <Link to={`/projects/${encodeURIComponent(projectId)}/songbooks`}>
           caderninhos do projeto
         </Link>

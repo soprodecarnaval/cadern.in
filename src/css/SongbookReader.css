@@ -1,0 +1,286 @@
+.reader {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  min-height: 360px;
+  background: var(--bs-body-bg);
+}
+
+/* Phones and tablets: the open score takes the whole screen. */
+.reader.immersive {
+  position: fixed;
+  inset: 0;
+  z-index: 1035;
+  min-height: 0;
+}
+
+.reader-index {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+
+.reader-index-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0.75rem 0.875rem 0.5rem;
+  background: var(--bs-body-bg);
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.reader-index-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.reader-section {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.75rem 0.875rem 0.375rem;
+  border: 0;
+  background: none;
+  color: var(--bs-secondary-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.reader-section span {
+  flex: 1;
+}
+
+.reader-section em {
+  font-style: normal;
+  font-weight: 400;
+}
+
+.reader-section svg {
+  transition: transform 0.15s;
+}
+
+.reader-section[aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
+
+.reader-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  padding: 0 0.5rem;
+}
+
+.reader-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 46px;
+  padding: 0 0.5rem;
+  border: 0;
+  border-bottom: 1px solid var(--bs-border-color);
+  background: none;
+  color: inherit;
+  text-align: left;
+}
+
+.reader-row[aria-current="true"] {
+  background: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary-text-emphasis);
+  font-weight: 600;
+}
+
+.reader-row.deleted {
+  color: var(--bs-secondary-color);
+}
+
+.reader-row-n {
+  flex-shrink: 0;
+  width: 1.75rem;
+  color: var(--bs-secondary-color);
+  font-size: 0.85rem;
+}
+
+.reader-row-t {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reader-row-s {
+  color: var(--bs-secondary-color);
+  font-size: 0.75rem;
+}
+
+.reader-none {
+  padding: 1.5rem 1rem;
+  color: var(--bs-secondary-color);
+}
+
+.reader-main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.reader-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bs-secondary-bg);
+}
+
+.reader-paper {
+  --reader-zoom: 1;
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  touch-action: pan-x pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.reader-sheet img {
+  display: block;
+  /* The app caps every img at 90vh; the score sizes itself. */
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  background: #fff;
+}
+
+.reader-sheet.fit-w img {
+  width: calc(var(--reader-zoom) * 100%);
+  height: auto;
+}
+
+.reader-sheet.fit-h {
+  height: 100%;
+}
+
+.reader-sheet.fit-h img {
+  height: calc(var(--reader-zoom) * 100%);
+  width: auto;
+  margin: 0 auto;
+}
+
+.reader-missing {
+  padding: 4rem 1.5rem;
+  color: var(--bs-secondary-color);
+  text-align: center;
+}
+
+.reader-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 48px;
+  padding: 0 0.375rem;
+  background: var(--bs-body-bg);
+  border-bottom: 1px solid var(--bs-border-color);
+  transition:
+    transform 0.2s,
+    opacity 0.2s;
+}
+
+.reader-bar.static {
+  position: relative;
+  border-radius: var(--bs-modal-inner-border-radius) var(--bs-modal-inner-border-radius) 0 0;
+}
+
+.reader-bar.hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.reader-bar-title {
+  flex: 1;
+  min-width: 0;
+  padding: 0 0.375rem;
+  line-height: 1.2;
+}
+
+.reader-bar-title b {
+  display: block;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reader-bar-title span {
+  color: var(--bs-secondary-color);
+  font-size: 0.75rem;
+}
+
+.reader-count {
+  min-width: 2.5rem;
+  color: var(--bs-secondary-color);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.reader-icon.btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--bs-body-color);
+  font-size: 1.15rem;
+}
+
+/* Wide screens: the score opens in a landscape modal, sized so a whole page
+   fits (score pages are about 1.75 times as wide as tall). */
+.modal-dialog.reader-modal {
+  --reader-modal-width: min(96vw, calc((92vh - 48px) * 1.75));
+  max-width: var(--reader-modal-width);
+  width: var(--reader-modal-width);
+}
+
+.reader-modal .modal-content {
+  overflow: hidden;
+}
+
+.reader-modal .reader-stage {
+  position: relative;
+  inset: auto;
+  aspect-ratio: 1.75;
+}
+
+.reader-drawer {
+  --bs-offcanvas-width: min(320px, 78%);
+}
+
+.reader-drawer-body {
+  height: 100%;
+  overflow: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-bar,
+  .reader-section svg {
+    transition: none;
+  }
+}
+
+.reader-pdf.btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
