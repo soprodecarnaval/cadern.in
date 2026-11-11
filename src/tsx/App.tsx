@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Col, Container, Nav, Navbar, Row } from "react-bootstrap";
 import { Link, Route, Routes } from "react-router-dom";
 import { AuthModal } from "./AuthModal";
@@ -11,7 +11,6 @@ import { SongbookDragProvider } from "./SongbookDragProvider";
 import type { SongbookSortableListHandle } from "./SongbookSortableList";
 import { PDFGenerator } from "./PdfGenerator";
 import {
-  restoreToLibrary as restoreToLibraryList,
   sortByColumn,
   SortColumn,
   SortDirection,
@@ -53,11 +52,11 @@ import {
 import { getPendingUserProjectInvitations } from "../lib/db";
 
 function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
-  const [results, setResults] = useState<ScoreViewModel[]>([]);
+  const [searchResults, setSearchResults] = useState<ScoreViewModel[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const handleSearchResults = useCallback(
     (scores: ScoreViewModel[], query: string) => {
-      setResults(scores);
+      setSearchResults(scores);
       setSearchQuery(query);
     },
     [],
@@ -68,8 +67,6 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
   const [restored, setRestored] = useState(false);
   const [showSave, setShowSave] = useState(false);
   const songbookRef = useRef<SongbookSortableListHandle>(null);
-  // The library's active sort, so a removed/cleared score can be reinserted
-  // at its correct position instead of just prepended.
   const [sort, setSort] = useState<{
     column: SortColumn;
     direction: SortDirection;
@@ -110,16 +107,13 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
     checked ? handleAddScore(song) : handleRemoveScore(song);
   };
 
-  const restoreToLibrary = (scores: ScoreViewModel[]) =>
-    restoreToLibraryList(results, scores, sort);
+  const results = useMemo(() => {
+    const selectedIds = new Set(items.flatMap((item) => isSongbookSection(item) ? [] : [item.score.id]));
+    const available = searchResults.filter((score) => !selectedIds.has(score.id));
+    return sort ? sortByColumn(available, sort.column, sort.direction) : available;
+  }, [searchResults, items, sort]);
 
-  const clearSelected = () => {
-    const removedScores = items.flatMap((r) =>
-      isSongbookSection(r) ? [] : [r.score],
-    );
-    setResults(restoreToLibrary(removedScores));
-    setItems([]);
-  };
+  const clearSelected = () => setItems([]);
 
   const handleAddScore = (score: ScoreViewModel, index?: number) => {
     setItems((prev) => {
@@ -127,14 +121,12 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
       next.splice(index ?? next.length, 0, songbookScore(score));
       return next;
     });
-    setResults(results.filter((r) => r.id !== score.id));
   };
 
   const handleRemoveScore = (score: ScoreViewModel) => {
     setItems(
       items.filter((r) => isSongbookSection(r) || r.score.id !== score.id),
     );
-    setResults(restoreToLibrary([score]));
   };
 
   const handleResultsSortBy = (
@@ -142,24 +134,6 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
     direction: SortDirection,
   ) => {
     setSort({ column, direction });
-    setResults(sortByColumn(results, column, direction).slice());
-  };
-
-  const handleAddAllSongs = () => {
-    const merged: SongbookItemViewModel[] = [
-      ...items,
-      ...results.map(songbookScore),
-    ];
-    const deduped = merged.filter(
-      (row, index) =>
-        isSongbookSection(row) ||
-        index ===
-          merged.findIndex(
-            (o) => !isSongbookSection(o) && row.score.id === o.score.id,
-          ),
-    );
-    setItems(deduped);
-    setResults([]);
   };
 
   const songBook: SongbookViewModel = { items: numberSongbookItems(items) };
@@ -186,7 +160,6 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
                 results={results}
                 searchQuery={searchQuery}
                 onSortBy={handleResultsSortBy}
-                onAddAll={handleAddAllSongs}
                 onSelectSong={handleSelectSong}
               />
             </Col>

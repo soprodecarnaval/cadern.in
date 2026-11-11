@@ -97,10 +97,11 @@ const ScoreSearchResultTable = ({
 }: ScoreSearchResultTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
 
-  const maxNumberPages = Math.round(scores.length / 10) + 1;
+  const maxNumberPages = Math.max(1, Math.ceil(scores.length / 10));
+  const page = Math.min(currentPage, maxNumberPages);
 
   const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
+    setCurrentPage(Number.isFinite(pageNumber) ? Math.max(1, Math.min(pageNumber, maxNumberPages)) : 1);
   };
 
   // Drop zone for songbook cards dragged back out: removes them, regardless
@@ -116,7 +117,7 @@ const ScoreSearchResultTable = ({
   return (
     <>
       <div ref={dropRef} className="score-card-list">
-        {scores.slice((currentPage - 1) * 10, currentPage * 10).map((song) => (
+        {scores.slice((page - 1) * 10, page * 10).map((song) => (
           <AvailableScoreCard
             handleSelect={handleSelect}
             score={song}
@@ -127,7 +128,7 @@ const ScoreSearchResultTable = ({
       </div>
       <PaginationBar
         onChange={handlePageChange}
-        currentPage={currentPage}
+        currentPage={page}
         maxNumberPages={maxNumberPages}
       />
     </>
