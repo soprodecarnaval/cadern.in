@@ -1,6 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Table } from "react-bootstrap";
 import { useDroppable, type DragEndEvent, type DragStartEvent, type DragMoveEvent, type DragOverEvent } from "@dnd-kit/react";
 import type { PlayingPartViewModel, ScoreViewModel, SongbookItemViewModel } from "../../types/viewModels";
 import { insertionIndex, moveSongbookEntry, songbookDragRange, songbookSectionRange } from "../lib/songbookReorder";
@@ -38,11 +37,9 @@ export interface SongbookSortableListHandle {
 function EmptySongbookDropzone() {
   const { ref } = useDroppable({ id: SONGBOOK_APPEND_ID, data: { group: "songbook" } });
   return (
-    <tbody ref={ref}>
-      <tr><td colSpan={9} className="text-muted py-3">
-        Adicione músicas ou seções para montar o caderninho.
-      </td></tr>
-    </tbody>
+    <div ref={ref} className="songbook-empty-list text-muted py-3">
+      Adicione músicas ou seções para montar o caderninho.
+    </div>
   );
 }
 
@@ -55,7 +52,7 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
   onUpdate: (index: number, update: ScoreEditUpdate) => void;
 }>(function SongbookSortableList({ rows, onReorder, onDelete, onSelect, onPlay, onUpdate }, ref) {
   const entries = useSongbookEditorItems(rows);
-  const table = useRef<HTMLTableElement>(null);
+  const container = useRef<HTMLDivElement>(null);
   const [preparingId, setPreparingId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [keyboardDrag, setKeyboardDrag] = useState(false);
@@ -98,6 +95,10 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
     return `Seção ${entry.item.title || "sem título"} · ${count} música${count === 1 ? "" : "s"}`;
   };
 
+  /** Direct children of the list container, keyed by data-editor-id — one per
+   * entry (score card or section), matching SortableSongbookRow's outer div. */
+  const entryElements = () => [...(container.current?.children ?? [])] as HTMLElement[];
+
   const destination = (operation: DragEndEvent["operation"]): DropPosition | null => {
     const { source, target, position, activatorEvent } = operation;
     if (!source || !target || source.id === target.id) { return null; }
@@ -106,16 +107,16 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
     if (from < 0 || to < 0) { return null; }
     const keyboard = activatorEvent instanceof KeyboardEvent;
     const point = position.current;
-    const bounds = table.current?.getBoundingClientRect();
+    const bounds = container.current?.getBoundingClientRect();
     if (!keyboard && (!bounds || point.x < bounds.left || point.x > bounds.right ||
       point.y < bounds.top || point.y > bounds.bottom)) { return null; }
     const range = songbookDragRange(rows, from)!;
     if (to >= range.start && to < range.end) { return null; }
     if (rows[from].type === "section") {
       const group = songbookSectionRange(rows, to)!;
-      const bodies = [...(table.current?.tBodies ?? [])];
-      const first = bodies.find((body) => body.dataset.editorId === entries[group.start].id);
-      const last = bodies.find((body) => body.dataset.editorId === entries[group.end - 1].id);
+      const elements = entryElements();
+      const first = elements.find((el) => el.dataset.editorId === entries[group.start].id);
+      const last = elements.find((el) => el.dataset.editorId === entries[group.end - 1].id);
       if (!first || !last) { return null; }
       const top = first.getBoundingClientRect().top;
       const bottom = last.getBoundingClientRect().bottom;
@@ -151,9 +152,9 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
     const point = operation.position.current;
     if (rows[to].type === "section") {
       const group = songbookSectionRange(rows, to)!;
-      const bodies = [...(table.current?.tBodies ?? [])];
-      const first = bodies.find((body) => body.dataset.editorId === entries[group.start].id);
-      const last = bodies.find((body) => body.dataset.editorId === entries[group.end - 1].id);
+      const elements = entryElements();
+      const first = elements.find((el) => el.dataset.editorId === entries[group.start].id);
+      const last = elements.find((el) => el.dataset.editorId === entries[group.end - 1].id);
       const top = first?.getBoundingClientRect().top ?? 0;
       const bottom = last?.getBoundingClientRect().bottom ?? 0;
       const edge = rows[group.start].type !== "section" ? "after"
@@ -227,35 +228,22 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
       <p className="text-muted small mt-2 mb-1">
         Arraste pela alça. Seções levam suas músicas. Teclado: Espaço, setas e Escape.
       </p>
-      <div className="table-responsive">
-        <Table ref={table} borderless hover className="songbook-sortable-table"
-          aria-label="Músicas e seções do caderninho">
-          <thead>
-            <tr>
-              <th><span className="visually-hidden">Mover</span></th>
-              <th><span className="visually-hidden">Expandir</span></th>
-              <th>Título</th><th>Arranjo</th><th>Tags</th>
-              <th><span className="visually-hidden">Remover</span></th>
-              <th><span className="visually-hidden">Editar</span></th>
-              <th><span className="visually-hidden">MIDI</span></th>
-              <th><span className="visually-hidden">MuseScore</span></th>
-            </tr>
-          </thead>
-          {entries.map((entry, index) => (
-            <SortableSongbookRow key={entry.id} entry={entry} index={index}
-              sorting={!sectionDrag && carried(index)}
-              carried={activeId !== null && carried(index)}
-              disableDrop={sectionDrag && ((carried(index) && index !== draggedIndex) ||
-                (keyboardDrag && entry.item.type === "score"))}
-              scoreCount={entry.item.type === "section" ? songbookDragRange(rows, index)!.end - index - 1 : 0}
-              emptySection={entry.item.type === "section" && (!entries[index + 1] || entries[index + 1].item.type === "section")}
-              insertion={drop?.target === entry.id ? drop.edge : undefined}
-              onPrepareDrag={(keyboard) => prepareDrag(entry.id, keyboard)}
-              onDelete={() => onDelete(index)} onSelect={onSelect} onPlay={onPlay}
-              onUpdate={(update) => onUpdate(index, update)} />
-          ))}
-          {entries.length === 0 && <EmptySongbookDropzone />}
-        </Table>
+      <div ref={container} className="songbook-card-list" role="list"
+        aria-label="Músicas e seções do caderninho">
+        {entries.map((entry, index) => (
+          <SortableSongbookRow key={entry.id} entry={entry} index={index}
+            sorting={!sectionDrag && carried(index)}
+            carried={activeId !== null && carried(index)}
+            disableDrop={sectionDrag && ((carried(index) && index !== draggedIndex) ||
+              (keyboardDrag && entry.item.type === "score"))}
+            scoreCount={entry.item.type === "section" ? songbookDragRange(rows, index)!.end - index - 1 : 0}
+            emptySection={entry.item.type === "section" && (!entries[index + 1] || entries[index + 1].item.type === "section")}
+            insertion={drop?.target === entry.id ? drop.edge : undefined}
+            onPrepareDrag={(keyboard) => prepareDrag(entry.id, keyboard)}
+            onDelete={() => onDelete(index)} onSelect={onSelect} onPlay={onPlay}
+            onUpdate={(update) => onUpdate(index, update)} />
+        ))}
+        {entries.length === 0 && <EmptySongbookDropzone />}
       </div>
     </>
   );

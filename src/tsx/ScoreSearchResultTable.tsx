@@ -1,4 +1,3 @@
-import { Table } from "react-bootstrap";
 import { useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { PointerSensor } from "@dnd-kit/dom";
@@ -6,6 +5,7 @@ import { PointerSensor } from "@dnd-kit/dom";
 import type { ScoreViewModel, PlayingPartViewModel } from "../../types/viewModels";
 
 import { ScoreCard } from "./ScoreCard";
+import { AddButton } from "./AddButton";
 import { DragHandle } from "./DragHandle";
 import { PaginationBar } from "./PaginationBar";
 
@@ -26,14 +26,14 @@ function AvailableScoreCard({
 }) {
   const [mode, setMode] = useState<"compact" | "expanded">("compact");
   // Pointer-only: no stable order to preserve, so no keyboard drag affordance
-  // here — keyboard users add via the "Adicionar" button instead.
+  // here — keyboard users add via the "+" button instead.
   const { ref, handleRef } = useDraggable({
     id: `available:${score.id}`,
     data: { group: "available", score },
     sensors: [PointerSensor],
   });
   return (
-    <tbody ref={ref}>
+    <div ref={ref}>
       <ScoreCard
         score={score}
         mode={mode}
@@ -41,18 +41,13 @@ function AvailableScoreCard({
         onPlay={onSetPlayingPart}
         leading={<DragHandle label={`Arraste ${score.title} para o caderninho`} handleRef={handleRef} onPrepareDrag={() => undefined} />}
         trailing={
-          <td>
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-primary"
-              onClick={() => handleSelect(score, true)}
-            >
-              Adicionar
-            </button>
-          </td>
+          <AddButton
+            label={`Adicionar ${score.title}`}
+            onClick={() => handleSelect(score, true)}
+          />
         }
       />
-    </tbody>
+    </div>
   );
 }
 
@@ -81,17 +76,7 @@ const ScoreSearchResultTable = ({
 
   return (
     <>
-      <Table ref={dropRef} striped borderless hover>
-        <thead>
-          <tr>
-            <th><span className="visually-hidden">Mover</span></th>
-            <th></th>
-            <th>Título</th>
-            <th>Arranjo</th>
-            <th>Tags</th>
-            <th><span className="visually-hidden">Adicionar</span></th>
-          </tr>
-        </thead>
+      <div ref={dropRef} className="score-card-list">
         {scores.slice((currentPage - 1) * 10, currentPage * 10).map((song) => (
           <AvailableScoreCard
             handleSelect={handleSelect}
@@ -100,7 +85,7 @@ const ScoreSearchResultTable = ({
             onSetPlayingPart={handlePlayingSong}
           />
         ))}
-      </Table>
+      </div>
       <PaginationBar
         onChange={handlePageChange}
         currentPage={currentPage}
