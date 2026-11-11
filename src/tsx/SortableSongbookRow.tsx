@@ -36,22 +36,18 @@ function SongbookScoreCard({
         onPlay={handlePlayingSong}
         leading={dragHandle}
         trailing={
-          <>
-            <td>
-              <button type="button" className="btn btn-link p-0"
-                aria-label={`Remover ${score.title}`}
-                onClick={() => handleDelete(score, false)}>
-                <BsFillTrashFill aria-hidden="true" />
-              </button>
-            </td>
-            <td>
-              <button type="button" className="btn btn-link p-0"
-                aria-label={`Editar ${score.title}`}
-                onClick={() => setShowEditModal(true)}>
-                <BsPencilFill aria-hidden="true" />
-              </button>
-            </td>
-          </>
+          <div className="score-card-actions">
+            <button type="button" className="btn btn-link p-0"
+              aria-label={`Remover ${score.title}`}
+              onClick={() => handleDelete(score, false)}>
+              <BsFillTrashFill aria-hidden="true" />
+            </button>
+            <button type="button" className="btn btn-link p-0"
+              aria-label={`Editar ${score.title}`}
+              onClick={() => setShowEditModal(true)}>
+              <BsPencilFill aria-hidden="true" />
+            </button>
+          </div>
         }
       />
       <ScoreEditModal
@@ -96,10 +92,9 @@ export function SortableSongbookRow({ entry, index, sorting, insertion, emptySec
   const label = section ? `Mover seção ${item.title || "sem título"} (${scoreCount} música${scoreCount === 1 ? "" : "s"})` : `Mover música ${item.score.title}`;
   const handle = <DragHandle label={label} handleRef={handleRef} onPrepareDrag={onPrepareDrag} />;
   return (
-    <tbody ref={ref} data-editor-id={entry.id} data-item-type={item.type}
+    <div ref={ref} data-editor-id={entry.id} data-item-type={item.type}
       className={[
-        "songbook-row-group",
-        index % 2 === 0 ? "songbook-row-striped" : "",
+        "songbook-card-entry",
         isDragSource ? "songbook-row-dragging" : "",
         carried ? "songbook-row-carried" : "",
         insertion ? `songbook-insert-${insertion}` : "",
@@ -107,14 +102,14 @@ export function SortableSongbookRow({ entry, index, sorting, insertion, emptySec
       {section ? (
         <>
           <SongBookSectionRow title={item.title} dragHandle={handle} handleDelete={onDelete} />
-          {emptySection && <tr className="songbook-empty-section"><td /><td colSpan={8}>
+          {emptySection && <div className="songbook-empty-section">
             Solte uma música após este título.
-          </td></tr>}
+          </div>}
         </>
       ) : (
         <SongbookScoreCard score={item.score} dragHandle={handle} hideDetails={sorting}
           handleDelete={onSelect} handlePlayingSong={onPlay} handleUpdateScore={onUpdate} />
       )}
-    </tbody>
+    </div>
   );
 }

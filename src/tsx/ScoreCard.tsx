@@ -1,23 +1,34 @@
 import type { ReactNode } from "react";
-import { BsTriangleFill } from "react-icons/bs";
+import { BsChevronDown, BsChevronRight } from "react-icons/bs";
 import { SiMidi, SiMusescore } from "react-icons/si";
 import { PartItem } from "./PartItem";
 import { LineageBadge } from "./LineageBadge";
+import { highlightRanges, type HighlightRanges } from "../lib/highlight";
 import type { ScoreViewModel, PlayingPartViewModel } from "../../types/viewModels";
 
 import "../css/ScoreRow.css";
+
+/** Per-field search-match ranges — library cards only (see ScoreCard's `highlight` prop). */
+export interface ScoreCardHighlight {
+  title?: HighlightRanges;
+  projectTitle?: HighlightRanges;
+  composer?: HighlightRanges;
+  tags?: HighlightRanges;
+}
 
 interface ScoreCardProps {
   score: ScoreViewModel;
   mode: "compact" | "expanded";
   onToggleMode: () => void;
   onPlay: (info: PlayingPartViewModel) => void;
-  /** Drag-handle cell, songbook column only. */
+  /** Drag-handle, songbook column only. */
   leading?: ReactNode;
-  /** Column-specific cell(s): delete+edit icons (songbook) or an Adicionar button (available). */
+  /** Column-specific action(s): delete+edit (songbook) or an add button (available). */
   trailing: ReactNode;
-  /** Extra content shown only when expanded, above the part list — e.g. the project picker's version selector. */
+  /** Extra content shown only when expanded — e.g. the project picker's version selector. */
   details?: ReactNode;
+  /** Search-match ranges to highlight — only ever passed for library/available cards. */
+  highlight?: ScoreCardHighlight;
 }
 
 const ScoreCard = ({
@@ -28,76 +39,82 @@ const ScoreCard = ({
   leading,
   trailing,
   details,
+  highlight,
 }: ScoreCardProps) => {
   const expanded = mode === "expanded";
+  const parts = score.latestRevision.parts;
+  // Field priority: title → owning project (stand-in for "first published
+  // songbook" until that data exists) → composer → tags.
+  const metaFields: { text: string; ranges?: HighlightRanges }[] = [
+    { text: score.projectTitle, ranges: highlight?.projectTitle },
+    ...(score.composer ? [{ text: score.composer, ranges: highlight?.composer }] : []),
+    ...(score.tags.length > 0
+      ? [{ text: score.tags.join(", "), ranges: highlight?.tags }]
+      : []),
+  ];
+
   return (
-    <>
-      <tr className="cursor">
-        {leading !== undefined && (
-          <td className="songbook-handle-cell">{leading}</td>
-        )}
-        <td className="action-cell">
-          <button
-            type="button"
-            className="btn btn-link p-0"
-            aria-label={`${expanded ? "Recolher" : "Expandir"} ${score.title}`}
-            aria-expanded={expanded}
-            onClick={onToggleMode}
-          >
-            <BsTriangleFill
-              aria-hidden="true"
-              className={`arrow ${expanded ? "arrow-down" : "arrow-right"}`}
-            />
-          </button>
-        </td>
-        <td onClick={onToggleMode}>{score.title}</td>
-        <td onClick={onToggleMode}>{score.projectTitle}</td>
-        <td onClick={onToggleMode}>{score.tags.join(", ")}</td>
-        {trailing}
-        <td>
+    <div className="score-card">
+      <div className="score-card-row">
+        {leading}
+        <button
+          type="button"
+          className="btn btn-link p-0 score-card-toggle"
+          aria-label={`${expanded ? "Recolher" : "Expandir"} ${score.title}`}
+          aria-expanded={expanded}
+          onClick={onToggleMode}
+        >
+          {expanded ? (
+            <BsChevronDown aria-hidden="true" />
+          ) : (
+            <BsChevronRight aria-hidden="true" />
+          )}
+        </button>
+        <div className="score-card-main" onClick={onToggleMode}>
+          <div className="score-card-title">{highlightRanges(score.title, highlight?.title)}</div>
+          {metaFields.length > 0 && (
+            <div className="score-card-meta text-muted small">
+              {metaFields.map((field, i) => (
+                <span key={i}>
+                  {i > 0 && " · "}
+                  {highlightRanges(field.text, field.ranges)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="score-card-links">
           {score.latestRevision.midi != "" && (
-            <a href={score.latestRevision.midi} target="_blank" rel="noreferrer">
+            <a href={score.latestRevision.midi} target="_blank" rel="noreferrer" aria-label="MIDI">
               <SiMidi />
             </a>
           )}
-        </td>
-        <td>
           {score.latestRevision.mscz != "" && (
-            <a href={score.latestRevision.mscz} target="_blank" rel="noreferrer">
+            <a href={score.latestRevision.mscz} target="_blank" rel="noreferrer" aria-label="MuseScore">
               <SiMusescore />
             </a>
           )}
-        </td>
-      </tr>
+        </div>
+        {trailing}
+      </div>
       {expanded && (
-        <>
-          <tr className="metadata-row">
-            <td></td>
-            <td colSpan={8} className="text-muted" style={{ fontSize: "0.85em" }}>
-              <strong>Compositor:</strong> {score.composer || "(vazio)"} |{" "}
-              <strong>Subtitulo:</strong> {score.sub || "(vazio)"} |{" "}
-              <strong>Partes:</strong> {score.latestRevision.parts.length}
-            </td>
-          </tr>
-          <tr>
-            <td></td>
-            <td colSpan={8}>
-              <LineageBadge scoreId={score.id} />
-            </td>
-          </tr>
+        <div className="score-card-details">
+          {(score.sub || parts.length > 0) && (
+            <div className="text-muted small score-card-subline">
+              {score.sub && <>{score.sub} · </>}
+              {parts.length} parte{parts.length === 1 ? "" : "s"}
+            </div>
+          )}
+          <LineageBadge scoreId={score.id} />
           {details}
-          {score.latestRevision.parts.map((part) => (
-            <PartItem
-              key={part.name}
-              score={score}
-              part={part}
-              handlePlayingSong={onPlay}
-              colSpan={8}
-            />
-          ))}
-        </>
+          <div className="score-card-parts">
+            {parts.map((part) => (
+              <PartItem key={part.name} score={score} part={part} handlePlayingSong={onPlay} />
+            ))}
+          </div>
+        </div>
       )}
-    </>
+    </div>
   );
 };
 
