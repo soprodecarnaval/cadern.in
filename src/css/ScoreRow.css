@@ -1,34 +1,111 @@
-.action-cell {
-  padding-right: 0;
-  margin-right: 0;
+.score-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.visualize-icon {
-  margin-left: 1.8em !important;
-  margin-right: 0.8em !important
+.score-card {
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  background: #fff;
+  overflow: hidden;
 }
 
-.instrument-checkbox {
-  margin-left: 0.7em;
-  margin-right: 0.7em;
-  display: inline;
+.score-card-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
 }
 
-.arrangement-checkbox {
-  display: inline;
-  margin-left: 0.7em
+.score-card-row:hover {
+  cursor: pointer;
+  background: #f8f9fa;
 }
 
-.arrow {
-  transition: all 0.5s ease
+.score-card-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: #6c757d;
 }
 
-.arrow-right {
-  transform: rotate(0.25turn)
+.score-card-main {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-.arrow-down {
-  transform: rotate(0.50turn)
+.score-card-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-card-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-card-links {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #495057;
+}
+
+.score-card-actions,
+.score-card-trailing {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-card-details {
+  padding: 0 0.75rem 0.75rem 2.75rem;
+  border-top: 1px solid #f1f3f5;
+}
+
+.score-card-subline {
+  padding-top: 0.5rem;
+}
+
+.score-card-parts {
+  display: flex;
+  flex-direction: column;
+}
+
+.score-card-versions {
+  margin-top: 0.5rem;
+}
+
+/* Small discrete "+" add button, shared by every "add to songbook" row. */
+.score-add-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 1px solid #0d6efd;
+  background: transparent;
+  color: #0d6efd;
+  font-size: 0.8rem;
+  padding: 0;
+}
+
+.score-add-button:hover:not(:disabled) {
+  background: #0d6efd;
+  color: #fff;
+}
+
+.score-add-button:disabled {
+  border-color: #adb5bd;
+  color: #198754;
+  cursor: default;
 }
 
 .cursor:hover {

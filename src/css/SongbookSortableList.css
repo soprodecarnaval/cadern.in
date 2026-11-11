@@ -1,10 +1,16 @@
-.songbook-sortable-table {
-  vertical-align: middle;
+.songbook-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.songbook-sortable-table .songbook-handle-cell {
-  padding: 0;
-  width: 2.75rem;
+.songbook-card-entry {
+  border-radius: 0.5rem;
+}
+
+.songbook-handle-cell,
+.songbook-drag-handle {
+  flex: 0 0 auto;
 }
 
 .songbook-drag-handle {
@@ -35,36 +41,45 @@
   outline-offset: -3px;
 }
 
-.songbook-row-striped > tr:first-child > * {
-  background-color: #f7f8fa;
-}
-
-.songbook-sortable-table .section-title {
-  --bs-table-bg: #e8edf5;
-  --bs-table-color-state: #212529;
-}
-
-.songbook-sortable-table .songbook-row-group .section-title > * {
-  background-color: #e8edf5;
+.songbook-section-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #e8edf5;
   color: #212529;
+  border-radius: 0.5rem;
+  font-weight: 600;
 }
 
-.songbook-row-dragging > tr > * {
+.songbook-section-title {
+  flex: 1 1 auto;
+}
+
+.songbook-empty-section {
+  color: #6c757d;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.75rem 0.5rem 2.75rem;
+}
+
+.songbook-empty-list {
+  border: 1px dashed #ced4da;
+  border-radius: 0.5rem;
+  text-align: center;
+}
+
+/* Drag state visuals apply to the entry's rendered box (a .score-card or a
+   .songbook-section-row), not the plain layout wrapper div around it. */
+.songbook-row-dragging > * {
   opacity: 0.4;
 }
 
-.songbook-insert-before > tr:first-child > * {
+.songbook-insert-before > :first-child {
   box-shadow: inset 0 3px #0d6efd;
 }
 
-.songbook-insert-after > tr:last-child > * {
+.songbook-insert-after > :first-child {
   box-shadow: inset 0 -3px #0d6efd;
-}
-
-.songbook-empty-section td {
-  color: #6c757d;
-  font-size: 0.85rem;
-  padding-top: 0;
 }
 
 .songbook-drag-preview {
@@ -81,15 +96,11 @@
   pointer-events: none;
 }
 
-
-.songbook-row-carried > tr > * {
+.songbook-row-carried > :first-child {
   background-color: #edf4ff;
-}
-
-.songbook-row-carried:not(.songbook-row-dragging) > tr > * {
-  opacity: 0.55;
-}
-
-.songbook-row-carried > tr > :first-child {
   box-shadow: inset 3px 0 #0d6efd;
+}
+
+.songbook-row-carried:not(.songbook-row-dragging) > * {
+  opacity: 0.55;
 }
