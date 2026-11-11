@@ -10,7 +10,12 @@ import { SongBookTable } from "./SongBookTable";
 import { SongbookDragProvider } from "./SongbookDragProvider";
 import type { SongbookSortableListHandle } from "./SongbookSortableList";
 import { PDFGenerator } from "./PdfGenerator";
-import { sortByColumn, SortColumn, SortDirection } from "../utils/sort";
+import {
+  restoreToLibrary as restoreToLibraryList,
+  sortByColumn,
+  SortColumn,
+  SortDirection,
+} from "../utils/sort";
 import { SongBar } from "./PlayerBar";
 
 import type {
@@ -111,9 +116,7 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
   };
 
   const restoreToLibrary = (scores: ScoreViewModel[]) =>
-    sort
-      ? sortByColumn([...results, ...scores], sort.column, sort.direction).slice()
-      : [...scores, ...results];
+    restoreToLibraryList(results, scores, sort);
 
   const clearSelected = () => {
     const removedScores = items.flatMap((r) =>

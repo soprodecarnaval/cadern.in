@@ -63,3 +63,17 @@ export const sortByColumn = (
 
   return sorted;
 };
+
+/**
+ * Reinserts scores removed from the songbook back into the library list,
+ * preserving the library's active sort (or prepending them, unsorted, if
+ * no sort is active).
+ */
+export const restoreToLibrary = (
+  results: ScoreViewModel[],
+  scores: ScoreViewModel[],
+  sort: { column: SortColumn; direction: SortDirection } | null,
+): ScoreViewModel[] =>
+  sort
+    ? sortByColumn([...results, ...scores], sort.column, sort.direction).slice()
+    : [...scores, ...results];
