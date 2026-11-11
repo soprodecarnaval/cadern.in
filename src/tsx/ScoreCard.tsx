@@ -1,11 +1,10 @@
 import { useState, type ReactNode } from "react";
-import { BsChevronDown, BsChevronRight } from "react-icons/bs";
+import { BsChevronDown, BsChevronRight, BsEye } from "react-icons/bs";
 import { SiMidi, SiMusescore } from "react-icons/si";
-import { PartItem } from "./PartItem";
-import { PreviewModal } from "./PreviewModal";
-import { LineageBadge } from "./LineageBadge";
+import { CardLineage } from "./CardLineage";
+import { ScoreDetailModal } from "./ScoreDetailModal";
 import { highlightRanges, type HighlightRanges } from "../lib/highlight";
-import type { ScoreViewModel, PlayingPartViewModel } from "../../types/viewModels";
+import type { ScoreViewModel } from "../../types/viewModels";
 
 import "../css/ScoreRow.css";
 
@@ -21,7 +20,6 @@ interface ScoreCardProps {
   score: ScoreViewModel;
   mode: "compact" | "expanded";
   onToggleMode: () => void;
-  onPlay: (info: PlayingPartViewModel) => void;
   /** Drag-handle, songbook column only. */
   leading?: ReactNode;
   /** Column-specific action(s): delete+edit (songbook) or an add button (available). */
@@ -36,7 +34,6 @@ const ScoreCard = ({
   score,
   mode,
   onToggleMode,
-  onPlay,
   leading,
   trailing,
   details,
@@ -44,8 +41,7 @@ const ScoreCard = ({
 }: ScoreCardProps) => {
   const expanded = mode === "expanded";
   const parts = score.latestRevision.parts;
-  const previewableParts = parts.filter((p) => p.svg.length > 0);
-  const [openPartIndex, setOpenPartIndex] = useState<number | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
   // Field priority: title → owning project (stand-in for "first published
   // songbook" until that data exists) → composer → tags.
   const metaFields: { text: string; ranges?: HighlightRanges }[] = [
@@ -87,6 +83,14 @@ const ScoreCard = ({
           )}
         </div>
         <div className="score-card-links">
+          <button
+            type="button"
+            className="btn btn-link p-0"
+            aria-label={`Ver detalhes de ${score.title}`}
+            onClick={() => setShowDetail(true)}
+          >
+            <BsEye aria-hidden="true" />
+          </button>
           {score.latestRevision.midi != "" && (
             <a href={score.latestRevision.midi} target="_blank" rel="noreferrer" aria-label="MIDI">
               <SiMidi />
@@ -108,30 +112,22 @@ const ScoreCard = ({
               {parts.length} parte{parts.length === 1 ? "" : "s"}
             </div>
           )}
-          <LineageBadge scoreId={score.id} />
+          <CardLineage scoreId={score.id} />
           {details}
           <div className="score-card-parts">
-            {previewableParts.map((part, i) => (
-              <PartItem
-                key={part.name}
-                score={score}
-                part={part}
-                handlePlayingSong={onPlay}
-                onOpenPreview={() => setOpenPartIndex(i)}
-              />
+            {parts.map((part) => (
+              <span key={part.name} className="badge rounded-pill text-bg-light border">
+                {part.instrument}
+              </span>
             ))}
           </div>
         </div>
       )}
-      {openPartIndex !== null && (
-        <PreviewModal
-          show
-          handleShow={(show) => setOpenPartIndex(show ? openPartIndex : null)}
-          parts={previewableParts}
-          activeIndex={openPartIndex}
-          onIndexChange={setOpenPartIndex}
-        />
-      )}
+      <ScoreDetailModal
+        show={showDetail}
+        scoreId={score.id}
+        onHide={() => setShowDetail(false)}
+      />
     </div>
   );
 };

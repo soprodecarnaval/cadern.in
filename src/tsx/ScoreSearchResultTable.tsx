@@ -3,7 +3,7 @@ import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { PointerSensor } from "@dnd-kit/dom";
 import type { FuseResultMatch } from "fuse.js";
 
-import type { ScoreViewModel, PlayingPartViewModel } from "../../types/viewModels";
+import type { ScoreViewModel } from "../../types/viewModels";
 import { useCollectionContext } from "../useCollectionContext";
 
 import { ScoreCard, type ScoreCardHighlight } from "./ScoreCard";
@@ -15,7 +15,6 @@ interface ScoreSearchResultTableProps {
   scores: ScoreViewModel[];
   searchQuery: string;
   handleSelect: (score: ScoreViewModel, checked: boolean) => void;
-  onSetPlayingPart: (info: PlayingPartViewModel) => void;
 }
 
 /** Fuse matches tags against one array element at a time; map that element's
@@ -58,12 +57,10 @@ function AvailableScoreCard({
   score,
   searchQuery,
   handleSelect,
-  onSetPlayingPart,
 }: {
   score: ScoreViewModel;
   searchQuery: string;
   handleSelect: (score: ScoreViewModel, checked: boolean) => void;
-  onSetPlayingPart: (info: PlayingPartViewModel) => void;
 }) {
   const [mode, setMode] = useState<"compact" | "expanded">("compact");
   const { getMatches } = useCollectionContext();
@@ -80,7 +77,6 @@ function AvailableScoreCard({
         score={score}
         mode={mode}
         onToggleMode={() => setMode(mode === "compact" ? "expanded" : "compact")}
-        onPlay={onSetPlayingPart}
         highlight={buildHighlight(getMatches(searchQuery, score.id), score)}
         leading={<DragHandle label={`Arraste ${score.title} para o caderninho`} handleRef={handleRef} onPrepareDrag={() => undefined} />}
         trailing={
@@ -98,7 +94,6 @@ const ScoreSearchResultTable = ({
   scores,
   searchQuery,
   handleSelect,
-  onSetPlayingPart: handlePlayingSong,
 }: ScoreSearchResultTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -127,7 +122,6 @@ const ScoreSearchResultTable = ({
             score={song}
             searchQuery={searchQuery}
             key={song.id}
-            onSetPlayingPart={handlePlayingSong}
           />
         ))}
       </div>

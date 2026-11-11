@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useDroppable, type DragEndEvent, type DragStartEvent, type DragMoveEvent, type DragOverEvent } from "@dnd-kit/react";
-import type { PlayingPartViewModel, ScoreViewModel, SongbookItemViewModel } from "../../types/viewModels";
+import type { ScoreViewModel, SongbookItemViewModel } from "../../types/viewModels";
 import { insertionIndex, moveSongbookEntry, songbookDragRange, songbookSectionRange } from "../lib/songbookReorder";
 import { destinationForIncomingScore, SONGBOOK_APPEND_ID } from "../lib/crossColumnDnd";
 import { useSongbookEditorItems } from "../lib/useSongbookEditorItems";
@@ -48,9 +48,8 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
   onReorder: (rows: SongbookItemViewModel[]) => void;
   onDelete: (index: number) => void;
   onSelect: (score: ScoreViewModel, checked: boolean) => void;
-  onPlay: (part: PlayingPartViewModel) => void;
   onUpdate: (index: number, update: ScoreEditUpdate) => void;
-}>(function SongbookSortableList({ rows, onReorder, onDelete, onSelect, onPlay, onUpdate }, ref) {
+}>(function SongbookSortableList({ rows, onReorder, onDelete, onSelect, onUpdate }, ref) {
   const entries = useSongbookEditorItems(rows);
   const container = useRef<HTMLDivElement>(null);
   const [preparingId, setPreparingId] = useState<string | null>(null);
@@ -240,7 +239,7 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
             emptySection={entry.item.type === "section" && (!entries[index + 1] || entries[index + 1].item.type === "section")}
             insertion={drop?.target === entry.id ? drop.edge : undefined}
             onPrepareDrag={(keyboard) => prepareDrag(entry.id, keyboard)}
-            onDelete={() => onDelete(index)} onSelect={onSelect} onPlay={onPlay}
+            onDelete={() => onDelete(index)} onSelect={onSelect}
             onUpdate={(update) => onUpdate(index, update)} />
         ))}
         {entries.length === 0 && <EmptySongbookDropzone />}

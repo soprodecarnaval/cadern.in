@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { OptimisticSortingPlugin } from "@dnd-kit/dom/sortable";
 import { BsFillTrashFill, BsPencilFill } from "react-icons/bs";
-import type { PlayingPartViewModel, ScoreViewModel } from "../../types/viewModels";
+import type { ScoreViewModel } from "../../types/viewModels";
 import type { SongbookEditorItem } from "../lib/songbookReorder";
 import { DragHandle } from "./DragHandle";
 import { ScoreCard } from "./ScoreCard";
@@ -14,14 +14,12 @@ function SongbookScoreCard({
   dragHandle,
   hideDetails,
   handleDelete,
-  handlePlayingSong,
   handleUpdateScore,
 }: {
   score: ScoreViewModel;
   dragHandle: ReactNode;
   hideDetails: boolean;
   handleDelete: (score: ScoreViewModel, checked: boolean) => void;
-  handlePlayingSong: (info: PlayingPartViewModel) => void;
   handleUpdateScore: (update: ScoreEditUpdate) => void;
 }) {
   const [mode, setMode] = useState<"compact" | "expanded">("compact");
@@ -33,7 +31,6 @@ function SongbookScoreCard({
         score={score}
         mode={hideDetails ? "compact" : mode}
         onToggleMode={() => setMode(mode === "compact" ? "expanded" : "compact")}
-        onPlay={handlePlayingSong}
         leading={dragHandle}
         trailing={
           <div className="score-card-actions">
@@ -61,7 +58,7 @@ function SongbookScoreCard({
 }
 
 export function SortableSongbookRow({ entry, index, sorting, insertion, emptySection, onDelete,
-  onSelect, onPlay, onUpdate, onPrepareDrag, carried, disableDrop, scoreCount }: {
+  onSelect, onUpdate, onPrepareDrag, carried, disableDrop, scoreCount }: {
   entry: SongbookEditorItem;
   index: number;
   sorting: boolean;
@@ -73,7 +70,6 @@ export function SortableSongbookRow({ entry, index, sorting, insertion, emptySec
   disableDrop: boolean;
   scoreCount: number;
   onSelect: (score: ScoreViewModel, checked: boolean) => void;
-  onPlay: (part: PlayingPartViewModel) => void;
   onUpdate: (update: ScoreEditUpdate) => void;
 }) {
   const { ref, handleRef, isDragSource } = useSortable({
@@ -108,7 +104,7 @@ export function SortableSongbookRow({ entry, index, sorting, insertion, emptySec
         </>
       ) : (
         <SongbookScoreCard score={item.score} dragHandle={handle} hideDetails={sorting}
-          handleDelete={onSelect} handlePlayingSong={onPlay} handleUpdateScore={onUpdate} />
+          handleDelete={onSelect} handleUpdateScore={onUpdate} />
       )}
     </div>
   );
