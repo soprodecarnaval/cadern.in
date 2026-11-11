@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Col, Container, Nav, Navbar, Row } from "react-bootstrap";
 import { Link, Route, Routes } from "react-router-dom";
 import { AuthModal } from "./AuthModal";
@@ -51,6 +51,14 @@ import { getPendingUserProjectInvitations } from "../lib/db";
 
 function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
   const [results, setResults] = useState<ScoreViewModel[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const handleSearchResults = useCallback(
+    (scores: ScoreViewModel[], query: string) => {
+      setResults(scores);
+      setSearchQuery(query);
+    },
+    [],
+  );
   const [items, setItems] = useState<SongbookItemViewModel[]>([]);
   const [playingPart, setPlayingPart] = useState<PlayingPartViewModel | null>(
     null,
@@ -147,7 +155,7 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
       <Container>
         <Row>
           <Col sm={6}>
-            <SearchBar handleResults={setResults} />
+            <SearchBar handleResults={handleSearchResults} />
           </Col>
           <Col sm={6}>
             <PDFGenerator songBook={songBook} />
@@ -163,6 +171,7 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
             <Col sm={6}>
               <ScoreSearchResults
                 results={results}
+                searchQuery={searchQuery}
                 onSortBy={handleResultsSortBy}
                 onAddAll={handleAddAllSongs}
                 onSelectSong={handleSelectSong}

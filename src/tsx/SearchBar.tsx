@@ -5,7 +5,7 @@ import type { ScoreViewModel } from "../../types/viewModels";
 import { useCollectionContext } from "../useCollectionContext";
 
 interface SearchBarProps {
-  handleResults: (results: ScoreViewModel[]) => void;
+  handleResults: (results: ScoreViewModel[], query: string) => void;
 }
 
 const SearchBar = ({ handleResults }: SearchBarProps) => {
@@ -16,7 +16,7 @@ const SearchBar = ({ handleResults }: SearchBarProps) => {
     if (status !== "ready") {
       return;
     }
-    handleResults(search(searchInput));
+    handleResults(search(searchInput), searchInput);
   }, [searchInput, status, handleResults, search]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
