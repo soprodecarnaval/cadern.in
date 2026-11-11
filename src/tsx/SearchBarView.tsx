@@ -1,0 +1,60 @@
+import { useState, useEffect } from "react";
+import { Row, Col, Form } from "react-bootstrap";
+
+import type { ScoreViewModel } from "../../types/viewModels";
+import type { CollectionStatus } from "../useCollectionContext";
+
+interface SearchBarViewProps {
+  status: CollectionStatus;
+  search: (query: string) => ScoreViewModel[];
+  handleResults: (results: ScoreViewModel[], query: string) => void;
+}
+
+const SearchBarView = ({
+  handleResults,
+  status,
+  search,
+}: SearchBarViewProps) => {
+  const [searchInput, setSearchInput] = useState("");
+
+  useEffect(() => {
+    if (status !== "ready") {
+      return;
+    }
+    handleResults(search(searchInput), searchInput);
+  }, [searchInput, status, handleResults, search]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchInput(e.target.value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+    }
+  };
+
+  return (
+    <Row className="mt-4">
+      <Col sm={6}>
+        <Form className="d-flex">
+          <Form.Control
+            type="search"
+            placeholder="Procurar por título, arranjo ou tags"
+            className="me-2"
+            aria-label="Search"
+            disabled={status !== "ready"}
+            onKeyDown={handleKeyDown}
+            value={searchInput}
+            onChange={handleChange}
+          />
+        </Form>
+      </Col>
+      <small>
+        Para busca exata, use aspas e chapéuzinho (ex: "^carnaval bh 2024")
+      </small>
+    </Row>
+  );
+};
+
+export { SearchBarView };
