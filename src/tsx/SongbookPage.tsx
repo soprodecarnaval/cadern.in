@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
-import { PointerSensor } from "@dnd-kit/dom";
+import { CardPointerSensor } from "../lib/cardPointerSensor";
 import {
   Alert,
   Badge,
@@ -803,7 +803,7 @@ function ScorePickerVersions({ versions, selectedIds, needle, onAdd }: {
   const { ref, handleRef } = useDraggable({
     id: `available:${chosen.doc.id}`,
     data: { group: "available", score: score ?? undefined },
-    sensors: [PointerSensor],
+    sensors: [CardPointerSensor],
     disabled: !score,
   });
 

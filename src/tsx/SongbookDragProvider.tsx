@@ -1,6 +1,7 @@
+import { CardPointerSensor } from "../lib/cardPointerSensor";
 import type { ReactNode, RefObject } from "react";
 import { DragDropProvider, DragOverlay, type DragEndEvent, type DragStartEvent, type DragMoveEvent, type DragOverEvent } from "@dnd-kit/react";
-import { Accessibility, PointerActivationConstraints, PointerSensor } from "@dnd-kit/dom";
+import { Accessibility } from "@dnd-kit/dom";
 import type { ScoreViewModel } from "../../types/viewModels";
 import type { DndGroup } from "../lib/crossColumnDnd";
 import { SongbookKeyboardSensor } from "../lib/songbookKeyboardSensor";
@@ -8,11 +9,7 @@ import type { SongbookSortableListHandle } from "./SongbookSortableList";
 import "../css/SongbookSortableList.css";
 
 const sensors = [
-  PointerSensor.configure({
-    activationConstraints: (event) => event.pointerType === "touch"
-      ? [new PointerActivationConstraints.Delay({ value: 200, tolerance: 8 })]
-      : [new PointerActivationConstraints.Distance({ value: 6 })],
-  }),
+  CardPointerSensor,
   SongbookKeyboardSensor,
 ];
 

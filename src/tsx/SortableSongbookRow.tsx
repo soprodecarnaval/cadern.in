@@ -88,7 +88,14 @@ export function SortableSongbookRow({ entry, index, sorting, insertion, emptySec
   const label = section ? `Mover seção ${item.title || "sem título"} (${scoreCount} música${scoreCount === 1 ? "" : "s"})` : `Mover música ${item.score.title}`;
   const handle = <DragHandle label={label} handleRef={handleRef} onPrepareDrag={onPrepareDrag} />;
   return (
-    <div ref={ref} data-editor-id={entry.id} data-item-type={item.type}
+    <div ref={ref}
+      onPointerDownCapture={(event) => {
+        if (event.button === 0 && event.isPrimary && event.target instanceof Element &&
+          !event.target.closest("button, a, input, select, textarea, [contenteditable], [role='button']")) {
+          onPrepareDrag(false);
+        }
+      }}
+      data-editor-id={entry.id} data-item-type={item.type}
       className={[
         "songbook-card-entry",
         isDragSource ? "songbook-row-dragging" : "",

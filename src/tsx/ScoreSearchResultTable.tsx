@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
-import { PointerSensor } from "@dnd-kit/dom";
+import { CardPointerSensor } from "../lib/cardPointerSensor";
 import type { FuseResultMatch } from "fuse.js";
 
 import type { ScoreViewModel } from "../../types/viewModels";
@@ -69,7 +69,7 @@ function AvailableScoreCard({
   const { ref, handleRef } = useDraggable({
     id: `available:${score.id}`,
     data: { group: "available", score },
-    sensors: [PointerSensor],
+    sensors: [CardPointerSensor],
   });
   return (
     <div ref={ref}>

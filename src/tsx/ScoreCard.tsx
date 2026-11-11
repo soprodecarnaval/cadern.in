@@ -106,10 +106,9 @@ const ScoreCard = ({
       </div>
       {expanded && (
         <div className="score-card-details">
-          {(score.sub || parts.length > 0) && (
+          {score.sub && (
             <div className="text-muted small score-card-subline">
-              {score.sub && <>{score.sub} · </>}
-              {parts.length} parte{parts.length === 1 ? "" : "s"}
+              {score.sub}
             </div>
           )}
           <CardLineage scoreId={score.id} />
