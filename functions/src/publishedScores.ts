@@ -180,7 +180,9 @@ export async function recomputePublished(
             // package happened to be imported here. The Firestore SDK
             // converts a plain Date for us.
             publishedAt: new Date(),
-          } satisfies Omit<FirstPublished, "publishedAt"> & { publishedAt: Date };
+          } satisfies Omit<FirstPublished, "publishedAt"> & {
+            publishedAt: Date;
+          };
         }
         await score.ref.update(update);
       }
