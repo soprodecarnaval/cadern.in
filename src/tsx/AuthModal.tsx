@@ -9,6 +9,7 @@ export function AuthModal(props: { show: boolean; onHide: () => void }) {
     pendingUser,
     resendVerificationEmail,
     refreshVerificationStatus,
+    signInWithGoogle,
     logout,
   } = useAuth();
   return (
@@ -20,6 +21,7 @@ export function AuthModal(props: { show: boolean; onHide: () => void }) {
       pendingUser={pendingUser}
       resendVerificationEmail={resendVerificationEmail}
       refreshVerificationStatus={refreshVerificationStatus}
+      signInWithGoogle={signInWithGoogle}
       logout={logout}
     />
   );

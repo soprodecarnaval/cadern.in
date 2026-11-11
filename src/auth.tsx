@@ -5,21 +5,50 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
   EmailAuthProvider,
+  GoogleAuthProvider,
+  linkWithCredential,
   onAuthStateChanged,
   reauthenticateWithCredential,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updatePassword as firebaseUpdatePassword,
   updateProfile,
+  type AuthCredential,
   type User,
 } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, storage } from "./firebase";
+
+// Thrown by signInWithGoogle when the email already has a password account.
+// Firebase requires proving ownership of the existing account before linking
+// a new provider to it, so the UI must prompt for that password and call
+// `link`; there's no way to link without it.
+export class GoogleLinkRequiredError extends Error {
+  constructor(
+    public readonly email: string,
+    private readonly pendingCredential: AuthCredential,
+  ) {
+    super(
+      `Já existe uma conta com o email ${email}. Digite a senha dela para conectar o Google.`,
+    );
+  }
+
+  async link(password: string) {
+    const { user } = await signInWithEmailAndPassword(
+      auth,
+      this.email,
+      password,
+    );
+    await linkWithCredential(user, this.pendingCredential);
+  }
+}
 
 interface AuthContextValue {
   currentUser: User | null;
@@ -34,6 +63,7 @@ interface AuthContextValue {
   ) => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
   refreshVerificationStatus: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   updateDisplayName: (name: string) => Promise<void>;
   updateAvatar: (blob: Blob) => Promise<void>;
   changePassword: (current: string, newPass: string) => Promise<void>;
@@ -89,16 +119,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const resendVerificationEmail = async () => {
-    if (!pendingUser) {return;}
+    if (!pendingUser) {
+      return;
+    }
     await sendEmailVerification(pendingUser);
   };
 
   const refreshVerificationStatus = async () => {
-    if (!auth.currentUser) {return;}
+    if (!auth.currentUser) {
+      return;
+    }
     await auth.currentUser.reload();
     if (auth.currentUser.emailVerified) {
       setCurrentUser(auth.currentUser);
       setPendingUser(null);
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch (err) {
+      if (
+        err instanceof FirebaseError &&
+        err.code === "auth/account-exists-with-different-credential"
+      ) {
+        const pendingCredential = GoogleAuthProvider.credentialFromError(err);
+        const email = err.customData?.email as string | undefined;
+        if (pendingCredential && email) {
+          throw new GoogleLinkRequiredError(email, pendingCredential);
+        }
+      }
+      throw err;
     }
   };
 
@@ -135,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         resendVerificationEmail,
         refreshVerificationStatus,
+        signInWithGoogle,
         updateDisplayName,
         updateAvatar,
         changePassword,

@@ -21,6 +21,16 @@ function createWindow() {
     },
   });
 
+  // signInWithPopup (Google OAuth) needs a real popup window; Electron
+  // denies window.open by default, so explicitly allow it for Google's
+  // consent screen and Firebase's auth-handler redirect.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    const allowed =
+      url.startsWith("https://accounts.google.com/") ||
+      url.includes(".firebaseapp.com/__/auth/handler");
+    return allowed ? { action: "allow" } : { action: "deny" };
+  });
+
   if (DEV_SERVER_URL) {
     void win.loadURL(DEV_SERVER_URL);
   } else {

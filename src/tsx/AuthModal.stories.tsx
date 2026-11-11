@@ -17,6 +17,7 @@ const meta = {
     pendingUser: null,
     resendVerificationEmail: fn(() => Promise.resolve()),
     refreshVerificationStatus: fn(() => Promise.resolve()),
+    signInWithGoogle: fn(() => Promise.resolve()),
     logout: fn(() => Promise.resolve()),
   },
   render: function Render(args) {
