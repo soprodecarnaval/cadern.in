@@ -5,17 +5,18 @@ import { BsFillTrashFill, BsPencilFill } from "react-icons/bs";
 import type { ScoreViewModel } from "../../types/viewModels";
 import type { SongbookEditorItem } from "../lib/songbookReorder";
 import { DragHandle } from "./DragHandle";
-import { ScoreCard } from "./ScoreCard";
 import { SongBookSectionRow } from "./SongBookSectionRow";
 import { ScoreEditModal, type ScoreEditUpdate } from "./ScoreEditModal";
 
-function SongbookScoreCard({
+function SongbookScoreCard({ Card,
   score,
   dragHandle,
   hideDetails,
   handleDelete,
   handleUpdateScore,
 }: {
+  Card: import("react").ComponentType<import("./ScoreCardView").ScoreCardProps>;
+
   score: ScoreViewModel;
   dragHandle: ReactNode;
   hideDetails: boolean;
@@ -27,7 +28,7 @@ function SongbookScoreCard({
 
   return (
     <>
-      <ScoreCard
+      <Card
         score={score}
         mode={hideDetails ? "compact" : mode}
         onToggleMode={() => setMode(mode === "compact" ? "expanded" : "compact")}
@@ -57,8 +58,10 @@ function SongbookScoreCard({
   );
 }
 
-export function SortableSongbookRow({ entry, index, sorting, insertion, emptySection, onDelete,
+export function SortableSongbookRow({ Card, entry, index, sorting, insertion, emptySection, onDelete,
   onSelect, onUpdate, onPrepareDrag, carried, disableDrop, scoreCount }: {
+  Card: import("react").ComponentType<import("./ScoreCardView").ScoreCardProps>;
+
   entry: SongbookEditorItem;
   index: number;
   sorting: boolean;
@@ -110,7 +113,7 @@ export function SortableSongbookRow({ entry, index, sorting, insertion, emptySec
           </div>}
         </>
       ) : (
-        <SongbookScoreCard score={item.score} dragHandle={handle} hideDetails={sorting}
+        <SongbookScoreCard Card={Card} score={item.score} dragHandle={handle} hideDetails={sorting}
           handleDelete={onSelect} handleUpdateScore={onUpdate} />
       )}
     </div>

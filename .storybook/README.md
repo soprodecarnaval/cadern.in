@@ -24,3 +24,42 @@ Static story URLs use `iframe.html?id=components-scorecard--expanded` (and the
 IDs in `index.json`). Serve the output over HTTP; opening files directly is
 unsupported. Check browser rendering, play functions, console, and network;
 a successful build alone does not validate interactions.
+
+## Screen coverage
+
+Screen stories cover home/library/builder, my scores, score review, my projects,
+project creation/public/settings/songbooks, songbook details/editor, navigation,
+and not-found. Profile, save, quick-score detail, metadata editing, builder score
+editing, and PDF selection/progress have dialog stories. Navigation is a separate
+story group; page stories show route content without duplicating the header.
+
+Connected screens inject typed operation props and UI composition. Their views
+retain form, loading, and interaction state. Collection/search and card renderers
+are passed through the builder tree; real connected wrappers still supply those
+props in production. Shared screen data and local renderers live in
+`src/tsx/screenFixtures.tsx`. The fixture Timestamp/User values support the
+methods used by production views. Operations simulate outcomes without persisting
+backend data. MIDI/audio and PDF generation are simulated.
+
+Stories can set `parameters.route` and `parameters.routePath` for route params
+and query strings. Navigation stays inside MemoryRouter and displays the target
+URL for routes outside that story. Dialog stories support close/reopen. Use play
+functions with visibility waits to reach modal/tab/error states after transitions.
+
+SongbookReader and the Electron export app are excluded. Songbook stories start
+at `?detalhes`; the reader implementation is untouched. The injected reader fixture
+only identifies the exclusion if a reader link is followed.
+
+## Repeatable browser checks
+
+Install Chromium once with `npx playwright install chromium`. Start Storybook,
+then run `npm run test:storybook`. Override the URL when needed:
+
+```sh
+STORYBOOK_URL=http://127.0.0.1:6008 npm run test:storybook
+```
+
+The same command works against an HTTP-served `storybook-static/` build. It
+checks every indexed story and waits for render/play completion, capturing browser
+errors. It blocks and fails external HTTP requests, detects AudioContext creation,
+and verifies stories leave the homepage builder's saved storage untouched.
