@@ -75,6 +75,8 @@ import { SongbookGenerationPanel } from "./SongbookGenerationPanel";
 import { SongbookDragProvider } from "./SongbookDragProvider";
 import type { SongbookSortableListHandle } from "./SongbookSortableList";
 import { SongbookReader } from "./SongbookReader";
+import { buildSongbookSections } from "../lib/pdfGeneration";
+import { generateSongbookPdfs } from "../lib/generateSongbookPdfs";
 
 // The songbook's table, PDF generation and member tools live under ?detalhes;
 // the reader is the landing view.
@@ -235,6 +237,18 @@ export function SongbookPage() {
           <Link to={withDetails(true)}>
             Detalhes, PDF e versões
           </Link>
+        }
+        onDownloadPdf={(instrument) =>
+          generateSongbookPdfs({
+            sections: buildSongbookSections(items),
+            instruments: [instrument],
+            title: songbook.title,
+            covers: { [instrument]: revision.covers[instrument]?.url ?? "" },
+            fallbackInstruments: new Set(),
+            carnivalMode: false,
+            backSheetPageNumber: false,
+            antiAssedioPages: false,
+          })
         }
       />
     );

@@ -8,14 +8,21 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { Button, Form, InputGroup, Offcanvas } from "react-bootstrap";
+import {
+  Button,
+  Form,
+  InputGroup,
+  Modal,
+  Offcanvas,
+  Spinner,
+} from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
 import {
   BsAspectRatio,
   BsChevronDown,
   BsChevronLeft,
   BsChevronRight,
-  BsLayoutSidebar,
+  BsDownload,
   BsSearch,
   BsX,
 } from "react-icons/bs";
@@ -94,6 +101,24 @@ const BAR_HIDE_MS = 3500;
 const SWIPE_MIN_PX = 50;
 const MAX_ZOOM = 4;
 
+// The primary pointer is a finger: phones and tablets, not laptops with a
+// touchscreen.
+const TOUCH_QUERY = "(pointer: coarse)";
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(query).matches,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
+}
+
 const normalize = (s: string) =>
   s
     .normalize("NFD")
@@ -122,20 +147,23 @@ function storeInstrument(instrument: string) {
  * The public way to read a songbook: an index with collapsible sections is the
  * landing view; opening a song shows its score for the chosen instrument,
  * always in landscape. Swipe turns the page, a tap toggles the top bar, pinch
- * zooms. Phones search through a drawer over the score; wide screens keep a
- * collapsible index sidebar.
+ * zooms. Phones show the score full screen and search through a drawer over
+ * it; wide screens open the score in a landscape modal over the index.
  */
 export function SongbookReader({
   title,
   badges,
   items,
   actions,
+  onDownloadPdf,
 }: {
   title: string;
   badges?: ReactNode;
   items: NumberedSongbookItemViewModel[];
   // Shown under the index header, e.g. a link to the songbook's details.
   actions?: ReactNode;
+  // Builds and downloads the songbook's PDF for one instrument.
+  onDownloadPdf?: (instrument: Instrument) => Promise<void>;
 }) {
   const { groups, songs } = useMemo(() => buildBook(items), [items]);
   const instruments = useMemo(
@@ -163,13 +191,21 @@ export function SongbookReader({
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   const [lastOpened, setLastOpened] = useState<number | null>(null);
   const [drawer, setDrawer] = useState(false);
-  const [sidebar, setSidebar] = useState(true);
   const [fit, setFit] = useState<"w" | "h">("w");
   const [bar, setBar] = useState(true);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const paperRef = useRef<HTMLDivElement>(null);
+  // The score's scroll area mounts in the page on phones and in a modal on
+  // wide screens, so gestures attach through a callback ref.
+  const paperRef = useRef<HTMLDivElement | null>(null);
+  const [paperEl, setPaperEl] = useState<HTMLDivElement | null>(null);
+  const attachPaper = useCallback((el: HTMLDivElement | null) => {
+    paperRef.current = el;
+    // A freshly mounted score starts unzoomed.
+    zoomRef.current = 1;
+    setPaperEl(el);
+  }, []);
   const drawerInputRef = useRef<HTMLInputElement>(null);
   const drawerListRef = useRef<HTMLDivElement>(null);
   const indexListRef = useRef<HTMLElement>(null);
@@ -187,7 +223,10 @@ export function SongbookReader({
     return () => ro.disconnect();
   }, []);
 
-  const wide = size.w >= 900 && size.w > size.h;
+  // Desktop only: tablets get the phone layout (full-screen score, no modal)
+  // whatever their size.
+  const touch = useMediaQuery(TOUCH_QUERY);
+  const wide = !touch && size.w >= 900 && size.w > size.h;
   // On phones and tablets the open score takes the whole screen.
   const immersive = !wide && cur !== null;
   const rotated = immersive && size.h > size.w;
@@ -307,7 +346,7 @@ export function SongbookReader({
   live.current = { go, rotated, setZoom };
   const hasCur = cur !== null;
   useEffect(() => {
-    const paper = paperRef.current;
+    const paper = paperEl;
     if (!paper) {
       return;
     }
@@ -426,7 +465,7 @@ export function SongbookReader({
       paper.removeEventListener("mouseup", onMouseUp);
       paper.removeEventListener("gesturestart", onGestureStart);
     };
-  }, [hasCur]);
+  }, [paperEl]);
 
   // Arrow keys turn the page.
   useEffect(() => {
@@ -481,6 +520,43 @@ export function SongbookReader({
       return next;
     });
 
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState("");
+  const downloadPdf = async () => {
+    if (!onDownloadPdf || !instrument) {
+      return;
+    }
+    setPdfBusy(true);
+    setPdfError("");
+    try {
+      await onDownloadPdf(instrument);
+    } catch {
+      setPdfError("Não foi possível gerar o PDF. Tente novamente.");
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+  const pdfButton = onDownloadPdf && instrument && (
+    <Button
+      size="sm"
+      variant="outline-primary"
+      className="reader-pdf"
+      disabled={pdfBusy}
+      onClick={() => void downloadPdf()}
+      aria-label={`Baixar PDF de ${instrumentLabel(instrument)}`}
+    >
+      {pdfBusy ? (
+        <>
+          <Spinner animation="border" size="sm" aria-hidden /> Gerando…
+        </>
+      ) : (
+        <>
+          <BsDownload aria-hidden /> PDF
+        </>
+      )}
+    </Button>
+  );
+
   const index = (
     inputRef?: RefObject<HTMLInputElement>,
     onClose?: () => void,
@@ -501,15 +577,101 @@ export function SongbookReader({
       onOpen={(song) => openSong(song)}
       onClose={onClose}
       actions={onClose ? undefined : actions}
+      pdf={onClose ? undefined : pdfButton}
+      pdfError={onClose ? undefined : pdfError}
       inputRef={inputRef}
     />
   );
 
-  const part = cur && instrument
-    ? cur.parts.find((p) => p.instrument === instrument)
-    : undefined;
   const barShown = wide || bar;
-  const showIndex = wide ? sidebar : cur === null;
+  const showIndex = wide || cur === null;
+  // Keeps the modal's content while it fades out after closing.
+  const modalSong =
+    cur ?? songs.find((s) => s.number === lastOpened) ?? null;
+
+  const sheet = (song: Song) => {
+    const part = instrument
+      ? song.parts.find((p) => p.instrument === instrument)
+      : undefined;
+    if (!part) {
+      return (
+        <p className="reader-missing">
+          {instrument
+            ? `Esta música não tem parte de ${instrumentLabel(instrument)}.`
+            : "Esta música não tem partes."}
+        </p>
+      );
+    }
+    return (
+      <div className={`reader-sheet fit-${fit}`}>
+        {part.svg.map((url, i) => (
+          <img
+            key={url}
+            src={url}
+            alt={
+              i === 0
+                ? `Partitura de ${song.title}, ${part.name}`
+                : `${song.title}, página ${i + 1}`
+            }
+            draggable={false}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const songTitle = (song: Song, id?: string) => (
+    <div className="reader-bar-title">
+      <b id={id}>
+        {song.number} · {song.title}
+      </b>
+      <span>
+        {[
+          groups[song.section]?.title,
+          instrument && instrumentLabel(instrument),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </span>
+    </div>
+  );
+
+  const pager = (song: Song) => (
+    <>
+      <Button
+        variant="link"
+        className="reader-icon"
+        aria-label="Música anterior"
+        disabled={song.pos === 0}
+        onClick={() => go(-1)}
+      >
+        <BsChevronLeft />
+      </Button>
+      <span className="reader-count">
+        {song.pos + 1}/{songs.length}
+      </span>
+      <Button
+        variant="link"
+        className="reader-icon"
+        aria-label="Próxima música"
+        disabled={song.pos === songs.length - 1}
+        onClick={() => go(1)}
+      >
+        <BsChevronRight />
+      </Button>
+      <Button
+        variant="link"
+        className="reader-icon"
+        aria-label={fit === "w" ? "Ajustar à altura" : "Ajustar à largura"}
+        onClick={() => {
+          setFit(fit === "w" ? "h" : "w");
+          setZoom(1);
+        }}
+      >
+        <BsAspectRatio />
+      </Button>
+    </>
+  );
 
   return (
     <div
@@ -526,158 +688,101 @@ export function SongbookReader({
           {index()}
         </aside>
       )}
-      {(wide || cur) && (
+      {!wide && cur && (
         <div className="reader-main">
-          {cur ? (
-            <div
-              ref={stageRef}
-              className="reader-stage"
-              style={
-                rotated
-                  ? {
-                      inset: "auto",
-                      left: size.w,
-                      top: 0,
-                      width: size.h,
-                      height: size.w,
-                      transform: "rotate(90deg)",
-                      transformOrigin: "0 0",
-                    }
-                  : undefined
-              }
-            >
-              <div
-                ref={paperRef}
-                className="reader-paper"
-                onClick={handlePaperClick}
-              >
-                {part ? (
-                  <div className={`reader-sheet fit-${fit}`}>
-                    {part.svg.map((url, i) => (
-                      <img
-                        key={url}
-                        src={url}
-                        alt={
-                          i === 0
-                            ? `Partitura de ${cur.title}, ${part.name}`
-                            : `${cur.title}, página ${i + 1}`
-                        }
-                        draggable={false}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="reader-missing">
-                    {instrument
-                      ? `Esta música não tem parte de ${instrumentLabel(instrument)}.`
-                      : "Esta música não tem partes."}
-                  </p>
-                )}
-              </div>
-              <div className={`reader-bar${barShown ? "" : " hidden"}`}>
-                {wide ? (
-                  <Button
-                    variant="link"
-                    className="reader-icon"
-                    aria-label={sidebar ? "Esconder índice" : "Mostrar índice"}
-                    aria-pressed={sidebar}
-                    onClick={() => setSidebar(!sidebar)}
-                  >
-                    <BsLayoutSidebar />
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="link"
-                      className="reader-icon"
-                      aria-label="Voltar ao índice"
-                      onClick={closeSong}
-                    >
-                      <BsChevronLeft />
-                    </Button>
-                    <Button
-                      variant="link"
-                      className="reader-icon"
-                      aria-label="Buscar música"
-                      onClick={openDrawer}
-                    >
-                      <BsSearch />
-                    </Button>
-                  </>
-                )}
-                <div className="reader-bar-title">
-                  <b>
-                    {cur.number} · {cur.title}
-                  </b>
-                  <span>
-                    {[
-                      groups[cur.section]?.title,
-                      instrument && instrumentLabel(instrument),
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                </div>
-                <Button
-                  variant="link"
-                  className="reader-icon"
-                  aria-label="Música anterior"
-                  disabled={cur.pos === 0}
-                  onClick={() => go(-1)}
-                >
-                  <BsChevronLeft />
-                </Button>
-                <span className="reader-count">
-                  {cur.pos + 1}/{songs.length}
-                </span>
-                <Button
-                  variant="link"
-                  className="reader-icon"
-                  aria-label="Próxima música"
-                  disabled={cur.pos === songs.length - 1}
-                  onClick={() => go(1)}
-                >
-                  <BsChevronRight />
-                </Button>
-                <Button
-                  variant="link"
-                  className="reader-icon"
-                  aria-label={
-                    fit === "w" ? "Ajustar à altura" : "Ajustar à largura"
+          <div
+            ref={stageRef}
+            className="reader-stage"
+            style={
+              rotated
+                ? {
+                    inset: "auto",
+                    left: size.w,
+                    top: 0,
+                    width: size.h,
+                    height: size.w,
+                    transform: "rotate(90deg)",
+                    transformOrigin: "0 0",
                   }
-                  onClick={() => {
-                    setFit(fit === "w" ? "h" : "w");
-                    setZoom(1);
-                  }}
+                : undefined
+            }
+          >
+            <div
+              ref={attachPaper}
+              className="reader-paper"
+              onClick={handlePaperClick}
+            >
+              {sheet(cur)}
+            </div>
+            <div className={`reader-bar${barShown ? "" : " hidden"}`}>
+              <Button
+                variant="link"
+                className="reader-icon"
+                aria-label="Voltar ao índice"
+                onClick={closeSong}
+              >
+                <BsChevronLeft />
+              </Button>
+              <Button
+                variant="link"
+                className="reader-icon"
+                aria-label="Buscar música"
+                onClick={openDrawer}
+              >
+                <BsSearch />
+              </Button>
+              {songTitle(cur)}
+              {pager(cur)}
+            </div>
+            <Offcanvas
+              show={drawer}
+              onHide={closeDrawer}
+              placement="start"
+              container={stageRef}
+              className="reader-drawer"
+              aria-label="Índice"
+              onEntered={() => {
+                scrollToCurrent(drawerListRef.current);
+                drawerInputRef.current?.focus({ preventScroll: true });
+              }}
+            >
+              <div className="reader-drawer-body" ref={drawerListRef}>
+                {index(drawerInputRef, closeDrawer)}
+              </div>
+            </Offcanvas>
+          </div>
+        </div>
+      )}
+      {wide && (
+        <Modal
+          show={cur !== null}
+          onHide={closeSong}
+          centered
+          dialogClassName="reader-modal"
+          aria-labelledby="reader-modal-title"
+        >
+          {modalSong && (
+            <>
+              <div className="reader-bar static">
+                {songTitle(modalSong, "reader-modal-title")}
+                {pager(modalSong)}
+                <Button
+                  variant="link"
+                  className="reader-icon"
+                  aria-label="Fechar partitura"
+                  onClick={closeSong}
                 >
-                  <BsAspectRatio />
+                  <BsX />
                 </Button>
               </div>
-              {!wide && (
-                <Offcanvas
-                  show={drawer}
-                  onHide={closeDrawer}
-                  placement="start"
-                  container={stageRef}
-                  className="reader-drawer"
-                  aria-label="Índice"
-                  onEntered={() => {
-                    scrollToCurrent(drawerListRef.current);
-                    drawerInputRef.current?.focus({ preventScroll: true });
-                  }}
-                >
-                  <div className="reader-drawer-body" ref={drawerListRef}>
-                    {index(drawerInputRef, closeDrawer)}
-                  </div>
-                </Offcanvas>
-              )}
-            </div>
-          ) : (
-            <div className="reader-empty">
-              Escolha uma música no índice para abrir a partitura.
-            </div>
+              <div className="reader-stage">
+                <div ref={attachPaper} className="reader-paper">
+                  {sheet(modalSong)}
+                </div>
+              </div>
+            </>
           )}
-        </div>
+        </Modal>
       )}
     </div>
   );
@@ -705,6 +810,8 @@ function SongIndex({
   onOpen,
   onClose,
   actions,
+  pdf,
+  pdfError,
   inputRef,
 }: {
   title: string;
@@ -722,6 +829,9 @@ function SongIndex({
   onOpen: (song: Song) => void;
   onClose?: () => void;
   actions?: ReactNode;
+  // Download button, shown after the instrument menu.
+  pdf?: ReactNode;
+  pdfError?: string;
   inputRef?: RefObject<HTMLInputElement>;
 }) {
   const q = query.trim();
@@ -820,6 +930,7 @@ function SongIndex({
               ))}
             </Form.Select>
           )}
+          {pdf}
           {onClose && (
             <Button
               variant="link"
@@ -845,6 +956,11 @@ function SongIndex({
             onChange={(e) => onQuery(e.target.value)}
           />
         </InputGroup>
+        {pdfError && (
+          <div className="text-danger small mt-2" role="alert">
+            {pdfError}
+          </div>
+        )}
         {actions && <div className="mt-2 small">{actions}</div>}
       </div>
       {list}
