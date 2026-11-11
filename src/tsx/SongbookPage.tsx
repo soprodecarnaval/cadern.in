@@ -71,6 +71,7 @@ import { SongBar } from "./PlayerBar";
 import { AddButton } from "./AddButton";
 import { DragHandle } from "./DragHandle";
 import { ScoreCard } from "./ScoreCard";
+import { substringRange } from "../lib/highlight";
 import { SongBookTable } from "./SongBookTable";
 import { SongbookGenerationPanel } from "./SongbookGenerationPanel";
 import { SongbookDragProvider } from "./SongbookDragProvider";
@@ -706,6 +707,7 @@ function ScorePicker({
             key={versions[0].doc.id}
             versions={versions}
             selectedIds={selectedIds}
+            needle={needle}
             onAdd={handleAdd}
             onPlay={onPlay}
           />
@@ -721,9 +723,10 @@ function ScorePicker({
   );
 }
 
-function ScorePickerVersions({ versions, selectedIds, onAdd, onPlay }: {
+function ScorePickerVersions({ versions, selectedIds, needle, onAdd, onPlay }: {
   versions: PickerScore[];
   selectedIds: Set<string>;
+  needle: string;
   onAdd: (score: PickerScore) => Promise<void>;
   onPlay: (info: PlayingPartViewModel) => void;
 }) {
@@ -788,6 +791,11 @@ function ScorePickerVersions({ versions, selectedIds, onAdd, onPlay }: {
       mode={mode}
       onToggleMode={() => setMode(mode === "compact" ? "expanded" : "compact")}
       onPlay={onPlay}
+      highlight={{
+        title: substringRange(score.title, needle),
+        projectTitle: substringRange(score.projectTitle, needle),
+        composer: substringRange(score.composer, needle),
+      }}
       leading={<DragHandle label={`Arraste ${score.title} para o caderninho`} handleRef={handleRef} onPrepareDrag={() => undefined} />}
       trailing={
         <div className="score-card-trailing">
