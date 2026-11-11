@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Col, Container, Nav, Navbar, Row } from "react-bootstrap";
 import { Link, Route, Routes } from "react-router-dom";
 import { AuthModal } from "./AuthModal";
@@ -10,7 +10,12 @@ import { SongBookTable } from "./SongBookTable";
 import { SongbookDragProvider } from "./SongbookDragProvider";
 import type { SongbookSortableListHandle } from "./SongbookSortableList";
 import { PDFGenerator } from "./PdfGenerator";
-import { sortByColumn, SortColumn, SortDirection } from "../utils/sort";
+import {
+  restoreToLibrary as restoreToLibraryList,
+  sortByColumn,
+  SortColumn,
+  SortDirection,
+} from "../utils/sort";
 import { SongBar } from "./PlayerBar";
 
 import type {
@@ -51,6 +56,14 @@ import { getPendingUserProjectInvitations } from "../lib/db";
 
 function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
   const [results, setResults] = useState<ScoreViewModel[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const handleSearchResults = useCallback(
+    (scores: ScoreViewModel[], query: string) => {
+      setResults(scores);
+      setSearchQuery(query);
+    },
+    [],
+  );
   const [items, setItems] = useState<SongbookItemViewModel[]>([]);
   const [playingPart, setPlayingPart] = useState<PlayingPartViewModel | null>(
     null,
@@ -60,6 +73,12 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
   const [restored, setRestored] = useState(false);
   const [showSave, setShowSave] = useState(false);
   const songbookRef = useRef<SongbookSortableListHandle>(null);
+  // The library's active sort, so a removed/cleared score can be reinserted
+  // at its correct position instead of just prepended.
+  const [sort, setSort] = useState<{
+    column: SortColumn;
+    direction: SortDirection;
+  } | null>(null);
 
   // The list survives reloads and logins: restored once the collection is
   // loaded, then stored on every change.
@@ -96,7 +115,14 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
     checked ? handleAddScore(song) : handleRemoveScore(song);
   };
 
+  const restoreToLibrary = (scores: ScoreViewModel[]) =>
+    restoreToLibraryList(results, scores, sort);
+
   const clearSelected = () => {
+    const removedScores = items.flatMap((r) =>
+      isSongbookSection(r) ? [] : [r.score],
+    );
+    setResults(restoreToLibrary(removedScores));
     setItems([]);
   };
 
@@ -113,13 +139,14 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
     setItems(
       items.filter((r) => isSongbookSection(r) || r.score.id !== score.id),
     );
-    setResults([score, ...results]);
+    setResults(restoreToLibrary([score]));
   };
 
   const handleResultsSortBy = (
     column: SortColumn,
     direction: SortDirection,
   ) => {
+    setSort({ column, direction });
     setResults(sortByColumn(results, column, direction).slice());
   };
 
@@ -147,7 +174,7 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
       <Container>
         <Row>
           <Col sm={6}>
-            <SearchBar handleResults={setResults} />
+            <SearchBar handleResults={handleSearchResults} />
           </Col>
           <Col sm={6}>
             <PDFGenerator songBook={songBook} />
@@ -163,6 +190,7 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
             <Col sm={6}>
               <ScoreSearchResults
                 results={results}
+                searchQuery={searchQuery}
                 onSortBy={handleResultsSortBy}
                 onAddAll={handleAddAllSongs}
                 onSelectSong={handleSelectSong}

@@ -68,8 +68,10 @@ import type {
   SongbookItemViewModel,
 } from "../../types/viewModels";
 import { SongBar } from "./PlayerBar";
+import { AddButton } from "./AddButton";
 import { DragHandle } from "./DragHandle";
 import { ScoreCard } from "./ScoreCard";
+import { substringRange } from "../lib/highlight";
 import { SongBookTable } from "./SongBookTable";
 import { SongbookGenerationPanel } from "./SongbookGenerationPanel";
 import { SongbookDragProvider } from "./SongbookDragProvider";
@@ -754,18 +756,17 @@ function ScorePicker({
         onChange={(e) => setFilter(e.target.value)}
         placeholder="Filtrar por título, compositor, projeto ou caderninho"
       />
-      <div style={{ maxHeight: 480, overflowY: "auto" }}>
-        <Table ref={dropRef} size="sm" borderless hover>
-          {matches.slice(0, PICKER_LIMIT).map((versions) => (
-            <ScorePickerVersions
-              key={versions[0].doc.id}
-              versions={versions}
-              selectedIds={selectedIds}
-              onAdd={handleAdd}
-              onPlay={onPlay}
-            />
-          ))}
-        </Table>
+      <div ref={dropRef} className="score-card-list" style={{ maxHeight: 480, overflowY: "auto" }}>
+        {matches.slice(0, PICKER_LIMIT).map((versions) => (
+          <ScorePickerVersions
+            key={versions[0].doc.id}
+            versions={versions}
+            selectedIds={selectedIds}
+            needle={needle}
+            onAdd={handleAdd}
+            onPlay={onPlay}
+          />
+        ))}
       </div>
       {matches.length > PICKER_LIMIT && (
         <p className="text-muted small mt-1">
@@ -777,9 +778,10 @@ function ScorePicker({
   );
 }
 
-function ScorePickerVersions({ versions, selectedIds, onAdd, onPlay }: {
+function ScorePickerVersions({ versions, selectedIds, needle, onAdd, onPlay }: {
   versions: PickerScore[];
   selectedIds: Set<string>;
+  needle: string;
   onAdd: (score: PickerScore) => Promise<void>;
   onPlay: (info: PlayingPartViewModel) => void;
 }) {
@@ -831,57 +833,57 @@ function ScorePickerVersions({ versions, selectedIds, onAdd, onPlay }: {
 
   if (!score) {
     return (
-      <tbody>
-        <tr>
-          <td colSpan={9} className="text-muted">
-            <Spinner animation="border" size="sm" /> {chosen.title}
-          </td>
-        </tr>
-      </tbody>
+      <div className="text-muted p-2">
+        <Spinner animation="border" size="sm" /> {chosen.title}
+      </div>
     );
   }
 
   return (
-    <tbody ref={ref}>
+    <div ref={ref}>
     <ScoreCard
       score={score}
       mode={mode}
       onToggleMode={() => setMode(mode === "compact" ? "expanded" : "compact")}
       onPlay={onPlay}
+      highlight={{
+        title: substringRange(score.title, needle),
+        projectTitle: substringRange(score.projectTitle, needle),
+        composer: substringRange(score.composer, needle),
+      }}
       leading={<DragHandle label={`Arraste ${score.title} para o caderninho`} handleRef={handleRef} onPrepareDrag={() => undefined} />}
       trailing={
-        <td>
-          <Button size="sm" variant="outline-primary"
-            disabled={adding || selectedIds.has(chosen.doc.id)}
-            onClick={() => void add()}>
-            {selectedIds.has(chosen.doc.id) ? "Adicionada" : adding ? "Adicionando…" : "Adicionar"}
-          </Button>
+        <div className="score-card-trailing">
+          <AddButton
+            label={`Adicionar ${chosen.title}`}
+            addedLabel={`${chosen.title} já adicionada`}
+            disabled={adding}
+            added={selectedIds.has(chosen.doc.id)}
+            onClick={() => void add()}
+          />
           {error && <div className="text-danger small">{error}</div>}
-        </td>
+        </div>
       }
       details={
-        <tr>
-          <td></td>
-          <td colSpan={8}>
-            <div className="text-muted small mb-1">
-              {chosen.songbooks.join(", ") || "Sem caderninho"}
-            </div>
-            {versions.length > 1 && (
-              <Form.Select size="sm"
-                aria-label={`Versão de ${versions[0].title} (${chosen.projectTitle})`}
-                value={chosenId} onChange={(e) => setChosenId(e.target.value)}>
-                {versions.map((s, index) => <option key={s.doc.id} value={s.doc.id}>
-                  {s.title} — {s.songbooks.join(", ") || "Sem caderninho"}
-                  {index === 0 ? " · mais recente" : ""}
-                  {selectedIds.has(s.doc.id) ? " · adicionada" : ""}
-                </option>)}
-              </Form.Select>
-            )}
-          </td>
-        </tr>
+        <div className="score-card-versions">
+          <div className="text-muted small mb-1">
+            {chosen.songbooks.join(", ") || "Sem caderninho"}
+          </div>
+          {versions.length > 1 && (
+            <Form.Select size="sm"
+              aria-label={`Versão de ${versions[0].title} (${chosen.projectTitle})`}
+              value={chosenId} onChange={(e) => setChosenId(e.target.value)}>
+              {versions.map((s, index) => <option key={s.doc.id} value={s.doc.id}>
+                {s.title} — {s.songbooks.join(", ") || "Sem caderninho"}
+                {index === 0 ? " · mais recente" : ""}
+                {selectedIds.has(s.doc.id) ? " · adicionada" : ""}
+              </option>)}
+            </Form.Select>
+          )}
+        </div>
       }
     />
-    </tbody>
+    </div>
   );
 }
 

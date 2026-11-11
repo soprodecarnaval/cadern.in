@@ -97,6 +97,7 @@ async function loadCollection(): Promise<ScoreViewModel[]> {
 const fuseOptions: IFuseOptions<ScoreViewModel> = {
   keys: ["title", "composer", "tags", "projectTitle"],
   includeScore: true,
+  includeMatches: true,
   shouldSort: true,
   threshold: 0.1,
   useExtendedSearch: true,
@@ -137,8 +138,18 @@ export function CollectionProvider({ children }: { children: ReactNode }) {
     [fuse, allScores],
   );
 
+  const getMatches = useCallback(
+    (query: string, scoreId: string) => {
+      if (!fuse || query === "") {
+        return undefined;
+      }
+      return fuse.search(query).find((r) => r.item.id === scoreId)?.matches;
+    },
+    [fuse],
+  );
+
   return (
-    <CollectionContext.Provider value={{ status, allScores, search }}>
+    <CollectionContext.Provider value={{ status, allScores, search, getMatches }}>
       {children}
     </CollectionContext.Provider>
   );
