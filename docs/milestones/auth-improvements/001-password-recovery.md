@@ -35,3 +35,15 @@ via Firebase's default hosted action page and default email template.
 
 - Forgot-password still works after 000/002 land, with no auto-linking or
   verification-gating regressions.
+
+## Verification (post-000)
+
+No code change needed: `resetPassword` never touches `currentUser`/
+`pendingUser`, and every `useAuth()` call site in `src` reads `currentUser`
+through the central `auth.tsx` state — so 000's verified-gate applies
+everywhere without a separate sweep. Error handling in `AuthModal.tsx` for
+reset failures is unchanged and consistent with how the rest of the modal
+(login/register) surfaces Firebase errors today — translating just the
+reset path to pt-BR would be inconsistent, so left as-is pending a broader
+error-message pass later. Export-app confirmed to still have no reset UI.
+Will re-verify end to end once 002 (Google OAuth) lands, per step 1.
