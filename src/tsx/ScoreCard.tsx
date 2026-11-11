@@ -1,29 +1,19 @@
+import { useState } from "react";
 import { ScoreCardView, type ScoreCardProps } from "./ScoreCardView";
-import { LineageBadge } from "./LineageBadge";
-import { PreviewModal } from "./PreviewModal";
-import { midiPlayer, playMidiPart } from "../utils/playMidi";
+import { CardLineage } from "./CardLineage";
+import { ScoreDetailModal } from "./ScoreDetailModal";
 export type { ScoreCardHighlight } from "./ScoreCardView";
 
 export function ScoreCard(props: ScoreCardProps) {
+  const [showDetail, setShowDetail] = useState(false);
   return (
-    <ScoreCardView
-      {...props}
-      lineage={
-        props.mode === "expanded" ? (
-          <LineageBadge scoreId={props.score.id} />
-        ) : null
-      }
-      play={(part) => playMidiPart(part.midi, part.instrument)}
-      stop={() => midiPlayer?.stop()}
-      renderPreview={(parts, index, setIndex) => (
-        <PreviewModal
-          show
-          handleShow={(show) => setIndex(show ? index : null)}
-          parts={parts}
-          activeIndex={index}
-          onIndexChange={setIndex}
-        />
-      )}
-    />
+    <>
+      <ScoreCardView
+        {...props}
+        lineage={props.mode === "expanded" ? <CardLineage scoreId={props.score.id} /> : null}
+        onShowDetail={() => setShowDetail(true)}
+      />
+      <ScoreDetailModal show={showDetail} scoreId={props.score.id} onHide={() => setShowDetail(false)} />
+    </>
   );
 }

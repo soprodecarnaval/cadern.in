@@ -64,8 +64,3 @@ export type NumberedSongbookItemViewModel =
 export type SongbookViewModel = {
   items: NumberedSongbookItemViewModel[];
 };
-
-export type PlayingPartViewModel = {
-  score: ScoreViewModel;
-  part: PartViewModel;
-};

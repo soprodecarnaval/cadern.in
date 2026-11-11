@@ -8,7 +8,7 @@ import {
   Tooltip,
 } from "react-bootstrap";
 
-import type { ScoreViewModel, PlayingPartViewModel, SongbookItemViewModel, SongbookScoreViewModel } from "../../types/viewModels";
+import type { ScoreViewModel, SongbookItemViewModel, SongbookScoreViewModel } from "../../types/viewModels";
 import { isSongbookSection, songbookSection } from "../lib/songbook";
 import type { ScoreEditUpdate } from "./ScoreEditModal";
 
@@ -27,7 +27,6 @@ interface SongBookTableProps {
   rows: SongbookItemViewModel[];
   setItems: (rows: SongbookItemViewModel[]) => void;
   handleSelect: (song: ScoreViewModel, checked: boolean) => void;
-  onSetPlayingPart: (song: PlayingPartViewModel) => void;
   handleClear: () => void;
 }
 
@@ -36,7 +35,6 @@ const SongBookTable = forwardRef<SongbookSortableListHandle, SongBookTableProps>
   setItems: setRows,
   handleSelect,
   handleClear,
-  onSetPlayingPart: handlePlayingSong,
 }, ref) => {
   const [newSection, setNewSection] = useState<string>("");
 
@@ -114,7 +112,7 @@ const SongBookTable = forwardRef<SongbookSortableListHandle, SongBookTableProps>
       </Row>
       <SongbookSortableList ref={ref} rows={rows} onReorder={setRows}
         onDelete={(index) => setRows(deleteRow(rows, index))}
-        onSelect={handleSelect} onPlay={handlePlayingSong} onUpdate={handleUpdateScore} />
+        onSelect={handleSelect} onUpdate={handleUpdateScore} />
       <Row className="mt-4">
         <Col>
           <p>

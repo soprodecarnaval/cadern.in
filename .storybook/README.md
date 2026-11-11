@@ -15,10 +15,10 @@ and a stable `Components/Name` title. Shared sample data lives in
 
 Auth stories use play functions to reach registration/error/reset states on
 navigation. ResetPending intentionally leaves its fixture promise pending.
-Callbacks are spies; no authentication or audio occurs. ScoreCard's injected
-preview demonstrates the preview request with a local SVG; the connected app
-retains its full PreviewModal. Neither previews nor MIDI links fetch remote
-media. Click the modal's close button, then “Abrir conta” to reopen.
+Callbacks are spies; no authentication or audio occurs. ScoreCard shows static
+instrument pills and fixture lineage; its eye button calls an injected spy.
+The connected app opens ScoreDetailModal. PartItem previews the instrument pill.
+Click the auth modal’s close button, then “Abrir conta” to reopen.
 
 Static story URLs use `iframe.html?id=components-scorecard--expanded` (and the
 IDs in `index.json`). Serve the output over HTTP; opening files directly is

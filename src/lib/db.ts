@@ -556,6 +556,16 @@ function songbookRevisionRef(songbookId: string, revisionId: string) {
 const isPermissionDenied = (err: unknown) =>
   err instanceof FirebaseError && err.code === "permission-denied";
 
+export async function getSongbookById(id: string): Promise<WithId<SongbookDoc> | null> {
+  try {
+    const snap = await getDoc(songbookRef(id));
+    return snap.exists() ? { id: snap.id, ...zSongbookDoc.parse(snap.data()) } : null;
+  } catch (err) {
+    if (isPermissionDenied(err)) { return null; }
+    throw err;
+  }
+}
+
 /**
  * `null` when it doesn't exist or the caller may not see it (unpublished and
  * not a member) — the two are indistinguishable by design.

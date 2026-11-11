@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Badge, Card, Placeholder } from "react-bootstrap";
+import { SiMidi } from "react-icons/si";
 import type { CommentAnchor } from "../../types/docs";
 import { MidiPlayer } from "./MidiPlayer";
 
@@ -176,6 +177,11 @@ export function ScoreDisplay({
                   <strong>{part.name}</strong>
                   <span className="text-muted">— {part.instrument}</span>
                   {!part.midiUrl && <Badge bg="danger">sem MIDI</Badge>}
+                  {part.midiUrl && (
+                    <a href={part.midiUrl} target="_blank" rel="noreferrer" aria-label={`Baixar MIDI de ${part.name}`}>
+                      <SiMidi />
+                    </a>
+                  )}
                   {part.warnings?.map((w, i) => (
                     <Badge bg="warning" text="dark" key={i}>
                       {w}

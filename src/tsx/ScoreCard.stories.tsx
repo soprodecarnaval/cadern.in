@@ -11,16 +11,9 @@ const meta = {
     score,
     mode: "compact",
     onToggleMode: noop,
-    onPlay: fn(),
+    onShowDetail: fn(),
     trailing: <button className="btn btn-outline-primary">Adicionar</button>,
-    play: fn(() => Promise.resolve()),
-    stop: fn(),
-    renderPreview: (parts, index, setIndex) => (
-      <div role="dialog" aria-label="Prévia da parte">
-        <img alt={parts[index].instrument} src={parts[index].svg[0]} />
-        <button onClick={() => setIndex(null)}>Fechar</button>
-      </div>
-    ),
+    lineage: "Carnaval BH 2020 → (…) → Carnaval BH 2025 → Carnaval BH 2026",
   },
   render: function Render(args) {
     const [mode, setMode] = useState(args.mode);

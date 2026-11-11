@@ -16,10 +16,8 @@ import {
   SortColumn,
   SortDirection,
 } from "../utils/sort";
-import { SongBar } from "./PlayerBar";
 
 import type {
-  PlayingPartViewModel,
   ScoreViewModel,
   SongbookViewModel,
   SongbookItemViewModel,
@@ -65,9 +63,6 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
     [],
   );
   const [items, setItems] = useState<SongbookItemViewModel[]>([]);
-  const [playingPart, setPlayingPart] = useState<PlayingPartViewModel | null>(
-    null,
-  );
   const { status, allScores } = useCollectionContext();
   const { currentUser } = useAuth();
   const [restored, setRestored] = useState(false);
@@ -180,7 +175,6 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
             <PDFGenerator songBook={songBook} />
           </Col>
         </Row>
-        <SongBar info={playingPart} />
         <SongbookDragProvider
           songbookRef={songbookRef}
           onAddAt={handleAddScore}
@@ -194,7 +188,6 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
                 onSortBy={handleResultsSortBy}
                 onAddAll={handleAddAllSongs}
                 onSelectSong={handleSelectSong}
-                onSetPlayingPart={setPlayingPart}
               />
             </Col>
             <Col sm={6}>
@@ -223,7 +216,6 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
                 ref={songbookRef}
                 rows={items}
                 setItems={setItems}
-                onSetPlayingPart={setPlayingPart}
                 handleSelect={handleSelectSong}
                 handleClear={clearSelected}
               />

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
-import { PointerSensor } from "@dnd-kit/dom";
+import { CardPointerSensor } from "../lib/cardPointerSensor";
 import {
   Alert,
   Badge,
@@ -61,13 +61,11 @@ import type {
   SongbookRevisionDoc,
 } from "../../types/docs";
 import type {
-  PlayingPartViewModel,
   ScoreViewModel,
   NumberedSongbookItemViewModel,
   NumberedSongbookScoreViewModel,
   SongbookItemViewModel,
 } from "../../types/viewModels";
-import { SongBar } from "./PlayerBar";
 import { AddButton } from "./AddButton";
 import { DragHandle } from "./DragHandle";
 import { ScoreCard } from "./ScoreCard";
@@ -530,9 +528,6 @@ function SongbookEditor({
   const { currentUser } = useAuth();
   const [items, setItems] = useState(initialItems);
   const [note, setNote] = useState("");
-  const [playingPart, setPlayingPart] = useState<PlayingPartViewModel | null>(
-    null,
-  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
 
@@ -572,7 +567,6 @@ function SongbookEditor({
 
   return (
     <>
-      <SongBar info={playingPart} />
       <SongbookDragProvider
         songbookRef={songbookRef}
         onAddAt={(score, index) => handleSelect(score, true, index)}
@@ -585,7 +579,6 @@ function SongbookEditor({
               projectId={projectId}
               selected={items}
               onAdd={(score) => handleSelect(score, true)}
-              onPlay={setPlayingPart}
             />
           </div>
           <div className="col-sm-6">
@@ -596,7 +589,6 @@ function SongbookEditor({
               setItems={setItems}
               handleSelect={handleSelect}
               handleClear={() => setItems([])}
-              onSetPlayingPart={setPlayingPart}
             />
           </div>
         </div>
@@ -647,12 +639,10 @@ function ScorePicker({
   projectId,
   selected,
   onAdd,
-  onPlay,
 }: {
   projectId: string;
   selected: SongbookItemViewModel[];
   onAdd: (score: ScoreViewModel) => void;
-  onPlay: (info: PlayingPartViewModel) => void;
 }) {
   const { currentUser } = useAuth();
   const uid = currentUser?.uid;
@@ -764,7 +754,6 @@ function ScorePicker({
             selectedIds={selectedIds}
             needle={needle}
             onAdd={handleAdd}
-            onPlay={onPlay}
           />
         ))}
       </div>
@@ -778,12 +767,11 @@ function ScorePicker({
   );
 }
 
-function ScorePickerVersions({ versions, selectedIds, needle, onAdd, onPlay }: {
+function ScorePickerVersions({ versions, selectedIds, needle, onAdd }: {
   versions: PickerScore[];
   selectedIds: Set<string>;
   needle: string;
   onAdd: (score: PickerScore) => Promise<void>;
-  onPlay: (info: PlayingPartViewModel) => void;
 }) {
   const [chosenId, setChosenId] = useState(versions[0].doc.id);
   const [mode, setMode] = useState<"compact" | "expanded">("compact");
@@ -815,7 +803,7 @@ function ScorePickerVersions({ versions, selectedIds, needle, onAdd, onPlay }: {
   const { ref, handleRef } = useDraggable({
     id: `available:${chosen.doc.id}`,
     data: { group: "available", score: score ?? undefined },
-    sensors: [PointerSensor],
+    sensors: [CardPointerSensor],
     disabled: !score,
   });
 
@@ -845,7 +833,6 @@ function ScorePickerVersions({ versions, selectedIds, needle, onAdd, onPlay }: {
       score={score}
       mode={mode}
       onToggleMode={() => setMode(mode === "compact" ? "expanded" : "compact")}
-      onPlay={onPlay}
       highlight={{
         title: substringRange(score.title, needle),
         projectTitle: substringRange(score.projectTitle, needle),
