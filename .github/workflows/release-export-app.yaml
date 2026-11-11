@@ -64,6 +64,8 @@ jobs:
         run: npm run export-app:build
       - name: Prepare package
         run: node scripts/packaging/prepareExportAppPackage.mjs
+      - name: Install wine (needed for Windows exe resource editing)
+        run: sudo apt-get update && sudo apt-get install -y wine
       - name: Package
         run: npx electron-builder --win nsis --linux AppImage --x64 --publish never
       - name: Create release
