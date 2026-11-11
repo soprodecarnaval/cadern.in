@@ -93,6 +93,19 @@ export const zScoreData = z.object({
     .object({ revisionId: z.string(), songbookIds: z.array(z.string()) })
     .nullable()
     .optional(),
+  // The first songbook ever to publish this score, and when (collab-flow
+  // §008). Written once by the server the first time `published` goes from
+  // null to non-null; never overwritten afterwards — unlike `published`,
+  // this is history, not a live cache. Optional until 008's migration
+  // backfills it.
+  firstPublished: z
+    .object({
+      songbookId: z.string(),
+      projectId: z.string(),
+      publishedAt: zTimestamp,
+    })
+    .nullable()
+    .optional(),
 });
 export type ScoreData = z.infer<typeof zScoreData>;
 export const zScoreDoc = zScoreData.extend({

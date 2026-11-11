@@ -10,6 +10,14 @@ export interface PublishedMarker {
   songbookIds: string[];
 }
 
+/** `scores/{id}.firstPublished` (collab-flow §008). Write-once, never
+ * overwritten once set — a historical fact, not a live cache. */
+export interface FirstPublished {
+  songbookId: string;
+  projectId: string;
+  publishedAt: Timestamp;
+}
+
 export interface MarkerChange {
   scoreId: string;
   before: PublishedMarker | null;
@@ -19,6 +27,7 @@ export interface MarkerChange {
 interface SongbookPins {
   pins: Record<string, string>;
   createdAt: number;
+  projectId: string;
 }
 
 /**
@@ -85,6 +94,7 @@ class Lookups {
       pins: (revision.get("pins") ?? {}) as Record<string, string>,
       createdAt:
         (revision.get("createdAt") as Timestamp | undefined)?.toMillis() ?? 0,
+      projectId: songbook.get("projectId") as string,
     };
   }
 }
@@ -123,6 +133,8 @@ export async function recomputePublished(
     }
     const before = (score.get("published") ?? null) as PublishedMarker | null;
     let after: PublishedMarker | null = null;
+    const matches: { songbookId: string; revisionId: string;
+      createdAt: number; projectId: string; }[] = [];
 
     if (!score.get("deletedAt") &&
         (await lookups.projectAlive(score.get("projectId")))) {
@@ -130,14 +142,12 @@ export async function recomputePublished(
         ...(before?.songbookIds ?? []),
         ...(options.extra?.(scoreId) ?? []),
       ]);
-      const matches: { songbookId: string; revisionId: string;
-        createdAt: number; }[] = [];
       for (const songbookId of candidates) {
         const songbook = await lookups.publishedPins(songbookId);
         const revisionId = songbook?.pins[scoreId];
         if (songbook && revisionId) {
           matches.push({ songbookId, revisionId,
-            createdAt: songbook.createdAt });
+            createdAt: songbook.createdAt, projectId: songbook.projectId });
         }
       }
       if (matches.length > 0) {
@@ -153,7 +163,28 @@ export async function recomputePublished(
     if (!sameMarker(before, after)) {
       changes.push({ scoreId, before, after });
       if (!options.dryRun) {
-        await score.ref.update({ published: after });
+        const update: DocumentData = { published: after };
+        // Write-once (collab-flow §008): only on the transition into
+        // "published", and only if nothing has claimed it before. Credits
+        // whichever current match's revision is oldest.
+        if (after && matches.length > 0 && !score.get("firstPublished")) {
+          const earliest = matches.reduce((a, b) =>
+            b.createdAt < a.createdAt ? b : a);
+          update.firstPublished = {
+            songbookId: earliest.songbookId,
+            projectId: earliest.projectId,
+            // A native Date, not `Timestamp.now()`: this module is called
+            // with `db` instances from either the Cloud Functions build of
+            // firebase-admin or the scripts/ one, and constructing their
+            // `Timestamp` class directly would tie the write to whichever
+            // package happened to be imported here. The Firestore SDK
+            // converts a plain Date for us.
+            publishedAt: new Date(),
+          } satisfies Omit<FirstPublished, "publishedAt"> & {
+            publishedAt: Date;
+          };
+        }
+        await score.ref.update(update);
       }
     }
   }
