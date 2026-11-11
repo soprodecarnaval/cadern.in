@@ -30,7 +30,7 @@ const ScoreSearchResults = ({
     <>
       <h3 className="results">Resultados</h3>
       <Row>
-        <Col sm="6">
+        <Col xs={12} sm="auto">
           <Sort onSortBy={onSortBy} />
         </Col>
       </Row>

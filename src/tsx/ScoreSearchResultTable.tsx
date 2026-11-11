@@ -126,11 +126,13 @@ const ScoreSearchResultTable = ({
           />
         ))}
       </div>
-      <PaginationBar
-        onChange={handlePageChange}
-        currentPage={page}
-        maxNumberPages={maxNumberPages}
-      />
+      <div className="mt-2">
+        <PaginationBar
+          onChange={handlePageChange}
+          currentPage={page}
+          maxNumberPages={maxNumberPages}
+        />
+      </div>
     </>
   );
 };

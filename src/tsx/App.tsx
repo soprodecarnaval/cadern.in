@@ -168,7 +168,6 @@ function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
                 <h3 className="results">Caderninho</h3>
                 {FEATURE_FLAG_COLLAB_FLOW && (
                   <Button
-                    size="sm"
                     variant="outline-primary"
                     disabled={items.length === 0}
                     onClick={handleSave}

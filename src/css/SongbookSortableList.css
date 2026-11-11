@@ -4,6 +4,19 @@
   gap: 0.5rem;
 }
 
+/* The drag tip takes a card's slot: a card's height (44px handle, 0.25rem
+   padding, 1px border) with the list's gap below. The gap above is the
+   controls' own 0.5rem bottom margin, as above the search results. */
+.songbook-tip {
+  display: flex;
+  align-items: center;
+  box-sizing: content-box;
+  min-height: 44px;
+  padding: 0.25rem 0;
+  border: 1px solid transparent;
+  margin: 0 0 0.5rem;
+}
+
 .songbook-card-entry {
   border-radius: 0.5rem;
 }
@@ -19,6 +32,7 @@
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
+  padding-inline: 0;
   border: 0;
   border-radius: 0.25rem;
   background: transparent;

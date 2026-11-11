@@ -204,8 +204,8 @@ const PDFGenerator = ({ songBook, covers }: PdfGeneratorProps) => {
   return (
     <>
       <Row className="mt-4">
-        <Form className="d-flex" onSubmit={openModal}>
-          <Col sm={6}>
+        <Form className="d-flex gap-1" onSubmit={openModal}>
+          <Col>
             <Form.Control
               type="text"
               onChange={onInputSongbookTitle}
@@ -213,8 +213,10 @@ const PDFGenerator = ({ songBook, covers }: PdfGeneratorProps) => {
               placeholder="Título do caderninho"
             />
           </Col>
-          <Col sm={3}>
-            <Button type="submit">Gerar caderninhos</Button>
+          <Col xs="auto">
+            <Button type="submit" className="text-nowrap">
+              Gerar caderninhos
+            </Button>
           </Col>
         </Form>
       </Row>

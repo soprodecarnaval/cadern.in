@@ -224,7 +224,7 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
 
   return (
     <>
-      <p className="text-muted small mt-2 mb-1">
+      <p className="songbook-tip text-muted small lh-sm">
         Arraste pela alça. Seções levam suas músicas. Teclado: Espaço, setas e Escape.
       </p>
       <div ref={container} className="songbook-card-list" role="list"
