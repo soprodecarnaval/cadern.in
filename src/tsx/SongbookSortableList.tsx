@@ -44,12 +44,13 @@ function EmptySongbookDropzone() {
 }
 
 export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
+  Card: import("react").ComponentType<import("./ScoreCardView").ScoreCardProps>;
   rows: SongbookItemViewModel[];
   onReorder: (rows: SongbookItemViewModel[]) => void;
   onDelete: (index: number) => void;
   onSelect: (score: ScoreViewModel, checked: boolean) => void;
   onUpdate: (index: number, update: ScoreEditUpdate) => void;
-}>(function SongbookSortableList({ rows, onReorder, onDelete, onSelect, onUpdate }, ref) {
+}>(function SongbookSortableList({ Card, rows, onReorder, onDelete, onSelect, onUpdate }, ref) {
   const entries = useSongbookEditorItems(rows);
   const container = useRef<HTMLDivElement>(null);
   const [preparingId, setPreparingId] = useState<string | null>(null);
@@ -230,7 +231,7 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
       <div ref={container} className="songbook-card-list" role="list"
         aria-label="Músicas e seções do caderninho">
         {entries.map((entry, index) => (
-          <SortableSongbookRow key={entry.id} entry={entry} index={index}
+          <SortableSongbookRow Card={Card} key={entry.id} entry={entry} index={index}
             sorting={!sectionDrag && carried(index)}
             carried={activeId !== null && carried(index)}
             disableDrop={sectionDrag && ((carried(index) && index !== draggedIndex) ||

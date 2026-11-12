@@ -33,7 +33,8 @@
     "backfill:metajson": "tsx scripts/maintenance/backfillMetajson.ts",
     "storybook": "storybook dev -p 6006 --disable-telemetry",
     "build-storybook": "storybook build --disable-telemetry",
-    "typecheck:storybook": "tsc -p .storybook/tsconfig.json"
+    "typecheck:storybook": "tsc -p .storybook/tsconfig.json",
+    "test:storybook": "node scripts/storybook/checkStories.mjs"
   },
   "dependencies": {
     "@dnd-kit/dom": "^0.5.3",
@@ -50,12 +51,14 @@
     "googleapis": "^128.0.0",
     "html-midi-player": "^1.6.0",
     "iconv-lite": "^0.6.3",
+    "midi-player-js": "^2.0.16",
     "pdfkit": "0.16.0",
     "react": "^18.2.0",
     "react-bootstrap": "^2.8.0",
     "react-dom": "^18.2.0",
     "react-icons": "^4.10.1",
     "react-router-dom": "^7.13.2",
+    "soundfont-player": "^0.12.0",
     "svg-to-pdfkit": "^0.1.8",
     "zod": "^3.23.8"
   },
@@ -87,6 +90,7 @@
     "firebase-admin": "^13.7.0",
     "firebase-tools": "^15.32.1",
     "fs": "^0.0.1-security",
+    "playwright": "1.65.0",
     "storybook": "8.6.14",
     "ts-node": "^10.9.1",
     "tsx": "^4.7.0",

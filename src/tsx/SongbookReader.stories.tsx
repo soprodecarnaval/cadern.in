@@ -23,7 +23,7 @@ const INSTRUMENT_KEY = "cadernin:instrumento";
 // wider than tall, with a mouse) show it in a modal over the index; narrower
 // ones show the phone/tablet full-screen view.
 const openSong = (n: number) => ({
-  router: { initialEntries: [`/?musica=${n}`] },
+  route: `/?musica=${n}`,
 });
 
 const longSongbook: SongbookFixtureEntry[] = [
@@ -53,7 +53,7 @@ const longSongbook: SongbookFixtureEntry[] = [
 const meta = {
   title: "Components/SongbookReader",
   component: SongbookReader,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "fullscreen", fullScreen: true },
   beforeEach: () => {
     try {
       localStorage.removeItem(INSTRUMENT_KEY);

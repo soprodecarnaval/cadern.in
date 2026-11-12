@@ -1,24 +1,26 @@
+import { NavigationResult } from "./NavigationResult";
 import type { Preview } from "@storybook/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import "../src/main.css";
 import "bootstrap/dist/css/bootstrap.css";
+import "../src/css/App.css";
 
-// Stories can start at a URL with `parameters.router.initialEntries` (e.g. a
-// query string a screen reads), and skip the padded container with
-// `parameters.layout: "fullscreen"`.
 const preview: Preview = {
   decorators: [
-    (Story, { parameters }) => (
-      <MemoryRouter initialEntries={parameters.router?.initialEntries}>
-        {parameters.layout === "fullscreen" ? (
-          <Story />
-        ) : (
-          <div className="container p-4">
-            <Story />
+    (Story, context) => {
+      const route = (context.parameters.route as string | undefined) ?? "/";
+      const path = (context.parameters.routePath as string | undefined) ?? "/";
+      return (
+        <MemoryRouter initialEntries={[route]}>
+          <div className={context.parameters.fullScreen ? "" : "container p-4"}>
+            <Routes>
+              <Route path={path} element={<Story />} />
+              <Route path="*" element={<NavigationResult back={route} />} />
+            </Routes>
           </div>
-        )}
-      </MemoryRouter>
-    ),
+        </MemoryRouter>
+      );
+    },
   ],
 };
 export default preview;

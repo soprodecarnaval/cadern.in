@@ -1,203 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Col, Container, Nav, Navbar, Row } from "react-bootstrap";
-import { Link, Route, Routes } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Route, Routes } from "react-router-dom";
+import { AppNavigation } from "./AppNavigation";
 import { AuthModal } from "./AuthModal";
 import { ProfileModal } from "./ProfileModal";
 
-import { SearchBar } from "./SearchBar";
-import { ScoreSearchResults } from "./ScoreSearchResults";
-import { SongBookTable } from "./SongBookTable";
-import { SongbookDragProvider } from "./SongbookDragProvider";
-import type { SongbookSortableListHandle } from "./SongbookSortableList";
-import { PDFGenerator } from "./PdfGenerator";
-import {
-  sortByColumn,
-  SortColumn,
-  SortDirection,
-} from "../utils/sort";
-
-import type {
-  ScoreViewModel,
-  SongbookViewModel,
-  SongbookItemViewModel,
-} from "../../types/viewModels";
-import {
-  isSongbookSection,
-  numberSongbookItems,
-  songbookScore,
-} from "../lib/songbook";
-
 import "bootstrap/dist/css/bootstrap.css";
-import "../css/App.css";
-import { AuthButton } from "./AuthButton";
-import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { useAuth } from "../auth";
-import { MyScoresPage } from "./MyScoresPage";
-import { ScorePage } from "./ScorePage";
-import { MeusProjetosPage } from "./MeusProjetosPage";
-import { CreateProjectPage } from "./CreateProjectPage";
-import { PublicProjectPage } from "./PublicProjectPage";
-import { ProjectSettingsPage } from "./ProjectSettingsPage";
-import { NotFoundPage } from "./NotFoundPage";
-import { SaveSongbookModal } from "./SaveSongbookModal";
-import { ProjectSongbooksPage } from "./ProjectSongbooksPage";
-import { SongbookPage } from "./SongbookPage";
-import { useCollectionContext } from "../useCollectionContext";
-import {
-  markPendingSave,
-  restoreBuilderItems,
-  storeBuilderItems,
-  takePendingSave,
-} from "../lib/builderStorage";
+import "../css/App.css";
+import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { getPendingUserProjectInvitations } from "../lib/db";
+import { CreateProjectPage } from "./CreateProjectPage";
+import { MeusProjetosPage } from "./MeusProjetosPage";
+import { MyScoresPage } from "./MyScoresPage";
+import { NotFoundPage } from "./NotFoundPage";
+import { ProjectSettingsPage } from "./ProjectSettingsPage";
+import { ProjectSongbooksPage } from "./ProjectSongbooksPage";
+import { PublicProjectPage } from "./PublicProjectPage";
+import { ScorePage } from "./ScorePage";
+import { SongbookPage } from "./SongbookPage";
 
-function HomePage({ onRequestLogin }: { onRequestLogin: () => void }) {
-  const [searchResults, setSearchResults] = useState<ScoreViewModel[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const handleSearchResults = useCallback(
-    (scores: ScoreViewModel[], query: string) => {
-      setSearchResults(scores);
-      setSearchQuery(query);
-    },
-    [],
-  );
-  const [items, setItems] = useState<SongbookItemViewModel[]>([]);
-  const { status, allScores } = useCollectionContext();
-  const { currentUser } = useAuth();
-  const [restored, setRestored] = useState(false);
-  const [showSave, setShowSave] = useState(false);
-  const songbookRef = useRef<SongbookSortableListHandle>(null);
-  const [sort, setSort] = useState<{
-    column: SortColumn;
-    direction: SortDirection;
-  } | null>(null);
-
-  // The list survives reloads and logins: restored once the collection is
-  // loaded, then stored on every change.
-  useEffect(() => {
-    if (status === "ready" && !restored) {
-      setItems(restoreBuilderItems(allScores));
-      setRestored(true);
-    }
-  }, [status, restored, allScores]);
-
-  useEffect(() => {
-    if (restored) {
-      storeBuilderItems(items);
-    }
-  }, [restored, items]);
-
-  // Back from logging in to save: carry on with the save.
-  useEffect(() => {
-    if (currentUser && takePendingSave()) {
-      setShowSave(true);
-    }
-  }, [currentUser]);
-
-  const handleSave = () => {
-    if (currentUser) {
-      setShowSave(true);
-    } else {
-      markPendingSave();
-      onRequestLogin();
-    }
-  };
-
-  const handleSelectSong = (song: ScoreViewModel, checked: boolean) => {
-    checked ? handleAddScore(song) : handleRemoveScore(song);
-  };
-
-  const results = useMemo(() => {
-    const selectedIds = new Set(items.flatMap((item) => isSongbookSection(item) ? [] : [item.score.id]));
-    const available = searchResults.filter((score) => !selectedIds.has(score.id));
-    return sort ? sortByColumn(available, sort.column, sort.direction) : available;
-  }, [searchResults, items, sort]);
-
-  const clearSelected = () => setItems([]);
-
-  const handleAddScore = (score: ScoreViewModel, index?: number) => {
-    setItems((prev) => {
-      const next = [...prev];
-      next.splice(index ?? next.length, 0, songbookScore(score));
-      return next;
-    });
-  };
-
-  const handleRemoveScore = (score: ScoreViewModel) => {
-    setItems(
-      items.filter((r) => isSongbookSection(r) || r.score.id !== score.id),
-    );
-  };
-
-  const handleResultsSortBy = (
-    column: SortColumn,
-    direction: SortDirection,
-  ) => {
-    setSort({ column, direction });
-  };
-
-  const songBook: SongbookViewModel = { items: numberSongbookItems(items) };
-
-  return (
-    <>
-      <Container>
-        <Row>
-          <Col sm={6}>
-            <SearchBar handleResults={handleSearchResults} />
-          </Col>
-          <Col sm={6}>
-            <PDFGenerator songBook={songBook} />
-          </Col>
-        </Row>
-        <SongbookDragProvider
-          songbookRef={songbookRef}
-          onAddAt={handleAddScore}
-          onRemove={handleRemoveScore}
-        >
-          <Row className="mt-4">
-            <Col sm={6}>
-              <ScoreSearchResults
-                results={results}
-                searchQuery={searchQuery}
-                onSortBy={handleResultsSortBy}
-                onSelectSong={handleSelectSong}
-              />
-            </Col>
-            <Col sm={6}>
-              <div className="d-flex justify-content-between align-items-baseline">
-                <h3 className="results">Caderninho</h3>
-                {FEATURE_FLAG_COLLAB_FLOW && (
-                  <Button
-                    variant="outline-primary"
-                    disabled={items.length === 0}
-                    onClick={handleSave}
-                  >
-                    Salvar caderninho
-                  </Button>
-                )}
-              </div>
-              {currentUser && showSave && (
-                <SaveSongbookModal
-                  show
-                  user={currentUser}
-                  items={items}
-                  onHide={() => setShowSave(false)}
-                />
-              )}
-              <SongBookTable
-                ref={songbookRef}
-                rows={items}
-                setItems={setItems}
-                handleSelect={handleSelectSong}
-                handleClear={clearSelected}
-              />
-            </Col>
-          </Row>
-        </SongbookDragProvider>
-      </Container>
-    </>
-  );
-}
+import { HomePage } from "./HomePage";
 
 function App() {
   const [showUserModal, setShowUserModal] = useState(false);
@@ -216,44 +38,12 @@ function App() {
 
   return (
     <>
-      <Navbar
-        expand="lg"
-        className="bg-body-tertiary"
-        bg="dark"
-        data-bs-theme="dark"
-      >
-        <Container>
-          <Navbar.Brand as={Link} to="/" className="nav-bar-title">
-            cadern.in
-          </Navbar.Brand>
-          <div className="banner-container">
-            <a href="/2026" className="banner banner-yellow">
-              Carnaval BH 2026
-            </a>
-            <a href="/plugin" className="banner banner-blue">
-              Plugin de Musescore
-            </a>
-          </div>
-          {FEATURE_FLAG_COLLAB_FLOW && (
-            <Nav className="ms-auto d-flex align-items-center gap-2">
-              {currentUser && (
-                <>
-                  <Nav.Link as={Link} to="/my-scores">
-                    Minhas partituras
-                  </Nav.Link>
-                  <Nav.Link as={Link} to="/projects">
-                    Meus projetos
-                  </Nav.Link>
-                </>
-              )}
-              <AuthButton
-                onOpenUserModal={() => setShowUserModal(true)}
-                inboxCount={inboxCount}
-              />
-            </Nav>
-          )}
-        </Container>
-      </Navbar>
+      <AppNavigation
+        currentUser={currentUser}
+        collabEnabled={FEATURE_FLAG_COLLAB_FLOW}
+        inboxCount={inboxCount}
+        onOpenUserModal={() => setShowUserModal(true)}
+      />
 
       <Routes>
         <Route
