@@ -2,6 +2,10 @@ import { useState, type FormEvent } from "react";
 import { GoogleLinkRequiredError, useAuth } from "../../auth";
 import { describeAuthError } from "../authMessages";
 
+// Signals the user closed the OAuth popup without finishing; distinct from a
+// Firebase error so it gets its own message instead of a generic one.
+class OAuthPopupClosedError extends Error {}
+
 export function LoginForm() {
   const { login, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
@@ -33,15 +37,27 @@ export function LoginForm() {
   const submitGoogle = async () => {
     setError("");
     setGoogleSubmitting(true);
+    // signInWithPopup never settles if the user closes the popup without
+    // finishing — Electron doesn't propagate that back to Firebase's own
+    // detection, so main.ts tells us directly and we unstick the UI here.
+    let unsubscribe: (() => void) | undefined;
+    const popupClosed = new Promise<never>((_resolve, reject) => {
+      unsubscribe = window.api.onOAuthPopupClosed(() => {
+        reject(new OAuthPopupClosedError());
+      });
+    });
     try {
-      await signInWithGoogle();
+      await Promise.race([signInWithGoogle(), popupClosed]);
     } catch (e) {
       if (e instanceof GoogleLinkRequiredError) {
         setLinkRequest(e);
+      } else if (e instanceof OAuthPopupClosedError) {
+        setError("Login cancelado.");
       } else {
         setError(describeAuthError(e));
       }
     } finally {
+      unsubscribe?.();
       setGoogleSubmitting(false);
     }
   };
