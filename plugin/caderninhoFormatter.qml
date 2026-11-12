@@ -302,7 +302,7 @@ MuseScore {
             checked: false
             ToolTip.visible: hovered
             ToolTip.text: t("dynamicTromboneTooltip")
-            ToolTip.delay: 400
+            ToolTip.delay: 1000
 
             Text {
                 text: t("dynamicTrombone")
