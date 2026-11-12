@@ -88,9 +88,8 @@ export function SaveSongbookModalView({
             <Spinner animation="border" size="sm" />
           ) : projects.length === 0 ? (
             <p className="mb-0">
-              Você precisa administrar um projeto para salvar um caderninho.{" "}
               <Link to="/projects/new" onClick={onHide}>
-                Criar um projeto
+                Criar um novo projeto
               </Link>
               .
             </p>
