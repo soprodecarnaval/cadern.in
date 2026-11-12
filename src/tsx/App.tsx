@@ -11,7 +11,6 @@ import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { getPendingUserProjectInvitations } from "../lib/db";
 import { CreateProjectPage } from "./CreateProjectPage";
 import { MeusProjetosPage } from "./MeusProjetosPage";
-import { MyScoresPage } from "./MyScoresPage";
 import { NotFoundPage } from "./NotFoundPage";
 import { ProjectSettingsPage } from "./ProjectSettingsPage";
 import { ProjectSongbooksPage } from "./ProjectSongbooksPage";
@@ -60,7 +59,6 @@ function App() {
         <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
         {FEATURE_FLAG_COLLAB_FLOW && (
           <>
-            <Route path="/my-scores" element={<MyScoresPage />} />
             <Route path="/projects" element={<MeusProjetosPage />} />
             <Route path="/projects/new" element={<CreateProjectPage />} />
             <Route path="/projects/:slug" element={<PublicProjectPage />} />
