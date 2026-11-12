@@ -15,8 +15,8 @@ MuseScore {
     menuPath: "Plugins.Caderninho Formatter"
 
     requiresScore: true
-    width: 250
-    height: mainCol.implicitHeight + 20
+    width: 250 * Screen.devicePixelRatio
+    height: mainCol.implicitHeight + 20 * Screen.devicePixelRatio
 
     property bool breakLine: false
     property bool addOffset: true
@@ -49,12 +49,12 @@ MuseScore {
     Column {
         id: mainCol
         anchors.top: parent.top
-        anchors.topMargin: 10
+        anchors.topMargin: 10 * Screen.devicePixelRatio
         anchors.left: parent.left
-        anchors.leftMargin: 10
+        anchors.leftMargin: 10 * Screen.devicePixelRatio
         anchors.right: parent.right
-        anchors.rightMargin: 10
-        spacing: 10
+        anchors.rightMargin: 10 * Screen.devicePixelRatio
+        spacing: 10 * Screen.devicePixelRatio
 
         CheckBox {
             id: optAll
