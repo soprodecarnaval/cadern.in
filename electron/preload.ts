@@ -41,4 +41,9 @@ contextBridge.exposeInMainWorld("api", {
   openFolder: (folderPath: string) =>
     ipcRenderer.invoke("shell:openFolder", folderPath),
   openMuseScoreDownload: () => ipcRenderer.invoke("shell:openMuseScoreDownload"),
+  onOAuthPopupClosed: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on("oauth-popup-closed", listener);
+    return () => ipcRenderer.removeListener("oauth-popup-closed", listener);
+  },
 });
