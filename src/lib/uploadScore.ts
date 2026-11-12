@@ -9,7 +9,7 @@ import {
   commitScoreRevision,
   createProject,
   createScore,
-  getProject,
+  getUserMemberProjects,
   softDeleteScore,
 } from "./db";
 import { newRevisionId, revisionSlug } from "./revisionId";
@@ -30,17 +30,25 @@ export interface UploadProgress {
 
 export type OnProgress = (progress: UploadProgress) => void;
 
+// Looked up by membership rather than by re-deriving the slug from the
+// user's current displayName: Firebase can momentarily expose a freshly
+// registered user with a blank displayName (before updateProfile commits),
+// and a display name can change later too. Either would otherwise slugify
+// to a different title and create a second "Acervo" for the same person.
 export async function getOrCreateDefaultProject(user: User): Promise<string> {
+  const existing = (await getUserMemberProjects(user.uid)).find((project) =>
+    project.title.startsWith(DEFAULT_PROJECT_PREFIX),
+  );
+  if (existing) {
+    return existing.id;
+  }
   const title = defaultProjectTitle(user.displayName ?? user.email ?? "user");
   const slug = slugify(title);
-  const existing = await getProject(slug);
-  if (!existing) {
-    await createProject(
-      slug,
-      { title },
-      { uid: user.uid, displayName: displayNameOf(user) },
-    );
-  }
+  await createProject(
+    slug,
+    { title },
+    { uid: user.uid, displayName: displayNameOf(user) },
+  );
   return slug;
 }
 
