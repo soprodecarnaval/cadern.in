@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn, userEvent, within, expect, waitFor } from "@storybook/test";
+import type { User } from "firebase/auth";
 import { AuthModalView } from "./AuthModalView";
 import { noop } from "./storyFixtures";
 
@@ -13,6 +14,11 @@ const meta = {
     login: fn(() => Promise.resolve()),
     register: fn(() => Promise.resolve()),
     resetPassword: fn(() => Promise.resolve()),
+    pendingUser: null,
+    resendVerificationEmail: fn(() => Promise.resolve()),
+    refreshVerificationStatus: fn(() => Promise.resolve()),
+    signInWithGoogle: fn(() => Promise.resolve()),
+    logout: fn(() => Promise.resolve()),
   },
   render: function Render(args) {
     const [show, setShow] = useState(args.show);
@@ -76,6 +82,11 @@ export const ResetSuccess: Story = {
     await expect(await dialog.findByRole("alert")).toHaveTextContent(
       "Email de recuperação enviado!",
     );
+  },
+};
+export const PendingVerification: Story = {
+  args: {
+    pendingUser: { email: "designer@example.test" } as User,
   },
 };
 export const ResetError: Story = {

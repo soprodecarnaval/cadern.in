@@ -1,26 +1,12 @@
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
-import { slugify } from "./slugify";
 import { scoreRevisionStoragePath } from "./storagePaths";
-import { displayNameOf } from "./displayName";
 import type { ParsedScore } from "./parseUploadedFiles";
 import type { User } from "firebase/auth";
-import {
-  commitScoreRevision,
-  createProject,
-  createScore,
-  getProject,
-  softDeleteScore,
-} from "./db";
+import { commitScoreRevision, createScore, softDeleteScore } from "./db";
 import { newRevisionId, revisionSlug } from "./revisionId";
 import type { UploadTarget } from "./uploadTarget";
 import type { ScoreIdentity } from "../../types/metajson";
-
-const DEFAULT_PROJECT_PREFIX = "Acervo @";
-
-export function defaultProjectTitle(displayName: string): string {
-  return `${DEFAULT_PROJECT_PREFIX}${displayName}`;
-}
 
 export interface UploadProgress {
   stage: "preparing" | "uploading" | "writing-firestore" | "done";
@@ -29,20 +15,6 @@ export interface UploadProgress {
 }
 
 export type OnProgress = (progress: UploadProgress) => void;
-
-export async function getOrCreateDefaultProject(user: User): Promise<string> {
-  const title = defaultProjectTitle(user.displayName ?? user.email ?? "user");
-  const slug = slugify(title);
-  const existing = await getProject(slug);
-  if (!existing) {
-    await createProject(
-      slug,
-      { title },
-      { uid: user.uid, displayName: displayNameOf(user) },
-    );
-  }
-  return slug;
-}
 
 export async function uploadScore(
   parsed: ParsedScore,

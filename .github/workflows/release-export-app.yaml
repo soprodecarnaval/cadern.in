@@ -1,0 +1,123 @@
+name: Release export app
+
+on:
+  push:
+    tags:
+      - "export-app-v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 1.2.3)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  set-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Resolve version and tag
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#export-app-v}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=export-app-v$VERSION" >> "$GITHUB_OUTPUT"
+
+  build-win-linux:
+    needs: set-version
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+      VITE_CADERNIN_UID: ${{ vars.CADERNIN_UID }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Set package version
+        run: npm pkg set version="${{ needs.set-version.outputs.version }}"
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Build export app
+        run: npm run export-app:build
+      - name: Prepare package
+        run: node scripts/packaging/prepareExportAppPackage.mjs
+      - name: Install wine (needed for Windows exe resource editing)
+        run: sudo apt-get update && sudo apt-get install -y wine
+      - name: Package
+        run: npx electron-builder --win nsis --linux AppImage --x64 --publish never
+      - name: Create release
+        run: |
+          TAG="${{ needs.set-version.outputs.tag }}"
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --title "$TAG" --generate-notes --target "$GITHUB_SHA"
+      - name: Upload artifacts
+        run: |
+          TAG="${{ needs.set-version.outputs.tag }}"
+          find _build/export-app/artifacts -maxdepth 1 -type f \
+            ! -name "builder-debug.yml" -print0 \
+            | xargs -0 gh release upload "$TAG" --clobber
+
+  build-mac:
+    needs: [set-version, build-win-linux]
+    runs-on: macos-latest
+    environment: production
+    env:
+      VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+      VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+      VITE_CADERNIN_UID: ${{ vars.CADERNIN_UID }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Set package version
+        run: npm pkg set version="${{ needs.set-version.outputs.version }}"
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Build export app
+        run: npm run export-app:build
+      - name: Prepare package
+        run: node scripts/packaging/prepareExportAppPackage.mjs
+      - name: Package
+        run: npx electron-builder --mac dmg --publish never
+      - name: Upload artifacts
+        run: |
+          TAG="${{ needs.set-version.outputs.tag }}"
+          find _build/export-app/artifacts -maxdepth 1 -type f \
+            ! -name "builder-debug.yml" -print0 \
+            | xargs -0 gh release upload "$TAG" --clobber

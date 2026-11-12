@@ -115,15 +115,6 @@ export async function getProjectScores(
     .filter((s) => !s.deletedAt);
 }
 
-export async function getUserScores(uid: string): Promise<WithId<ScoreDoc>[]> {
-  const snap = await getDocs(
-    query(collection(db, "scores"), where("uploadedBy", "==", uid)),
-  );
-  return snap.docs
-    .map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }))
-    .filter((s) => !s.deletedAt);
-}
-
 export async function getAllScores(): Promise<WithId<ScoreDoc>[]> {
   const snap = await getDocs(collection(db, "scores"));
   return snap.docs.map((d) => ({ id: d.id, ...zScoreDoc.parse(d.data()) }));

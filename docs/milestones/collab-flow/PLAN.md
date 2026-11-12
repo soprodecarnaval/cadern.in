@@ -1147,6 +1147,7 @@ numbered files:
 | [005](005-review-comments.md) | Review comments with positional pins | 001, 002 |
 | [006](006-forks.md) | Identity in the `.mscz`, fork-on-upload, lineage, swapping forks into songbooks; no links | 001, 002, 004 |
 | [007](007-data-migration.md) | Real projects + songbooks, legacy cleanup, flag on in prod | all |
+| [009](009-project-required-uploads.md) | Drop the auto-created Acervo project; inline project creation on upload; remove "Minhas partituras" | 001, 002 |
 
 001 and 002 are independent and can run in parallel; so can 005 and 006.
 
@@ -1220,3 +1221,4 @@ None blocking. Things to watch rather than decide now:
 | `pins` split out of `entries` so the admin/editor split is rules-enforceable | §2.6 |
 | Restore UI deferred to a cadern.in admin panel | §8 |
 | Revision purging deferred behind storage monitoring; must respect songbook pins | §8 |
+| No personal (project-less) scores; the auto-created Acervo project is removed in favor of inline project creation on upload | §009 |

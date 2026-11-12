@@ -41,6 +41,8 @@ export interface ExportApi {
   ): Promise<{ name: string; bytes: Uint8Array }[]>;
   openFolder(folderPath: string): Promise<string>;
   openMuseScoreDownload(): Promise<void>;
+  /** Fires when an OAuth popup window closes; returns an unsubscribe fn. */
+  onOAuthPopupClosed(callback: () => void): () => void;
 }
 
 declare global {

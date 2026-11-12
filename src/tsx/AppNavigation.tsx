@@ -35,14 +35,9 @@ export function AppNavigation({
         {collabEnabled && (
           <Nav className="ms-auto d-flex align-items-center gap-2">
             {currentUser && (
-              <>
-                <Nav.Link as={Link} to="/my-scores">
-                  Minhas partituras
-                </Nav.Link>
-                <Nav.Link as={Link} to="/projects">
-                  Meus projetos
-                </Nav.Link>
-              </>
+              <Nav.Link as={Link} to="/projects">
+                Meus projetos
+              </Nav.Link>
             )}
             <AuthButtonView
               currentUser={currentUser}

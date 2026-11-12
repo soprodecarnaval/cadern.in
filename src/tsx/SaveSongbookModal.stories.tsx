@@ -20,7 +20,12 @@ type Story = StoryObj<typeof SaveSongbookModalView>;
 export const Ready: Story = {};
 export const Loading: Story = {
   args: {
-    services: { ...services, getOrCreateDefaultProject: () => pending() },
+    services: { ...services, getUserMemberProjects: () => pending() },
+  },
+};
+export const NoProjects: Story = {
+  args: {
+    services: { ...services, getUserMemberProjects: () => Promise.resolve([]) },
   },
 };
 export const EmptySelection: Story = { args: { items: [] } };
