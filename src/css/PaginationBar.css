@@ -12,3 +12,9 @@ input[type=number] {
 .page {
   width: 4.5vh !important;
 }
+
+/* Current page field and total pages: numbers centered in their boxes. */
+.page,
+.page .page-link {
+  text-align: center;
+}
