@@ -24,7 +24,7 @@ import { HomePage } from "./HomePage";
 function App() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [inboxCount, setInboxCount] = useState(0);
-  const { currentUser } = useAuth();
+  const { currentUser, pendingUser } = useAuth();
 
   useEffect(() => {
     if (!FEATURE_FLAG_COLLAB_FLOW || !currentUser) {
@@ -35,6 +35,12 @@ function App() {
       setInboxCount(invs.length),
     );
   }, [currentUser]);
+
+  useEffect(() => {
+    if (pendingUser) {
+      setShowUserModal(true);
+    }
+  }, [pendingUser]);
 
   return (
     <>
