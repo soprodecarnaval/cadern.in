@@ -49,3 +49,57 @@ test('dynamic trombone state stays independent per staff', () => {
 test('unsupported instruments produce no fingering function', () => {
   assert.equal(instruments.getGriffFn('unknown', null, false, false), null);
 });
+
+test('explicit IDs select modes and tuning even when part labels disagree', () => {
+  const cases = [
+    ['bb-tuba', 'Bb', 'concert-octave'],
+    ['bb-tuba-treble', 'Bb', 'transposed-treble'],
+    ['sousaphone', 'Bb', 'concert-octave'],
+    ['bb-sousaphone-treble', 'Bb', 'transposed-treble'],
+    ['bass-eb-tuba', 'Eb', 'concert-octave'],
+    ['eb-tuba', 'Eb', 'concert-octave'],
+    ['eb-tuba-treble', 'Eb', 'transposed-treble'],
+  ];
+  for (const [id, tuning, mode] of cases) {
+    const policy = instruments.getTubaPolicy(id, { longName: tuning === 'Bb' ? 'E♭ Tuba' : 'Bb Tuba' });
+    assert.equal(policy.tuning, tuning);
+    assert.equal(policy.mode, mode);
+  }
+  assert.equal(instruments.getTubaPolicy('bb-sousaphone').mode, 'transposed-bass');
+  assert.equal(instruments.getTubaPolicy('tuba').mode, 'concert-octave');
+  assert.equal(instruments.getTubaPolicy('tuba').tuning, 'Bb');
+  assert.equal(instruments.getTubaPolicy('tuba', { shortName: 'E♭' }).tuning, 'Eb');
+  assert.equal(instruments.getTubaPolicy('brass.tuba', { partName: 'Eb' }).tuning, 'Eb');
+  for (const id of ['c-tuba', 'bass-f-tuba', 'unknown', 'toString']) {
+    assert.equal(instruments.getTubaPolicy(id), null);
+  }
+});
+
+test('Bb open harmonics and valve reference notes are independent of notation mode', () => {
+  for (const id of ['tuba', 'bb-tuba', 'bb-tuba-treble', 'sousaphone', 'bb-sousaphone-treble']) {
+    const valves = instruments.getGriffFn(id, null, false, false);
+    const oneChar = instruments.getGriffFn(id, null, true, false);
+    for (const pitch of [34, 41, 46, 50, 53, 58]) {
+      assert.equal(valves(pitch), '0', `${id}: ${pitch}`);
+      assert.equal(oneChar(pitch), '1', `${id}: ${pitch}`);
+    }
+    assert.equal(valves(36), '13');
+    assert.equal(valves(38), '12');
+  }
+});
+
+test('Eb concert and treble IDs use Eb sounding-pitch fingerings', () => {
+  for (const id of ['bass-eb-tuba', 'eb-tuba', 'eb-tuba-treble']) {
+    const valves = instruments.getGriffFn(id, null, false, false);
+    const oneChar = instruments.getGriffFn(id, null, true, false);
+    for (const pitch of [39, 46, 51, 55, 58, 63]) {
+      assert.equal(valves(pitch), '0', `${id}: ${pitch}`);
+      assert.equal(oneChar(pitch), '1', `${id}: ${pitch}`);
+    }
+    assert.equal(valves(41), '13');
+    assert.equal(valves(43), '12');
+    assert.equal(valves(34), '13'); // Sounding Bb1, open on Bb tuba, is 1+3 on Eb.
+    assert.equal(valves(20), '');
+    assert.equal(valves(90), '');
+  }
+});
