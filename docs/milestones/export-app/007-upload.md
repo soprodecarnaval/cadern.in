@@ -61,6 +61,8 @@ structured-clone message.
   editor-or-above, defaulting to the user's Acervo. Uploading only to a personal
   project would mean someone has to move every score before it can appear in a
   songbook.
+  **Superseded by collab-flow 009**: the auto-created Acervo project is gone;
+  a user with no project creates one inline in this same picker instead.
 - **An existing score becomes a new revision.** Export, spot a mistake, fix,
   re-upload is the normal loop.
 

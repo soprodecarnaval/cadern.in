@@ -1,7 +1,7 @@
 import type { User } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { Button, Form, Modal, Spinner } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { WithId } from "../lib/db";
 import { isAdmin } from "../lib/roles";
 
@@ -12,15 +12,14 @@ import type { SongbookItemViewModel } from "../../types/viewModels";
 
 /**
  * Saves the homepage builder's list as a songbook of a project the user
- * administers, defaulting to their Acervo.
+ * administers. A user with no project is prompted to create one, rather
+ * than getting one created silently.
  */
 export type SaveSongbookModalServices = Pick<
   typeof import("../lib/db"),
   "getMemberRole" | "getUserMemberProjects"
 > & {
   saveAsNewSongbook: typeof import("../lib/saveSongbook").saveAsNewSongbook;
-} & {
-  getOrCreateDefaultProject: typeof import("../lib/uploadScore").getOrCreateDefaultProject;
 };
 
 export function SaveSongbookModalView({
@@ -50,13 +49,13 @@ export function SaveSongbookModalView({
       return;
     }
     void (async () => {
-      const defaultId = await services.getOrCreateDefaultProject(user);
       const memberOf = await services.getUserMemberProjects(user.uid);
       const roles = await Promise.all(
         memberOf.map((p) => services.getMemberRole(p.id, user.uid)),
       );
-      setProjects(memberOf.filter((_, i) => isAdmin(roles[i])));
-      setProjectId(defaultId);
+      const mine = memberOf.filter((_, i) => isAdmin(roles[i]));
+      setProjects(mine);
+      setProjectId(mine[0]?.id ?? "");
     })();
   }, [show, user, services]);
 
@@ -87,6 +86,14 @@ export function SaveSongbookModalView({
         <Modal.Body>
           {projects === null ? (
             <Spinner animation="border" size="sm" />
+          ) : projects.length === 0 ? (
+            <p className="mb-0">
+              Você precisa administrar um projeto para salvar um caderninho.{" "}
+              <Link to="/projects/new" onClick={onHide}>
+                Criar um projeto
+              </Link>
+              .
+            </p>
           ) : (
             <>
               <Form.Group className="mb-3">
@@ -120,7 +127,7 @@ export function SaveSongbookModalView({
           </Button>
           <Button
             type="submit"
-            disabled={pending || projects === null || items.length === 0}
+            disabled={pending || !projectId || items.length === 0}
           >
             {pending ? <Spinner animation="border" size="sm" /> : "Salvar"}
           </Button>

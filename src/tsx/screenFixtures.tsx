@@ -222,7 +222,6 @@ export const services = {
   getProjectScores: () => Promise.resolve([scoreDoc]),
   getAllProjects: () => Promise.resolve([project]),
   getAllScores: () => Promise.resolve([scoreDoc, availableScoreDoc]),
-  getUserScores: () => Promise.resolve([scoreDoc]),
   getScore: () => Promise.resolve(scoreDoc),
   getScoreForks: () => Promise.resolve([]),
   getScoreRevision: () => Promise.resolve(revisionDoc),
@@ -283,7 +282,6 @@ export const services = {
   changePassword: resolve,
   logout: resolve,
   saveAsNewSongbook: () => Promise.resolve({ slug: songbook.slug }),
-  getOrCreateDefaultProject: () => Promise.resolve(project.id),
 };
 export const collection = {
   status: "ready" as const,

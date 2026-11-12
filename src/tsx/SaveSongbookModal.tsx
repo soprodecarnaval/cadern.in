@@ -1,9 +1,8 @@
 import type { ComponentProps } from "react";
 import * as db from "../lib/db";
 import { saveAsNewSongbook } from "../lib/saveSongbook";
-import { getOrCreateDefaultProject } from "../lib/uploadScore";
 import { SaveSongbookModalView } from "./SaveSongbookModalView";
-const services = { ...db, saveAsNewSongbook, getOrCreateDefaultProject };
+const services = { ...db, saveAsNewSongbook };
 
 export function SaveSongbookModal(
   props: Omit<ComponentProps<typeof SaveSongbookModalView>, "services">,
