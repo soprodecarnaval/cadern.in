@@ -5,23 +5,54 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
   EmailAuthProvider,
+  GoogleAuthProvider,
+  linkWithCredential,
   onAuthStateChanged,
   reauthenticateWithCredential,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updatePassword as firebaseUpdatePassword,
   updateProfile,
+  type AuthCredential,
   type User,
 } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, storage } from "./firebase";
 
+// Thrown by signInWithGoogle when the email already has a password account.
+// Firebase requires proving ownership of the existing account before linking
+// a new provider to it, so the UI must prompt for that password and call
+// `link`; there's no way to link without it.
+export class GoogleLinkRequiredError extends Error {
+  constructor(
+    public readonly email: string,
+    private readonly pendingCredential: AuthCredential,
+  ) {
+    super(
+      `Já existe uma conta com o email ${email}. Digite a senha dela para conectar o Google.`,
+    );
+  }
+
+  async link(password: string) {
+    const { user } = await signInWithEmailAndPassword(
+      auth,
+      this.email,
+      password,
+    );
+    await linkWithCredential(user, this.pendingCredential);
+  }
+}
+
 interface AuthContextValue {
   currentUser: User | null;
+  pendingUser: User | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -30,6 +61,9 @@ interface AuthContextValue {
     password: string,
     displayName: string,
   ) => Promise<void>;
+  resendVerificationEmail: () => Promise<void>;
+  refreshVerificationStatus: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   updateDisplayName: (name: string) => Promise<void>;
   updateAvatar: (blob: Blob) => Promise<void>;
   changePassword: (current: string, newPass: string) => Promise<void>;
@@ -38,10 +72,22 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  // A signed-in Firebase user whose email isn't verified yet is not
+  // considered logged in: currentUser stays null, and the raw user sits in
+  // pendingUser so the UI can show a "verify your email" screen with resend.
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setCurrentUser);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user && !user.emailVerified) {
+        setCurrentUser(null);
+        setPendingUser(user);
+      } else {
+        setCurrentUser(user);
+        setPendingUser(null);
+      }
+    });
     return unsubscribe;
   }, []);
 
@@ -68,7 +114,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
     );
     await updateProfile(user, { displayName });
-    setCurrentUser({ ...user, displayName });
+    await sendEmailVerification(user);
+    setPendingUser({ ...user });
+  };
+
+  const resendVerificationEmail = async () => {
+    if (!pendingUser) {
+      return;
+    }
+    await sendEmailVerification(pendingUser);
+  };
+
+  const refreshVerificationStatus = async () => {
+    if (!auth.currentUser) {
+      return;
+    }
+    await auth.currentUser.reload();
+    if (auth.currentUser.emailVerified) {
+      setCurrentUser(auth.currentUser);
+      setPendingUser(null);
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch (err) {
+      if (
+        err instanceof FirebaseError &&
+        err.code === "auth/account-exists-with-different-credential"
+      ) {
+        const pendingCredential = GoogleAuthProvider.credentialFromError(err);
+        const email = err.customData?.email as string | undefined;
+        if (pendingCredential && email) {
+          throw new GoogleLinkRequiredError(email, pendingCredential);
+        }
+      }
+      throw err;
+    }
   };
 
   const updateDisplayName = async (name: string) => {
@@ -97,10 +180,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         currentUser,
+        pendingUser,
         login,
         logout,
         resetPassword,
         register,
+        resendVerificationEmail,
+        refreshVerificationStatus,
+        signInWithGoogle,
         updateDisplayName,
         updateAvatar,
         changePassword,

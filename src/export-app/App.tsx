@@ -29,10 +29,25 @@ function describeFailure(failure: ExportFailure): string {
 }
 
 export function App() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, pendingUser, logout, resendVerificationEmail } =
+    useAuth();
 
   // Login gates the whole app: uploading is the point of it, and a session
-  // established up front is one less interruption mid-export.
+  // established up front is one less interruption mid-export. An unverified
+  // user is not considered logged in, same as the website.
+  if (pendingUser) {
+    return (
+      <main className="app app--login">
+        <h1>cadern.in — Exportador</h1>
+        <PendingVerification
+          email={pendingUser.email}
+          onResend={() => resendVerificationEmail()}
+          onLogout={() => void logout()}
+        />
+      </main>
+    );
+  }
+
   if (!currentUser) {
     return (
       <main className="app app--login">
@@ -47,6 +62,47 @@ export function App() {
       onLogout={() => void logout()}
       user={currentUser}
     />
+  );
+}
+
+function PendingVerification({
+  email,
+  onResend,
+  onLogout,
+}: {
+  email: string | null;
+  onResend: () => Promise<void>;
+  onLogout: () => void;
+}) {
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  const resend = async () => {
+    setError("");
+    try {
+      await onResend();
+      setSent(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao reenviar");
+    }
+  };
+
+  return (
+    <div className="login-form">
+      <h2>Verifique seu e-mail</h2>
+      <p>
+        Enviamos um link de confirmação para <strong>{email}</strong>. Clique
+        no link, depois reabra o app.
+      </p>
+      <button type="button" onClick={() => void resend()}>
+        Reenviar e-mail
+      </button>
+      <button type="button" className="btn-link" onClick={onLogout}>
+        Usar outra conta
+      </button>
+      {sent && <p className="muted">Email reenviado!</p>}
+      {error && <p className="error">{error}</p>}
+    </div>
   );
 }
 

@@ -11,7 +11,6 @@ import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { getPendingUserProjectInvitations } from "../lib/db";
 import { CreateProjectPage } from "./CreateProjectPage";
 import { MeusProjetosPage } from "./MeusProjetosPage";
-import { MyScoresPage } from "./MyScoresPage";
 import { NotFoundPage } from "./NotFoundPage";
 import { ProjectSettingsPage } from "./ProjectSettingsPage";
 import { ProjectSongbooksPage } from "./ProjectSongbooksPage";
@@ -24,7 +23,7 @@ import { HomePage } from "./HomePage";
 function App() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [inboxCount, setInboxCount] = useState(0);
-  const { currentUser } = useAuth();
+  const { currentUser, pendingUser } = useAuth();
 
   useEffect(() => {
     if (!FEATURE_FLAG_COLLAB_FLOW || !currentUser) {
@@ -35,6 +34,12 @@ function App() {
       setInboxCount(invs.length),
     );
   }, [currentUser]);
+
+  useEffect(() => {
+    if (pendingUser) {
+      setShowUserModal(true);
+    }
+  }, [pendingUser]);
 
   return (
     <>
@@ -54,7 +59,6 @@ function App() {
         <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
         {FEATURE_FLAG_COLLAB_FLOW && (
           <>
-            <Route path="/my-scores" element={<MyScoresPage />} />
             <Route path="/projects" element={<MeusProjetosPage />} />
             <Route path="/projects/new" element={<CreateProjectPage />} />
             <Route path="/projects/:slug" element={<PublicProjectPage />} />
