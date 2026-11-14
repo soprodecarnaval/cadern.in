@@ -411,10 +411,12 @@
   overflow: hidden;
 }
 
+/* 44px + the item's 3px top and bottom borders = 50px per closed dropdown. */
 .landing-tools .accordion-button {
   font-size: 1.5rem;
   font-weight: 500;
-  padding: 6px 22px;
+  min-height: 44px;
+  padding: 4px 22px;
   border-radius: 0 !important;
 }
 
