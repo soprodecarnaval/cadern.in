@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { Accordion } from "react-bootstrap";
+import { Accordion, Dropdown } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
 import type { SongbookDoc } from "../../types/docs";
 import type { WithId } from "../lib/db";
 import type { CollectionContextValue } from "../useCollectionContext";
+import type { ProfileTab } from "./ProfileModalView";
 
 import arrowNext from "../assets/brand/arrow-next.svg";
 import arrowPrev from "../assets/brand/arrow-prev.svg";
@@ -39,6 +40,7 @@ const PLANNED = {
   biblioteca: "/biblioteca",
   artigos: "/artigos",
   carnaval: "/2027",
+  favoritos: "/favoritos",
 };
 
 // Served as static HTML from /public, outside the router.
@@ -58,6 +60,7 @@ export function LandingPageView({
   songbooks,
   articles,
   onOpenUserModal,
+  onSignOut,
 }: {
   currentUser: import("firebase/auth").User | null;
   collabEnabled: boolean;
@@ -65,7 +68,8 @@ export function LandingPageView({
   collection: CollectionContextValue;
   songbooks: LandingSongbooks;
   articles: LandingArticle[];
-  onOpenUserModal: () => void;
+  onOpenUserModal: (tab?: ProfileTab) => void;
+  onSignOut: () => void;
 }) {
   const [openTools, setOpenTools] = useState<string[]>(["plugin"]);
   // The exporter has no page of its own yet: links to it open its panel here.
@@ -85,6 +89,7 @@ export function LandingPageView({
         collabEnabled={collabEnabled}
         inboxCount={inboxCount}
         onOpenUserModal={onOpenUserModal}
+        onSignOut={onSignOut}
       />
       <main className="landing-main">
         <LandingSearch collection={collection} />
@@ -167,7 +172,7 @@ export function LandingPageView({
                 />
               ) : (
                 <ActionCard
-                  onClick={onOpenUserModal}
+                  onClick={() => onOpenUserModal()}
                   title="Colaborar em um projeto"
                   text="Colabore com outros musicistas na criação e revisão de novas partituras ou cadernos."
                 />
@@ -225,11 +230,13 @@ function LandingHeader({
   collabEnabled,
   inboxCount,
   onOpenUserModal,
+  onSignOut,
 }: {
   currentUser: import("firebase/auth").User | null;
   collabEnabled: boolean;
   inboxCount: number;
-  onOpenUserModal: () => void;
+  onOpenUserModal: (tab?: ProfileTab) => void;
+  onSignOut: () => void;
 }) {
   return (
     <header className="landing-header">
@@ -239,26 +246,87 @@ function LandingHeader({
         <Link to={PLANNED.contribua}>Contribua</Link>
         <Link to={PLANNED.ajuda}>Ajuda</Link>
         {collabEnabled && (
-          <button
-            type="button"
-            className="landing-login"
-            onClick={onOpenUserModal}
-          >
-            {currentUser
-              ? (currentUser.displayName ?? "Minha conta")
-              : "Entrar"}
-            {currentUser && inboxCount > 0 && (
-              <span
-                className="landing-login-badge"
-                aria-label={`${inboxCount} convites`}
+          // Fixed height, so logging in doesn't move the page down.
+          <div className="landing-auth">
+            {currentUser ? (
+              <AccountMenu
+                user={currentUser}
+                inboxCount={inboxCount}
+                onOpenUserModal={onOpenUserModal}
+                onSignOut={onSignOut}
+              />
+            ) : (
+              <button
+                type="button"
+                className="landing-login"
+                onClick={() => onOpenUserModal()}
               >
-                {inboxCount}
-              </span>
+                Entrar
+              </button>
             )}
-          </button>
+          </div>
         )}
       </nav>
     </header>
+  );
+}
+
+/** Up to two initials from the display name, or from the email. */
+function initials(user: import("firebase/auth").User): string {
+  const words = (user.displayName ?? user.email ?? "?")
+    .split(/[\s@._-]+/)
+    .filter(Boolean);
+  const letters =
+    words.length > 1 ? words[0][0] + words[words.length - 1][0] : words[0][0];
+  return (letters ?? "?").toUpperCase();
+}
+
+function AccountMenu({
+  user,
+  inboxCount,
+  onOpenUserModal,
+  onSignOut,
+}: {
+  user: import("firebase/auth").User;
+  inboxCount: number;
+  onOpenUserModal: (tab?: ProfileTab) => void;
+  onSignOut: () => void;
+}) {
+  const name = user.displayName ?? user.email ?? "Minha conta";
+  return (
+    <Dropdown align="end" className="landing-account">
+      <Dropdown.Toggle as="button" className="landing-account-toggle">
+        <span className="landing-avatar" aria-hidden="true">
+          {user.photoURL ? <img src={user.photoURL} alt="" /> : initials(user)}
+        </span>
+        <span className="landing-account-name">{name}</span>
+        {inboxCount > 0 && (
+          <span
+            className="landing-account-badge"
+            aria-label={`${inboxCount} convites`}
+          >
+            {inboxCount}
+          </span>
+        )}
+      </Dropdown.Toggle>
+      <Dropdown.Menu className="landing-account-menu">
+        <Dropdown.Item as="button" onClick={() => onOpenUserModal("profile")}>
+          Conta
+        </Dropdown.Item>
+        <Dropdown.Item as="button" onClick={() => onOpenUserModal("inbox")}>
+          Convites{inboxCount > 0 && ` (${inboxCount})`}
+        </Dropdown.Item>
+        <Dropdown.Item as={Link} to="/projects">
+          Meus Projetos
+        </Dropdown.Item>
+        <Dropdown.Item as={Link} to={PLANNED.favoritos}>
+          Meus Favoritos
+        </Dropdown.Item>
+        <Dropdown.Item as="button" onClick={onSignOut}>
+          Sair
+        </Dropdown.Item>
+      </Dropdown.Menu>
+    </Dropdown>
   );
 }
 
@@ -468,7 +536,7 @@ function LandingFooter({
             {collabEnabled && (
               <>
                 <li>
-                  <button type="button" onClick={onOpenUserModal}>
+                  <button type="button" onClick={() => onOpenUserModal()}>
                     Minha conta
                   </button>
                 </li>
@@ -476,7 +544,7 @@ function LandingFooter({
                   {currentUser ? (
                     <Link to="/projects">Meus projetos</Link>
                   ) : (
-                    <button type="button" onClick={onOpenUserModal}>
+                    <button type="button" onClick={() => onOpenUserModal()}>
                       Meus projetos
                     </button>
                   )}

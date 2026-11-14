@@ -10,6 +10,7 @@ import {
   type LandingSongbook,
   type LandingSongbooks,
 } from "./LandingPageView";
+import type { ProfileTab } from "./ProfileModalView";
 
 // Placeholders until the articles are written: their pages don't exist yet.
 // Without an `imageUrl` the image area shows as a grey box. The first two
@@ -33,9 +34,9 @@ const articles: LandingArticle[] = [
 
 export function LandingPage(props: {
   inboxCount: number;
-  onOpenUserModal: () => void;
+  onOpenUserModal: (tab?: ProfileTab) => void;
 }) {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
   const collection = useCollectionContext();
   const [songbooks, setSongbooks] = useState<LandingSongbooks>({
     status: "loading",
@@ -72,6 +73,7 @@ export function LandingPage(props: {
       collection={collection}
       songbooks={songbooks}
       articles={articles}
+      onSignOut={() => void logout()}
     />
   );
 }

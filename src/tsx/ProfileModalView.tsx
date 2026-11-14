@@ -17,11 +17,15 @@ export type ProfileModalServices = Pick<
     "updateDisplayName" | "updateAvatar" | "changePassword" | "logout"
   >;
 
+export type ProfileTab = "profile" | "inbox" | "password";
+
 interface ProfileModalViewProps {
   services: ProfileModalServices;
   currentUser: import("firebase/auth").User | null;
   show: boolean;
   onHide: () => void;
+  /** The tab shown each time the modal opens. Defaults to the profile. */
+  initialTab?: ProfileTab;
   inboxCount?: number;
   onInboxCountChange?: (count: number) => void;
 }
@@ -31,10 +35,17 @@ export function ProfileModalView({
   currentUser,
   show,
   onHide,
+  initialTab = "profile",
   inboxCount,
   onInboxCountChange,
 }: ProfileModalViewProps) {
-  const [tab, setTab] = useState("profile");
+  const [tab, setTab] = useState<string>(initialTab);
+
+  useEffect(() => {
+    if (show) {
+      setTab(initialTab);
+    }
+  }, [show, initialTab]);
 
   const [invitations, setInvitations] = useState<
     WithId<UserProjectInvitationDoc>[]

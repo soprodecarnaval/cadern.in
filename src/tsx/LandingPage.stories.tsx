@@ -30,6 +30,7 @@ const meta = {
     songbooks: { status: "ready", items: songbooks },
     articles: [],
     onOpenUserModal: fn(),
+    onSignOut: fn(),
   },
 } satisfies Meta<typeof LandingPageView>;
 export default meta;
@@ -37,6 +38,17 @@ type Story = StoryObj<typeof LandingPageView>;
 
 export const SignedOut: Story = {};
 export const SignedIn: Story = { args: { currentUser: user, inboxCount: 2 } };
+export const AccountMenuOpen: Story = {
+  args: { currentUser: user, inboxCount: 2 },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole("button", { name: /Ana Silva/ }),
+    );
+    await expect(
+      await within(canvasElement).findByRole("button", { name: "Sair" }),
+    ).toBeVisible();
+  },
+};
 export const Legacy: Story = { args: { collabEnabled: false } };
 export const LoadingSongbooks: Story = {
   args: { songbooks: { status: "loading" } },

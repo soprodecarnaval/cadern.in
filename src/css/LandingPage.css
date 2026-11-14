@@ -89,7 +89,6 @@
   max-width: 200px;
   overflow: visible;
   text-overflow: ellipsis;
-  margin-left: clamp(0px, 2vw, 24px);
   font-size: 18px;
 }
 
@@ -108,6 +107,100 @@
   color: #fff;
   font-size: 0.75rem;
   line-height: 20px;
+}
+
+/* Signed-in account menu */
+
+/* Always the avatar's height, so logging in doesn't move the page down. */
+.landing-auth {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  margin-left: clamp(0px, 2vw, 24px);
+}
+
+.landing-account-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* Bootstrap's caret: the design has none. */
+.landing-account-toggle::after {
+  display: none;
+}
+
+.landing-avatar {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  overflow: hidden;
+  border: 3px solid var(--landing-ink);
+  border-radius: 50%;
+  background: var(--landing-yellow);
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.landing-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.landing-account-name {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.landing-account-badge {
+  position: absolute;
+  top: -4px;
+  left: 34px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--landing-ink);
+  color: var(--landing-paper);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 20px;
+  text-align: center;
+}
+
+.landing-account-menu {
+  --bs-dropdown-min-width: 0;
+  --bs-dropdown-padding-y: 14px;
+  --bs-dropdown-border-color: var(--landing-ink);
+  --bs-dropdown-border-width: 3px;
+  --bs-dropdown-border-radius: 10px;
+  --bs-dropdown-link-color: var(--landing-ink);
+  --bs-dropdown-link-hover-color: var(--landing-ink);
+  --bs-dropdown-link-hover-bg: var(--landing-yellow);
+  --bs-dropdown-link-active-color: var(--landing-ink);
+  --bs-dropdown-link-active-bg: var(--landing-yellow);
+  --bs-dropdown-item-padding-x: 22px;
+  --bs-dropdown-item-padding-y: 4px;
+  margin-top: 18px !important;
+}
+
+.landing-account-menu .dropdown-item {
+  text-align: right;
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1.5;
 }
 
 /* Search */
@@ -636,6 +729,16 @@
 /* Small screens */
 
 @media (max-width: 767px) {
+  /* Avatar only: with the name, the header is wider than a phone. */
+  .landing-account-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
   .landing-caderno {
     flex-basis: 78%;
   }
