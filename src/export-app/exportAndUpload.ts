@@ -32,7 +32,9 @@ export async function exportAndUpload(options: Options): Promise<{
   onProgress({ kind: "reading" });
   const raw = await window.api.readExportFolder(result.directory);
   const parsed = await parseUploadedFiles(
-    raw.map((file) => new File([file.bytes], file.name)),
+    raw.map((file) => new File([file.bytes], file.name, {
+      type: file.name.toLowerCase().endsWith(".svg") ? "image/svg+xml" : "",
+    })),
   );
   const target = await resolveUploadTarget(parsed, projectId);
   onParsed(parsed, target);

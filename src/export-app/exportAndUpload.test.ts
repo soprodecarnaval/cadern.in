@@ -25,7 +25,7 @@ beforeEach(() => {
   mocks.upload.mockResolvedValue({ scoreId: "score", revisionId: "rev" });
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); });
 
 const options = () => ({
   exportScore: vi.fn().mockResolvedValue({ directory: "/temp/export", files: ["Score.mscz"] }),
@@ -37,6 +37,20 @@ const options = () => ({
 });
 
 describe("combined export and upload", () => {
+  it("assigns the SVG MIME type to exported score pages", async () => {
+    readExportFolder.mockResolvedValueOnce([
+      { name: "parts/Score-sax tenor-1.svg", bytes: new Uint8Array() },
+      { name: "Score.mscz", bytes: new Uint8Array() },
+    ]);
+
+    await exportAndUpload(options());
+
+    const files = mocks.parse.mock.calls[0][0] as File[];
+    expect(files[0].name).toBe("parts/Score-sax tenor-1.svg");
+    expect(files[0].type).toBe("image/svg+xml");
+    expect(files[1].type).toBe("");
+  });
+
   it("exports, then uploads to the selected project with no second action", async () => {
     const args = options();
     const result = await exportAndUpload(args);
