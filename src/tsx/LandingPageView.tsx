@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import type { SongbookDoc } from "../../types/docs";
 import type { WithId } from "../lib/db";
 import type { CollectionContextValue } from "../useCollectionContext";
+import { initialsOf } from "../lib/displayName";
 import type { ProfileTab } from "./ProfileModalView";
 
 import arrowNext from "../assets/brand/arrow-next.svg";
@@ -286,16 +287,6 @@ function LandingHeader({
   );
 }
 
-/** Up to two initials from the display name, or from the email. */
-function initials(user: import("firebase/auth").User): string {
-  const words = (user.displayName ?? user.email ?? "?")
-    .split(/[\s@._-]+/)
-    .filter(Boolean);
-  const letters =
-    words.length > 1 ? words[0][0] + words[words.length - 1][0] : words[0][0];
-  return (letters ?? "?").toUpperCase();
-}
-
 function AccountMenu({
   user,
   inboxCount,
@@ -312,7 +303,7 @@ function AccountMenu({
     <Dropdown align="end" className="landing-account">
       <Dropdown.Toggle as="button" className="landing-account-toggle">
         <span className="landing-avatar" aria-hidden="true">
-          {user.photoURL ? <img src={user.photoURL} alt="" /> : initials(user)}
+          {user.photoURL ? <img src={user.photoURL} alt="" /> : initialsOf(user)}
         </span>
         <span className="landing-account-name">{name}</span>
         {inboxCount > 0 && (
