@@ -1,7 +1,8 @@
 # B/004 → C/008
 
 Status: implementation locally reviewed and validated; human acceptance pending.
-Implementation commit: recorded in the next documentation commit after implementation.
+Implementation commit: `29e33093ba2ed9fed874cbd3704c25965bf1bc6b`.
+PR: https://github.com/soprodecarnaval/cadern.in/pull/433 (open for review).
 Branch: `workstream/b-songbook-ui`. PR base: `main` (explicit chat override;
 repository has no `staging` branch).
 
