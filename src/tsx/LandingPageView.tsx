@@ -151,7 +151,7 @@ export function LandingPageView({
             <ActionCard
               to="/montar"
               title="Pesquisar músicas"
-              text="Consulte, ouça, baixe ou estude partituras da nossa base de dados."
+              text="Consulte, ouça, baixe ou estude partituras da nossa musicoteca."
             />
             <ActionCard
               to="/montar"
@@ -460,7 +460,7 @@ function LandingFooter({
         <nav className="landing-footer-links" aria-label="Rodapé">
           <ul>
             <li><Link to={PLANNED.biblioteca}>Biblioteca</Link></li>
-            <li><Link to="/montar">Pesquisar</Link></li>
+            <li><Link to="/montar">Musicoteca</Link></li>
             <li><Link to="/montar">Criar caderninho</Link></li>
             <li><a href={STATIC.plugin}>Plugin Musescore</a></li>
           </ul>

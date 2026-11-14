@@ -490,7 +490,9 @@
   box-shadow: 4px 4px 0 var(--landing-ink);
 }
 
-/* Keyboard focus: the card turns yellow, in place of the browser's ring. */
+/* Hover and keyboard focus turn the card yellow (in place of the browser's
+   focus ring). */
+.landing-action:hover,
 .landing-action:focus-visible {
   outline: none;
   background: var(--landing-yellow);
