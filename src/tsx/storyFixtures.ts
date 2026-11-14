@@ -137,3 +137,27 @@ export const songbookFixture: SongbookFixtureEntry[] = [
   { title: "Ó Abre Alas", composer: "Chiquinha Gonzaga" },
   { title: "Bandeira Branca", composer: "Max Nunes e Laércio Alves" },
 ];
+
+export const pinnedVersionItems: NumberedSongbookItemViewModel[] = [
+  { type: "section", title: "Sambas" },
+  ...[
+    { title: "Aquarela do Brasil", composer: "Ary Barroso", projectId: "bloco-exemplo", version: 3 },
+    { title: "Ô abre alas", composer: "Chiquinha Gonzaga", projectId: "bloco-vizinho", version: 2 },
+    { title: "Carinhoso", composer: "Pixinguinha", projectId: "bloco-exemplo", version: 1, deleted: true },
+    { title: "Projeto sem título", composer: "Compositor", projectId: "projeto-externo", version: 4 },
+  ].map((entry, index) => ({
+    type: "score" as const,
+    index: index + 1,
+    deleted: entry.deleted,
+    latestRevisionId: "newer-revision-5",
+    score: {
+      ...score,
+      id: `label-score-${index}`,
+      title: entry.title,
+      composer: entry.composer,
+      projectId: entry.projectId,
+      projectTitle: "",
+      latestRevision: { ...score.latestRevision, id: `pin-${index}`, revisionNumber: entry.version },
+    },
+  })),
+];

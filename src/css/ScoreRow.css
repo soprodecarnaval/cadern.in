@@ -49,6 +49,12 @@
   white-space: nowrap;
 }
 
+.score-card-meta-version {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
 .score-card-links {
   flex: 0 0 auto;
   display: flex;

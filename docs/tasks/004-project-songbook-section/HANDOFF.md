@@ -44,4 +44,14 @@ Browser services mocked: no backend integration or production/staging writes.
 
 Use this document for commit hashes, PR references and integration notes.
 C should integrate the exact implementation commit recorded here, then own route
-migration. B/005 and B/006 stay open pending separate mockup/plan approvals.
+migration. B/005 implementation is approved and in progress; B/006 stays open pending its mockup/plan approval.
+
+## B/005 ready for human review
+
+Approved plan/mockup; branch `workstream/b-songbook-ui-005`, stacked on 004.
+Touches songbook detail rows and the reader project-context prop in
+`SongbookPageView.tsx`, reader rows, and selected editor cards. Routes and data
+permissions unchanged. C: reconcile these small view changes when integrating;
+Validation: 37 browser stories, 24 unit tests, six layout checks, TypeScript,
+targeted ESLint and demo build passed. No new reads or dependencies.
+005 implementation commit/PR will be recorded after committing. 006 remains open.

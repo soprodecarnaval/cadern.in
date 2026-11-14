@@ -25,6 +25,7 @@ export interface ScoreCardProps {
   trailing: ReactNode;
   /** Extra content shown only when expanded — e.g. the project picker's version selector. */
   details?: ReactNode;
+  versionLabel?: string;
   /** Search-match ranges to highlight — only ever passed for library/available cards. */
   highlight?: ScoreCardHighlight;
 }
@@ -41,6 +42,7 @@ const ScoreCardView = ({
   leading,
   trailing,
   details,
+  versionLabel,
   highlight,
   lineage,
   onShowDetail,
@@ -50,7 +52,7 @@ const ScoreCardView = ({
   // Field priority: title → owning project (stand-in for "first published
   // songbook" until that data exists) → composer → tags.
   const metaFields: { text: string; ranges?: HighlightRanges }[] = [
-    { text: score.projectTitle, ranges: highlight?.projectTitle },
+    { text: versionLabel ?? score.projectTitle, ranges: versionLabel ? undefined : highlight?.projectTitle },
     ...(score.composer ? [{ text: score.composer, ranges: highlight?.composer }] : []),
     ...(score.tags.length > 0
       ? [{ text: score.tags.join(", "), ranges: highlight?.tags }]
@@ -77,7 +79,7 @@ const ScoreCardView = ({
         <div className="score-card-main" onClick={onToggleMode}>
           <div className="score-card-title">{highlightRanges(score.title, highlight?.title)}</div>
           {metaFields.length > 0 && (
-            <div className="score-card-meta text-muted small">
+            <div className={`score-card-meta text-muted small${versionLabel ? " score-card-meta-version" : ""}`}>
               {metaFields.map((field, i) => (
                 <span key={i}>
                   {i > 0 && " · "}
