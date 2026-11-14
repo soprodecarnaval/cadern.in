@@ -1,4 +1,10 @@
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Accordion, Dropdown } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
@@ -6,6 +12,7 @@ import type { SongbookDoc } from "../../types/docs";
 import type { WithId } from "../lib/db";
 import type { CollectionContextValue } from "../useCollectionContext";
 import { initialsOf } from "../lib/displayName";
+import { safeSpiralCut } from "../lib/spiralCut";
 import type { ProfileTab } from "./ProfileModalView";
 
 import arrowNext from "../assets/brand/arrow-next.svg";
@@ -389,8 +396,55 @@ function LandingSearch({ collection }: { collection: CollectionContextValue }) {
   );
 }
 
+/**
+ * Trims the track's visible right edge back to the nearest gap between two
+ * spiral loops, so the notebook peeking in never shows a loop cut in half.
+ */
+function useWholeLoopsAtEdge(
+  trackRef: React.RefObject<HTMLDivElement | null>,
+  layoutKey: unknown,
+) {
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track) {
+      return;
+    }
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const edge = track.getBoundingClientRect().right;
+      let trim = 0;
+      for (const spiral of track.querySelectorAll<HTMLElement>(
+        ".landing-caderno-spiral",
+      )) {
+        const box = spiral.getBoundingClientRect();
+        if (box.left < edge && edge < box.right) {
+          const at = edge - box.left;
+          trim = at - safeSpiralCut(at, box.width, box.height);
+          break;
+        }
+      }
+      track.style.clipPath = trim > 0 ? `inset(0 ${trim}px 0 0)` : "";
+    };
+    const schedule = () => {
+      frame ||= requestAnimationFrame(update);
+    };
+    update();
+    const resize = new ResizeObserver(schedule);
+    resize.observe(track);
+    track.addEventListener("scroll", schedule, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      resize.disconnect();
+      track.removeEventListener("scroll", schedule);
+      track.style.clipPath = "";
+    };
+  }, [trackRef, layoutKey]);
+}
+
 function SongbookCarousel({ songbooks }: { songbooks: LandingSongbooks }) {
   const trackRef = useRef<HTMLDivElement>(null);
+  useWholeLoopsAtEdge(trackRef, songbooks);
   const scroll = (direction: 1 | -1) => {
     const track = trackRef.current;
     if (track) {
