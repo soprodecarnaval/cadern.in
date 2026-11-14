@@ -336,8 +336,9 @@
   transform: scale(1.06);
 }
 
+/* Both buttons sit together at the right: next's 22px + its 50px + 8px gap. */
 .landing-carousel-button.is-prev {
-  left: 26px;
+  right: 80px;
 }
 
 .landing-carousel-button.is-next {
