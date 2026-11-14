@@ -21,9 +21,14 @@ export function AppNavigation({
       data-bs-theme="dark"
     >
       <Container>
-        <Navbar.Brand as={Link} to="/" className="nav-bar-title">
+        <Navbar.Brand as={Link} to="/" className="nav-bar-title fs-3">
           cadern.in
         </Navbar.Brand>
+        <Nav className="me-3">
+          <Nav.Link as={Link} to="/montar">
+            Montar caderninho
+          </Nav.Link>
+        </Nav>
         <div className="banner-container">
           <a href="/2026" className="banner banner-yellow">
             Carnaval BH 2026

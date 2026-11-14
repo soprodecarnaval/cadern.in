@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { saveSongbookCovers } from "./songbookCovers";
+import { representativeCoverUrl, saveSongbookCovers } from "./songbookCovers";
 import { createSongbookRevision, type WithId } from "./db";
 import { ref, uploadBytes } from "firebase/storage";
 import type { User } from "firebase/auth";
@@ -42,5 +42,25 @@ describe("project-scoped cover uploads", () => {
     expect(content.covers.trombone).toEqual(oldCover);
     expect(content.covers.trompete).toEqual({ path, url: "https://example.com/new-cover" });
     expect(revision.revisionId).toBe("r2");
+  });
+});
+
+describe("representativeCoverUrl", () => {
+  const file = (url: string) => ({ path: `p/${url}`, url });
+
+  it("picks the first instrument in list order, not insertion order", () => {
+    expect(
+      representativeCoverUrl({ tuba: file("tuba"), flauta: file("flauta") }),
+    ).toBe("flauta");
+  });
+
+  it("skips covers without a url", () => {
+    expect(
+      representativeCoverUrl({ bombardino: file(""), trombone: file("trombone") }),
+    ).toBe("trombone");
+  });
+
+  it("is undefined when there are no covers", () => {
+    expect(representativeCoverUrl({})).toBeUndefined();
   });
 });

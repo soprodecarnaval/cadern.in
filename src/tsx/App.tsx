@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { AppNavigation } from "./AppNavigation";
 import { AuthModal } from "./AuthModal";
 import { ProfileModal } from "./ProfileModal";
@@ -19,11 +19,14 @@ import { ScorePage } from "./ScorePage";
 import { SongbookPage } from "./SongbookPage";
 
 import { HomePage } from "./HomePage";
+import { LandingPage } from "./LandingPage";
 
 function App() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [inboxCount, setInboxCount] = useState(0);
   const { currentUser, pendingUser } = useAuth();
+  // The landing page draws its own header and footer.
+  const isLanding = useLocation().pathname === "/";
 
   useEffect(() => {
     if (!FEATURE_FLAG_COLLAB_FLOW || !currentUser) {
@@ -43,16 +46,27 @@ function App() {
 
   return (
     <>
-      <AppNavigation
-        currentUser={currentUser}
-        collabEnabled={FEATURE_FLAG_COLLAB_FLOW}
-        inboxCount={inboxCount}
-        onOpenUserModal={() => setShowUserModal(true)}
-      />
+      {!isLanding && (
+        <AppNavigation
+          currentUser={currentUser}
+          collabEnabled={FEATURE_FLAG_COLLAB_FLOW}
+          inboxCount={inboxCount}
+          onOpenUserModal={() => setShowUserModal(true)}
+        />
+      )}
 
       <Routes>
         <Route
           path="/"
+          element={
+            <LandingPage
+              inboxCount={inboxCount}
+              onOpenUserModal={() => setShowUserModal(true)}
+            />
+          }
+        />
+        <Route
+          path="/montar"
           element={<HomePage onRequestLogin={() => setShowUserModal(true)} />}
         />
         <Route path="/score/:scoreId" element={<ScorePage />} />

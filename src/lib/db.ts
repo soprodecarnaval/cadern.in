@@ -9,6 +9,7 @@ import {
   getCountFromServer,
   getDocs,
   getDoc,
+  limit,
   query,
   runTransaction,
   serverTimestamp,
@@ -595,6 +596,26 @@ export async function getProjectSongbooks(
     query(collection(db, "songbooks"), ...constraints),
   );
   return snap.docs.map((d) => ({ id: d.id, ...zSongbookDoc.parse(d.data()) }));
+}
+
+/**
+ * Published songbooks from every project, most recently updated first. The
+ * rules let anyone run this query, signed in or not.
+ */
+export async function getPublishedSongbooks(
+  max = 12,
+): Promise<WithId<SongbookDoc>[]> {
+  const snap = await getDocs(
+    query(
+      collection(db, "songbooks"),
+      where("isPublished", "==", true),
+      where("deletedAt", "==", null),
+      limit(max),
+    ),
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...zSongbookDoc.parse(d.data()) }))
+    .sort((a, b) => b.updatedAt.toMillis() - a.updatedAt.toMillis());
 }
 
 export async function getSongbookRevision(
