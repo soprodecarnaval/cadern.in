@@ -54,4 +54,6 @@ Touches songbook detail rows and the reader project-context prop in
 permissions unchanged. C: reconcile these small view changes when integrating;
 Validation: 37 browser stories, 24 unit tests, six layout checks, TypeScript,
 targeted ESLint and demo build passed. No new reads or dependencies.
-005 implementation commit/PR will be recorded after committing. 006 remains open.
+005 implementation commit: `2483e1af019bd0f5b8292c277c39d19e2c346cfb`.
+PR: https://github.com/soprodecarnaval/cadern.in/pull/436, stacked on #433
+with `main` base per chat override. Human acceptance pending. 006 remains open.
