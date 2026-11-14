@@ -1,13 +1,29 @@
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import type { User } from "firebase/auth";
 import { storage } from "../firebase";
-import type { Instrument } from "../../types/instrument";
+import { zInstrument, type Instrument } from "../../types/instrument";
 import type { SongbookDoc, SongbookRevisionDoc } from "../../types/docs";
 import { createSongbookRevision, newSongbookRevisionId, type WithId } from "./db";
 import { slugify } from "./slugify";
 import { songbookRevisionStoragePath } from "./storagePaths";
 
 export const COVER_TYPES = ["image/png", "image/jpeg"];
+
+/**
+ * One cover to represent the whole songbook: the first instrument, in the
+ * instrument list's order, that has one.
+ */
+export function representativeCoverUrl(
+  covers: SongbookRevisionDoc["covers"],
+): string | undefined {
+  for (const instrument of zInstrument.options) {
+    const url = covers[instrument]?.url;
+    if (url) {
+      return url;
+    }
+  }
+  return undefined;
+}
 
 /**
  * Uploads the new covers under the next revision's path, then creates that

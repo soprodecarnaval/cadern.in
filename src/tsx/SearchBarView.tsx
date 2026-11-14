@@ -36,12 +36,11 @@ const SearchBarView = ({
 
   return (
     <Row className="mt-4">
-      <Col sm={6}>
+      <Col>
         <Form className="d-flex">
           <Form.Control
             type="search"
             placeholder="Procurar por título, arranjo ou tags"
-            className="me-2"
             aria-label="Search"
             disabled={status !== "ready"}
             onKeyDown={handleKeyDown}
@@ -50,7 +49,7 @@ const SearchBarView = ({
           />
         </Form>
       </Col>
-      <small>
+      <small className="text-muted lh-sm mt-2 mb-2">
         Para busca exata, use aspas e chapéuzinho (ex: "^carnaval bh 2024")
       </small>
     </Row>

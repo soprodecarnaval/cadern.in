@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { AppNavigation } from "./AppNavigation";
 import { AuthModal } from "./AuthModal";
 import { ProfileModal } from "./ProfileModal";
+import type { ProfileTab } from "./ProfileModalView";
 
 import "bootstrap/dist/css/bootstrap.css";
 import { useAuth } from "../auth";
@@ -19,11 +20,19 @@ import { ScorePage } from "./ScorePage";
 import { SongbookPage } from "./SongbookPage";
 
 import { HomePage } from "./HomePage";
+import { LandingPage } from "./LandingPage";
 
 function App() {
   const [showUserModal, setShowUserModal] = useState(false);
+  const [profileTab, setProfileTab] = useState<ProfileTab>("profile");
+  const openUserModal = (tab: ProfileTab = "profile") => {
+    setProfileTab(tab);
+    setShowUserModal(true);
+  };
   const [inboxCount, setInboxCount] = useState(0);
   const { currentUser, pendingUser } = useAuth();
+  // The landing page draws its own header and footer.
+  const isLanding = useLocation().pathname === "/";
 
   useEffect(() => {
     if (!FEATURE_FLAG_COLLAB_FLOW || !currentUser) {
@@ -43,17 +52,28 @@ function App() {
 
   return (
     <>
-      <AppNavigation
-        currentUser={currentUser}
-        collabEnabled={FEATURE_FLAG_COLLAB_FLOW}
-        inboxCount={inboxCount}
-        onOpenUserModal={() => setShowUserModal(true)}
-      />
+      {!isLanding && (
+        <AppNavigation
+          currentUser={currentUser}
+          collabEnabled={FEATURE_FLAG_COLLAB_FLOW}
+          inboxCount={inboxCount}
+          onOpenUserModal={() => openUserModal()}
+        />
+      )}
 
       <Routes>
         <Route
           path="/"
-          element={<HomePage onRequestLogin={() => setShowUserModal(true)} />}
+          element={
+            <LandingPage
+              inboxCount={inboxCount}
+              onOpenUserModal={openUserModal}
+            />
+          }
+        />
+        <Route
+          path="/montar"
+          element={<HomePage onRequestLogin={() => openUserModal()} />}
         />
         <Route path="/score/:scoreId" element={<ScorePage />} />
         <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
@@ -87,6 +107,7 @@ function App() {
         <ProfileModal
           show={showUserModal}
           onHide={() => setShowUserModal(false)}
+          initialTab={profileTab}
           inboxCount={inboxCount}
           onInboxCountChange={setInboxCount}
         />
