@@ -301,11 +301,10 @@ function AccountMenu({
         </span>
         <span className="landing-account-name">{name}</span>
         {inboxCount > 0 && (
-          <span
-            className="landing-account-badge"
-            aria-label={`${inboxCount} convites`}
-          >
+          <span className="landing-account-badge">
             {inboxCount}
+            {/* In the toggle's accessible name, not just the visual badge. */}
+            <span className="visually-hidden"> convites</span>
           </span>
         )}
       </Dropdown.Toggle>
@@ -409,7 +408,11 @@ function SongbookCarousel({ songbooks }: { songbooks: LandingSongbooks }) {
   }
 
   return (
-    <div className="landing-carousel" aria-label="Cadernos publicados">
+    <div
+      className="landing-carousel"
+      role="region"
+      aria-label="Cadernos publicados"
+    >
       <div className="landing-carousel-track" ref={trackRef}>
         {songbooks.status === "loading"
           ? [0, 1, 2].map((i) => (
