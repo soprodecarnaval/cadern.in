@@ -31,6 +31,7 @@
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-cadernin 'vitest run --config vitest.rules.config.ts'",
     "test:migrations": "firebase emulators:exec --only firestore --project demo-cadernin 'vitest run --config vitest.migrations.config.ts'",
     "backfill:metajson": "tsx scripts/maintenance/backfillMetajson.ts",
+    "purge:staging": "tsx --env-file=.env.staging scripts/maintenance/purgeNonCaderninData.ts",
     "storybook": "storybook dev -p 6006 --disable-telemetry",
     "build-storybook": "storybook build --disable-telemetry",
     "typecheck:storybook": "tsc -p .storybook/tsconfig.json",
