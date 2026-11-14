@@ -426,9 +426,10 @@ function SongbookCarousel({ songbooks }: { songbooks: LandingSongbooks }) {
               >
                 <div className="landing-caderno-spiral" />
                 {songbook.coverUrl ? (
-                  // With a cover, the title becomes a tooltip on hover.
+                  // With a cover, the title moves into the image's alt text
+                  // and becomes a tooltip on hover.
                   <div className="landing-caderno-cover has-image">
-                    <img src={songbook.coverUrl} alt="" />
+                    <img src={songbook.coverUrl} alt={songbook.title} />
                     <span className="landing-caderno-tooltip">
                       {songbook.title}
                     </span>
