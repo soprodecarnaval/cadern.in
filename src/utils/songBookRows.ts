@@ -5,7 +5,6 @@ import {
   SortColumn,
   sortByColumn,
   SortDirection,
-  carnivalSectionOrder,
 } from "./sort";
 
 export const deleteRow = (rows: SongbookItemViewModel[], idx: number) => {
@@ -73,56 +72,4 @@ export const generateSectionsByStyle = (rows: SongbookItemViewModel[]) => {
     sorted.push(...value);
   }
   return sorted;
-};
-
-// secion names have changed over time, so we need to map them to the current ones
-// some of them have been capitalized or had a plural -s added to the end
-const normalizeSectionName = (name: string) => {
-  return name.toLocaleLowerCase().replace(/s$/, "");
-};
-
-export const generateCarnivalSections = (rows: SongbookItemViewModel[]) => {
-  rows = generateSectionsByStyle(rows);
-
-  // pick only carnival sections, keeping their order
-  // ignore sections not in the order
-  const allSongs: Map<string, ScoreViewModel> = new Map();
-  for (const row of rows) {
-    if (row.type == "score") {
-      allSongs.set(row.score.title, row.score);
-    }
-  }
-
-  const newRows: SongbookItemViewModel[] = [];
-  for (const section of carnivalSectionOrder) {
-    // find section index
-    const idx = rows.findIndex(
-      (r) =>
-        isSongbookSection(r) &&
-        normalizeSectionName(r.title) === normalizeSectionName(section),
-    );
-    if (idx === -1) {
-      continue;
-    }
-    // push style
-    newRows.push(rows[idx]);
-
-    // add all songs in section
-    const slice: ScoreViewModel[] = [];
-    for (let i = idx + 1; i < rows.length; i++) {
-      const row = rows[i];
-      if (isSongbookSection(row)) {
-        break;
-      }
-      slice.push(row.score);
-      allSongs.delete(row.score.title);
-    }
-    // push sorted slice
-    const sorted = sortByColumn(slice, "title", "asc").map(songbookScore);
-    newRows.push(...sorted);
-  }
-  for (const rest of allSongs.values()) {
-    console.log(rest.title, rest.tags);
-  }
-  return newRows;
 };
