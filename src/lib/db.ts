@@ -9,6 +9,7 @@ import {
   getCountFromServer,
   getDocs,
   getDoc,
+  limit,
   query,
   runTransaction,
   serverTimestamp,
@@ -595,6 +596,31 @@ export async function getProjectSongbooks(
     query(collection(db, "songbooks"), ...constraints),
   );
   return snap.docs.map((d) => ({ id: d.id, ...zSongbookDoc.parse(d.data()) }));
+}
+
+/**
+ * Up to `max` published songbooks from every project. The query can't order
+ * by `updatedAt` without a composite index, so Firestore returns matches in
+ * document ID order and the limit picks from those: which songbooks show up
+ * is arbitrary once more than `max` are published (manual curation of the
+ * carousel is planned). The sort below only orders the fetched ones, most
+ * recently updated first. The rules let anyone run this query, signed in or
+ * not.
+ */
+export async function getPublishedSongbooks(
+  max = 12,
+): Promise<WithId<SongbookDoc>[]> {
+  const snap = await getDocs(
+    query(
+      collection(db, "songbooks"),
+      where("isPublished", "==", true),
+      where("deletedAt", "==", null),
+      limit(max),
+    ),
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...zSongbookDoc.parse(d.data()) }))
+    .sort((a, b) => b.updatedAt.toMillis() - a.updatedAt.toMillis());
 }
 
 export async function getSongbookRevision(

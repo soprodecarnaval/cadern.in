@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Button, Modal, Spinner, Tab, Tabs } from "react-bootstrap";
+import { Button, Modal, Spinner, Tab, Tabs } from "react-bootstrap";
 
 import type { UserProjectInvitationDoc } from "../../types/docs";
 import type { WithId } from "../lib/db";
-import { displayNameOf } from "../lib/displayName";
+import { displayNameOf, initialsOf } from "../lib/displayName";
+import "../css/BrandModal.css";
 import { resizeImage } from "../utils/image";
 
 export type ProfileModalServices = Pick<
@@ -17,11 +18,15 @@ export type ProfileModalServices = Pick<
     "updateDisplayName" | "updateAvatar" | "changePassword" | "logout"
   >;
 
+export type ProfileTab = "profile" | "inbox" | "password";
+
 interface ProfileModalViewProps {
   services: ProfileModalServices;
   currentUser: import("firebase/auth").User | null;
   show: boolean;
   onHide: () => void;
+  /** The tab shown each time the modal opens. Defaults to the profile. */
+  initialTab?: ProfileTab;
   inboxCount?: number;
   onInboxCountChange?: (count: number) => void;
 }
@@ -31,10 +36,17 @@ export function ProfileModalView({
   currentUser,
   show,
   onHide,
+  initialTab = "profile",
   inboxCount,
   onInboxCountChange,
 }: ProfileModalViewProps) {
-  const [tab, setTab] = useState("profile");
+  const [tab, setTab] = useState<string>(initialTab);
+
+  useEffect(() => {
+    if (show) {
+      setTab(initialTab);
+    }
+  }, [show, initialTab]);
 
   const [invitations, setInvitations] = useState<
     WithId<UserProjectInvitationDoc>[]
@@ -163,7 +175,7 @@ export function ProfileModalView({
   };
 
   return (
-    <Modal show={show} onHide={onHide}>
+    <Modal show={show} onHide={onHide} className="brand-modal">
       <Modal.Header closeButton>
         <Modal.Title>Perfil</Modal.Title>
       </Modal.Header>
@@ -181,37 +193,16 @@ export function ProfileModalView({
         >
           <Tab eventKey="profile" title="Editar perfil">
             <div className="d-flex flex-column align-items-center mb-3">
-              {currentUser?.photoURL ? (
-                <img
-                  src={currentUser.photoURL}
-                  alt="Avatar"
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: "50%",
-                    background: "#ccc",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 32,
-                    color: "#fff",
-                  }}
-                >
-                  {(currentUser?.displayName?.[0] ?? "?").toUpperCase()}
-                </div>
-              )}
+              <div className="brand-avatar">
+                {currentUser?.photoURL ? (
+                  <img src={currentUser.photoURL} alt="Avatar" />
+                ) : (
+                  currentUser && initialsOf(currentUser)
+                )}
+              </div>
               <button
                 type="button"
-                className="btn btn-link btn-sm mt-1"
+                className="btn btn-link mt-1"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={profilePending}
               >
@@ -268,28 +259,26 @@ export function ProfileModalView({
             {inboxLoading ? (
               <Spinner animation="border" size="sm" />
             ) : invitations.length === 0 ? (
-              <Alert variant="info">Nenhum convite pendente.</Alert>
+              <p className="mb-0">Nenhum convite pendente.</p>
             ) : (
               <div className="d-flex flex-column gap-3">
                 {invitations.map((inv) => (
-                  <div key={inv.projectId} className="border rounded p-3">
-                    <p className="mb-1">
+                  <div key={inv.projectId} className="brand-card">
+                    <p className="mb-3">
                       <strong>{inv.fromDisplayName}</strong> convidou você para{" "}
                       <strong>{inv.projectTitle}</strong> como{" "}
                       <strong>{inv.role}</strong>
                     </p>
                     <div className="d-flex gap-2">
                       <Button
-                        size="sm"
-                        variant="success"
+                        variant="primary"
                         disabled={respondingTo === inv.projectId}
                         onClick={() => void handleAccept(inv)}
                       >
                         Aceitar
                       </Button>
                       <Button
-                        size="sm"
-                        variant="outline-danger"
+                        variant="outline-secondary"
                         disabled={respondingTo === inv.projectId}
                         onClick={() => void handleDeny(inv)}
                       >
@@ -304,8 +293,9 @@ export function ProfileModalView({
           <Tab eventKey="password" title="Alterar senha">
             <form onSubmit={(e) => void handleChangePassword(e)}>
               <div className="mb-3">
-                <label className="form-label">Senha atual</label>
                 <input
+                  placeholder="Senha atual"
+                  aria-label="Senha atual"
                   type="password"
                   className="form-control"
                   value={currentPassword}
@@ -314,8 +304,9 @@ export function ProfileModalView({
                 />
               </div>
               <div className="mb-3">
-                <label className="form-label">Nova senha</label>
                 <input
+                  placeholder="Nova senha"
+                  aria-label="Nova senha"
                   type="password"
                   className="form-control"
                   value={newPassword}
@@ -324,8 +315,9 @@ export function ProfileModalView({
                 />
               </div>
               <div className="mb-3">
-                <label className="form-label">Confirmar nova senha</label>
                 <input
+                  placeholder="Confirmar nova senha"
+                  aria-label="Confirmar nova senha"
                   type="password"
                   className="form-control"
                   value={confirmPassword}
@@ -351,7 +343,10 @@ export function ProfileModalView({
         </Tabs>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="outline-danger" onClick={() => void services.logout()}>
+        <Button
+          variant="outline-secondary"
+          onClick={() => void services.logout()}
+        >
           Sair
         </Button>
       </Modal.Footer>

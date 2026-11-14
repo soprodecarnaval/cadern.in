@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Modal, Tab, Tabs } from "react-bootstrap";
 import type { User } from "firebase/auth";
 import { GoogleLinkRequiredError } from "../auth";
+import "../css/BrandModal.css";
 
 export interface AuthModalViewProps {
   login: (email: string, password: string) => Promise<void>;
@@ -214,7 +215,7 @@ export function AuthModalView({
 
   if (linkRequest) {
     return (
-      <Modal show={show} onHide={onHide}>
+      <Modal show={show} onHide={onHide} className="brand-modal">
         <Modal.Header closeButton>
           <Modal.Title>Conectar conta Google</Modal.Title>
         </Modal.Header>
@@ -222,8 +223,9 @@ export function AuthModalView({
           <p>{linkRequest.message}</p>
           <form onSubmit={(val) => void handleLinkSubmit(val)}>
             <div className="mb-3">
-              <label className="form-label">Senha</label>
               <input
+                placeholder="Senha"
+                aria-label="Senha"
                 type="password"
                 className="form-control"
                 value={linkPassword}
@@ -265,7 +267,7 @@ export function AuthModalView({
 
   if (pendingUser) {
     return (
-      <Modal show={show} onHide={onHide}>
+      <Modal show={show} onHide={onHide} className="brand-modal">
         <Modal.Header closeButton>
           <Modal.Title>Verifique seu email</Modal.Title>
         </Modal.Header>
@@ -318,7 +320,7 @@ export function AuthModalView({
   }
 
   return (
-    <Modal show={show} onHide={handleHide}>
+    <Modal show={show} onHide={handleHide} className="brand-modal">
       <Modal.Header closeButton>
         <Modal.Title>Conta</Modal.Title>
       </Modal.Header>
@@ -334,8 +336,9 @@ export function AuthModalView({
           <Tab eventKey="login" title="Entrar">
             <form onSubmit={(val) => void handleLogin(val)}>
               <div className="mb-3">
-                <label className="form-label">Email</label>
                 <input
+                  placeholder="Email"
+                  aria-label="Email"
                   type="email"
                   className="form-control"
                   value={email}
@@ -344,8 +347,9 @@ export function AuthModalView({
                 />
               </div>
               <div className="mb-3">
-                <label className="form-label">Senha</label>
                 <input
+                  placeholder="Senha"
+                  aria-label="Senha"
                   type="password"
                   className="form-control"
                   value={password}
@@ -378,8 +382,9 @@ export function AuthModalView({
           <Tab eventKey="register" title="Criar conta">
             <form onSubmit={(val) => void handleRegister(val)}>
               <div className="mb-3">
-                <label className="form-label">Nome</label>
                 <input
+                  placeholder="Nome"
+                  aria-label="Nome"
                   type="text"
                   className="form-control"
                   value={displayName}
@@ -388,8 +393,9 @@ export function AuthModalView({
                 />
               </div>
               <div className="mb-3">
-                <label className="form-label">Email</label>
                 <input
+                  placeholder="Email"
+                  aria-label="Email"
                   type="email"
                   className="form-control"
                   value={email}
@@ -398,8 +404,9 @@ export function AuthModalView({
                 />
               </div>
               <div className="mb-3">
-                <label className="form-label">Senha</label>
                 <input
+                  placeholder="Senha"
+                  aria-label="Senha"
                   type="password"
                   className="form-control"
                   value={password}

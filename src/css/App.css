@@ -1,5 +1,9 @@
-.nav-bar-title {
-  font-size: 1.7em;
+/* Inter is loaded from Google Fonts in index.html. Bootstrap sets the body
+   font from this variable, so this switches every page to it. `html:root`
+   outranks Bootstrap's own `:root`, which can load after this file. */
+html:root {
+  --bs-body-font-family: "Inter", system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 .results {

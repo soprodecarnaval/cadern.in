@@ -167,7 +167,6 @@ export function HomePageView({
                 <h3 className="results">Caderninho</h3>
                 {collabEnabled && (
                   <Button
-                    size="sm"
                     variant="outline-primary"
                     disabled={items.length === 0}
                     onClick={handleSave}

@@ -91,7 +91,9 @@ const ScoreSearchResultTable = ({ Card, getMatches, scores, searchQuery, handleS
             handleSelect={handleSelect} score={song} searchQuery={searchQuery} />
         ))}
       </div>
-      <PaginationBar onChange={handlePageChange} currentPage={page} maxNumberPages={maxNumberPages} />
+      <div className="mt-2">
+        <PaginationBar onChange={handlePageChange} currentPage={page} maxNumberPages={maxNumberPages} />
+      </div>
     </>
   );
 };

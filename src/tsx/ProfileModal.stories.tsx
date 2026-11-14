@@ -115,3 +115,6 @@ export const SavePending: Story = {
     await expect(dialog.getByRole("button", { name: "Salvar" })).toBeDisabled();
   },
 };
+export const OpenedOnInvitations: Story = {
+  args: { initialTab: "inbox" },
+};

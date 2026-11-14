@@ -46,9 +46,10 @@ and query strings. Navigation stays inside MemoryRouter and displays the target
 URL for routes outside that story. Dialog stories support close/reopen. Use play
 functions with visibility waits to reach modal/tab/error states after transitions.
 
-SongbookReader and the Electron export app are excluded. Songbook stories start
-at `?detalhes`; the reader implementation is untouched. The injected reader fixture
-only identifies the exclusion if a reader link is followed.
+The Electron export app is excluded. The songbook reader has its own stories
+(`Components/SongbookReader`, fixtures in `storyFixtures.ts`); they open a score
+with `parameters.route` (`/?musica=<number>`). Songbook page stories start at
+`?detalhes`, and their injected reader fixture stands in for the reader there.
 
 ## Repeatable browser checks
 

@@ -6,7 +6,7 @@ import { collection, homeComponents, storage, user } from "./screenFixtures";
 const meta = {
   title: "Screens/HomePage",
   component: HomePageView,
-  parameters: { route: "/", routePath: "/", fullScreen: true },
+  parameters: { route: "/montar", routePath: "/montar", fullScreen: true },
   args: {
     currentUser: user,
     collection,

@@ -1,12 +1,4 @@
-import {
-  Button,
-  Col,
-  Form,
-  ListGroup,
-  OverlayTrigger,
-  Row,
-  Tooltip,
-} from "react-bootstrap";
+import { Button, Col, Form, Row } from "react-bootstrap";
 
 import type {
   ScoreViewModel,
@@ -19,11 +11,9 @@ import type { ScoreEditUpdate } from "./ScoreEditModal";
 import { ChangeEvent, forwardRef, useState } from "react";
 import {
   deleteRow,
-  generateCarnivalSections,
   generateSectionsByStyle,
   sortSongsWithinSections,
 } from "../utils/songBookRows";
-import { carnivalSectionOrder } from "../utils/sort";
 import {
   SongbookSortableList,
   type SongbookSortableListHandle,
@@ -71,19 +61,6 @@ const SongBookTableView = forwardRef<
       setNewSection("");
     };
 
-    const CarnivalSectionsToolTip = () => (
-      <Tooltip id="tooltip">
-        Reorganiza seções como no caderninho do carnaval:
-        <ListGroup>
-          {carnivalSectionOrder.map((section) => (
-            <ListGroup.Item key={`section-${section}`}>
-              {section}
-            </ListGroup.Item>
-          ))}
-        </ListGroup>
-      </Tooltip>
-    );
-
     const handleUpdateScore = (idx: number, update: ScoreEditUpdate) => {
       const newRows = [...rows];
       const existing = newRows[idx] as SongbookScoreViewModel;
@@ -108,7 +85,7 @@ const SongBookTableView = forwardRef<
     return (
       <>
         <Row>
-          <Col sm="4">
+          <Col xs={12} sm="auto">
             <Sort
               onSortBy={(col, dir) =>
                 setRows(sortSongsWithinSections(rows, col, dir))
@@ -116,8 +93,11 @@ const SongBookTableView = forwardRef<
             />
           </Col>
           <Col>
-            <Form className="d-flex" onSubmit={onSubmitNewSection}>
-              <Col>
+            <Form
+              className="d-flex justify-content-end gap-1 mb-2"
+              onSubmit={onSubmitNewSection}
+            >
+              <Col style={{ maxWidth: "200px" }}>
                 <Form.Control
                   type="text"
                   onChange={onInputNewSection}
@@ -125,8 +105,17 @@ const SongBookTableView = forwardRef<
                   placeholder="Adicionar seção"
                 />
               </Col>
-              <Col>
-                <Button onClick={createNewSection}>+ seção</Button>
+              <Col xs="auto">
+                <Button
+                  onClick={createNewSection}
+                  className="px-0"
+                  // Square: as wide as Bootstrap's input/button height.
+                  style={{ width: "calc(1.5em + 0.75rem + 2px)" }}
+                  aria-label="Adicionar seção"
+                  title="Adicionar seção"
+                >
+                  +
+                </Button>
               </Col>
             </Form>
           </Col>
@@ -147,26 +136,13 @@ const SongBookTableView = forwardRef<
               {rows.filter((r) => !isSongbookSection(r)).length} músicas
             </p>
           </Col>
-          <Col>
-            <Button onClick={handleClear}>Limpar tudo</Button>
-          </Col>
         </Row>
-        <Row>
-          <Col>
-            <Button onClick={() => setRows(generateSectionsByStyle(rows))}>
-              Gerar seções por estilo
-            </Button>
-          </Col>
-        </Row>
-        <Row>
-          <Col>
-            <OverlayTrigger placement="left" overlay={CarnivalSectionsToolTip}>
-              <Button onClick={() => setRows(generateCarnivalSections(rows))}>
-                Aplicar ordenação do carnaval
-              </Button>
-            </OverlayTrigger>
-          </Col>
-        </Row>
+        <div className="d-flex justify-content-between gap-2">
+          <Button onClick={() => setRows(generateSectionsByStyle(rows))}>
+            Criar seções por estilo
+          </Button>
+          <Button onClick={handleClear}>Limpar tudo</Button>
+        </div>
       </>
     );
   },
