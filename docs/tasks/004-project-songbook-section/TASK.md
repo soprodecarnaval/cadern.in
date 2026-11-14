@@ -1,6 +1,6 @@
 ---
 title: Consolidate songbooks on the project page
-status: in-progress
+status: completed
 type: feature
 milestone: collab-flow
 ---
@@ -46,7 +46,7 @@ None.
 - Members retain all-songbook visibility, non-members published-only. Current songbook paths preserved.
 - Legacy list route redirects with replacement to the project; back/delete destinations updated.
 - Standalone list view/stories retired; project stories cover creation, permissions and recovery.
-- Implementation ready for human review; task stays in-progress pending acceptance.
+- Implementation accepted by the user in chat (`accept and move on`). Task completed.
 - Shared C/008 handoff: [HANDOFF.md](HANDOFF.md). 005 and 006 remain open.
 
 ### Checks
