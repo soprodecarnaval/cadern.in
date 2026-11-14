@@ -21,6 +21,8 @@ export type LandingArticle = {
   summary: string;
   href: string;
   imageUrl?: string;
+  /** Width descriptors for `imageUrl`, when variants exist. */
+  imageSrcSet?: string;
 };
 
 /** A published songbook and, when it has one, a cover image to show. */
@@ -51,6 +53,10 @@ const STATIC = {
 
 const MAX_SEARCH_RESULTS = 8;
 const EXPORTER_ANCHOR = "exportador";
+// Article cards sit in a two-column grid (~656px each) on wide screens and
+// one full-width column on phones; half the viewport in between.
+const ARTICLE_IMAGE_SIZES =
+  "(min-width: 1100px) 656px, (min-width: 628px) 50vw, calc(100vw - 32px)";
 
 export function LandingPageView({
   currentUser,
@@ -96,7 +102,9 @@ export function LandingPageView({
 
         <a className="landing-hero" href="/2026">
           <img
-            src="/assets/home-hero.jpg"
+            src="/assets/home-hero-1340.webp"
+            srcSet="/assets/home-hero-670.webp 670w, /assets/home-hero-1000.webp 1000w, /assets/home-hero-1340.webp 1340w"
+            sizes="(min-width: 1440px) 1347px, 94vw"
             alt="Capa do caderninho do Carnaval BH 2026"
           />
         </a>
@@ -196,7 +204,14 @@ export function LandingPageView({
                   to={article.href}
                 >
                   <div className="landing-article-image">
-                    {article.imageUrl && <img src={article.imageUrl} alt="" />}
+                    {article.imageUrl && (
+                      <img
+                        src={article.imageUrl}
+                        srcSet={article.imageSrcSet}
+                        sizes={ARTICLE_IMAGE_SIZES}
+                        alt=""
+                      />
+                    )}
                   </div>
                   <h3>{article.title}</h3>
                   <p>{article.summary}</p>
