@@ -8,3 +8,13 @@ Improve usability across cadern.in's existing flows.
 - [001 — Storybook support](001-storybook-support.md) — completed.
 - [002 — Search deduplication](../../tasks/002-search-deduplication/TASK.md) — completed.
 - [002 — Storybook screens](002-storybook-screens.md) — in-progress.
+
+## Follow-up task plans (2026-11-14)
+
+These open plans supersede conflicting earlier design decisions when implemented.
+UI work requires wireframe iteration and approval before implementation.
+
+- [005 — Show project and pinned version in songbook score lists](../../tasks/005-songbook-score-version-labels/TASK.md) — open.
+- [006 — Preview songbook covers in a save/cancel modal](../../tasks/006-songbook-cover-modal/TASK.md) — open.
+
+Sequence and dependencies: [three workstreams](../../tasks/WORKSTREAMS.md).

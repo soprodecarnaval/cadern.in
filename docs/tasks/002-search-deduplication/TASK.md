@@ -144,3 +144,10 @@ Checks passed:
 The browser harness blocked the unrelated external Cloudflare analytics beacon
 because it produces CORS errors on localhost. No staging data was written.
 Existing dependency-engine, protobuf eval and bundle-size warnings remain.
+
+## Planning consolidation — 2026-11-14
+
+Canonical completed search-deduplication task. The duplicate
+`001-search-deduplication` directory was empty and removed; no requirements or
+implementation history were lost. UX milestone links here. No new implementation
+is needed for this consolidation.
