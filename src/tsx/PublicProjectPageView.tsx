@@ -18,6 +18,7 @@ import type {
   SongbookDoc,
   UserProjectRole,
 } from "../../types/docs";
+import { CreateSongbookForm } from "./CreateSongbookForm";
 import { resolveScoreMetadata } from "../lib/scoreMetadata";
 
 const ROLE_LABELS: Record<UserProjectRole, string> = {
@@ -36,14 +37,20 @@ const ROLE_BADGE_VARIANTS: Record<UserProjectRole, string> = {
 
 export type PublicProjectPageServices = Pick<
   typeof import("../lib/db"),
-  "getProjectBySlug" | "getProjectScores" | "getProjectSongbooks"
+  | "getProjectBySlug"
+  | "getProjectScores"
+  | "getProjectSongbooks"
+  | "createSongbook"
+  | "getSongbook"
 >;
 
 export function PublicProjectPageView({
   services,
   role,
+  currentUser,
 }: {
   services: PublicProjectPageServices;
+  currentUser: import("firebase/auth").User | null;
   role: import("../lib/roles").Role | "loading";
 }) {
   const { slug } = useParams<{ slug: string }>();
@@ -53,38 +60,92 @@ export function PublicProjectPageView({
   );
   const [scores, setScores] = useState<WithId<ScoreDoc>[]>([]);
   const [scoresLoading, setScoresLoading] = useState(true);
-  const [songbooks, setSongbooks] = useState<WithId<SongbookDoc>[] | null>(
-    null,
-  );
+  const [songbooks, setSongbooks] = useState<WithId<SongbookDoc>[] | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [projectError, setProjectError] = useState(false);
+  const [songbooksError, setSongbooksError] = useState(false);
+  const [scoresError, setScoresError] = useState(false);
+  const [projectAttempt, retryProject] = useState(0);
+  const [songbooksAttempt, retrySongbooks] = useState(0);
+  const [scoresAttempt, retryScores] = useState(0);
   const isMember = role !== "loading" && isReviewer(role);
 
   useEffect(() => {
-    if (!slug) {
-      return;
+    let active = true;
+    setProject("loading");
+    setProjectError(false);
+    if (slug) {
+      void services.getProjectBySlug(slug).then(
+        (value) => {
+          if (active) { setProject(value); }
+        },
+        () => {
+          if (active) { setProjectError(true); }
+        },
+      );
     }
-    void services.getProjectBySlug(slug).then(setProject);
-  }, [slug, services]);
+    return () => {
+      active = false;
+    };
+  }, [slug, services, projectAttempt]);
 
-  // Non-members see only published songbooks, no score list (collab-flow §4.4).
   useEffect(() => {
+    let active = true;
+    setSongbooks(null);
+    setSongbooksError(false);
     if (
-      !slug ||
-      project === "loading" ||
-      project === null ||
-      role === "loading"
+      slug && project && project !== "loading" &&
+      !project.deletedAt && role !== "loading"
     ) {
-      return;
+      void services.getProjectSongbooks(slug, { publishedOnly: !isMember }).then(
+        (value) => {
+          if (active) { setSongbooks(value); }
+        },
+        () => {
+          if (active) { setSongbooksError(true); }
+        },
+      );
     }
-    void services
-      .getProjectSongbooks(slug, { publishedOnly: !isMember })
-      .then(setSongbooks);
-    if (isMember) {
-      void services.getProjectScores(slug).then((s) => {
-        setScores(s);
-        setScoresLoading(false);
-      });
+    return () => {
+      active = false;
+    };
+  }, [slug, project, role, isMember, services, songbooksAttempt]);
+
+  useEffect(() => {
+    let active = true;
+    setScores([]);
+    setScoresLoading(true);
+    setScoresError(false);
+    if (slug && project && project !== "loading" && !project.deletedAt && isMember) {
+      void services.getProjectScores(slug).then(
+        (value) => {
+          if (active) {
+            setScores(value);
+            setScoresLoading(false);
+          }
+        },
+        () => {
+          if (active) { setScoresError(true); }
+        },
+      );
     }
-  }, [slug, project, role, isMember, services]);
+    return () => {
+      active = false;
+    };
+  }, [slug, project, isMember, services, scoresAttempt]);
+
+  if (projectError) {
+    return (
+      <Container className="mt-4">
+        <Alert variant="danger">
+          Não foi possível carregar o projeto.{" "}
+          <Button variant="outline-danger" onClick={() => retryProject((n) => n + 1)}>
+            Tentar novamente
+          </Button>
+        </Alert>
+      </Container>
+    );
+  }
 
   if (project === "loading") {
     return (
@@ -128,8 +189,28 @@ export function PublicProjectPageView({
         <small>/{project.slug}</small>
       </p>
 
-      <h5>Caderninhos</h5>
-      {songbooks === null ? (
+      <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
+        <h5 className="mb-0">Caderninhos</h5>
+        {canManage && currentUser && !creating && songbooks !== null && (
+          <Button variant="outline-primary" size="sm" onClick={() => setCreating(true)}>
+            + Novo caderninho
+          </Button>
+        )}
+      </div>
+      {canManage && currentUser && creating && (
+        <CreateSongbookForm
+          key={project.id}
+          services={services}
+          currentUser={currentUser}
+          projectId={project.id}
+          onCancel={() => setCreating(false)}
+        />
+      )}
+      {songbooksError ? (
+        <Alert variant="danger">Não foi possível carregar os caderninhos.{" "}
+          <Button variant="outline-danger" onClick={() => retrySongbooks((n) => n + 1)}>Tentar novamente</Button>
+        </Alert>
+      ) : songbooks === null ? (
         <Spinner animation="border" />
       ) : songbooks.length === 0 ? (
         <Alert variant="info">
@@ -161,16 +242,12 @@ export function PublicProjectPageView({
           </tbody>
         </Table>
       )}
-      {isMember && (
-        <p>
-          <Link to={`/projects/${encodeURIComponent(project.id)}/songbooks`}>
-            Gerenciar caderninhos
-          </Link>
-        </p>
-      )}
-
       {isMember && <h5>Partituras</h5>}
-      {!isMember ? null : scoresLoading ? (
+      {!isMember ? null : scoresError ? (
+        <Alert variant="danger">Não foi possível carregar as partituras.{" "}
+          <Button variant="outline-danger" onClick={() => retryScores((n) => n + 1)}>Tentar novamente</Button>
+        </Alert>
+      ) : scoresLoading ? (
         <Spinner animation="border" />
       ) : scores.length === 0 ? (
         <Alert variant="info">Nenhuma partitura neste projeto.</Alert>
