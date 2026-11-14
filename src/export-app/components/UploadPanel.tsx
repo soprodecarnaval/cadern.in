@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { User } from "firebase/auth";
-import { uploadScore, type UploadProgress } from "../../lib/uploadScore";
+import type { ExportResult } from "../../../scripts/lib/exportScore";
+import { exportAndUpload, type ExportUploadProgress } from "../exportAndUpload";
 import {
   createProject,
   getMemberRole,
@@ -12,9 +13,8 @@ import type { ProjectDoc } from "../../../types/docs";
 import { displayNameOf } from "../../lib/displayName";
 import { isEditor } from "../../lib/roles";
 import { slugify } from "../../lib/slugify";
-import { resolveUploadTarget, type UploadTarget } from "../../lib/uploadTarget";
+import type { UploadTarget } from "../../lib/uploadTarget";
 import {
-  parseUploadedFiles,
   validateParsedScore,
   type ParsedScore,
 } from "../../lib/parseUploadedFiles";
@@ -23,23 +23,23 @@ import type { Warning } from "../../result";
 
 interface Props {
   user: User;
-  /** Folder produced by the export step. */
-  directory: string;
+  exportScore: () => Promise<ExportResult>;
+  disabled: boolean;
+  onBusyChange: (busy: boolean) => void;
   /** The user's own file, which gets the uploaded identity written back. */
   msczPath: string;
 }
 
 type Status =
   | { kind: "idle" }
-  | { kind: "reading" }
-  | { kind: "uploading"; progress: UploadProgress }
-  | { kind: "done"; scoreId: string; localStamped: boolean }
+  | ExportUploadProgress
+  | { kind: "done"; scoreId: string; localStamped: boolean; directory: string }
   | { kind: "error"; message: string };
 
 // The project <select>'s own sentinel value for "create a new one instead".
 const NEW_PROJECT = "__new__";
 
-export function UploadPanel({ user, directory, msczPath }: Props) {
+export function UploadPanel({ user, exportScore, msczPath, disabled, onBusyChange }: Props) {
   const [projects, setProjects] = useState<WithId<ProjectDoc>[]>([]);
   const [projectId, setProjectId] = useState("");
   const [loadedProjects, setLoadedProjects] = useState(false);
@@ -56,58 +56,29 @@ export function UploadPanel({ user, directory, msczPath }: Props) {
   const [createError, setCreateError] = useState("");
 
   useEffect(() => {
+    let current = true;
     void (async () => {
-      const memberOf = await getUserMemberProjects(user.uid);
-      const roles = await Promise.all(
-        memberOf.map((p) => getMemberRole(p.id, user.uid)),
-      );
-      const mine = memberOf.filter((_, i) => isEditor(roles[i]));
-      setProjects(mine);
-      setProjectId(mine[0]?.id ?? "");
-      setCreatingProject(mine.length === 0);
-      setLoadedProjects(true);
-    })();
-  }, [user]);
-
-  // Read and parse once; the folder does not change under us.
-  useEffect(() => {
-    void (async () => {
-      setStatus({ kind: "reading" });
       try {
-        const raw = await window.api.readExportFolder(directory);
-        const files = raw.map((f) => new File([f.bytes], f.name));
-        const result = await parseUploadedFiles(files);
-        setParsed(result);
-        setWarnings([...result.warnings, ...validateParsedScore(result)]);
-        setStatus({ kind: "idle" });
+        const memberOf = await getUserMemberProjects(user.uid);
+        const roles = await Promise.all(memberOf.map((p) => getMemberRole(p.id, user.uid)));
+        if (!current) {return;}
+        const mine = memberOf.filter((_, i) => isEditor(roles[i]));
+        setProjects(mine);
+        setProjectId(mine[0]?.id ?? "");
+        setCreatingProject(mine.length === 0);
+        setLoadedProjects(true);
       } catch (e) {
-        setStatus({
-          kind: "error",
-          message: e instanceof Error ? e.message : String(e),
-        });
+        if (current) {setStatus({ kind: "error", message: e instanceof Error ? e.message : String(e) });}
       }
     })();
-  }, [directory]);
-
-  // What the upload will do is stated before anything is written.
-  const title = parsed?.title;
-  const source = parsed?.source;
-  useEffect(() => {
-    let current = true;
-    setTarget(null);
-    if (title && projectId) {
-      void resolveUploadTarget({ title, source }, projectId).then((t) => {
-        if (current) {
-          setTarget(t);
-        }
-      });
-    }
-    return () => {
-      current = false;
-    };
-  }, [title, source, projectId]);
+    return () => { current = false; };
+  }, [user]);
 
   const handleProjectChange = (value: string) => {
+    setStatus({ kind: "idle" });
+    setParsed(null);
+    setTarget(null);
+    setWarnings([]);
     if (value === NEW_PROJECT) {
       setCreatingProject(true);
       return;
@@ -148,60 +119,35 @@ export function UploadPanel({ user, directory, msczPath }: Props) {
     }
   }, [newProjectTitle, user]);
 
-  const upload = useCallback(async () => {
-    if (!parsed || !projectId || !target) {
-      return;
-    }
+  const busy = status.kind === "exporting" || status.kind === "reading" || status.kind === "uploading";
+
+  const upload = async () => {
+    if (!projectId || creatingProject || disabled || busy) {return;}
+    onBusyChange(true);
+    setParsed(null);
+    setTarget(null);
+    setWarnings([]);
     try {
-      const identity = await uploadScore(parsed, projectId, target, user, {
-        onProgress: (progress) => setStatus({ kind: "uploading", progress }),
-        stampMscz: async (file, ids) =>
-          new File(
-            [
-              await window.api.stampMsczBytes(
-                new Uint8Array(await file.arrayBuffer()),
-                ids,
-              ),
-            ],
-            file.name,
-            { type: file.type },
-          ),
+      const result = await exportAndUpload({
+        exportScore, projectId, user, msczPath,
+        onProgress: setStatus,
+        onParsed: (score, uploadTarget) => {
+          setParsed(score);
+          setTarget(uploadTarget);
+          setWarnings([...score.warnings, ...validateParsedScore(score)]);
+        },
       });
-      // The upload already succeeded: a file MuseScore has locked only costs
-      // the next upload's identity, so it's reported, not fatal.
-      const localStamped = await window.api
-        .stampMsczFile(msczPath, identity)
-        .then(() => true)
-        .catch(() => false);
-      setStatus({ kind: "done", scoreId: identity.scoreId, localStamped });
+      setStatus({ kind: "done", ...result });
     } catch (e) {
-      setStatus({
-        kind: "error",
-        message: e instanceof Error ? e.message : String(e),
-      });
+      setStatus({ kind: "error", message: e instanceof Error ? e.message : String(e) });
+    } finally {
+      onBusyChange(false);
     }
-  }, [parsed, projectId, target, user, msczPath]);
-
-  if (status.kind === "done") {
-    return (
-      <section className="upload-panel">
-        <strong>Enviado para o cadern.in</strong>
-        <span>{status.scoreId}</span>
-        {!status.localStamped && (
-          <p className="upload-notice">
-            Não foi possível atualizar o arquivo original. Feche-o no MuseScore;
-            sem isso, o próximo envio pode não reconhecer esta partitura.
-          </p>
-        )}
-      </section>
-    );
-  }
-
-  const busy = status.kind === "reading" || status.kind === "uploading";
+  };
 
   return (
     <section className="upload-panel">
-      <h2>Enviar para o cadern.in</h2>
+      <h2>Destino</h2>
 
       <label>
         <span>Projeto</span>
@@ -242,9 +188,10 @@ export function UploadPanel({ user, directory, msczPath }: Props) {
         ) : (
           <select
             value={projectId}
-            disabled={busy}
+            disabled={busy || !loadedProjects}
             onChange={(e) => handleProjectChange(e.target.value)}
           >
+            {!loadedProjects && <option value="">Carregando projetos…</option>}
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.title}
@@ -281,20 +228,48 @@ export function UploadPanel({ user, directory, msczPath }: Props) {
         </ul>
       )}
 
-      {status.kind === "uploading" && (
-        <p className="upload-progress">
-          Enviando {status.progress.filesUploaded}/{status.progress.filesTotal}…
-        </p>
+      {busy && (
+        <div className="export-progress" role="status" aria-live="polite">
+          <span>
+            {status.kind === "exporting" ? "Exportando partitura…"
+              : status.kind === "reading" ? "Preparando envio…"
+              : status.kind === "uploading" && status.progress
+                ? `Enviando ${status.progress.filesUploaded}/${status.progress.filesTotal}…`
+                : "Enviando…"}
+          </span>
+          <progress
+            aria-label={status.kind === "exporting" ? "Exportando partitura" : "Enviando partitura"}
+            max={status.kind === "uploading" ? status.progress?.filesTotal || 1 : 1}
+            value={status.kind === "uploading" ? status.progress?.filesUploaded : undefined}
+          />
+        </div>
+      )}
+
+      {status.kind === "done" && (
+        <div className="export-result" role="status">
+          <strong>Enviado para o cadern.in</strong>
+          <span>{status.scoreId}</span>
+          <button type="button" onClick={() => void window.api.openFolder(status.directory)}>
+            Abrir pasta
+          </button>
+          {!status.localStamped && (
+            <p className="upload-notice">
+              Não foi possível atualizar o arquivo original. Feche-o no MuseScore;
+              sem isso, o próximo envio pode não reconhecer esta partitura.
+            </p>
+          )}
+        </div>
       )}
 
       {status.kind === "error" && <p className="error">{status.message}</p>}
 
       <button
         type="button"
-        disabled={!parsed || !target || busy || !loadedProjects}
+        className="btn-primary"
+        disabled={disabled || !projectId || creatingProject || createPending || busy || !loadedProjects}
         onClick={() => void upload()}
       >
-        {status.kind === "uploading" ? "Enviando…" : "Enviar"}
+        Exportar para o cadern.in
       </button>
     </section>
   );

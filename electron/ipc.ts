@@ -78,17 +78,6 @@ export function registerIpc(): void {
     return res.canceled ? null : (res.filePaths[0] ?? null);
   });
 
-  ipcMain.handle(
-    "dialog:pickExportDirectory",
-    async (): Promise<string | null> => {
-      const res = await dialog.showOpenDialog({
-        title: "Choose export folder",
-        properties: ["openDirectory", "createDirectory"],
-      });
-      return res.canceled ? null : (res.filePaths[0] ?? null);
-    },
-  );
-
   ipcMain.handle("score:readMeta", (_e, msczPath: string) => {
     const mscore = resolveMscorePath();
     if (!mscore) {
@@ -124,7 +113,8 @@ export function registerIpc(): void {
   // recovered on the renderer side.
   ipcMain.handle(
     "score:runExport",
-    (_e, options: Omit<RunExportOptions, "mscorePath">) => {
+    (_e, options: Omit<RunExportOptions, "mscorePath" | "destinationDirectory">) => {
+      let destinationDirectory: string | undefined;
       try {
         const mscorePath = resolveMscorePath();
         if (!mscorePath) {
@@ -133,16 +123,22 @@ export function registerIpc(): void {
             "MuseScore path not set",
           );
         }
+        destinationDirectory = fs.mkdtempSync(
+          path.join(os.tmpdir(), "cadernin-export-"),
+        );
         return {
           ok: true as const,
           value: exportScoreFolder({
             ...options,
             mscorePath,
             msczPath: expandHome(options.msczPath),
-            destinationDirectory: expandHome(options.destinationDirectory),
+            destinationDirectory,
           }),
         };
       } catch (error) {
+        if (destinationDirectory) {
+          fs.rmSync(destinationDirectory, { recursive: true, force: true });
+        }
         return toExportFailure(error);
       }
     },
