@@ -279,7 +279,7 @@ export function SongbookPageView({
       <p className="text-muted">
         <Link to={withDetails(false)}>abrir caderninho</Link>
         {" · "}
-        <Link to={`/projects/${encodeURIComponent(projectId)}/songbooks`}>
+        <Link to={`/projects/${encodeURIComponent(projectId)}`}>
           caderninhos do projeto
         </Link>
         {revision.note && <> · {revision.note}</>}
@@ -362,7 +362,7 @@ export function SongbookPageView({
               songbook={songbook}
               onDeleted={() =>
                 void navigate(
-                  `/projects/${encodeURIComponent(projectId)}/songbooks`,
+                  `/projects/${encodeURIComponent(projectId)}`,
                 )
               }
             />

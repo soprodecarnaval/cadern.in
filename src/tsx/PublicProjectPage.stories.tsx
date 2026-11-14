@@ -1,6 +1,17 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, fn, userEvent, within, waitFor } from "@storybook/test";
+import { ProjectSongbooksPage } from "./ProjectSongbooksPage";
 import { PublicProjectPageView } from "./PublicProjectPageView";
-import { pending, services } from "./screenFixtures";
+import { pending, services, user, songbook } from "./screenFixtures";
+
+const projectServices = {
+  ...services,
+  getProjectSongbooks: fn<typeof import("../lib/db").getProjectSongbooks>((_id, options) =>
+    Promise.resolve(options?.publishedOnly ? [songbook] : [songbook, {
+      ...songbook, id: "draft", slug: "ensaios", title: "Ensaios 2027", isPublished: false,
+    }]),
+  ),
+};
 
 const meta = {
   title: "Screens/PublicProjectPage",
@@ -9,14 +20,39 @@ const meta = {
     route: "/projects/bloco-exemplo",
     routePath: "/projects/:slug",
   },
-  args: { services, role: "owner" },
+  args: { services: projectServices, role: "owner", currentUser: user },
 } satisfies Meta<typeof PublicProjectPageView>;
 export default meta;
 type Story = StoryObj<typeof PublicProjectPageView>;
 
-export const Owner: Story = {};
-export const Public: Story = { args: { role: undefined } };
-export const Reviewer: Story = { args: { role: "reviewer" } };
+export const Owner: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("button", { name: "+ Novo caderninho" })).toBeVisible();
+    await expect(await canvas.findByText("Ensaios 2027")).toBeVisible();
+    await expect(projectServices.getProjectSongbooks).toHaveBeenCalledWith("bloco-exemplo", { publishedOnly: false });
+    await expect(canvas.getByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/projects/bloco-exemplo/songbooks/carnaval");
+  },
+};
+export const Public: Story = {
+  args: { role: undefined, currentUser: null },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/songbooks/bloco-exemplo/carnaval");
+    await expect(projectServices.getProjectSongbooks).toHaveBeenCalledWith("bloco-exemplo", { publishedOnly: true });
+    await expect(canvas.queryByText("Ensaios 2027")).not.toBeInTheDocument();
+    await expect(canvas.queryByText("Partituras")).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("button", { name: "+ Novo caderninho" })).not.toBeInTheDocument();
+  },
+};
+export const Reviewer: Story = {
+  args: { role: "reviewer" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Ensaios 2027")).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "+ Novo caderninho" })).not.toBeInTheDocument();
+  },
+};
 export const Loading: Story = {
   args: { services: { ...services, getProjectBySlug: () => pending() } },
 };
@@ -32,5 +68,93 @@ export const Empty: Story = {
       getProjectSongbooks: () => Promise.resolve([]),
       getProjectScores: () => Promise.resolve([]),
     },
+  },
+};
+
+export const Admin: Story = { args: { role: "admin" } };
+export const Editor: Story = { args: { role: "editor" } };
+export const PermissionsLoading: Story = { args: { role: "loading" } };
+export const SongbooksLoading: Story = { args: { services: { ...services, getProjectSongbooks: () => pending() } } };
+export const PublicEmpty: Story = { args: { role: undefined, currentUser: null, services: { ...services, getProjectSongbooks: () => Promise.resolve([]) } } };
+export const LoadFailure: Story = { args: { services: { ...services, getProjectSongbooks: () => Promise.reject(new Error("offline")) } } };
+export const CreateAndCancel: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "+ Novo caderninho" }));
+    await userEvent.type(canvas.getByLabelText("Título do novo caderninho"), "Rascunho");
+    await userEvent.click(canvas.getByRole("button", { name: "Cancelar" }));
+    await userEvent.click(canvas.getByRole("button", { name: "+ Novo caderninho" }));
+    await expect(canvas.getByLabelText("Título do novo caderninho")).toHaveValue("");
+  },
+};
+export const DuplicateTitle: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "+ Novo caderninho" }));
+    await userEvent.type(canvas.getByLabelText("Título do novo caderninho"), "Carnaval 2026");
+    await userEvent.click(canvas.getByRole("button", { name: "Criar" }));
+    await expect(await canvas.findByText("Já existe um caderninho com esse título.")).toBeVisible();
+  },
+};
+export const CreateSuccess: Story = {
+  args: { services: { ...services, getSongbook: () => Promise.resolve(null) } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "+ Novo caderninho" }));
+    await userEvent.type(canvas.getByLabelText("Título do novo caderninho"), "Novo repertório");
+    await userEvent.click(canvas.getByRole("button", { name: "Criar" }));
+    await expect(await canvas.findByText("/projects/bloco-exemplo/songbooks/novo-repertorio")).toBeVisible();
+  },
+};
+export const CreateFailure: Story = {
+  args: { services: { ...services, getSongbook: () => Promise.resolve(null), createSongbook: () => Promise.reject(new Error("Não foi possível criar. Tente novamente.")) } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "+ Novo caderninho" }));
+    await userEvent.type(canvas.getByLabelText("Título do novo caderninho"), "Novo repertório");
+    await userEvent.click(canvas.getByRole("button", { name: "Criar" }));
+    await expect(await canvas.findByText("Não foi possível criar. Tente novamente.")).toBeVisible();
+    await expect(canvas.getByLabelText("Título do novo caderninho")).toHaveValue("Novo repertório");
+    await expect(canvas.getByRole("button", { name: "Criar" })).toBeEnabled();
+  },
+};
+export const Creating: Story = {
+  args: { services: { ...services, getSongbook: () => Promise.resolve(null), createSongbook: () => pending() } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "+ Novo caderninho" }));
+    await userEvent.type(canvas.getByLabelText("Título do novo caderninho"), "Novo repertório");
+    await userEvent.click(canvas.getByRole("button", { name: "Criar" }));
+    await expect(await canvas.findByRole("button", { name: /Criando/ })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "Cancelar" })).toBeDisabled();
+  },
+};
+export const LegacyListRedirect: Story = {
+  parameters: { route: "/projects/bloco-exemplo/songbooks", routePath: "/projects/:slug/songbooks" },
+  render: () => <ProjectSongbooksPage />,
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText("/projects/bloco-exemplo")).toBeVisible();
+  },
+};
+
+export const InvalidTitle: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "+ Novo caderninho" }));
+    await userEvent.type(canvas.getByLabelText("Título do novo caderninho"), "!!!");
+    await userEvent.click(canvas.getByRole("button", { name: "Criar" }));
+    await expect(await canvas.findByText("Informe um título com letras ou números.")).toBeVisible();
+  },
+};
+export const RetryLoad: Story = {
+  render: (args) => {
+    let attempts = 0;
+    return <PublicProjectPageView {...args} services={{ ...services, getProjectSongbooks: () => ++attempts === 1 ? Promise.reject(new Error("offline")) : Promise.resolve([songbook]) }} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Tentar novamente" }));
+    await expect(await canvas.findByText("Carnaval 2026")).toBeVisible();
+    await waitFor(() => expect(canvas.queryByRole("button", { name: "Tentar novamente" })).not.toBeInTheDocument());
   },
 };
