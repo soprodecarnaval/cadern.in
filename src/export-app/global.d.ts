@@ -19,7 +19,6 @@ export interface ExportApi {
     error?: string;
   } | null>;
   pickMscz(): Promise<string | null>;
-  pickExportDirectory(): Promise<string | null>;
   getDroppedPath(file: File): string;
   readScoreMeta(msczPath: string): Promise<ScoreMeta>;
   copyMsczWithMeta(
@@ -33,7 +32,7 @@ export interface ExportApi {
   stampMsczFile(msczPath: string, identity: ScoreIdentity): Promise<void>;
   // Resolves with an outcome rather than rejecting; see scripts/lib/exportError.
   runExport(
-    options: Omit<RunExportOptions, "mscorePath">,
+    options: Omit<RunExportOptions, "mscorePath" | "destinationDirectory">,
   ): Promise<ExportOutcome<ExportResult>>;
   /** Reads an exported folder so the renderer can rebuild browser `File`s. */
   readExportFolder(

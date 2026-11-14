@@ -6,8 +6,6 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.invoke("mscore:set", mscorePath),
   locateMscore: () => ipcRenderer.invoke("mscore:locate"),
   pickMscz: () => ipcRenderer.invoke("dialog:pickMscz"),
-  pickExportDirectory: () =>
-    ipcRenderer.invoke("dialog:pickExportDirectory"),
   getDroppedPath: (file: File) => webUtils.getPathForFile(file),
   readScoreMeta: (msczPath: string) =>
     ipcRenderer.invoke("score:readMeta", msczPath),
@@ -33,7 +31,7 @@ contextBridge.exposeInMainWorld("api", {
   runExport: (
     options: Omit<
       import("../scripts/lib/exportScore").RunExportOptions,
-      "mscorePath"
+      "mscorePath" | "destinationDirectory"
     >,
   ) => ipcRenderer.invoke("score:runExport", options),
   readExportFolder: (folderPath: string) =>

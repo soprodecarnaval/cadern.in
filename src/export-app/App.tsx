@@ -121,7 +121,6 @@ function ExportApp({
   const [metadata, setMetadata] = useState<MetadataValues | null>(null);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [exportResult, setExportResult] = useState<ExportResult | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -147,7 +146,6 @@ function ExportApp({
     setParts([]);
     setSelected(new Set());
     setMetadata(null);
-    setExportResult(null);
     setLoading(true);
     try {
       const result = await window.api.readScoreMeta(path);
@@ -187,17 +185,11 @@ function ExportApp({
     });
   };
 
-  const runExport = async () => {
+  const runExport = async (): Promise<ExportResult> => {
     if (!metadata) {
-      return;
+      throw new Error("Selecione uma partitura.");
     }
     setError("");
-    setExportResult(null);
-    const destinationDirectory = await window.api.pickExportDirectory();
-    if (!destinationDirectory) {
-      return;
-    }
-
     const selectedParts = parts.flatMap((part, scoreIndex) =>
       selected.has(part.id) && part.instrument
         ? [{
@@ -209,43 +201,16 @@ function ExportApp({
         : [],
     );
 
-    const attempt = async (overwrite: boolean) => {
-      setExporting(true);
-      try {
-        return await window.api.runExport({
-          msczPath,
-          title: metadata.title,
-          selectedParts,
-          metadata,
-          destinationDirectory,
-          overwrite,
-        });
-      } finally {
-        setExporting(false);
-      }
-    };
-
-    let outcome = await attempt(false);
-
-    // A destination that already holds a previous export is a question, not a
-    // failure: exporting, spotting a typo and re-exporting is a normal loop.
-    if (!outcome.ok && outcome.code === "EXPORT_DESTINATION_NOT_EMPTY") {
-      const files = (outcome.meta.files as string[] | undefined) ?? [];
-      const confirmed = window.confirm(
-        `A pasta de destino já tem ${files.length} arquivo(s) exportados` +
-          `:\n\n${files.join("\n")}\n\nSubstituir?`,
-      );
-      if (!confirmed) {
-        return;
-      }
-      outcome = await attempt(true);
+    const outcome = await window.api.runExport({
+      msczPath,
+      title: metadata.title,
+      selectedParts,
+      metadata,
+    });
+    if (!outcome.ok) {
+      throw new Error(describeFailure(outcome));
     }
-
-    if (outcome.ok) {
-      setExportResult(outcome.value);
-    } else {
-      setError(describeFailure(outcome));
-    }
+    return outcome.value;
   };
 
   return (
@@ -254,7 +219,7 @@ function ExportApp({
         <h1>cadern.in — Exportador</h1>
         <span className="session-user">
           {user.email}
-          <button type="button" className="link" onClick={onLogout}>
+          <button type="button" className="link" disabled={exporting} onClick={onLogout}>
             Sair
           </button>
         </span>
@@ -269,14 +234,14 @@ function ExportApp({
         ) : (
           <span className="danger">não encontrado</span>
         )}
-        <button className="btn-link" onClick={() => void locate()}>
+        <button className="btn-link" disabled={exporting} onClick={() => void locate()}>
           Localizar…
         </button>
       </section>
 
       <FileDrop
         onPick={(path) => void loadScore(path)}
-        disabled={!mscorePath || loading}
+        disabled={!mscorePath || loading || exporting}
       />
 
       {!resolvingMscore && !mscorePath && (
@@ -295,7 +260,7 @@ function ExportApp({
       {error && <p className="error">{error}</p>}
 
       {metadata && (
-        <>
+        <fieldset className="score-editor" disabled={exporting}>
           <header className="score-head">
             <strong>{msczPath.split(/[\\/]/).pop()}</strong>
             <button
@@ -305,7 +270,6 @@ function ExportApp({
                 setParts([]);
                 setSelected(new Set());
                 setMetadata(null);
-                setExportResult(null);
                 setError("");
               }}
             >
@@ -321,45 +285,20 @@ function ExportApp({
           )}
           <MetadataForm
             value={metadata}
-            onChange={(value) => {
-              setMetadata(value);
-              setExportResult(null);
-            }}
+            onChange={setMetadata}
           />
-          <section className="export-actions">
-            <button
-              className="btn-primary"
-              disabled={selected.size === 0 || exporting}
-              onClick={() => void runExport()}
-            >
-              {exporting ? "Exportando…" : "Exportar…"}
-            </button>
-            {selected.size === 0 && (
-              <span className="muted">Selecione pelo menos uma parte.</span>
-            )}
-          </section>
-          {exportResult && (
-            <section className="export-result">
-              <strong>Partitura exportada com sucesso</strong>
-              <span>{exportResult.files.length} arquivos criados.</span>
-              <button
-                onClick={() =>
-                  void window.api.openFolder(exportResult.directory)
-                }
-              >
-                Abrir pasta
-              </button>
-            </section>
+          {selected.size === 0 && (
+            <p className="muted">Selecione pelo menos uma parte.</p>
           )}
-
-          {exportResult && (
-            <UploadPanel
-              user={user}
-              directory={exportResult.directory}
-              msczPath={msczPath}
-            />
-          )}
-        </>
+          <UploadPanel
+            key={msczPath}
+            user={user}
+            msczPath={msczPath}
+            exportScore={runExport}
+            disabled={selected.size === 0}
+            onBusyChange={setExporting}
+          />
+        </fieldset>
       )}
     </main>
   );
