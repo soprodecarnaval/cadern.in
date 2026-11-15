@@ -16,6 +16,7 @@ import type { CommentAnchor, ReviewCommentDoc } from "../../types/docs";
 import { commentThreads } from "../lib/comments";
 import type { LoadedScore } from "../lib/loadScore";
 import { canDeleteScore, canEditScoreMetadata, isReviewer } from "../lib/roles";
+import { projectPath } from "../lib/songbook";
 import { useMemberRoleValue } from "../lib/useMemberRoleValue";
 
 import type { ScorePin } from "./ScoreDisplay";
@@ -107,7 +108,7 @@ export function ScorePageView({
     setDeleting(true);
     try {
       await services.softDeleteScore(score.scoreId);
-      void navigate(`/projects/${encodeURIComponent(score.projectId)}`);
+      void navigate(projectPath(score.projectId));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Erro ao excluir");
       setDeleting(false);

@@ -6,6 +6,7 @@ import type { SongbookDoc } from "../../types/docs";
 import type { WithId } from "../lib/db";
 import type { CollectionContextValue } from "../useCollectionContext";
 import { initialsOf } from "../lib/displayName";
+import { publicSongbookPath } from "../lib/songbook";
 import type { ProfileTab } from "./ProfileModalView";
 
 import arrowNext from "../assets/brand/arrow-next.svg";
@@ -435,7 +436,7 @@ function SongbookCarousel({ songbooks }: { songbooks: LandingSongbooks }) {
               <Link
                 key={songbook.id}
                 className="landing-caderno"
-                to={`/projects/${encodeURIComponent(songbook.projectId)}/songbooks/${encodeURIComponent(songbook.slug)}`}
+                to={publicSongbookPath(songbook.projectId, songbook.slug)}
               >
                 <div className="landing-caderno-spiral" />
                 {songbook.coverUrl ? (

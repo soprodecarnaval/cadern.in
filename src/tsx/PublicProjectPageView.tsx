@@ -10,7 +10,11 @@ import {
 import { Link, useParams } from "react-router-dom";
 import type { WithId } from "../lib/db";
 import { isAdmin, isReviewer } from "../lib/roles";
-import { publicSongbookPath, songbookPath } from "../lib/songbook";
+import {
+  projectSettingsPath,
+  publicSongbookPath,
+  songbookPath,
+} from "../lib/songbook";
 
 import type {
   ProjectDoc,
@@ -177,7 +181,7 @@ export function PublicProjectPageView({
             </Badge>
           )}
           {canManage && (
-            <Link to={`/projects/${slug ?? ""}/settings`}>
+            <Link to={projectSettingsPath(slug ?? "")}>
               <Button size="sm" variant="outline-primary">
                 Configurações
               </Button>

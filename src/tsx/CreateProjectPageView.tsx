@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { displayNameOf } from "../lib/displayName";
 import { slugify } from "../lib/slugify";
+import { projectSettingsPath } from "../lib/songbook";
 
 export type CreateProjectPageServices = Pick<
   typeof import("../lib/db"),
@@ -44,7 +45,7 @@ export function CreateProjectPageView({
         { title },
         { uid: currentUser.uid, displayName: displayNameOf(currentUser) },
       );
-      void navigate(`/projects/${slug}/settings`);
+      void navigate(projectSettingsPath(slug));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erro ao criar projeto");
     } finally {

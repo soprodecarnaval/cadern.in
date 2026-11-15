@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within, waitFor } from "@storybook/test";
-import { ProjectSongbooksPage } from "./ProjectSongbooksPage";
 import { PublicProjectPageView } from "./PublicProjectPageView";
 import { pending, services, user, songbook } from "./screenFixtures";
 
@@ -17,8 +16,8 @@ const meta = {
   title: "Screens/PublicProjectPage",
   component: PublicProjectPageView,
   parameters: {
-    route: "/projects/bloco-exemplo",
-    routePath: "/projects/:slug",
+    route: "/project/bloco-exemplo",
+    routePath: "/project/:slug",
   },
   args: { services: projectServices, role: "owner", currentUser: user },
 } satisfies Meta<typeof PublicProjectPageView>;
@@ -31,14 +30,14 @@ export const Owner: Story = {
     await expect(await canvas.findByRole("button", { name: "+ Novo caderninho" })).toBeVisible();
     await expect(await canvas.findByText("Ensaios 2027")).toBeVisible();
     await expect(projectServices.getProjectSongbooks).toHaveBeenCalledWith("bloco-exemplo", { publishedOnly: false });
-    await expect(canvas.getByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/projects/bloco-exemplo/songbooks/carnaval");
+    await expect(canvas.getByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/project/bloco-exemplo/songbook/carnaval/manage");
   },
 };
 export const Public: Story = {
   args: { role: undefined, currentUser: null },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/songbooks/bloco-exemplo/carnaval");
+    await expect(await canvas.findByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/project/bloco-exemplo/songbook/carnaval");
     await expect(projectServices.getProjectSongbooks).toHaveBeenCalledWith("bloco-exemplo", { publishedOnly: true });
     await expect(canvas.queryByText("Ensaios 2027")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Partituras")).not.toBeInTheDocument();
@@ -103,7 +102,7 @@ export const CreateSuccess: Story = {
     await userEvent.click(await canvas.findByRole("button", { name: "+ Novo caderninho" }));
     await userEvent.type(canvas.getByLabelText("Título do novo caderninho"), "Novo repertório");
     await userEvent.click(canvas.getByRole("button", { name: "Criar" }));
-    await expect(await canvas.findByText("/projects/bloco-exemplo/songbooks/novo-repertorio")).toBeVisible();
+    await expect(await canvas.findByText("/project/bloco-exemplo/songbook/novo-repertorio/manage")).toBeVisible();
   },
 };
 export const CreateFailure: Story = {
@@ -129,14 +128,6 @@ export const Creating: Story = {
     await expect(canvas.getByRole("button", { name: "Cancelar" })).toBeDisabled();
   },
 };
-export const LegacyListRedirect: Story = {
-  parameters: { route: "/projects/bloco-exemplo/songbooks", routePath: "/projects/:slug/songbooks" },
-  render: () => <ProjectSongbooksPage />,
-  play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText("/projects/bloco-exemplo")).toBeVisible();
-  },
-};
-
 export const InvalidTitle: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

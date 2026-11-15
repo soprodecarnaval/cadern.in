@@ -14,9 +14,9 @@ import { CreateProjectPage } from "./CreateProjectPage";
 import { MeusProjetosPage } from "./MeusProjetosPage";
 import { NotFoundPage } from "./NotFoundPage";
 import { ProjectSettingsPage } from "./ProjectSettingsPage";
-import { ProjectSongbooksPage } from "./ProjectSongbooksPage";
 import { PublicProjectPage } from "./PublicProjectPage";
 import { ScorePage } from "./ScorePage";
+import { SongbookManagePage } from "./SongbookManagePage";
 import { SongbookPage } from "./SongbookPage";
 
 import { HomePage } from "./HomePage";
@@ -81,22 +81,18 @@ function App() {
           <>
             <Route path="/projects" element={<MeusProjetosPage />} />
             <Route path="/projects/new" element={<CreateProjectPage />} />
-            <Route path="/projects/:slug" element={<PublicProjectPage />} />
+            <Route path="/project/:slug" element={<PublicProjectPage />} />
             <Route
-              path="/projects/:slug/settings"
+              path="/project/:slug/settings"
               element={<ProjectSettingsPage />}
             />
             <Route
-              path="/projects/:slug/songbooks"
-              element={<ProjectSongbooksPage />}
-            />
-            <Route
-              path="/projects/:slug/songbooks/:songbookSlug"
+              path="/project/:slug/songbook/:songbookSlug"
               element={<SongbookPage />}
             />
             <Route
-              path="/songbooks/:slug/:songbookSlug"
-              element={<SongbookPage />}
+              path="/project/:slug/songbook/:songbookSlug/manage"
+              element={<SongbookManagePage />}
             />
           </>
         )}
