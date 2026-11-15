@@ -1,6 +1,6 @@
 ---
 title: Show project and pinned version in songbook score lists
-status: in-progress
+status: completed
 type: feature
 milestone: ux-improvements
 ---
@@ -70,4 +70,4 @@ slug; no extra reads; preserve missing-score behavior.
 - Built atop accepted 004 on `workstream/b-songbook-ui-005`; PR targets `main`
   under the chat override and depends on #433. Shared coordination:
   [HANDOFF.md](../004-project-songbook-section/HANDOFF.md).
-- Implementation ready for human review; task remains in-progress. 006 remains open.
+- Implementation accepted by the user in chat (`yes pls`). Task completed; 006 remains open.

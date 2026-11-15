@@ -14,7 +14,7 @@ Improve usability across cadern.in's existing flows.
 These open plans supersede conflicting earlier design decisions when implemented.
 UI work requires wireframe iteration and approval before implementation.
 
-- [005 — Show project and pinned version in songbook score lists](../../tasks/005-songbook-score-version-labels/TASK.md) — in-progress; approved mockup implemented, validation passed, human acceptance pending.
+- [005 — Show project and pinned version in songbook score lists](../../tasks/005-songbook-score-version-labels/TASK.md) — completed; approved mockup implemented, validation passed, user accepted.
 - [006 — Preview songbook covers in a save/cancel modal](../../tasks/006-songbook-cover-modal/TASK.md) — open.
 
 Sequence and dependencies: [three workstreams](../../tasks/WORKSTREAMS.md).
