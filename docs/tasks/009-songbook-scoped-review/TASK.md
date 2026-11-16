@@ -38,13 +38,15 @@ Difficulty: large. Dependencies: 008 (integrated: commit record in
 - **Re-pin (same score, new revision)**: automatic, empty new thread — no
   dialog, no change from 005's existing "comments never carry over between
   versions" rule, just re-keyed per songbook instead of per score.
-- **Fork-swap (`swapSongbookEntryToFork`) is the one exception**: still
-  automatic (no dialog), but the new fork's thread is seeded by copying the
-  old thread's comments in the same operation. Anchors stay valid because a
-  fork's revision 1 is byte-identical to the revision it was forked from. The
-  old thread is left in place (not deleted/merged) and stays reachable from
-  the songbook's revision history — just no longer the live thread for that
-  entry.
+- **Fork-swap (`swapSongbookEntryToFork`) is *not* an exception, corrected
+  2026-11-16**: it starts an empty thread automatically, same as any other
+  re-pin. The original plan carried the old thread's comments into the
+  fork's, reasoned from "a fork's revision 1 is byte-identical to the
+  revision it was forked from" — wrong: a fork's first revision is whatever
+  the editor just uploaded to fix the issue, not a copy of the source, so a
+  carried-over anchor could point at the wrong spot after notes or measures
+  moved. Reverted before this branch was pushed; see
+  `functions/src/swapSongbookEntry.ts`'s history for the correction.
 
 ## Requirements
 
@@ -57,7 +59,7 @@ Difficulty: large. Dependencies: 008 (integrated: commit record in
 
 ## Implementation plan
 
-1. ✅ Wireframes iterated and approved: [mockup-v1.html](mockup-v1.html) — own-project score, foreign score (review yes/mutate no), fork-swap carrying comments forward, plain re-pin starting empty.
+1. ✅ Wireframes iterated and approved: [mockup-v1.html](mockup-v1.html) — own-project score, foreign score (review yes/mutate no), plain re-pin starting empty. The mockup's fork-swap panel is superseded by the correction above (fork-swap now also starts empty).
 2. ✅ Schema and authorization model agreed (see Decisions above).
 3. ✅ Implemented: schema, songbook-scoped reads/writes, rules, route, and songbook row links (below).
 4. ~~Migration~~ — dropped.
@@ -75,10 +77,11 @@ Difficulty: large. Dependencies: 008 (integrated: commit record in
   behavioral difference from the existing score-comment rules. No validation
   against a current pin: once a thread exists, read/write stay gated purely
   by songbook membership, same as `songbookRevisions`.
-- `functions/src/swapSongbookEntry.ts`: within the same transaction, reads the
-  old thread's comments (`scoreId_oldRevisionId`), remaps `parentId`
-  references to freshly generated doc ids, and writes them into the new
-  thread (`forkId_newRevisionId`). The old thread is left untouched.
+- `functions/src/swapSongbookEntry.ts`: unchanged — fork-swap is a plain
+  re-pin to the new `(forkId, revisionId)` pair; the thread for that pair
+  starts empty automatically, same as any other re-pin. (An earlier version
+  of this task copied the old thread's comments across; reverted, see
+  Decisions above.)
 - `src/tsx/SongbookScorePageView.tsx` (new) + `SongbookScorePage.tsx`
   container, routed at
   `/project/:slug/songbook/:songbookSlug/manage/score/:scoreId`. Membership
@@ -103,23 +106,27 @@ Difficulty: large. Dependencies: 008 (integrated: commit record in
 - `vitest run` (app): 277/277 passing.
 - Firestore rules tests added (`tests/rules/firestore.test.ts`, "songbook-scoped
   review comments" — membership, outsider/impersonation denial, foreign-score
-  authorization, cross-songbook isolation, replies, read restriction,
-  author-only edit/soft-delete) and a Cloud Functions test (comment-copy on
-  fork-swap, with `parentId` remapping). **Neither could run in this
-  environment** — both need the Firestore emulator, which needs Java 21;
-  only Java 17 is available here. Confirmed the gap is pre-existing and
-  environment-wide (every existing rules/functions test fails identically,
-  not just the new ones) rather than something introduced by this change.
-  Both test files type-check and vitest successfully *collects* all cases
-  (92 rules tests, 5 functions tests) before failing on the emulator
-  connection — review the logic directly pending a CI run with the emulator.
+  authorization, replies, read restriction, author-only edit/soft-delete).
+  A cross-songbook-isolation test was also written and then removed: it
+  asserted a denial that was never going to happen, since the second
+  songbook it seeded belonged to the *same* project, so the reviewer
+  legitimately had access to both — isolation here is structural (separate
+  Firestore paths), not something a security rule enforces, so there was
+  nothing rules-specific left to assert. **Rules tests could not run in
+  this environment** — they need the Firestore emulator, which needs Java
+  21; only Java 17 is available here. Confirmed the gap is pre-existing and
+  environment-wide (every existing rules test fails identically, not just
+  the new ones) rather than something introduced by this change. The test
+  file type-checks and vitest successfully *collects* all cases (90 rules
+  tests) before failing on the emulator connection — review the logic
+  directly pending a CI run with the emulator.
 - Storybook stories added (`SongbookScorePage.stories.tsx`): own-project
   score, foreign score, missing entry, access denied, loading, songbook not
   found.
 
 ## Validation
 
-Rules and integration checks: same score in two songbooks stays isolated, foreign-score review uses songbook permissions, non-members cannot read/write, anchors/replies work, re-pins isolate versions, unrelated songbook edits preserve threads, fork-swap copies comments with anchors intact.
+Rules and integration checks: same score in two songbooks stays isolated (structurally, by path), foreign-score review uses songbook permissions, non-members cannot read/write, anchors/replies work, re-pins isolate versions, unrelated songbook edits preserve threads, fork-swap starts an empty thread like any other re-pin.
 
 Run focused tests and relevant type/build checks after implementation.
 

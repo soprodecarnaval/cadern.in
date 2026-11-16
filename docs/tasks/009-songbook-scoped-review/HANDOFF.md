@@ -17,10 +17,10 @@ Branch: `workstream/c-routes-review-uploads`. PR base: `main`.
 - `db.ts` functions: `getSongbookComments`, `addSongbookComment`,
   `editSongbookComment`, `softDeleteSongbookComment` — same signatures as
   the score-scoped ones, plus a leading `songbookId`.
-- Re-pin (same score, new revision) still starts an empty thread,
-  automatically. Fork-swap copies the old thread's comments into the new
-  one, inside the same transaction as the pin change
-  (`functions/src/swapSongbookEntry.ts`).
+- Re-pin (same score, new revision, including a fork-swap) always starts an
+  empty thread, automatically — no exception for fork-swap: carrying the
+  old thread's comments over was tried and reverted (wrong anchor-safety
+  assumption; see TASK.md Decisions, corrected 2026-11-16).
 
 ## Files / conflict boundary
 
@@ -36,9 +36,7 @@ Branch: `workstream/c-routes-review-uploads`. PR base: `main`.
   `songbooks/{songbookId}`, after `songbookRevisions`. Reuses
   `onlyUpdatingFields` (defined at file scope) and `isReviewer`/`songbookPath`
   already in use by the sibling block.
-- `functions/src/swapSongbookEntry.ts`: comment-copy logic inserted between
-  the pin computation and the new-revision write, inside the existing
-  transaction — no new transaction, no new Cloud Function.
+- `functions/src/swapSongbookEntry.ts`: unchanged from before this task.
 
 ## Validation
 
