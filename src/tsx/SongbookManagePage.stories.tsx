@@ -1,7 +1,7 @@
 import { score } from "./screenFixtures";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within, waitFor } from "@storybook/test";
-import { SongbookPageView } from "./SongbookPageView";
+import { SongbookManagePageView } from "./SongbookManagePageView";
 import {
   bookRevision,
   generate,
@@ -11,11 +11,11 @@ import {
   user,
 } from "./screenFixtures";
 const meta = {
-  title: "Screens/SongbookPage",
-  component: SongbookPageView,
+  title: "Screens/SongbookManagePage",
+  component: SongbookManagePageView,
   parameters: {
-    route: "/projects/bloco-exemplo/songbooks/carnaval?detalhes",
-    routePath: "/projects/:slug/songbooks/:songbookSlug",
+    route: "/project/bloco-exemplo/songbook/carnaval/manage?detalhes",
+    routePath: "/project/:slug/songbook/:songbookSlug/manage",
   },
   args: {
     services: { ...services, generateSongbookPdfs: generate },
@@ -23,12 +23,12 @@ const meta = {
     role: "owner",
     components: songbookComponents,
   },
-} satisfies Meta<typeof SongbookPageView>;
+} satisfies Meta<typeof SongbookManagePageView>;
 export default meta;
-type Story = StoryObj<typeof SongbookPageView>;
+type Story = StoryObj<typeof SongbookManagePageView>;
 
 export const OwnerDetails: Story = {};
-export const PublicDetails: Story = {
+export const AccessDenied: Story = {
   args: { currentUser: null, role: undefined },
 };
 export const ReviewerDetails: Story = { args: { role: "reviewer" } };
