@@ -710,8 +710,15 @@
   align-items: center;
   gap: 12px; /* as between the Instagram icon and handle */
   margin: 0;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 300;
+}
+
+/* "Feito" over "em BH": two lines about as tall as the flag. */
+.landing-footer-made-in span {
+  position: relative;
+  top: 2px;
+  line-height: 1.1;
 }
 
 /* The flag's own 10:7 proportions. */

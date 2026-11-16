@@ -548,7 +548,11 @@ function LandingFooter({
             </a>
             <p className="landing-footer-made-in">
               <img src={flagBeloHorizonte} alt="Bandeira de Belo Horizonte" />
-              Feito em BH
+              <span>
+                Feito
+                <br />
+                em BH
+              </span>
             </p>
           </div>
         </div>
