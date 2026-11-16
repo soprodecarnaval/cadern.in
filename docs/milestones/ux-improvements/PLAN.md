@@ -26,6 +26,7 @@ Execute sequentially after all three workstreams are completed and integrated:
 - [011 — Design system and app-wide adoption](../../tasks/011-design-system-foundations/TASK.md) — in-progress.
 - [012 — Rename application routes to pt-BR](../../tasks/012-pt-br-routes/TASK.md) — open; after 011.
 - [013 — Exporter Storybook stories](../../tasks/013-exporter-stories/TASK.md) — open; after 011, independent of 012.
+- [014 — Managed article system](../../tasks/014-article-system/TASK.md) — open; after #443 and 011.
 
 These tasks require wireframe iteration and implementation-plan approval. See
 [execution order](../../tasks/WORKSTREAMS.md).

@@ -46,11 +46,12 @@ These are sequential follow-ups, not a fourth parallel stream.
 | 1 | [011 — Merge #432 and establish design system](011-design-system-foundations/TASK.md) | UX improvements | Large | All A/B/C integrated |
 | 2 | [012 — Rename routes to pt-BR](012-pt-br-routes/TASK.md) | UX improvements | Large | All A/B/C integrated; 011 |
 | 3 | [013 — Exporter Storybook stories](013-exporter-stories/TASK.md) | UX improvements | Medium | 011 |
+| 4 | [014 — Managed article system](014-article-system/TASK.md) | UX improvements | Large | 011; PR #443 |
 
 011 establishes the visual foundations before the broader URL compatibility work
 in 012. Do not rename routes during A/B/C based on this later task. 013 can run
 after 011 in parallel with 012; it must not move Electron code into the website
-bundle.
+bundle. 014 replaces the hardcoded article data introduced by PR #443.
 
 ## Consolidated completed work
 
