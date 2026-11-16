@@ -20,6 +20,7 @@ import { SongbookManagePage } from "./SongbookManagePage";
 import { SongbookPage } from "./SongbookPage";
 import { SongbookScorePage } from "./SongbookScorePage";
 
+import { ArticlePage } from "./ArticlePage";
 import { HomePage } from "./HomePage";
 import { LandingPage } from "./LandingPage";
 
@@ -32,8 +33,9 @@ function App() {
   };
   const [inboxCount, setInboxCount] = useState(0);
   const { currentUser, pendingUser } = useAuth();
-  // The landing page draws its own header and footer.
-  const isLanding = useLocation().pathname === "/";
+  // The landing and article pages draw their own header and footer.
+  const { pathname } = useLocation();
+  const isLanding = pathname === "/" || pathname.startsWith("/artigos/");
 
   useEffect(() => {
     if (!FEATURE_FLAG_COLLAB_FLOW || !currentUser) {
@@ -75,6 +77,12 @@ function App() {
         <Route
           path="/montar"
           element={<HomePage onRequestLogin={() => openUserModal()} />}
+        />
+        <Route
+          path="/artigos/:slug"
+          element={
+            <ArticlePage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
+          }
         />
         <Route path="/score/:scoreId" element={<ScorePage />} />
         <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
