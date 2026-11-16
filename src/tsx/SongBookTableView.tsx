@@ -22,6 +22,7 @@ import { Sort } from "./Sort";
 
 export interface SongBookTableProps {
   rows: SongbookItemViewModel[];
+  songbookProjectId?: string;
   setItems: (rows: SongbookItemViewModel[]) => void;
   handleSelect: (song: ScoreViewModel, checked: boolean) => void;
   handleClear: () => void;
@@ -38,6 +39,7 @@ const SongBookTableView = forwardRef<
   (
     {
       Card,
+      songbookProjectId,
       rows,
       setItems: setRows,
       handleSelect,
@@ -122,6 +124,7 @@ const SongBookTableView = forwardRef<
         </Row>
         <SongbookSortableList
           Card={Card}
+          songbookProjectId={songbookProjectId}
           ref={ref}
           rows={rows}
           onReorder={setRows}

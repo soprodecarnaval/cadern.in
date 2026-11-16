@@ -35,6 +35,7 @@ import {
   REMOVED_SCORES_NOTE,
   getScoreRevision,
   isSongbookSection,
+  songbookScoreVersionLabel,
 } from "../lib/songbook";
 import "../css/SongbookReader.css";
 
@@ -44,13 +45,14 @@ interface Song {
   number: number;
   title: string;
   composer: string;
+  versionLabel: string;
   section: number;
   parts: PartViewModel[];
 }
 
 type Entry =
   | { kind: "song"; song: Song }
-  | { kind: "deleted"; number: number; title: string };
+  | { kind: "deleted"; number: number; title: string; composer: string; versionLabel: string };
 
 interface Group {
   // Scores listed before the first section have no title.
@@ -58,7 +60,7 @@ interface Group {
   entries: Entry[];
 }
 
-function buildBook(items: NumberedSongbookItemViewModel[]) {
+function buildBook(items: NumberedSongbookItemViewModel[], projectId?: string) {
   const groups: Group[] = [];
   const songs: Song[] = [];
   const current = () => {
@@ -77,6 +79,8 @@ function buildBook(items: NumberedSongbookItemViewModel[]) {
         kind: "deleted",
         number: item.index,
         title: item.score.title,
+        composer: item.score.composer,
+        versionLabel: songbookScoreVersionLabel(item, projectId),
       });
       continue;
     }
@@ -86,6 +90,7 @@ function buildBook(items: NumberedSongbookItemViewModel[]) {
       number: item.index,
       title: item.score.title,
       composer: item.score.composer,
+      versionLabel: songbookScoreVersionLabel(item, projectId),
       section: groups.length - 1,
       parts: getScoreRevision(item).parts,
     };
@@ -152,12 +157,14 @@ function storeInstrument(instrument: string) {
  */
 export function SongbookReader({
   title,
+  projectId,
   badges,
   items,
   actions,
   onDownloadPdf,
 }: {
   title: string;
+  projectId?: string;
   badges?: ReactNode;
   items: NumberedSongbookItemViewModel[];
   // Shown under the index header, e.g. a link to the songbook's details.
@@ -165,7 +172,7 @@ export function SongbookReader({
   // Builds and downloads the songbook's PDF for one instrument.
   onDownloadPdf?: (instrument: Instrument) => Promise<void>;
 }) {
-  const { groups, songs } = useMemo(() => buildBook(items), [items]);
+  const { groups, songs } = useMemo(() => buildBook(items, projectId), [items, projectId]);
   const instruments = useMemo(
     () =>
       zInstrument.options.filter((i) =>
@@ -849,7 +856,10 @@ function SongIndex({
       onClick={() => onOpen(song)}
     >
       <span className="reader-row-n">{song.number}</span>
-      <span className="reader-row-t">{song.title}</span>
+      <span className="reader-row-details">
+        <span className="reader-row-t">{song.title}</span>
+        <span className="reader-row-meta">{song.versionLabel}{song.composer && ` · ${song.composer}`}</span>
+      </span>
       {showSection && groups[song.section].title && (
         <span className="reader-row-s">{groups[song.section].title}</span>
       )}
@@ -882,7 +892,10 @@ function SongIndex({
             ) : (
               <div key={`d-${entry.number}`} className="reader-row deleted">
                 <span className="reader-row-n">{entry.number}</span>
-                <s className="reader-row-t">{entry.title}</s>
+                <span className="reader-row-details">
+                  <s className="reader-row-t">{entry.title}</s>
+                  <span className="reader-row-meta">{entry.versionLabel}{entry.composer && ` · ${entry.composer}`}</span>
+                </span>
               </div>
             ),
           )}

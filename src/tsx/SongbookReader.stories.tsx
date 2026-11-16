@@ -11,6 +11,7 @@ import { Badge } from "react-bootstrap";
 import { SongbookReader } from "./SongbookReader";
 import {
   songbookFixture,
+  pinnedVersionItems,
   songbookItems,
   type SongbookFixtureEntry,
 } from "./storyFixtures";
@@ -220,4 +221,25 @@ export const ScoreOpenMissingPart: Story = {
     ]),
   },
   parameters: openSong(2),
+};
+
+export const PinnedVersionLabels: Story = {
+  args: { projectId: "bloco-exemplo", items: pinnedVersionItems },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("v3 · Ary Barroso")).toBeVisible();
+    await expect(canvas.getByText("bloco-vizinho/v2 · Chiquinha Gonzaga")).toBeVisible();
+    await expect(canvas.getByText("projeto-externo/v4 · Compositor")).toBeVisible();
+    await expect(canvas.getByText("v1 · Pixinguinha")).toBeVisible();
+    await expect(canvas.queryByText(/bloco-vizinho\/v5/)).toBeNull();
+  },
+};
+export const SearchPinnedVersionLabels: Story = {
+  args: { projectId: "bloco-exemplo", items: pinnedVersionItems },
+  play: async ({ canvasElement }) => {
+    await search(canvasElement, "chiquinha");
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("bloco-vizinho/v2 · Chiquinha Gonzaga")).toBeVisible();
+    await expect(canvas.queryByText("Aquarela do Brasil")).toBeNull();
+  },
 };

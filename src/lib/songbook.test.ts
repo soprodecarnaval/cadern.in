@@ -6,6 +6,7 @@ import {
   numberSongbookItems,
   repinnedContent,
   songbookScore,
+  songbookScoreVersionLabel,
   songbookSection,
   toSongbookRevisionContent,
 } from "./songbook";
@@ -116,5 +117,30 @@ describe("newer versions", () => {
       pins: { a: "a-r2", b: "b-r1", c: "c-r1" },
     });
     expect(note).toBe("atualiza: a");
+  });
+});
+
+describe("songbook score version labels", () => {
+  const item = {
+    ...songbookScore({ ...score("a"), projectId: "own", projectTitle: "Same title", latestRevision: { ...score("a").latestRevision, revisionNumber: 5 } }),
+    revision: { ...score("a", "pinned-r2").latestRevision, revisionNumber: 2 },
+    latestRevisionId: "latest-r5",
+  };
+
+  it("uses the explicit pin instead of latest for its version", () => {
+    expect(songbookScoreVersionLabel(item, "own")).toBe("v2");
+  });
+
+  it("uses project identity, even with duplicate or unavailable titles", () => {
+    expect(songbookScoreVersionLabel(item, "another")).toBe("own/v2");
+    expect(songbookScoreVersionLabel({ ...item, score: { ...item.score, projectTitle: "" } }, "another")).toBe("own/v2");
+  });
+
+  it("keeps the pinned label for deleted entries", () => {
+    expect(songbookScoreVersionLabel({ ...item, deleted: true }, "own")).toBe("v2");
+  });
+
+  it("uses the loaded pin when no explicit revision override exists", () => {
+    expect(songbookScoreVersionLabel({ ...item, revision: undefined }, "own")).toBe("v5");
   });
 });

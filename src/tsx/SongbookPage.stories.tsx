@@ -1,6 +1,8 @@
+import { pinnedVersionItems } from "./storyFixtures";
 import { score } from "./screenFixtures";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within, waitFor } from "@storybook/test";
+import { SongbookReader } from "./SongbookReader";
 import { SongbookPageView } from "./SongbookPageView";
 import {
   bookRevision,
@@ -144,5 +146,62 @@ export const EditorAddScore: Story = {
         }),
       ).toBeVisible();
     });
+  },
+};
+
+const labelScores = pinnedVersionItems.flatMap((item) => item.type === "score" ? [item] : []);
+const labelServices = {
+  ...services,
+  generateSongbookPdfs: generate,
+  loadPinnedScores: () => Promise.resolve(new Map(labelScores.map((item) => [item.score.id, {
+    score: item.score, deleted: !!item.deleted, latestRevisionId: item.latestRevisionId!,
+  }]))),
+  getSongbookRevision: () => Promise.resolve({
+    ...bookRevision,
+    entries: labelScores.map((item, order) => ({ type: "score" as const, scoreId: item.score.id, order, index: item.index })),
+    pins: Object.fromEntries(labelScores.map((item) => [item.score.id, item.score.latestRevision.id])),
+  }),
+};
+export const PinnedVersionLabels: Story = {
+  args: { services: labelServices },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("v3")).toBeVisible();
+    await expect(canvas.getByText("bloco-vizinho/v2")).toBeVisible();
+    await expect(canvas.getByText("projeto-externo/v4")).toBeVisible();
+    await expect(canvas.getByText("v1")).toBeVisible();
+    await expect(canvas.getByText("Carinhoso").tagName).toBe("S");
+    await expect(canvas.queryByText("bloco-exemplo/v3")).toBeNull();
+    await expect(canvas.queryByText("bloco-vizinho/v5")).toBeNull();
+  },
+};
+export const PublicPinnedVersionLabels: Story = {
+  ...PinnedVersionLabels,
+  args: { services: labelServices, role: undefined, currentUser: null },
+};
+export const EditorPinnedVersionLabels: Story = {
+  args: { services: labelServices },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Editar" }));
+    await expect(await canvas.findByText(/bloco-vizinho\/v2/)).toBeVisible();
+    await expect(canvas.getByText("v3").closest(".score-card-meta")).toHaveTextContent("v3 · Ary Barroso");
+    await expect(canvas.queryByText(/bloco-vizinho\/v5/)).toBeNull();
+  },
+};
+
+export const PublicReaderPinnedVersionLabels: Story = {
+  args: {
+    services: labelServices,
+    role: undefined,
+    currentUser: null,
+    components: { ...songbookComponents, SongbookReader },
+  },
+  parameters: { route: "/songbooks/bloco-exemplo/carnaval", routePath: "/songbooks/:slug/:songbookSlug" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("v3 · Ary Barroso")).toBeVisible();
+    await expect(canvas.getByText("bloco-vizinho/v2 · Chiquinha Gonzaga")).toBeVisible();
+    await expect(canvas.queryByText("bloco-exemplo/v3 · Ary Barroso")).toBeNull();
   },
 };

@@ -46,7 +46,19 @@ Browser services mocked: no backend integration or production/staging writes.
 
 Use this document for commit hashes, PR references and integration notes.
 C should integrate the exact implementation commit recorded here, then own route
-migration. B/005 and B/006 stay open pending separate mockup/plan approvals.
+migration. B/005 is implemented, validated and accepted; B/006 stays open pending its mockup/plan approval.
+
+## B/005 accepted
+
+Approved plan/mockup; branch `workstream/b-songbook-ui-005`, stacked on 004.
+Touches songbook detail rows and the reader project-context prop in
+`SongbookPageView.tsx`, reader rows, and selected editor cards. Routes and data
+permissions unchanged. C: reconcile these small view changes when integrating;
+Validation: 37 browser stories, 24 unit tests, six layout checks, TypeScript,
+targeted ESLint and demo build passed. No new reads or dependencies.
+005 implementation commit: `2483e1af019bd0f5b8292c277c39d19e2c346cfb`.
+PR: https://github.com/soprodecarnaval/cadern.in/pull/436, stacked on #433
+with `main` base per chat override. User accepted (`yes pls`). 006 remains open.
 
 ## PR correction — 2026-11-16
 
