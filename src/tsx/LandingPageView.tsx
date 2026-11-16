@@ -63,8 +63,8 @@ const MAX_SEARCH_RESULTS = 8;
 const EXPORTER_ANCHOR = "exportador";
 // Article cards sit in a two-column grid (~656px each) on wide screens and
 // one full-width column on phones; half the viewport in between.
-const ARTICLE_IMAGE_SIZES =
-  "(min-width: 1100px) 656px, (min-width: 628px) 50vw, calc(100vw - 32px)";
+// const ARTICLE_IMAGE_SIZES =
+//   "(min-width: 1100px) 656px, (min-width: 628px) 50vw, calc(100vw - 32px)";
 
 export function LandingPageView({
   currentUser,
@@ -72,7 +72,7 @@ export function LandingPageView({
   inboxCount,
   collection,
   songbooks,
-  articles,
+  // articles,
   onOpenUserModal,
   onSignOut,
 }: {
@@ -108,6 +108,7 @@ export function LandingPageView({
       <main className="landing-main">
         <LandingSearch collection={collection} />
 
+        {/* TBD: restore when hero content is ready.
         <a className="landing-hero" href="/2026">
           <img
             src="/assets/home-hero-1340.webp"
@@ -116,6 +117,7 @@ export function LandingPageView({
             alt="Capa do caderninho do Carnaval BH 2026"
           />
         </a>
+        */}
 
         <SongbookCarousel songbooks={songbooks} />
         <MoreLink to={PLANNED.biblioteca}>biblioteca</MoreLink>
@@ -201,7 +203,8 @@ export function LandingPageView({
           </div>
         </section>
 
-        {articles.length > 0 && (
+        {/* TBD: restore when articles are ready.
+        articles.length > 0 && (
           <section className="landing-section">
             <SectionTitle>Artigos</SectionTitle>
             <div className="landing-articles">
@@ -228,7 +231,8 @@ export function LandingPageView({
             </div>
             <MoreLink to={PLANNED.artigos}>artigos</MoreLink>
           </section>
-        )}
+        )
+        */}
       </main>
       <LandingFooter
         currentUser={currentUser}
