@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within, waitFor } from "@storybook/test";
+import { createSongbookCoverPreview } from "../lib/pdfPreview";
 import { SongbookGenerationPanelView } from "./SongbookGenerationPanelView";
 import { bookRevision, songbook, user, numberedItems } from "./screenFixtures";
 import { coverPreviewFixture } from "./storyFixtures";
@@ -208,3 +209,12 @@ export const ReadOnly: Story = {
   },
 };
 export const LoggedOut: Story = { args: { currentUser: null } };
+
+export const InferredCover: Story = {
+  args: { createCoverPreview: createSongbookCoverPreview, revision: { ...bookRevision, covers: {} } },
+  play: async ({ canvasElement }) => {
+    const dialog = await open(canvasElement);
+    await expect(await dialog.findByTitle("Prévia da capa no PDF")).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Salvar" })).toBeDisabled();
+  },
+};

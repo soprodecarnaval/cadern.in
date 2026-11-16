@@ -64,7 +64,7 @@ export function SongbookGenerationPanelView({
   currentUser: import("firebase/auth").User | null;
   generateSongbookPdfs: typeof import("../lib/generateSongbookPdfs").generateSongbookPdfs;
   saveSongbookCovers: typeof import("../lib/songbookCovers").saveSongbookCovers;
-  createCoverPreview: typeof import("../createSongBook").createSongbookCoverPreview;
+  createCoverPreview: typeof import("../lib/pdfPreview").createSongbookCoverPreview;
 
   songbook: WithId<SongbookDoc>;
   revision: SongbookRevisionDoc;
@@ -103,14 +103,9 @@ export function SongbookGenerationPanelView({
   const coverOptions = useMemo(() => coverInstrument ? ({
     title: songbook.title,
     instrument: coverInstrument,
-    sections: buildSongbookSections(items),
     coverImageUrl: covers[coverInstrument]?.url ?? "",
-    fallbackInstrument: enabledFallbacks.has(coverInstrument) ? instrumentFallbacks[coverInstrument] : undefined,
     carnivalMode,
-    backSheetPageNumber,
-    antiAssedioPages,
-    debugBoundingBoxes,
-  }) : null, [coverInstrument, songbook.title, items, covers, enabledFallbacks, carnivalMode, backSheetPageNumber, antiAssedioPages, debugBoundingBoxes]);
+  }) : null, [coverInstrument, songbook.title, covers, carnivalMode]);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);

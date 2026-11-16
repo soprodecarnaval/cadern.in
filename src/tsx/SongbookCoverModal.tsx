@@ -4,7 +4,7 @@ import type { User } from "firebase/auth";
 import type { Instrument } from "../../types/instrument";
 import type { SongbookDoc, SongbookRevisionDoc } from "../../types/docs";
 import type { WithId } from "../lib/db";
-import type { CreateSongBookOptions } from "../createSongBook";
+import type { CoverPreviewOptions } from "../lib/pdfPreview";
 
 export function SongbookCoverModal({
   instrument, songbook, revision, user, options, createPreview, saveCovers,
@@ -14,8 +14,8 @@ export function SongbookCoverModal({
   songbook: WithId<SongbookDoc>;
   revision: SongbookRevisionDoc;
   user: User;
-  options: CreateSongBookOptions;
-  createPreview: (options: CreateSongBookOptions) => Promise<string>;
+  options: CoverPreviewOptions;
+  createPreview: (options: CoverPreviewOptions) => Promise<string>;
   saveCovers: typeof import("../lib/songbookCovers").saveSongbookCovers;
   onSaved: (covers: SongbookRevisionDoc["covers"]) => void;
   onHide: () => void;
@@ -102,10 +102,10 @@ export function SongbookCoverModal({
         <Modal.Title>Capa · {instrument.charAt(0).toUpperCase() + instrument.slice(1)}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <p className="text-muted small mb-2">{songbook.title} · Prévia da primeira página do PDF</p>
+        <p className="text-muted small mb-2">{songbook.title} · Prévia da capa</p>
         <div className="bg-light rounded p-2 mb-2" style={{ aspectRatio: "18 / 13" }}>
           {previewUrl ? (
-            <img title="Prévia da capa no PDF" alt="Prévia da primeira página do caderninho" src={previewUrl} className="w-100 h-100 bg-white" style={{ objectFit: "contain" }} />
+            <img title="Prévia da capa no PDF" alt="Prévia da capa do caderninho" src={previewUrl} className="w-100 h-100 bg-white" style={{ objectFit: "contain" }} />
           ) : previewError ? null : (
             <div className="d-flex h-100 align-items-center justify-content-center" role="status">
               <Spinner animation="border" aria-label="Carregando prévia" />

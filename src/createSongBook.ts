@@ -2,6 +2,7 @@ import SVGtoPDF from "svg-to-pdfkit";
 import type { Instrument } from "../types/instrument";
 import type { ScoreViewModel, PartViewModel } from "../types/viewModels";
 import { Section } from "./lib/pdfGeneration";
+import { COVER_LAYOUT, POINTS_PER_CM, carnivalCoverUrl } from "./lib/pdfPreview";
 import { REMOVED_SCORES_NOTE } from "./lib/songbook";
 
 interface PDFBlobStream extends NodeJS.WritableStream {
@@ -14,11 +15,10 @@ declare const window: Window &
     blobStream: () => PDFBlobStream;
   };
 
-const cm2pt = 28.3465;
+const cm2pt = POINTS_PER_CM;
 
-// A5 page dimensions in points
-const pageWidth = 18 * cm2pt;
-const pageHeight = 13 * cm2pt;
+const pageWidth = COVER_LAYOUT.pageWidth;
+const pageHeight = COVER_LAYOUT.pageHeight;
 
 // TODO: use SongBook type instead of CreateSongBookOptions
 export interface CreateSongBookOptions {
@@ -175,50 +175,27 @@ function drawCoverPage(doc: PDFKit.PDFDocument, opts: CreateSongBookOptions) {
   if (coverImageUrl != "") {
     promises.push(drawImage(doc, coverImageUrl, 0));
     doc
-      .fontSize(25)
-      .text(title.toUpperCase(), 120, 100)
-      .fontSize(22)
-      .text(instrument.toUpperCase(), 120, 125);
+      .fontSize(COVER_LAYOUT.titleFontSize)
+      .text(title.toUpperCase(), COVER_LAYOUT.textX, COVER_LAYOUT.titleY)
+      .fontSize(COVER_LAYOUT.instrumentFontSize)
+      .text(instrument.toUpperCase(), COVER_LAYOUT.textX, COVER_LAYOUT.instrumentY);
   } else if (carnivalMode) {
     promises.push(
       drawImage(
         doc,
-        `/assets/capa_carnaval_2026_${instrument.replace(/[ ]/g, "_")}.png`,
+        carnivalCoverUrl(instrument),
         0,
       ),
     );
   } else {
     doc
-      .fontSize(25)
-      .text(title.toUpperCase(), 120, 100)
-      .fontSize(22)
-      .text(instrument.toUpperCase(), 120, 125);
+      .fontSize(COVER_LAYOUT.titleFontSize)
+      .text(title.toUpperCase(), COVER_LAYOUT.textX, COVER_LAYOUT.titleY)
+      .fontSize(COVER_LAYOUT.instrumentFontSize)
+      .text(instrument.toUpperCase(), COVER_LAYOUT.textX, COVER_LAYOUT.instrumentY);
   }
 
   return promises;
-}
-
-async function createSongbookCoverPdf(opts: CreateSongBookOptions): Promise<string> {
-  const doc = createDoc();
-  await loadFonts(doc);
-  const promises = drawCoverPage(doc, opts);
-  await Promise.all(promises);
-  return new Promise<string>((resolve, reject) => {
-    const stream = doc.pipe(window.blobStream());
-    stream.on("finish", () => resolve(stream.toBlobURL("application/pdf")));
-    stream.on("error", reject);
-    doc.end();
-  });
-}
-
-export async function createSongbookCoverPreview(opts: CreateSongBookOptions): Promise<string> {
-  const pdfUrl = await createSongbookCoverPdf(opts);
-  try {
-    const { pdfFirstPageImage } = await import("./lib/pdfPreview");
-    return await pdfFirstPageImage(pdfUrl);
-  } finally {
-    URL.revokeObjectURL(pdfUrl);
-  }
 }
 
 const sectionTitleOutlines = new Map<string, PDFKit.PDFOutline>();

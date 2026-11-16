@@ -54,7 +54,6 @@
     "html-midi-player": "^1.6.0",
     "iconv-lite": "^0.6.3",
     "midi-player-js": "^2.0.16",
-    "pdfjs-dist": "6.5.438",
     "pdfkit": "0.16.0",
     "react": "^18.2.0",
     "react-bootstrap": "^2.8.0",

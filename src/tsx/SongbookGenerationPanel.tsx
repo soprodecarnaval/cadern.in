@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import { useAuth } from "../auth";
-import { createSongbookCoverPreview } from "../createSongBook";
+import { createSongbookCoverPreview } from "../lib/pdfPreview";
 import { generateSongbookPdfs } from "../lib/generateSongbookPdfs";
 import { saveSongbookCovers } from "../lib/songbookCovers";
 import { SongbookGenerationPanelView } from "./SongbookGenerationPanelView";
