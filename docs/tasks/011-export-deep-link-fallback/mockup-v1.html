@@ -1,0 +1,390 @@
+<title>011 — Exporter deep-link fallback</title>
+<style>
+  :root {
+    --ink: #1b2430; --ink-soft: #4b5768; --paper: #f4f6f9; --panel: #ffffff;
+    --line: #d7dde6; --accent: #3457d5; --accent-soft: #e7ecfb; --accent-ink: #1f3aa8;
+    --ok: #1f7a4d; --ok-soft: #e4f3ea; --warn: #b5650d; --warn-soft: #fbead8;
+    --danger: #b3261e; --danger-soft: #fbe6e4;
+    --chrome: #e4e8ee; --dot: #c7ced8;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e8ecf2; --ink-soft: #a7b2c2; --paper: #11151c; --panel: #171c25;
+      --line: #2b3240; --accent: #7c9bff; --accent-soft: #202a44; --accent-ink: #b7c6ff;
+      --ok: #5fcf96; --ok-soft: #163024; --warn: #e2a04c; --warn-soft: #3a2a14;
+      --danger: #ff8178; --danger-soft: #3a1c1a; --chrome: #1f2530; --dot: #3a4252;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.45; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 48px 28px 80px; }
+  header.intro { margin-bottom: 30px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink); margin: 0 0 10px; }
+  h1 { font-size: 28px; margin: 0 0 10px; text-wrap: balance; letter-spacing: -0.01em; }
+  .intro p { max-width: 66ch; color: var(--ink-soft); margin: 0; font-size: 15px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 40px; }
+  .legend .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-soft); }
+  .chip .sw { width: 8px; height: 8px; border-radius: 50%; }
+
+  .flow { display: flex; gap: 14px; margin: 0 0 52px; }
+  .flow .step { flex: 1; min-width: 200px; border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--panel); }
+  .flow .step .k { font-family: var(--mono); font-size: 10.5px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; }
+  .flow .step .t { font-size: 13px; font-weight: 600; margin: 4px 0 6px; }
+  .flow .step .d { font-size: 12px; color: var(--ink-soft); }
+  .flow .arrow { align-self: center; color: var(--ink-soft); font-size: 18px; flex: 0 0 auto; }
+  @media (max-width: 860px) { .flow { flex-direction: column; } .flow .arrow { display: none; } }
+  .flow .warnstep .t, .flow .warnstep .k { color: var(--warn); }
+
+  .group { margin-bottom: 52px; }
+  .group h2 { font-size: 17px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .group .sub { margin: 0 0 18px; color: var(--ink-soft); font-size: 13.5px; max-width: 80ch; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  .grid.single { grid-template-columns: minmax(0, 1fr); max-width: 860px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .frame { display: flex; flex-direction: column; gap: 0; }
+  .caption { font-size: 12.5px; color: var(--ink-soft); margin: 10px 2px 0; }
+  .caption strong { color: var(--ink); }
+
+  .browser, .window { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); box-shadow: 0 2px 10px rgb(0 0 0 / 6%); }
+  .chrome-bar, .titlebar { background: var(--chrome); padding: 9px 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+  .chrome-bar .dots, .titlebar .dots { display: flex; gap: 5px; }
+  .chrome-bar .dots span, .titlebar .dots span { width: 9px; height: 9px; border-radius: 50%; background: var(--dot); display: block; }
+  .urlbar { flex: 1; font-size: 12px; color: var(--ink-soft); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; white-space: nowrap; overflow: hidden; }
+  .urlbar .path-slug { color: var(--accent-ink); }
+  .urlbar .lock { opacity: .6; font-size: 10px; }
+  .titlebar .t { font-size: 12px; color: var(--ink-soft); font-weight: 600; margin-left: 4px; }
+  .viewport { padding: 18px; }
+
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid transparent; margin-bottom: 8px; }
+  .badge.own { color: var(--ok); background: var(--ok-soft); }
+  .badge.foreign { color: var(--warn); background: var(--warn-soft); }
+  .badge.app { color: var(--accent-ink); background: var(--accent-soft); }
+
+  .page-h { font-size: 19px; font-weight: 700; margin: 2px 0 14px; }
+  .section-h { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 12px; margin-top: 14px; }
+  .section-h .h { font-size: 14px; font-weight: 700; margin: 0; }
+  .table-stub { width: 100%; font-size: 12.5px; border-collapse: collapse; margin-top: 8px; }
+  .table-stub td { padding: 7px 0; border-bottom: 1px solid var(--line); color: var(--ink-soft); }
+  .table-stub td.n { width: 26px; }
+
+  .btn { display: inline-block; font-size: 12.5px; font-weight: 600; padding: 6px 14px; border-radius: 7px; border: 1px solid var(--accent); background: var(--accent); color: #fff; }
+  .btn.ghost { background: var(--panel); color: var(--accent-ink); border-color: var(--line); }
+  .btn[disabled], .btn.disabled { background: var(--chrome); border-color: var(--chrome); color: var(--dot); cursor: not-allowed; }
+
+  .ctxmenu { position: relative; margin-top: 8px; display: inline-block; }
+  .ctxmenu .menu { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 22px rgb(0 0 0 / 14%); font-size: 12.5px; min-width: 230px; padding: 4px; }
+  .ctxmenu .mi { padding: 7px 10px; border-radius: 6px; color: var(--ink-soft); }
+  .ctxmenu .mi.hot { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+  .rc-hint { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 4px 11px; margin-left: 10px; }
+
+  .link-chip { font-family: var(--mono); font-size: 11.5px; color: var(--accent-ink); background: var(--accent-soft); border-radius: 6px; padding: 5px 9px; margin-top: 14px; word-break: break-all; }
+  .link-decode { font-family: var(--mono); font-size: 11px; color: var(--ink-soft); margin-top: 6px; word-break: break-all; }
+
+  .app-viewport { padding: 22px; display: flex; flex-direction: column; align-items: center; background: var(--paper); min-height: 305px; }
+  .app-h1 { font-size: 15px; font-weight: 700; margin: 0 0 16px; }
+
+  .card { width: 100%; max-width: 430px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; position: relative; }
+  .card h2 { font-size: 15px; margin: 0 0 8px; }
+  .card p { font-size: 13px; color: var(--ink-soft); margin: 0 0 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .field .input { font-family: var(--mono); font-size: 11.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 7px; padding: 9px 10px; color: var(--ink); white-space: nowrap; overflow: hidden; display: block; }
+  .field .input.invalid { border-color: var(--danger); background: var(--danger-soft); }
+  .field .input .cur { display: inline-block; width: 1px; height: 12px; background: var(--accent); vertical-align: -2px; }
+  .field .ellip { color: var(--dot); }
+  .field .hint { font-family: var(--sans); font-size: 11.5px; color: var(--ink-soft); margin-top: 6px; }
+  .card .actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+  .linkrow { width: 100%; max-width: 430px; text-align: center; margin-top: 14px; }
+  .linkrow a { font-size: 12px; color: var(--ink-soft); }
+
+  .inputerr { margin-top: 10px; border-radius: 7px; background: var(--danger-soft); color: var(--danger); font-size: 12.5px; padding: 9px 11px; }
+  .inputerr .second { display: block; color: var(--warn); margin-top: 7px; }
+
+  .handoff { width: 100%; max-width: 430px; margin-top: 16px; }
+  .handoff .dock { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--ink-soft); font-size: 12px; }
+  .handoff .dock .chain { font-size: 15px; }
+
+  .app-flow { width: 100%; margin-top: 14px; border: 1px dashed var(--line); border-radius: 10px; padding: 14px; background: var(--panel); }
+  .app-flow .flowtag { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .ctx-head { font-size: 11.5px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .ctx-head .seg { font-family: var(--mono); color: var(--accent-ink); }
+  .ctx-head .arrow { opacity: .5; }
+  .ctx-head .h { font-weight: 700; color: var(--ink); font-family: var(--sans); margin-right: 4px; }
+  .dropzone { border: 1.5px dashed var(--line); border-radius: 9px; padding: 16px; text-align: center; color: var(--ink-soft); font-size: 12.5px; }
+  .upload-btn { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+  .notes { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 8px; }
+  @media (max-width: 860px) { .notes { grid-template-columns: 1fr; } }
+  .note { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 16px; }
+  .note h3 { font-size: 13px; margin: 0 0 8px; }
+  .note p { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 8px; }
+  .note code, .caption code { font-family: var(--mono); font-size: 11.5px; background: var(--accent-soft); color: var(--accent-ink); border-radius: 5px; padding: 1px 5px; word-break: break-all; }
+  .note .vh { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 12.5px; color: var(--ink-soft); align-items: baseline; }
+  .note .vh b { color: var(--ink); font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">Task 011 · wireframes · stacked on 010 (PR #441)</p>
+    <h1>Exporter deep-link fallback — paste the link by hand</h1>
+    <p>
+      010 made every upload enter through a <code style="font-family:var(--mono)">cadernin-export://</code>
+      link and dead-ended the exporter when there was none. Wireframes keep that
+      rule — there is still no unscoped upload — but the authenticated area
+      gains an escape hatch: the same link, copied on the website and pasted
+      by hand, resolves the same destination a protocol launch would.
+      The link itself becomes one opaque token:
+      <code style="font-family:var(--mono)">cadernin-export://</code> + base64 of the JSON payload.
+    </p>
+  </header>
+
+  <div class="legend">
+    <span class="chip"><span class="sw" style="background:var(--accent)"></span>Website — the link is born here</span>
+    <span class="chip"><span class="sw" style="background:var(--dot)"></span>Exportador, autenticado, sem link</span>
+    <span class="chip"><span class="sw" style="background:var(--danger)"></span>Invalid / truncated paste</span>
+    <span class="chip"><span class="sw" style="background:var(--ok)"></span>Contextual flow resumed — identical to a launch</span>
+  </div>
+
+  <div class="flow">
+    <div class="step">
+      <div class="k">Normal path · like today</div>
+      <div class="t">«Enviar partitura» launches the app</div>
+      <div class="d">The anchor's href is the deep link; the OS hands it to the exporter, which opens with the destination already set.</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step warnstep">
+      <div class="k">When it fails</div>
+      <div class="t">Nothing opens</div>
+      <div class="d">Protocol not registered (fresh install, packaged build missing), browser blocks custom protocols, or the user just opened the app by hand from the menu.</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="k">Fallback · new</div>
+      <div class="t">Copy the link, paste it</div>
+      <div class="d">Right-click the same button → «Copiar endereço do link». The exporter's authenticated area explains this and takes the pasted link.</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="step">
+      <div class="k">Result</div>
+      <div class="t">Same contextual flow</div>
+      <div class="d">Project / score / songbook context, staleness and permission checks — everything 010 built applies unmodified.</div>
+    </div>
+  </div>
+
+  <section class="group">
+    <h2>1 · The link stays on the website — nothing added there</h2>
+    <p class="sub">
+      Both entry points («Enviar partitura» on the project page, «Enviar nova versão» on
+      the songbook-scoped score page) are already anchors carrying the deep link as
+      their <code>href</code>. The fallback only teaches the copy gesture; the
+      website ships no new control for v1.
+    </p>
+    <div class="grid single">
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar"><span class="lock">🔒</span>cadern.in/<span class="path-slug">project/surdo-e-cia</span></div>
+          </div>
+          <div class="viewport">
+            <span class="badge own">Editor</span>
+            <div class="page-h">Surdo &amp; Cia</div>
+            <div class="section-h">
+              <span class="h">Partituras</span>
+              <span class="btn ghost" style="outline:2px solid var(--accent)">Enviar partitura</span>
+            </div>
+            <table class="table-stub">
+              <tr><td class="n">1</td><td>Mineirinho</td></tr>
+              <tr><td class="n">2</td><td>Pinel, Pinel</td></tr>
+            </table>
+            <div>
+              <div class="ctxmenu">
+                <div class="menu">
+                  <div class="mi">Abrir link em uma nova aba</div>
+                  <div class="mi hot">Copiar endereço do link</div>
+                  <div class="mi">…</div>
+                </div>
+              </div>
+              <span class="rc-hint">⌥ right-click over «Enviar partitura»</span>
+            </div>
+            <div>
+              <div class="link-chip">href = cadernin-export://eyJwcm9qZWN0SWQiOiJzdXJkby1lLWNpYSIsInNjb3JlSWQiOiJtaW5laXJpbmhvIiwiZXhwZWN0ZWRTY29yZVJldmlzaW9uSWQiOiJzY3ItbWluZWlyaW5oby00LTIiLCJzb25nYm9va0lkIjoic2ItY2FybmF2YWwtMjAyNiIsImV4cGVjdGVkU29uZ2Jvb2tSZXZpc2lvbklkIjoic2JyLTctMiJ9</div>
+              <div class="link-decode">↳ decodes to {"projectId":"surdo-e-cia","scoreId":"mineirinho","expectedScoreRevisionId":"scr-mineirinho-4-2","songbookId":"sb-carnaval-2026","expectedSongbookRevisionId":"sbr-7-2"}</div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">
+          The format changes from 010's query string to one opaque token, so the
+          copy is a single unbreakable value. The user never reads it; the
+          annotation on the right of the section title is mock-only.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>2 · Exporter opened directly, signed in — the fallback screen</h2>
+    <p class="sub">
+      010's <code>NoContext</code> dead end becomes this card. It appears only past the
+      login gate — there is nothing to paste before being authenticated. The card keeps
+      the existing copy's promise («abra a partir da página…») and adds the input.
+    </p>
+    <div class="grid">
+      <div class="frame">
+        <div class="window">
+          <div class="titlebar"><div class="dots"><span></span><span></span><span></span></div><span class="t">cadern.in — Exportador</span></div>
+          <div class="app-viewport">
+            <span class="badge app" style="align-self:flex-start">signed in · no link</span>
+            <div class="app-h1">cadern.in — Exportador</div>
+            <div class="card">
+              <h2>Nenhum destino selecionado</h2>
+              <p>
+                Os envios começam no site do cadern.in: na página de um projeto
+                ou de uma partitura em um caderninho, use «Enviar partitura» —
+                o link abre este app já sabendo para onde enviar.
+              </p>
+              <div class="field">
+                <label for="paste">O link não abriu o app? Cole-o aqui</label>
+                <span class="input" id="paste" style="border-style:dashed; color:var(--ink-soft); background:var(--panel)">cadernin-export://…</span>
+                <span class="hint">No site, com o botão direito sobre «Enviar partitura», escolha «Copiar endereço do link».</span>
+              </div>
+              <div class="actions">
+                <span class="btn disabled">Continuar</span>
+              </div>
+            </div>
+            <div class="linkrow"><a>Usar outra conta</a></div>
+          </div>
+        </div>
+        <p class="caption">
+          <strong>Idle.</strong> The empty input renders its placeholder (dashed);
+          «Continuar» is disabled until something is pasted. «Usar outra conta» stays
+          exactly where 010 put it.
+        </p>
+      </div>
+
+      <div class="frame">
+        <div class="window">
+          <div class="titlebar"><div class="dots"><span></span><span></span><span></span></div><span class="t">cadern.in — Exportador</span></div>
+          <div class="app-viewport">
+            <span class="badge app" style="align-self:flex-start">signed in · no link</span>
+            <div class="app-h1">cadern.in — Exportador</div>
+            <div class="card">
+              <h2>Nenhum destino selecionado</h2>
+              <div class="field" style="margin-top:-4px">
+                <label for="paste2">O link não abriu o app? Cole-o aqui</label>
+                <span class="input invalid" id="paste2">cadernin://enviar?pid=surdo<span class="cur"></span></span>
+              </div>
+              <div class="inputerr">
+                Este texto não é um link de envio — ele precisa começar com
+                <strong>cadernin-export://</strong>.
+                <span class="second">
+                  Não foi possível ler este link — pode ter sido copiado pela metade.
+                  <em style="opacity:.75">(segunda família de erro: decodifica, mas o conteúdo não fecha)</em>
+                </span>
+              </div>
+              <div class="actions">
+                <span class="btn disabled">Continuar</span>
+              </div>
+            </div>
+            <div class="linkrow"><a>Usar outra conta</a></div>
+          </div>
+        </div>
+        <p class="caption">
+          <strong>Invalid paste.</strong> Two failures, both failing closed: wrong
+          protocol / plain text, and a well-formed <code>cadernin-export://</code> whose
+          payload doesn't decode to valid JSON with a <code>projectId</code>. No
+          destination is ever guessed from a bad paste.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>3 · Valid paste — back into 010's contextual flow</h2>
+    <p class="sub">
+      A decodable link names the same thing a protocol launch would, so nothing
+      new happens after: the input talks to the same context state, and the
+      normal app takes over. Live validation runs as always — the paste box
+      grants no trust to what was pasted.
+    </p>
+    <div class="grid single">
+      <div class="frame">
+        <div class="window">
+          <div class="titlebar"><div class="dots"><span></span><span></span><span></span></div><span class="t">cadern.in — Exportador</span></div>
+          <div class="app-viewport">
+            <span class="badge app" style="align-self:flex-start">signed in · link colado</span>
+            <div class="app-h1">cadern.in — Exportador</div>
+            <div class="card">
+              <h2>Nenhum destino selecionado</h2>
+              <div class="field" style="margin-top:-4px">
+                <label for="paste3">O link não abriu o app? Cole-o aqui</label>
+                <span class="input" id="paste3">cadernin-export://eyJwcm9qZWN0SWQiOiJzdXJkby1lLWNpYSIsInNjb3JlSWQ<span class="ellip">…</span>fMiJ9</span>
+              </div>
+              <div class="actions">
+                <span class="btn">Continuar</span>
+              </div>
+              <div class="handoff">
+                <div class="dock"><span class="chain">⛓</span> contexto aplicado — a partir daqui, idêntico a um lançamento pelo site</div>
+              </div>
+            </div>
+            <div class="app-flow">
+              <div class="flowtag">
+                <span class="ctx-head"><span class="h">Destino</span>
+                  <span class="seg">Surdo &amp; Cia</span><span class="arrow">›</span>
+                  <span class="seg">Carnaval 2026</span><span class="arrow">›</span>
+                  <span class="seg">Mineirinho</span>
+                </span>
+                <span class="badge own" style="margin:0">Verificando destino… ✓</span>
+              </div>
+              <div class="dropzone">Arraste a partitura (.mscz) ou clique para escolher</div>
+              <div class="upload-btn"><span class="btn disabled">Exportar para o cadern.in</span></div>
+              <div class="caption" style="margin-top:10px">
+                «Verificar destino» revalida contra dados vivos como sempre —
+                permissão de editor, versões esperadas, caderninho atual.
+                Link vencido or sem permissão → mesmas mensagens de 010.
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">
+          <strong>Hand-off.</strong> After «Continuar», the paste screen is gone: the
+          songbook-scoped link shown resolves to project › songbook › score and the
+          full ExportApp renders — file drop, parts, upload panel. A later real
+          deep-link launch (the app staying open) replaces the context, exactly like
+          today.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>Notes — format and trust</h2>
+    <div class="notes">
+      <div class="note">
+        <h3>Why URL-safe base64, not standard</h3>
+        <p>
+          The token sits in a URL's authority slot, so the alphabet matters:
+        </p>
+        <div class="vh">
+          <b>/</b><span>would end the URL's authority and start a path — the token splits in two</span>
+          <b>+</b><span>percent-encodes oddly in URLs and can degrade to a space in some copy paths</span>
+          <b>=</b><span>padding is legal here but brittle — chat and email copy sometimes trim it</span>
+          <b>- _</b><span>URL-safe alphabet (RFC 4648 §5, unpadded): survives <code>new URL()</code>, copy-paste, and <code>app.setAsDefaultProtocolClient</code> on every OS unscathed</span>
+        </div>
+      </div>
+      <div class="note">
+        <h3>A pasted link is protocol-launch input</h3>
+        <p>
+          One parser for both roads: <code>parseExportDeepLink</code> →
+          <code>validateExportContext</code> against live Firestore, at panel resolve,
+          again before the upload writes, and before any songbook re-pin. A paste
+          never skips a check, never persists to disk, and the fallback card is only
+          reachable signed-in — login comes first, exactly like today.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
