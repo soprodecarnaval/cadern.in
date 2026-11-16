@@ -1,5 +1,8 @@
+import { Modal } from "../../../atoms/Modal";
+import { Input } from "../../../atoms/Input";
+import { Button } from "../../../atoms/Button";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Button, Form, Modal, Spinner } from "react-bootstrap";
+import { Alert, Form, Spinner } from "react-bootstrap";
 import type { User } from "firebase/auth";
 import type { Instrument } from "../../../../../types/instrument";
 import type { SongbookDoc, SongbookRevisionDoc } from "../../../../../types/docs";
@@ -118,7 +121,7 @@ export function SongbookCoverModal({
         </p>
         <Form.Group controlId="songbook-cover-image">
           <Form.Label>Selecionar imagem</Form.Label>
-          <Form.Control type="file" accept="image/png,image/jpeg" disabled={saving}
+          <Form.Control as={Input} type="file" accept="image/png,image/jpeg" disabled={saving}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
               const selected = event.target.files?.[0];
               event.target.value = "";
@@ -136,7 +139,7 @@ export function SongbookCoverModal({
         </Form.Group>
         {file && <p className="small text-break mt-2 mb-0">{file.name}</p>}
         {(file || (hasSaved && !removed)) && (
-          <Button variant="outline-danger" size="sm" className="mt-3" disabled={saving} onClick={() => {
+          <Button variant="danger-secondary" size="sm" className="mt-3" disabled={saving} onClick={() => {
             setFile(null);
             setRemoved(true);
             setValidationError("");
@@ -146,13 +149,13 @@ export function SongbookCoverModal({
         {validationError && <Alert variant="danger" className="mt-3 mb-0">{validationError}</Alert>}
         {previewError && <Alert variant="danger" className="mt-3 mb-0">
           {previewError}{" "}
-          <Button variant="outline-danger" size="sm" onClick={() => retryPreview((n) => n + 1)}>Tentar novamente</Button>
+          <Button variant="danger-secondary" size="sm" onClick={() => retryPreview((n) => n + 1)}>Tentar novamente</Button>
         </Alert>}
         {saveError && <Alert variant="danger" className="mt-3 mb-0">{saveError}</Alert>}
         {saving && <p className="small mt-3 mb-0" role="status">Enviando imagem e salvando nova versão…</p>}
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="outline-secondary" onClick={dismiss} disabled={saving}>Cancelar</Button>
+        <Button variant="secondary" onClick={dismiss} disabled={saving}>Cancelar</Button>
         <Button onClick={() => void save()} disabled={saving || !dirty || !previewUrl || !!previewError || !!validationError}>
           {saving ? <><Spinner animation="border" size="sm" /> Salvando…</> : "Salvar"}
         </Button>

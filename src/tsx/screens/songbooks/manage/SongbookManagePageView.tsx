@@ -1,16 +1,12 @@
+import { Select } from "../../../atoms/Select";
+import { Page } from "../../../atoms/Page";
+import { List } from "../../../atoms/List";
+import { Input } from "../../../atoms/Input";
+import { Button } from "../../../atoms/Button";
 import { CardPointerSensor } from "../../../../lib/cardPointerSensor";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  Badge,
-  Button,
-  Container,
-  Form,
-  ListGroup,
-  Spinner,
-  Table,
-} from "react-bootstrap";
+import { Alert, Badge, Form, Spinner, Table } from "react-bootstrap";
 import {
   Link,
   useNavigate,
@@ -184,15 +180,15 @@ export function SongbookManagePageView({
 
   if (role === "loading") {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Spinner animation="border" />
-      </Container>
+      </Page>
     );
   }
 
   if (!isMember) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="warning">
           Você não é membro deste projeto.{" "}
           {projectId && songbookSlug && (
@@ -201,22 +197,22 @@ export function SongbookManagePageView({
             </Link>
           )}
         </Alert>
-      </Container>
+      </Page>
     );
   }
 
   if (loaded === "loading") {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Spinner animation="border" />
-      </Container>
+      </Page>
     );
   }
   if (!loaded || !projectId) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="danger">Caderninho não encontrado.</Alert>
-      </Container>
+      </Page>
     );
   }
 
@@ -301,7 +297,7 @@ export function SongbookManagePageView({
   }
 
   return (
-    <Container className="mt-4">
+    <Page className="mt-4">
       <div className="d-flex align-items-baseline gap-2 mb-1">
         <h2 className="mb-0">{songbook.title}</h2>
         <span className="text-muted">versão #{revision.revisionNumber}</span>
@@ -331,7 +327,7 @@ export function SongbookManagePageView({
               {canEditSongbook(role) && (
                 <Button
                   size="sm"
-                  variant="outline-primary"
+                  variant="secondary"
                   onClick={() => setEditing("contents")}
                 >
                   Editar
@@ -340,7 +336,7 @@ export function SongbookManagePageView({
               {canRepin && stale.length > 0 && (
                 <Button
                   size="sm"
-                  variant="outline-warning"
+                  variant="primary"
                   onClick={() => void handleRepin(stale.map((i) => i.score.id))}
                 >
                   Atualizar todas ({stale.length})
@@ -350,7 +346,7 @@ export function SongbookManagePageView({
                 <Button
                   size="sm"
                   variant={
-                    songbook.isPublished ? "outline-secondary" : "success"
+                    songbook.isPublished ? "secondary" : "primary"
                   }
                   onClick={() => void handleTogglePublished()}
                 >
@@ -396,7 +392,7 @@ export function SongbookManagePageView({
           )}
         </>
       )}
-    </Container>
+    </Page>
   );
 }
 
@@ -440,7 +436,7 @@ function DeleteSongbookSection({
         onSubmit={(e) => void handleDelete(e)}
         className="d-flex gap-2 align-items-start flex-wrap"
       >
-        <Form.Control
+        <Form.Control as={Input}
           value={confirmation}
           onChange={(e) => setConfirmation(e.target.value)}
           placeholder={songbook.title}
@@ -535,7 +531,7 @@ function SongbookContents({
                       {onSwap && (
                         <Button
                           size="sm"
-                          variant="link"
+                          variant="text"
                           className="py-0"
                           onClick={() =>
                             onSwap(item.score.id, forks.get(item.score.id)!)
@@ -556,7 +552,7 @@ function SongbookContents({
                       {onRepin && (
                         <Button
                           size="sm"
-                          variant="link"
+                          variant="text"
                           className="py-0"
                           onClick={() => onRepin(item.score.id)}
                         >
@@ -682,7 +678,7 @@ function SongbookEditor({
       <div className="row">
         <div className="col-sm-6" />
         <div className="col-sm-6">
-          <Form.Control
+          <Form.Control as={Input}
             className="mt-3"
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -861,7 +857,7 @@ function ScorePicker({
 
   return (
     <>
-      <Form.Control
+      <Form.Control as={Input}
         className="mb-2"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
@@ -1006,7 +1002,7 @@ function ScorePickerVersions({
               {chosen.songbooks.join(", ") || "Sem caderninho"}
             </div>
             {versions.length > 1 && (
-              <Form.Select
+              <Select
                 size="sm"
                 aria-label={`Versão de ${versions[0].title} (${chosen.projectTitle})`}
                 value={chosenId}
@@ -1019,7 +1015,7 @@ function ScorePickerVersions({
                     {selectedIds.has(s.doc.id) ? " · adicionada" : ""}
                   </option>
                 ))}
-              </Form.Select>
+              </Select>
             )}
           </div>
         }
@@ -1055,9 +1051,9 @@ function SongbookHistory({
   return (
     <section className="mt-4">
       <h5>Histórico</h5>
-      <ListGroup>
+      <List>
         {revisions.map((rev) => (
-          <ListGroup.Item
+          <List.Item
             key={rev.id}
             action
             as={Link}
@@ -1067,13 +1063,14 @@ function SongbookHistory({
                 : `?versao=${encodeURIComponent(rev.id)}`
             }
             active={rev.id === shownRevisionId}
+            aria-current={rev.id === shownRevisionId ? "page" : undefined}
           >
             Versão #{rev.revisionNumber} ·{" "}
             {rev.createdAt?.toDate().toLocaleDateString("pt-BR") ?? "—"}
             {rev.note && <> · {rev.note}</>}
-          </ListGroup.Item>
+          </List.Item>
         ))}
-      </ListGroup>
+      </List>
     </section>
   );
 }

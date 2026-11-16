@@ -1,3 +1,4 @@
+import { Button } from "../../../atoms/Button";
 import { useState, type ReactNode } from "react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { OptimisticSortingPlugin } from "@dnd-kit/dom/sortable";
@@ -39,16 +40,16 @@ function SongbookScoreCard({ Card,
         leading={dragHandle}
         trailing={
           <div className="score-card-actions">
-            <button type="button" className="btn btn-link p-0"
+            <Button type="button" variant="text" className="p-0"
               aria-label={`Remover ${score.title}`}
               onClick={() => handleDelete(score, false)}>
               <BsFillTrashFill aria-hidden="true" />
-            </button>
-            <button type="button" className="btn btn-link p-0"
+            </Button>
+            <Button type="button" variant="text" className="p-0"
               aria-label={`Editar ${score.title}`}
               onClick={() => setShowEditModal(true)}>
               <BsPencilFill aria-hidden="true" />
-            </button>
+            </Button>
           </div>
         }
       />

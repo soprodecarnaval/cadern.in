@@ -1,3 +1,4 @@
+import { Button } from "../../../atoms/Button";
 import type { ReactNode } from "react";
 import { BsFillTrashFill } from "react-icons/bs";
 
@@ -12,10 +13,10 @@ export function SongBookSectionRow({ handleDelete, dragHandle, title }: SongBook
     <div className="songbook-section-row">
       {dragHandle}
       <div className="songbook-section-title">{title || "Seção sem título"}</div>
-      <button type="button" className="btn btn-link p-0" onClick={handleDelete}
+      <Button type="button" variant="text" className="p-0" onClick={handleDelete}
         aria-label={`Remover seção ${title || "sem título"}`}>
         <BsFillTrashFill aria-hidden="true" />
-      </button>
+      </Button>
     </div>
   );
 }

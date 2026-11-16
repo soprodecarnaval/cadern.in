@@ -1,12 +1,7 @@
+import { List } from "../../../atoms/List";
+import { Button } from "../../../atoms/Button";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Button,
-  Form,
-  ListGroup,
-  OverlayTrigger,
-  Spinner,
-  Tooltip,
-} from "react-bootstrap";
+import { Form, OverlayTrigger, Spinner, Tooltip } from "react-bootstrap";
 import type { SongbookDoc, SongbookRevisionDoc } from "../../../../../types/docs";
 import type { Instrument } from "../../../../../types/instrument";
 import type {
@@ -43,7 +38,7 @@ const AntiAssedioTooltip = (
 
 const HelpIcon = ({ tooltip }: { tooltip: JSX.Element }) => (
   <OverlayTrigger placement="right" overlay={tooltip}>
-    <span style={{ cursor: "help", marginLeft: "0.5rem", color: "#6c757d" }}>
+    <span style={{ cursor: "help", marginLeft: "0.5rem", color: "var(--ds-text-secondary)" }}>
       ?
     </span>
   </OverlayTrigger>
@@ -166,7 +161,7 @@ export function SongbookGenerationPanelView({
   return (
     <section className="mt-4">
       <h5>Gerar caderninhos</h5>
-      <ListGroup>
+      <List>
         {instrumentStats.stats.map(
           ({ instrument, count, countWithFallback }) => {
             const isIncluded = included.has(instrument);
@@ -183,7 +178,7 @@ export function SongbookGenerationPanelView({
 
             return (
               <div key={instrument}>
-                <ListGroup.Item
+                <List.Item
                   onClick={() => !isGenerating && toggleIncluded(instrument)}
                   className="d-flex align-items-center"
                   style={{
@@ -213,7 +208,7 @@ export function SongbookGenerationPanelView({
                         <Spinner
                           animation="border"
                           size="sm"
-                          variant="primary"
+                          style={{ color: "var(--ds-ink)" }}
                         />
                       ) : null
                     ) : null}
@@ -227,7 +222,7 @@ export function SongbookGenerationPanelView({
                   {!isGenerating && canEditCovers && currentUser && (
                     <Button
                       size="sm"
-                      variant={hasCover ? "success" : "outline-secondary"}
+                      variant={hasCover ? "primary" : "secondary"}
                       aria-label={`Capa de ${instrument}`}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -240,11 +235,11 @@ export function SongbookGenerationPanelView({
                   {!isGenerating && !canEditCovers && hasCover && (
                     <span className="text-success small">✓ Capa</span>
                   )}
-                </ListGroup.Item>
+                </List.Item>
                 {!isGenerating && isIncluded && hasFallback && (
-                  <ListGroup.Item
+                  <List.Item
                     className="d-flex align-items-center ps-5"
-                    style={{ backgroundColor: "#f8f9fa", borderTop: "none" }}
+                    style={{ backgroundColor: "var(--ds-surface-disabled)", borderTop: "none" }}
                   >
                     <Form.Check
                       type="checkbox"
@@ -261,13 +256,13 @@ export function SongbookGenerationPanelView({
                         })
                       }
                     />
-                  </ListGroup.Item>
+                  </List.Item>
                 )}
               </div>
             );
           },
         )}
-      </ListGroup>
+      </List>
       {instrumentStats.stats.length === 0 && (
         <p className="text-muted text-center">
           Nenhum instrumento disponível nas músicas deste caderninho.

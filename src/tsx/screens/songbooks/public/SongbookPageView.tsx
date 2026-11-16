@@ -1,5 +1,6 @@
+import { Page } from "../../../atoms/Page";
 import { useEffect, useState } from "react";
-import { Alert, Container, Spinner } from "react-bootstrap";
+import { Alert, Spinner } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 
 import type { WithId } from "../../../../lib/db";
@@ -76,16 +77,16 @@ export function SongbookPageView({
 
   if (loaded === "loading") {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Spinner animation="border" />
-      </Container>
+      </Page>
     );
   }
   if (!loaded) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="danger">Caderninho não encontrado.</Alert>
-      </Container>
+      </Page>
     );
   }
 

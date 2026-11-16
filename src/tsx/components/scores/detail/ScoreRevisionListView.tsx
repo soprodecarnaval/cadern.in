@@ -1,5 +1,6 @@
+import { List } from "../../../atoms/List";
 import { useEffect, useState } from "react";
-import { Badge, ListGroup, Spinner } from "react-bootstrap";
+import { Badge, Spinner } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import type { ScoreRevisionDoc } from "../../../../../types/docs";
 import type { WithId } from "../../../../lib/db";
@@ -72,14 +73,15 @@ export function ScoreRevisionListView({
   }
 
   return (
-    <ListGroup>
+    <List>
       {revisions.map((rev) => (
-        <ListGroup.Item
+        <List.Item
           key={rev.id}
           action
           as={Link}
           to={`/score/${encodeURIComponent(scoreId)}/${encodeURIComponent(rev.id)}`}
           active={rev.id === currentRevisionId}
+          aria-current={rev.id === currentRevisionId ? "page" : undefined}
           className="d-flex justify-content-between align-items-center"
         >
           <span>
@@ -95,8 +97,8 @@ export function ScoreRevisionListView({
             )}
             {rev.id === latestRevisionId && <Badge bg="secondary">atual</Badge>}
           </span>
-        </ListGroup.Item>
+        </List.Item>
       ))}
-    </ListGroup>
+    </List>
   );
 }

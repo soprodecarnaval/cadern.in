@@ -1,15 +1,9 @@
+import { List } from "../../../atoms/List";
+import { Modal } from "../../../atoms/Modal";
+import { Input } from "../../../atoms/Input";
+import { Button } from "../../../atoms/Button";
 import React, { useMemo, useState } from "react";
-import {
-  Button,
-  Col,
-  Form,
-  ListGroup,
-  Modal,
-  OverlayTrigger,
-  Row,
-  Spinner,
-  Tooltip,
-} from "react-bootstrap";
+import { Col, Form, OverlayTrigger, Row, Spinner, Tooltip } from "react-bootstrap";
 import type { Instrument } from "../../../../../types/instrument";
 import type {
   SongbookItemViewModel,
@@ -214,10 +208,11 @@ const PDFGeneratorView = ({
       <Row className="mt-4">
         <Form className="d-flex gap-1" onSubmit={openModal}>
           <Col>
-            <Form.Control
+            <Form.Control as={Input}
               type="text"
               onChange={onInputSongbookTitle}
               value={songbookTitle}
+              aria-label="Título do caderninho"
               placeholder="Título do caderninho"
             />
           </Col>
@@ -246,14 +241,14 @@ const PDFGeneratorView = ({
           {!isGenerating && (
             <div className="d-flex justify-content-between mb-3">
               <Button
-                variant="outline-primary"
+                variant="secondary"
                 size="sm"
                 onClick={selectAllInstruments}
               >
                 Selecionar todos
               </Button>
               <Button
-                variant="outline-secondary"
+                variant="secondary"
                 size="sm"
                 onClick={deselectAllInstruments}
               >
@@ -261,7 +256,7 @@ const PDFGeneratorView = ({
               </Button>
             </div>
           )}
-          <ListGroup>
+          <List>
             {instrumentStats.stats.map(
               ({ instrument, count, countWithFallback }) => {
                 const isSelected = selectedInstruments.has(instrument);
@@ -283,7 +278,7 @@ const PDFGeneratorView = ({
 
                 return (
                   <React.Fragment key={instrument}>
-                    <ListGroup.Item
+                    <List.Item
                       action={!isGenerating}
                       onClick={() =>
                         !isGenerating && toggleInstrument(instrument)
@@ -334,13 +329,13 @@ const PDFGeneratorView = ({
                         <>
                           <Form.Label
                             htmlFor={`cover-${instrument}`}
-                            className={`btn btn-sm ${hasCover ? "btn-success" : "btn-outline-secondary"} mb-0`}
+                            className={`ds-button btn btn-sm ${hasCover ? "btn-success" : "btn-outline-secondary"} mb-0`}
                             style={{ cursor: "pointer", fontSize: "0.75rem" }}
                             onClick={(e) => e.stopPropagation()}
                           >
                             {hasCover ? "✓ Capa" : "Capa"}
                           </Form.Label>
-                          <Form.Control
+                          <Form.Control as={Input}
                             id={`cover-${instrument}`}
                             type="file"
                             hidden
@@ -355,9 +350,9 @@ const PDFGeneratorView = ({
                           />
                         </>
                       )}
-                    </ListGroup.Item>
+                    </List.Item>
                     {!isGenerating && isSelected && hasFallback && (
-                      <ListGroup.Item
+                      <List.Item
                         className="d-flex align-items-center ps-5"
                         style={{
                           backgroundColor: "#f8f9fa",
@@ -381,13 +376,13 @@ const PDFGeneratorView = ({
                             });
                           }}
                         />
-                      </ListGroup.Item>
+                      </List.Item>
                     )}
                   </React.Fragment>
                 );
               },
             )}
-          </ListGroup>
+          </List>
           {instrumentStats.stats.length === 0 && (
             <p className="text-muted text-center">
               Nenhum instrumento disponível nas músicas selecionadas.
@@ -475,7 +470,7 @@ const PDFGeneratorView = ({
             </Button>
           )}
           {!isGenerating && completedInstruments.size > 0 && (
-            <Button variant="success" onClick={closeModal}>
+            <Button variant="primary" onClick={closeModal}>
               Fechar
             </Button>
           )}

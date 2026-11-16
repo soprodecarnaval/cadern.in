@@ -1,5 +1,6 @@
+import { Page } from "../../../atoms/Page";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Badge, Button, Col, Container, Row, Spinner } from "react-bootstrap";
+import { Alert, Badge, Col, Row, Spinner } from "react-bootstrap";
 import { Link, useParams } from "react-router-dom";
 
 import type { CommentAnchor, ReviewCommentDoc } from "../../../../../types/docs";
@@ -180,15 +181,15 @@ export function SongbookScorePageView({
 
   if (role === "loading") {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Spinner animation="border" />
-      </Container>
+      </Page>
     );
   }
 
   if (!isMember) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="warning">
           Você não é membro deste projeto.{" "}
           {projectId && songbookSlug && (
@@ -197,21 +198,21 @@ export function SongbookScorePageView({
             </Link>
           )}
         </Alert>
-      </Container>
+      </Page>
     );
   }
 
   if (loaded === "loading") {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Spinner animation="border" />
-      </Container>
+      </Page>
     );
   }
 
   if (loaded === "missing") {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="warning">
           Esta partitura não está mais neste caderninho.{" "}
           {projectId && songbookSlug && (
@@ -220,40 +221,35 @@ export function SongbookScorePageView({
             </Link>
           )}
         </Alert>
-      </Container>
+      </Page>
     );
   }
 
   if (!loaded || !projectId || !songbookSlug || !scoreId) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="danger">Caderninho não encontrado.</Alert>
-      </Container>
+      </Page>
     );
   }
 
   return (
-    <Container className="mt-4">
+    <Page className="mt-4">
       <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
         <div className="d-flex align-items-baseline gap-2">
           <h2 className="mb-0">{loaded.title}</h2>
           {loaded.foreign && <Badge bg="warning">de outro projeto</Badge>}
         </div>
         {isEditor(role) && (
-          <Button
-            size="sm"
-            variant="outline-primary"
-            as="a"
-            href={buildExportDeepLink({
+          <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink({
               projectId: loaded.songbookProjectId,
               scoreId,
               expectedScoreRevisionId: loaded.revisionId,
               songbookId: loaded.songbookId,
               expectedSongbookRevisionId: loaded.songbookRevisionId,
-            })}
-          >
+            })}>
             Enviar nova versão
-          </Button>
+          </a>
         )}
       </div>
       <p className="text-muted mb-3">
@@ -326,6 +322,6 @@ export function SongbookScorePageView({
           </Col>
         )}
       </Row>
-    </Container>
+    </Page>
   );
 }

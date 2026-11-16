@@ -28,3 +28,5 @@
 .ds-page .alert { border-radius: var(--ds-radius-surface); }
 .ds-page .form-label { margin-bottom: var(--ds-space-2); }
 .ds-page .form-control { max-width: 100%; }
+
+.ds-page a { color: var(--ds-ink); }

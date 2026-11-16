@@ -1,6 +1,10 @@
+import { Select } from "../../../atoms/Select";
+import { Modal } from "../../../atoms/Modal";
+import { Input } from "../../../atoms/Input";
+import { Button } from "../../../atoms/Button";
 import type { User } from "firebase/auth";
 import { useEffect, useState } from "react";
-import { Button, Form, Modal, Spinner } from "react-bootstrap";
+import { Form, Spinner } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import type { WithId } from "../../../../lib/db";
 import { isAdmin } from "../../../../lib/roles";
@@ -95,17 +99,17 @@ export function SaveSongbookModalView({
             </p>
           ) : (
             <>
-              <Form.Group className="mb-3">
+              <Form.Group className="mb-3" controlId="save-songbook-title">
                 <Form.Label>Título</Form.Label>
-                <Form.Control
+                <Form.Control as={Input}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
                 />
               </Form.Group>
-              <Form.Group className="mb-3">
+              <Form.Group className="mb-3" controlId="save-songbook-project">
                 <Form.Label>Projeto</Form.Label>
-                <Form.Select
+                <Select
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
                 >
@@ -114,7 +118,7 @@ export function SaveSongbookModalView({
                       {p.title}
                     </option>
                   ))}
-                </Form.Select>
+                </Select>
               </Form.Group>
             </>
           )}

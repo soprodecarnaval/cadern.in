@@ -1,7 +1,10 @@
+import { Modal } from "../../atoms/Modal";
+import { Input } from "../../atoms/Input";
+import { Button } from "../../atoms/Button";
 import "./ProfileModal.css";
 import { describeAuthError } from "../../../lib/authMessages";
 import { useEffect, useRef, useState } from "react";
-import { Button, Modal, Spinner, Tab, Tabs } from "react-bootstrap";
+import { Spinner, Tab, Tabs } from "react-bootstrap";
 
 import type { UserProjectInvitationDoc } from "../../../../types/docs";
 import type { WithId } from "../../../lib/db";
@@ -177,7 +180,7 @@ export function ProfileModalView({
   };
 
   return (
-    <Modal show={show} onHide={onHide} className="brand-modal">
+    <Modal show={show} onHide={onHide}>
       <Modal.Header closeButton>
         <Modal.Title>Perfil</Modal.Title>
       </Modal.Header>
@@ -202,14 +205,14 @@ export function ProfileModalView({
                   currentUser && initialsOf(currentUser)
                 )}
               </div>
-              <button
+              <Button
                 type="button"
-                className="btn btn-link mt-1"
+                variant="text" className="mt-1"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={profilePending}
               >
                 Alterar foto
-              </button>
+              </Button>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -220,32 +223,32 @@ export function ProfileModalView({
             </div>
             <form onSubmit={(e) => void handleSaveDisplayName(e)}>
               <div className="mb-3">
-                <label className="form-label">Email</label>
-                <input
+                <label className="form-label" htmlFor="profile-email">Email</label>
+                <Input
+                  id="profile-email"
                   type="email"
-                  className="form-control"
                   value={currentUser?.email ?? ""}
                   readOnly
                   disabled
                 />
               </div>
               <div className="mb-3">
-                <label className="form-label">Nome</label>
-                <input
+                <label className="form-label" htmlFor="profile-name">Nome</label>
+                <Input
+                  id="profile-name"
                   type="text"
-                  className="form-control"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   required
                 />
               </div>
-              <button
+              <Button
                 type="submit"
-                className="btn btn-primary"
+
                 disabled={profilePending}
               >
                 Salvar
-              </button>
+              </Button>
             </form>
             {profileSuccess && (
               <div className="alert alert-success mt-3">{profileSuccess}</div>
@@ -280,7 +283,7 @@ export function ProfileModalView({
                         Aceitar
                       </Button>
                       <Button
-                        variant="outline-secondary"
+                        variant="secondary"
                         disabled={respondingTo === inv.projectId}
                         onClick={() => void handleDeny(inv)}
                       >
@@ -295,45 +298,42 @@ export function ProfileModalView({
           <Tab eventKey="password" title="Alterar senha">
             <form onSubmit={(e) => void handleChangePassword(e)}>
               <div className="mb-3">
-                <input
+                <Input
                   placeholder="Senha atual"
                   aria-label="Senha atual"
                   type="password"
-                  className="form-control"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   required
                 />
               </div>
               <div className="mb-3">
-                <input
+                <Input
                   placeholder="Nova senha"
                   aria-label="Nova senha"
                   type="password"
-                  className="form-control"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
                 />
               </div>
               <div className="mb-3">
-                <input
+                <Input
                   placeholder="Confirmar nova senha"
                   aria-label="Confirmar nova senha"
                   type="password"
-                  className="form-control"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                 />
               </div>
-              <button
+              <Button
                 type="submit"
-                className="btn btn-primary"
+
                 disabled={passwordPending}
               >
                 Alterar senha
-              </button>
+              </Button>
             </form>
             {passwordSuccess && (
               <div className="alert alert-success mt-3">{passwordSuccess}</div>
@@ -346,7 +346,7 @@ export function ProfileModalView({
       </Modal.Body>
       <Modal.Footer>
         <Button
-          variant="outline-secondary"
+          variant="secondary"
           onClick={() => void services.logout()}
         >
           Sair

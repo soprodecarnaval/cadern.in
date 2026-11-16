@@ -1,19 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, within } from "@storybook/test";
 import { ReviewCommentsPanelView } from "../../../components/review/ReviewCommentsPanelView";
-import { ScoreDisplay } from "../../../components/scores/detail/ScoreDisplay";
 import { SongbookScorePageView } from "./SongbookScorePageView";
 import {
   bookRevision,
   comment,
   scoreDoc,
+  scoreComponents,
   services,
   songbook,
   user,
 } from "../../../../../.storybook/fixtures/screens";
 
 const components = {
-  ScoreDisplay,
+  ScoreDisplay: scoreComponents.ScoreDisplay,
   ReviewCommentsPanel: ReviewCommentsPanelView,
 };
 

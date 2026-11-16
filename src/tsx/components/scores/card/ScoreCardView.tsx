@@ -1,3 +1,4 @@
+import { Button } from "../../../atoms/Button";
 import { type ReactNode } from "react";
 import { BsChevronDown, BsChevronRight, BsEye } from "react-icons/bs";
 import { SiMidi, SiMusescore } from "react-icons/si";
@@ -63,9 +64,9 @@ const ScoreCardView = ({
     <div className="score-card">
       <div className="score-card-row">
         {leading}
-        <button
+        <Button
           type="button"
-          className="btn btn-link p-0 score-card-toggle"
+          variant="text" className="p-0 score-card-toggle"
           aria-label={`${expanded ? "Recolher" : "Expandir"} ${score.title}`}
           aria-expanded={expanded}
           onClick={onToggleMode}
@@ -75,7 +76,7 @@ const ScoreCardView = ({
           ) : (
             <BsChevronRight aria-hidden="true" />
           )}
-        </button>
+        </Button>
         <div className="score-card-main" onClick={onToggleMode}>
           <div className="score-card-title">{highlightRanges(score.title, highlight?.title)}</div>
           {metaFields.length > 0 && (
@@ -90,14 +91,14 @@ const ScoreCardView = ({
           )}
         </div>
         <div className="score-card-links">
-          <button
+          <Button
             type="button"
-            className="btn btn-link p-0"
+            variant="text" className="p-0"
             aria-label={`Ver detalhes de ${score.title}`}
             onClick={onShowDetail}
           >
             <BsEye aria-hidden="true" />
-          </button>
+          </Button>
           {score.latestRevision.midi != "" && (
             <a href={score.latestRevision.midi} target="_blank" rel="noreferrer" aria-label="MIDI">
               <SiMidi />

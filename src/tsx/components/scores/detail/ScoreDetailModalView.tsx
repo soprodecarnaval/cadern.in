@@ -1,6 +1,8 @@
+import { Modal } from "../../../atoms/Modal";
+import { Button } from "../../../atoms/Button";
 import { useEffect, useState } from "react";
-import { Alert, Badge, Button, Modal, Spinner } from "react-bootstrap";
-import { Link } from "react-router-dom";
+import { Alert, Badge, Spinner } from "react-bootstrap";
+import { Link } from "../../../atoms/Link";
 import type { LoadedScore } from "../../../../lib/loadScore";
 
 /**
@@ -103,7 +105,7 @@ export function ScoreDetailModalView({
       <Modal.Footer>
         {score && (
           <Link
-            className="btn btn-outline-primary"
+            variant="secondary"
             to={`/score/${encodeURIComponent(score.scoreId)}/${encodeURIComponent(score.revisionId)}`}
           >
             Abrir página completa

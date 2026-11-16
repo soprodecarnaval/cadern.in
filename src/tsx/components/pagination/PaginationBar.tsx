@@ -1,3 +1,4 @@
+import { Input } from "../../atoms/Input";
 import { Pagination, Form } from "react-bootstrap";
 
 import "./PaginationBar.css";
@@ -16,7 +17,7 @@ const PaginationBar = ({ onChange, currentPage, maxNumberPages } : PaginationBar
       disabled={currentPage === 1}
     />
 
-    <Form.Control
+    <Form.Control as={Input}
       value={currentPage}
       className="page"
       type="number"

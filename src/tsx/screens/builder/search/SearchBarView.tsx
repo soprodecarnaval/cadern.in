@@ -1,3 +1,4 @@
+import { Input } from "../../../atoms/Input";
 import { useState, useEffect } from "react";
 import { Row, Col, Form } from "react-bootstrap";
 
@@ -38,7 +39,7 @@ const SearchBarView = ({
     <Row className="mt-4">
       <Col>
         <Form className="d-flex">
-          <Form.Control
+          <Form.Control as={Input}
             type="search"
             placeholder="Procurar por título, arranjo ou tags"
             aria-label="Search"

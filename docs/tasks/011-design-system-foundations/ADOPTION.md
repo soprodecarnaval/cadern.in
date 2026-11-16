@@ -8,8 +8,8 @@ Further batches require affected screen/wireframe review per TASK.md step 6.
 | Foundations | Tokens, buttons, fields, modal; Storybook reference | Implemented; focused checks pass |
 | Home/auth | Landing page, login/register/reset/verification/Google-link dialogs | Implemented; focused checks pass |
 | 1 — navigation/projects | AppNavigation, AuthButton, project list/create/public/settings, CreateSongbookForm, NotFoundPage | Implemented; 43 relevant stories pass |
-| 2 — builder/dialogs | HomePage, search/results/cards, SongBookTable/sortable rows, save, PDF selection, metadata/score edit, detail and profile dialogs | Awaiting screen review |
-| 3 — songbook/review | Public/member songbook pages, scoped score page, generation/cover modal, score page/revisions/lineage, comments, reader/part controls | Awaiting screen review |
+| 2 — builder/dialogs | HomePage, search/results/cards, SongBookTable/sortable rows, save, PDF selection, metadata/score edit, detail and profile dialogs | Implemented; focused checks pass |
+| 3 — songbook/review | Public/member songbook pages, scoped score page, generation/cover modal, score page/revisions/lineage, comments, reader/part controls | Implemented; 73 relevant stories pass |
 | 4 — exporter | App shell, LoginForm, file/parts/metadata/upload/progress, contextual launch states | Awaiting screen review; validate actual Electron UI |
 
 Batch review uses existing screen stories with proposed design-system treatment,
@@ -57,3 +57,40 @@ split from the old aggregate stylesheets; feature CSS follows its owning UI.
 Shared Storybook fixtures and cross-screen reference stories live in .storybook.
 Source imports, CSS asset URLs, main entry and recursive story discovery were
 updated together. No screen behavior or route names are changed by this move.
+
+Batch 2 implemented after approval: builder shell/search/sort, score cards and
+sortable actions, pagination, save/PDF/profile/score edit/detail/metadata dialogs.
+Select is a typed Bootstrap-backed atom preserving Form.Group context. Hidden
+file choosers and specialized drag/add affordances retain their handlers; shared
+styles use tokens. Labels were associated with their inputs while adopting atoms.
+
+Batch 3 preview: `Design System/Songbook batch`, with Public, Manage, Reader,
+Review and Generation stories. Uses existing fixture-driven views with a
+story-only branded wrapper and reader/select/textarea treatment. Score display
+uses the existing silent fixture, not real audio initialization. Production batch
+3 screens await approval; shared batch 2 controls already appear consistently
+where those screens reuse them.
+
+Batch 2 final validation: 51 relevant stories, ten responsive checks and add-score/keyboard reorder pass; builds/types/lint pass. Batch 3 preview: five stories checked at desktop/mobile. No batch 3 production-page migration yet.
+
+Batch 3 approved with correction: remove remaining blue outlines in Reader,
+Manage and Histórico. Migrated songbook pages, reader, generation/cover modal,
+score page/review controls and revision histories to shared atoms. Added List
+and TextArea atoms; active history and reader selection use yellow/black. Removed
+story-only treatment so previews exercise production styling. Scoped-score
+stories now use the existing silent display fixture to avoid audio side effects.
+
+Batch 3 validation: 73/73 selected stories pass; computed-style checks verify
+Reader/Manage borders are black and selected history is yellow with black
+borders at 1280px and 390px. App/Storybook builds, story types and lint pass.
+
+Final batch preview: `Design System/Exporter batch` — Ready, Login,
+Open from website, Uploading and Failure. Uses atoms and fictitious data only;
+no Electron preload, file export, auth or upload side effects. Actual exporter
+migration and runtime checks await approval of this treatment.
+
+Exporter preview validation: 10/10 checks pass at 1280px and 390px (five
+stories each), including login fields, no-context message, upload-disabled
+controls, simulated progress and failure alert. No console errors or horizontal
+overflow. Storybook typecheck and whitespace checks pass. Production exporter
+migration awaits approval.

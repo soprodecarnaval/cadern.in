@@ -1,5 +1,8 @@
+import { Modal } from "../../atoms/Modal";
+import { Input } from "../../atoms/Input";
+import { Button } from "../../atoms/Button";
 import { useState } from "react";
-import { Button, Form, Modal, Spinner } from "react-bootstrap";
+import { Form, Spinner } from "react-bootstrap";
 
 import type { ScoreMetadata } from "../../../../types/docs";
 
@@ -97,9 +100,9 @@ export function ScoreMetadataEditorView({
           const fromUpload = toInput(uploaded, field);
           const edited = values[field].trim() !== fromUpload;
           return (
-            <Form.Group key={field} className="mb-3">
+            <Form.Group key={field} controlId={`score-metadata-${field}`} className="mb-3">
               <Form.Label>{LABELS[field]}</Form.Label>
-              <Form.Control
+              <Form.Control as={Input}
                 value={values[field]}
                 onChange={(e) =>
                   setValues((v) => ({ ...v, [field]: e.target.value }))
@@ -109,7 +112,7 @@ export function ScoreMetadataEditorView({
                 Do arquivo: {fromUpload || "—"}
                 {edited && (
                   <Button
-                    variant="link"
+                    variant="text"
                     size="sm"
                     className="p-0 ms-2 align-baseline"
                     onClick={() =>

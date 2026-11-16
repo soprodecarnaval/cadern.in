@@ -106,3 +106,9 @@
   outline: var(--ds-border) solid var(--ds-ink);
   outline-offset: 3px;
 }
+
+.brand-modal .form-check-input:checked { background-color: var(--ds-ink); border-color: var(--ds-ink); }
+.brand-modal .form-check-input:focus-visible { outline: var(--ds-border) solid var(--ds-ink); outline-offset: 2px; box-shadow: none; }
+.brand-modal .modal-footer { gap: var(--ds-space-3); flex-wrap: wrap; }
+
+.brand-modal .d-flex { flex-wrap: wrap; }

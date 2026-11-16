@@ -1,5 +1,7 @@
+import { Page } from "../../atoms/Page";
+import { Button } from "../../atoms/Button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Col, Container, Row } from "react-bootstrap";
+import { Col, Row } from "react-bootstrap";
 
 import { ScoreSearchResultsView } from "./search/ScoreSearchResultsView";
 import { SearchBarView } from "./search/SearchBarView";
@@ -133,7 +135,7 @@ export function HomePageView({
 
   return (
     <>
-      <Container>
+      <Page>
         <Row>
           <Col sm={6}>
             <SearchBarView
@@ -167,7 +169,7 @@ export function HomePageView({
                 <h3 className="results">Caderninho</h3>
                 {collabEnabled && (
                   <Button
-                    variant="outline-primary"
+                    variant="secondary"
                     disabled={items.length === 0}
                     onClick={handleSave}
                   >
@@ -194,7 +196,7 @@ export function HomePageView({
             </Col>
           </Row>
         </SongbookDragProvider>
-      </Container>
+      </Page>
     </>
   );
 }

@@ -1,5 +1,5 @@
+import { Select } from "../../atoms/Select";
 import { ChangeEventHandler } from "react";
-import { Form } from "react-bootstrap";
 import { SortColumn, SortDirection } from "../../../utils/sort";
 
 interface SortProps {
@@ -16,7 +16,7 @@ const Sort = ({ onSortBy }: SortProps) => {
   };
 
   return (
-    <Form.Select onChange={handleOnClick} className="mb-2">
+    <Select onChange={handleOnClick} className="mb-2">
       <option>Ordenar por</option>
       <option value="carnivalStyle">Estilo (carnaval)</option>
       <option value="title-asc">Título (A-Z)</option>
@@ -25,7 +25,7 @@ const Sort = ({ onSortBy }: SortProps) => {
       <option value="projectTitle-desc">Arranjo (Z-A)</option>
       <option value="style-asc">Estilo (A-Z)</option>
       <option value="style-desc">Estilo (Z-A)</option>
-    </Form.Select>
+    </Select>
   );
 };
 

@@ -101,3 +101,45 @@ failures are the existing seven auth Firebase-initialization and six scoped-scor
 render/audio-isolation failures. Reference stories outside src needed automatic
 JSX runtime in Storybook Vite config; corrected and rechecked. No staging or
 commit performed for this structural pass.
+
+## Builder/dialog adoption
+
+Structural reorganization committed as `091a1bb2`. Continued the previously
+approved builder/dialog batch: shared atoms and tokens now cover builder/search,
+score cards, sortable action controls, pagination and save/PDF/profile/detail/
+metadata dialogs. Added Select atom using typed FormSelectProps, preserving
+Bootstrap field context and event typing. Operation and drag handlers remain.
+Initial validation: app/Storybook builds, story TypeScript, targeted lint pass;
+47 builder/dialog plus four metadata-editor stories pass. Further responsive/
+keyboard checks and the next batch preview are recorded with final results.
+Next review: `Design System/Songbook batch` (five stories); see ADOPTION.md.
+
+Builder/dialog final checks: 47 selected builder/dialog stories plus all four
+metadata-editor stories pass (51 total). Ten responsive checks pass at 1280px
+and 390px for builder/save/PDF/score-edit/profile. Add-score and keyboard reorder
+(Space, ArrowDown, Space) pass with two fixture scores. Website/Storybook builds,
+story TypeScript, targeted ESLint (including new files with --no-ignore) and
+whitespace checks pass. Five next-batch preview stories also pass at both widths
+(ten checks); Review uses the silent score fixture. Builder/dialog work and the
+next preview remain uncommitted; production batch 3 awaits visual approval.
+
+## Songbook/review adoption and blue-outline correction
+
+User approved previews and identified blue outlined buttons/history selection.
+Reader/Manage now use atom buttons, revision histories use shared List with
+black borders and yellow selection, and reader selected rows/focus use tokens.
+Migrated public/member/scoped score screens, root score screen, generation/
+cover controls and review fields/actions. Added TextArea and List atoms; native
+upload/download links preserve their URL and download semantics. Preview-only
+styling was removed so review stories use production styling.
+
+Checks: 73/73 songbook/review stories pass. Scoped-score stories were switched
+from connected audio display to the existing silent fixture, fixing their
+previous audio-isolation problem without changing production behavior. Exact
+computed Reader/Manage/history border and selection colors pass at 1280/390px.
+App/Storybook builds, story types and targeted lint pass. Work is uncommitted.
+Next gate is the exporter treatment under Design System/Exporter batch.
+
+Exporter preview validation: 10/10 checks pass at 1280px and 390px (five
+stories each). Storybook typecheck and whitespace checks pass. Production
+exporter migration awaits approval.

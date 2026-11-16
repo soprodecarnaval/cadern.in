@@ -1,3 +1,4 @@
+import { Button } from "../../../atoms/Button";
 import { useState } from "react";
 import { Badge, Card, Placeholder } from "react-bootstrap";
 import { SiMidi } from "react-icons/si";
@@ -63,7 +64,7 @@ function SvgImage({
     >
       {loaded &&
         pins.map((pin) => (
-          <button
+          <Button
             key={pin.id}
             type="button"
             title={`Comentário ${pin.number}`}
@@ -71,9 +72,9 @@ function SvgImage({
               e.stopPropagation();
               pinsProps?.onPinClick(pin.id);
             }}
-            className={`btn btn-sm rounded-circle p-0 ${
-              pinsProps?.selectedPinId === pin.id ? "btn-danger" : "btn-warning"
-            }`}
+            variant={pinsProps?.selectedPinId === pin.id ? "danger" : "primary"}
+            size="sm"
+            className="rounded-circle p-0"
             style={{
               position: "absolute",
               left: `${pin.anchor.x * 100}%`,
@@ -86,7 +87,7 @@ function SvgImage({
             }}
           >
             {pin.number}
-          </button>
+          </Button>
         ))}
       {!loaded && (
         <Placeholder animation="glow">
@@ -101,8 +102,8 @@ function SvgImage({
         onLoad={() => setLoaded(true)}
         style={{
           width: "100%",
-          border: "1px solid #dee2e6",
-          background: "#fff",
+          border: "var(--ds-border) solid var(--ds-ink)",
+          background: "var(--ds-paper)",
           display: loaded ? "block" : "none",
         }}
       />

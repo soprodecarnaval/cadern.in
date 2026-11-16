@@ -1,13 +1,7 @@
+import { Page } from "../../atoms/Page";
+import { Button } from "../../atoms/Button";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  Badge,
-  Button,
-  Col,
-  Container,
-  Row,
-  Spinner,
-} from "react-bootstrap";
+import { Alert, Badge, Col, Row, Spinner } from "react-bootstrap";
 
 import { useNavigate, useParams } from "react-router-dom";
 import type { WithId } from "../../../lib/db";
@@ -117,22 +111,22 @@ export function ScorePageView({
 
   if (error) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="danger">{error}</Alert>
-      </Container>
+      </Page>
     );
   }
 
   if (!score) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Spinner animation="border" />
-      </Container>
+      </Page>
     );
   }
 
   return (
-    <Container className="mt-4">
+    <Page className="mt-4">
       <div className="d-flex align-items-baseline gap-2 mb-1">
         <h2 className="mb-0">{score.title}</h2>
         <span className="text-muted">versão #{score.revisionNumber}</span>
@@ -145,7 +139,7 @@ export function ScorePageView({
         <div className="d-flex gap-2">
           {role !== "loading" && canDeleteScore(role) && (
             <Button
-              variant="outline-danger"
+              variant="danger-secondary"
               size="sm"
               disabled={deleting}
               onClick={() => void handleDelete()}
@@ -155,22 +149,17 @@ export function ScorePageView({
           )}
           {role !== "loading" && canEditScoreMetadata(role) && (
             <Button
-              variant="outline-primary"
+              variant="secondary"
               size="sm"
               onClick={() => setEditing(true)}
             >
               Editar metadados
             </Button>
           )}
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            as="a"
-            href={score.msczUrl}
-            download={`${score.title}.mscz`}
-          >
+          <a className="btn btn-outline-secondary ds-button btn-sm" href={score.msczUrl}
+            download={`${score.title}.mscz`}>
             Baixar .mscz
-          </Button>
+          </a>
         </div>
       </div>
       {collabEnabled && (
@@ -248,6 +237,6 @@ export function ScorePageView({
           }
         />
       )}
-    </Container>
+    </Page>
   );
 }

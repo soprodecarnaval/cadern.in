@@ -9,7 +9,7 @@ import { Page } from "../../src/tsx/atoms/Page";
 
 function BuilderPreview() {
   return (
-    <Page className="brand-modal py-4">
+    <Page className="py-4">
       <p className="text-muted">Proposta · lote 2 · construtor e controles compartilhados</p>
       <HomePageView
         currentUser={user}

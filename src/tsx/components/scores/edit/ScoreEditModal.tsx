@@ -1,5 +1,9 @@
+import { List } from "../../../atoms/List";
+import { Modal } from "../../../atoms/Modal";
+import { Input } from "../../../atoms/Input";
+import { Button } from "../../../atoms/Button";
 import { useState } from "react";
-import { Modal, Button, Form, ListGroup } from "react-bootstrap";
+import { Form } from "react-bootstrap";
 import type { ScoreViewModel, PartViewModel } from "../../../../../types/viewModels";
 
 export type ScoreEditUpdate = {
@@ -59,18 +63,18 @@ const ScoreEditModal = ({ show, score, onHide, onSave }: ScoreEditModalProps) =>
       </Modal.Header>
       <Modal.Body>
         <Form>
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="score-edit-title">
             <Form.Label>Titulo</Form.Label>
-            <Form.Control
+            <Form.Control as={Input}
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </Form.Group>
 
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="score-edit-project">
             <Form.Label>Projeto</Form.Label>
-            <Form.Control
+            <Form.Control as={Input}
               type="text"
               value={score.projectTitle}
               disabled
@@ -78,27 +82,27 @@ const ScoreEditModal = ({ show, score, onHide, onSave }: ScoreEditModalProps) =>
             />
           </Form.Group>
 
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="score-edit-composer">
             <Form.Label>Compositor</Form.Label>
-            <Form.Control
+            <Form.Control as={Input}
               type="text"
               value={composer}
               onChange={(e) => setComposer(e.target.value)}
             />
           </Form.Group>
 
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="score-edit-sub">
             <Form.Label>Subtitulo / Letra</Form.Label>
-            <Form.Control
+            <Form.Control as={Input}
               type="text"
               value={sub}
               onChange={(e) => setSub(e.target.value)}
             />
           </Form.Group>
 
-          <Form.Group className="mb-3">
+          <Form.Group className="mb-3" controlId="score-edit-tags">
             <Form.Label>Tags (separadas por virgula)</Form.Label>
-            <Form.Control
+            <Form.Control as={Input}
               type="text"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
@@ -107,11 +111,12 @@ const ScoreEditModal = ({ show, score, onHide, onSave }: ScoreEditModalProps) =>
           </Form.Group>
 
           <Form.Label>Partes ({parts.length})</Form.Label>
-          <ListGroup className="mb-3">
+          <List className="mb-3">
             {parts.map((part, index) => (
-              <ListGroup.Item key={index} className="d-flex gap-2 align-items-center">
-                <Form.Control
+              <List.Item key={index} className="d-flex gap-2 align-items-center">
+                <Form.Control as={Input}
                   type="text"
+                  aria-label={`Nome da parte ${index + 1}`}
                   value={part.name}
                   onChange={(e) => handlePartNameChange(index, e.target.value)}
                   style={{ flex: 2 }}
@@ -119,9 +124,9 @@ const ScoreEditModal = ({ show, score, onHide, onSave }: ScoreEditModalProps) =>
                 <span className="text-muted" style={{ flex: 1 }}>
                   {part.instrument}
                 </span>
-              </ListGroup.Item>
+              </List.Item>
             ))}
-          </ListGroup>
+          </List>
         </Form>
       </Modal.Body>
       <Modal.Footer>

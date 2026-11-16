@@ -1,4 +1,6 @@
-import { Button, Col, Form, Row } from "react-bootstrap";
+import { Input } from "../../../atoms/Input";
+import { Button } from "../../../atoms/Button";
+import { Col, Form, Row } from "react-bootstrap";
 
 import type {
   ScoreViewModel,
@@ -100,10 +102,11 @@ const SongBookTableView = forwardRef<
               onSubmit={onSubmitNewSection}
             >
               <Col style={{ maxWidth: "200px" }}>
-                <Form.Control
+                <Form.Control as={Input}
                   type="text"
                   onChange={onInputNewSection}
                   value={newSection}
+                  aria-label="Adicionar seção"
                   placeholder="Adicionar seção"
                 />
               </Col>

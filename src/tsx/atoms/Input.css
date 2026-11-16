@@ -45,3 +45,5 @@
 .ds-field.ds-select { height: auto; min-height: 48px; }
 
 .ds-field.ds-select.form-select-sm { min-height: 36px; font-size: var(--ds-caption); }
+
+.ds-field.ds-textarea { min-height: 96px; height: auto; resize: vertical; }

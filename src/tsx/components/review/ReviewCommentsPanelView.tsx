@@ -1,6 +1,9 @@
+import { TextArea } from "../../atoms/TextArea";
+import { Input } from "../../atoms/Input";
+import { Button } from "../../atoms/Button";
 import type { User } from "firebase/auth";
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, CloseButton, Form, Spinner } from "react-bootstrap";
+import { Badge, CloseButton, Form, Spinner } from "react-bootstrap";
 import type { CommentAnchor, ReviewCommentDoc } from "../../../../types/docs";
 import { type CommentThread } from "../../../lib/comments";
 import type { WithId } from "../../../lib/db";
@@ -94,8 +97,7 @@ export function ReviewCommentsPanelView({
     <div>
       <h5>Comentários ({live})</h5>
       <Form onSubmit={(e) => void handleSubmit(e)} className="mb-3">
-        <Form.Control
-          as="textarea"
+        <Form.Control as={TextArea}
           rows={3}
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -116,7 +118,7 @@ export function ReviewCommentsPanelView({
         <div className="d-flex justify-content-end gap-2 mt-2">
           <Button
             size="sm"
-            variant={picking ? "warning" : "outline-secondary"}
+            variant={picking ? "primary" : "secondary"}
             onClick={onStartPicking}
           >
             {picking ? "Clique na partitura…" : "📍 Marcar ponto"}
@@ -243,7 +245,7 @@ function CommentItem({
         {mine && !editing && (
           <>
             <Button
-              variant="link"
+              variant="text"
               size="sm"
               className="p-0"
               onClick={() => setEditing(true)}
@@ -251,7 +253,7 @@ function CommentItem({
               editar
             </Button>
             <Button
-              variant="link"
+              variant="text"
               size="sm"
               className="p-0 text-danger"
               onClick={() => void handleDelete()}
@@ -263,7 +265,7 @@ function CommentItem({
       </div>
       {editing ? (
         <div className="d-flex gap-1 mt-1">
-          <Form.Control
+          <Form.Control as={Input}
             size="sm"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -318,7 +320,7 @@ function ReplyForm({
   if (!open) {
     return (
       <Button
-        variant="link"
+        variant="text"
         size="sm"
         className="p-0"
         onClick={() => setOpen(true)}
@@ -343,7 +345,7 @@ function ReplyForm({
 
   return (
     <div className="d-flex gap-1 mt-1">
-      <Form.Control
+      <Form.Control as={Input}
         size="sm"
         value={body}
         onChange={(e) => setBody(e.target.value)}

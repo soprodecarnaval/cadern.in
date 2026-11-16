@@ -1,9 +1,11 @@
+@import "../../../../styles/tokens.css";
+
 .reader {
   position: relative;
   display: flex;
   overflow: hidden;
   min-height: 360px;
-  background: var(--bs-body-bg);
+  background: var(--ds-paper);
 }
 
 /* Phones and tablets: the open score takes the whole screen. */
@@ -25,7 +27,7 @@
   top: 0;
   z-index: 2;
   padding: 0.75rem 0.875rem 0.5rem;
-  background: var(--bs-body-bg);
+  background: var(--ds-paper);
   border-bottom: 1px solid var(--bs-border-color);
 }
 
@@ -34,7 +36,7 @@
   min-width: 0;
   margin: 0;
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: var(--ds-weight-heading);
 }
 
 .reader-section {
@@ -47,7 +49,7 @@
   background: none;
   color: var(--bs-secondary-color);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: var(--ds-weight-heading);
   text-align: left;
 }
 
@@ -88,9 +90,9 @@
 }
 
 .reader-row[aria-current="true"] {
-  background: var(--bs-primary-bg-subtle);
-  color: var(--bs-primary-text-emphasis);
-  font-weight: 600;
+  background: var(--ds-yellow);
+  color: var(--ds-ink);
+  font-weight: var(--ds-weight-heading);
 }
 
 .reader-row.deleted {
@@ -204,7 +206,7 @@
   gap: 0.25rem;
   height: 48px;
   padding: 0 0.375rem;
-  background: var(--bs-body-bg);
+  background: var(--ds-paper);
   border-bottom: 1px solid var(--bs-border-color);
   transition:
     transform 0.2s,
@@ -232,7 +234,7 @@
 .reader-bar-title b {
   display: block;
   overflow: hidden;
-  font-weight: 600;
+  font-weight: var(--ds-weight-heading);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -257,7 +259,7 @@
   width: 40px;
   height: 40px;
   padding: 0;
-  color: var(--bs-body-color);
+  color: var(--ds-ink);
   font-size: 1.15rem;
 }
 
@@ -302,3 +304,11 @@
   gap: 0.375rem;
   white-space: nowrap;
 }
+
+.reader { font-family: var(--ds-font); font-weight: var(--ds-weight-body); color: var(--ds-ink); }
+.reader-index-head { border-bottom: var(--ds-border) solid var(--ds-ink); }
+.reader-section { background: var(--ds-yellow); color: var(--ds-ink); }
+.reader :is(a, button, input, select):focus-visible { outline: var(--ds-border) solid var(--ds-ink); outline-offset: -3px; }
+.reader a { color: var(--ds-ink); }
+.reader .input-group-text { border: var(--ds-border) solid var(--ds-ink); background: var(--ds-paper); }
+.reader-index-head .d-flex { flex-wrap: wrap; }

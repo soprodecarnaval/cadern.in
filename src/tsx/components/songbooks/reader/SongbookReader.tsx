@@ -1,3 +1,7 @@
+import { Select } from "../../../atoms/Select";
+import { Modal } from "../../../atoms/Modal";
+import { Input } from "../../../atoms/Input";
+import { Button } from "../../../atoms/Button";
 import {
   useCallback,
   useEffect,
@@ -8,14 +12,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import {
-  Button,
-  Form,
-  InputGroup,
-  Modal,
-  Offcanvas,
-  Spinner,
-} from "react-bootstrap";
+import { Form, InputGroup, Offcanvas, Spinner } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
 import {
   BsAspectRatio,
@@ -546,7 +543,7 @@ export function SongbookReader({
   const pdfButton = onDownloadPdf && instrument && (
     <Button
       size="sm"
-      variant="outline-primary"
+      variant="secondary"
       className="reader-pdf"
       disabled={pdfBusy}
       onClick={() => void downloadPdf()}
@@ -646,7 +643,7 @@ export function SongbookReader({
   const pager = (song: Song) => (
     <>
       <Button
-        variant="link"
+        variant="text"
         className="reader-icon"
         aria-label="Música anterior"
         disabled={song.pos === 0}
@@ -658,7 +655,7 @@ export function SongbookReader({
         {song.pos + 1}/{songs.length}
       </span>
       <Button
-        variant="link"
+        variant="text"
         className="reader-icon"
         aria-label="Próxima música"
         disabled={song.pos === songs.length - 1}
@@ -667,7 +664,7 @@ export function SongbookReader({
         <BsChevronRight />
       </Button>
       <Button
-        variant="link"
+        variant="text"
         className="reader-icon"
         aria-label={fit === "w" ? "Ajustar à altura" : "Ajustar à largura"}
         onClick={() => {
@@ -723,7 +720,7 @@ export function SongbookReader({
             </div>
             <div className={`reader-bar${barShown ? "" : " hidden"}`}>
               <Button
-                variant="link"
+                variant="text"
                 className="reader-icon"
                 aria-label="Voltar ao índice"
                 onClick={closeSong}
@@ -731,7 +728,7 @@ export function SongbookReader({
                 <BsChevronLeft />
               </Button>
               <Button
-                variant="link"
+                variant="text"
                 className="reader-icon"
                 aria-label="Buscar música"
                 onClick={openDrawer}
@@ -774,7 +771,7 @@ export function SongbookReader({
                 {songTitle(modalSong, "reader-modal-title")}
                 {pager(modalSong)}
                 <Button
-                  variant="link"
+                  variant="text"
                   className="reader-icon"
                   aria-label="Fechar partitura"
                   onClick={closeSong}
@@ -929,7 +926,7 @@ function SongIndex({
           <h1 className="reader-index-title">{title}</h1>
           {badges}
           {instruments.length > 0 && instrument && (
-            <Form.Select
+            <Select
               size="sm"
               className="w-auto"
               aria-label="Instrumento"
@@ -941,12 +938,12 @@ function SongIndex({
                   {instrumentLabel(i)}
                 </option>
               ))}
-            </Form.Select>
+            </Select>
           )}
           {pdf}
           {onClose && (
             <Button
-              variant="link"
+              variant="text"
               className="reader-icon"
               aria-label="Fechar"
               onClick={onClose}
@@ -959,7 +956,7 @@ function SongIndex({
           <InputGroup.Text>
             <BsSearch aria-hidden />
           </InputGroup.Text>
-          <Form.Control
+          <Form.Control as={Input}
             ref={inputRef}
             type="search"
             placeholder="Buscar por nome ou número"
