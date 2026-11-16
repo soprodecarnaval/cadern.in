@@ -106,3 +106,7 @@ Dependencies: 001 → 002 → 003 → {004, 005}; 004 → 009 → 005; 006 → 0
   path runs headless (`ConsoleApp` RunMode), but validate in 002.
 - Renderer File objects for `uploadScore` (which expects browser `File[]`) —
   bridged from main-process reads; see 007.
+
+## Contextual upload follow-up
+
+[Task 010](../../tasks/010-contextual-exporter-uploads/TASK.md) in Collaborative Flow owns website-to-exporter deep links, protocol handling and context-required uploads. It supersedes free-standing upload entry after implementation. Shared auth error copy is owned by [003](../../tasks/003-humanize-auth-errors/TASK.md).

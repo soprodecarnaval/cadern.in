@@ -1222,3 +1222,16 @@ None blocking. Things to watch rather than decide now:
 | Restore UI deferred to a cadern.in admin panel | §8 |
 | Revision purging deferred behind storage monitoring; must respect songbook pins | §8 |
 | No personal (project-less) scores; the auto-created Acervo project is removed in favor of inline project creation on upload | §009 |
+
+## Follow-up task plans (2026-11-14)
+
+These open plans supersede conflicting earlier design decisions when implemented.
+UI work requires wireframe iteration and approval before implementation.
+
+- [004 — Consolidate songbooks on the project page](../../tasks/004-project-songbook-section/TASK.md) — open.
+- [007 — Invite project members by email](../../tasks/007-email-project-invitations/TASK.md) — open.
+- [008 — Separate public and member songbook routes](../../tasks/008-public-member-songbook-routes/TASK.md) — open.
+- [009 — Scope score review pages and comments to songbooks](../../tasks/009-songbook-scoped-review/TASK.md) — open.
+- [010 — Launch exporter uploads from project and songbook contexts](../../tasks/010-contextual-exporter-uploads/TASK.md) — open.
+
+Sequence and dependencies: [three workstreams](../../tasks/WORKSTREAMS.md).
