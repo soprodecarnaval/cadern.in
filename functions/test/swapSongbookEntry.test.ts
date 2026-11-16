@@ -91,4 +91,34 @@ describe("swapSongbookEntryToFork", () => {
       code: "failed-precondition",
     });
   });
+
+  it("copies the old thread's comments into the fork's thread", async () => {
+    const oldThread = db().collection("songbooks").doc(SB)
+      .collection("scoreThreads").doc("cbh-eva_e1").collection("comments");
+    const root = await oldThread.add({
+      authorId: "rev", authorName: "Rev", body: "Acorde errado",
+      parentId: null, anchor: null, deletedAt: null,
+    });
+    await oldThread.add({
+      authorId: "ed", authorName: "Ed", body: "Concordo",
+      parentId: root.id, anchor: null, deletedAt: null,
+    });
+
+    await swap("ed");
+
+    const newThread = db().collection("songbooks").doc(SB)
+      .collection("scoreThreads").doc("gar-eva_f1").collection("comments");
+    const copied = (await newThread.get()).docs;
+    expect(copied).toHaveLength(2);
+    const newRoot = copied.find((d) => d.get("parentId") === null);
+    const newReply = copied.find((d) => d.id !== newRoot?.id);
+    expect(newRoot?.get("body")).toBe("Acorde errado");
+    expect(newReply?.get("body")).toBe("Concordo");
+    expect(newReply?.get("parentId")).toBe(newRoot?.id);
+    expect(newRoot?.id).not.toBe(root.id);
+
+    // The original thread is untouched, not deleted or moved.
+    const stillThere = await oldThread.get();
+    expect(stillThere.docs).toHaveLength(2);
+  });
 });

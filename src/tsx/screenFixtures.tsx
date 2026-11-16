@@ -246,6 +246,10 @@ export const services = {
   getPendingUserProjectInvitations: () => Promise.resolve([invitation]),
   getComments: () => Promise.resolve([comment]),
   countComments: () => Promise.resolve(1),
+  getSongbookComments: () => Promise.resolve([comment]),
+  addSongbookComment: () => Promise.resolve("new-comment"),
+  editSongbookComment: resolve,
+  softDeleteSongbookComment: resolve,
   loadScore: () => Promise.resolve(loadedScore),
   loadPinnedScores: () =>
     Promise.resolve(

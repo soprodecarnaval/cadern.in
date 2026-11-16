@@ -359,6 +359,57 @@ service cloud.firestore {
             ));
         }
       }
+
+      // Comments on one pinned (scoreId, revisionId) pair, owned by this
+      // songbook rather than the score — two songbooks pinning the same
+      // score never share a thread (009). A thread isn't validated against
+      // a current pin: once created, access stays gated purely by songbook
+      // project membership, same as songbookRevisions above. Mirrors the
+      // scores/.../comments rules, authorized by the songbook's project
+      // instead of the score's — reviewing a foreign score never grants
+      // mutation rights over it.
+      match /scoreThreads/{threadId}/comments/{commentId} {
+        allow read: if isReviewer(get(songbookPath(songbookId)).data.projectId);
+        allow create: if isReviewer(get(songbookPath(songbookId)).data.projectId) &&
+          request.resource.data.keys().hasOnly(['authorId', 'authorName',
+            'body', 'parentId', 'anchor', 'createdAt', 'updatedAt',
+            'deletedAt']) &&
+          request.resource.data.authorId == request.auth.uid &&
+          validThreadBody() &&
+          request.resource.data.deletedAt == null &&
+          (isValidThreadRoot() || isValidThreadReply(songbookId, threadId));
+        // Authors edit or soft-delete their own; nobody else writes.
+        allow update: if request.auth != null &&
+          resource.data.authorId == request.auth.uid &&
+          isReviewer(get(songbookPath(songbookId)).data.projectId) &&
+          onlyUpdatingFields(['body', 'updatedAt', 'deletedAt']) &&
+          validThreadBody();
+        allow delete: if false;
+
+        function validThreadBody() {
+          return request.resource.data.body is string &&
+            request.resource.data.body.size() > 0 &&
+            request.resource.data.body.size() <= 5000;
+        }
+
+        function isValidThreadRoot() {
+          let anchor = request.resource.data.anchor;
+          return request.resource.data.parentId == null && (anchor == null || (
+            anchor.keys().hasOnly(['partName', 'page', 'x', 'y']) &&
+            anchor.partName is string &&
+            anchor.page is int && anchor.page >= 1 &&
+            anchor.x is number && anchor.x >= 0 && anchor.x <= 1 &&
+            anchor.y is number && anchor.y >= 0 && anchor.y <= 1));
+        }
+
+        function isValidThreadReply(songbookId, threadId) {
+          let parent = /databases/$(database)/documents/songbooks/$(songbookId)/scoreThreads/$(threadId)/comments/$(request.resource.data.parentId);
+          return request.resource.data.parentId is string &&
+            request.resource.data.anchor == null &&
+            exists(parent) &&
+            get(parent).data.parentId == null;
+        }
+      }
     }
 
     function onlyUpdatingFields(fields) {

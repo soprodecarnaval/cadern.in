@@ -31,6 +31,13 @@ export const publicSongbookPath = (projectId: string, slug: string) =>
 export const songbookPath = (projectId: string, slug: string) =>
   `${publicSongbookPath(projectId, slug)}/manage`;
 
+/** Review for one entry's pinned revision, scoped to this songbook (009). */
+export const songbookScorePath = (
+  projectId: string,
+  slug: string,
+  scoreId: string,
+) => `${songbookPath(projectId, slug)}/score/${encodeURIComponent(scoreId)}`;
+
 export const isSongbookSection = (
   item: SongbookItemViewModel,
 ): item is SongbookSectionViewModel => item.type === "section";

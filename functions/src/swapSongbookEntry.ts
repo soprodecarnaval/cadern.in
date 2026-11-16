@@ -69,8 +69,35 @@ export async function swapSongbookEntryHandler(
     if (pins[forkId]) {
       throw new HttpsError("failed-precondition", "Fork is already in it.");
     }
+    const oldRevisionId = pins[scoreId];
+    const newRevisionId = fork.get("latestRevisionId") as string;
     delete pins[scoreId];
-    pins[forkId] = fork.get("latestRevisionId");
+    pins[forkId] = newRevisionId;
+
+    // Carries the pinned score's review thread over to the fork's (009): a
+    // fork-swap is a re-pin, which would otherwise start empty like any
+    // other, but the fork is the same piece with a tiny fix — continuity of
+    // the discussion matters more here. Anchors still line up: a fork's
+    // first revision is byte-identical to the version it was forked from.
+    const oldThread = songbookRef
+      .collection("scoreThreads").doc(`${scoreId}_${oldRevisionId}`);
+    const newThread = songbookRef
+      .collection("scoreThreads").doc(`${forkId}_${newRevisionId}`);
+    const oldComments = await tx.get(oldThread.collection("comments"));
+    const newComments = newThread.collection("comments");
+    const idMap = new Map(
+      oldComments.docs.map((d) => [d.id, newComments.doc()]),
+    );
+    for (const commentDoc of oldComments.docs) {
+      const commentData = commentDoc.data();
+      const newRef = idMap.get(commentDoc.id)!;
+      tx.create(newRef, {
+        ...commentData,
+        parentId: commentData.parentId ?
+          idMap.get(commentData.parentId as string)!.id :
+          null,
+      });
+    }
 
     const revision = revisions.doc();
     tx.create(revision, {
