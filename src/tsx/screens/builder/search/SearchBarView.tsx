@@ -5,6 +5,9 @@ import { Row, Col, Form } from "react-bootstrap";
 import type { ScoreViewModel } from "../../../../../types/viewModels";
 import type { CollectionStatus } from "../../../../useCollectionContext";
 
+import searchIcon from "../../../../assets/brand/search.svg";
+import "./SearchBar.css";
+
 interface SearchBarViewProps {
   status: CollectionStatus;
   search: (query: string) => ScoreViewModel[];
@@ -39,15 +42,18 @@ const SearchBarView = ({
     <Row className="mt-4">
       <Col>
         <Form className="d-flex">
-          <Form.Control as={Input}
-            type="search"
-            placeholder="Procurar por título, arranjo ou tags"
-            aria-label="Search"
-            disabled={status !== "ready"}
-            onKeyDown={handleKeyDown}
-            value={searchInput}
-            onChange={handleChange}
-          />
+          <div className="search-field">
+            <img src={searchIcon} alt="" className="search-field-icon" />
+            <Form.Control as={Input}
+              type="search"
+              placeholder="Procurar por título, arranjo ou tags"
+              aria-label="Search"
+              disabled={status !== "ready"}
+              onKeyDown={handleKeyDown}
+              value={searchInput}
+              onChange={handleChange}
+            />
+          </div>
         </Form>
       </Col>
       <small className="text-muted lh-sm mt-2 mb-2">

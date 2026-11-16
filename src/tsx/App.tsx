@@ -24,6 +24,7 @@ import { SongbookScorePage } from "./screens/songbooks/review/SongbookScorePage"
 import { ArticlePage } from "./screens/articles/ArticlePage";
 import { ArticlesPage } from "./screens/articles/ArticlesPage";
 import { HomePage } from "./screens/builder/HomePage";
+import { LandingChrome } from "./screens/landing/LandingChrome";
 import { LandingPage } from "./screens/landing/LandingPage";
 
 /** Year-only URLs belonged to the old static songbook pages. Project slugs
@@ -76,10 +77,11 @@ function App() {
   };
   const [inboxCount, setInboxCount] = useState(0);
   const { currentUser, pendingUser } = useAuth();
-  // The landing and article pages draw their own header and footer.
+  // The landing, article and Montar pages draw the landing header and footer.
   const { pathname } = useLocation();
   const isLanding =
     pathname === ROUTE_PATTERNS.home ||
+    pathname === ROUTE_PATTERNS.builder ||
     pathname === ROUTE_PATTERNS.articles ||
     pathname.startsWith(`${ROUTE_PATTERNS.articles}/`);
 
@@ -122,7 +124,14 @@ function App() {
         />
         <Route
           path={ROUTE_PATTERNS.builder}
-          element={<HomePage onRequestLogin={() => openUserModal()} />}
+          element={
+            <LandingChrome
+              inboxCount={inboxCount}
+              onOpenUserModal={openUserModal}
+            >
+              <HomePage onRequestLogin={() => openUserModal()} />
+            </LandingChrome>
+          }
         />
         <Route
           path={ROUTE_PATTERNS.articles}

@@ -41,14 +41,14 @@ function SongbookScoreCard({ Card,
         trailing={
           <div className="score-card-actions">
             <Button type="button" variant="text" className="p-0"
-              aria-label={`Remover ${score.title}`}
-              onClick={() => handleDelete(score, false)}>
-              <BsFillTrashFill aria-hidden="true" />
-            </Button>
-            <Button type="button" variant="text" className="p-0"
               aria-label={`Editar ${score.title}`}
               onClick={() => setShowEditModal(true)}>
               <BsPencilFill aria-hidden="true" />
+            </Button>
+            <Button type="button" variant="text" className="p-0"
+              aria-label={`Remover ${score.title}`}
+              onClick={() => handleDelete(score, false)}>
+              <BsFillTrashFill aria-hidden="true" />
             </Button>
           </div>
         }
