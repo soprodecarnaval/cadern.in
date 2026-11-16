@@ -105,14 +105,15 @@ Difficulty: large. Dependencies: 008 (integrated: commit record in
   review comments" — membership, outsider/impersonation denial, foreign-score
   authorization, cross-songbook isolation, replies, read restriction,
   author-only edit/soft-delete) and a Cloud Functions test (comment-copy on
-  fork-swap, with `parentId` remapping). **Neither could run in this
-  environment** — both need the Firestore emulator, which needs Java 21;
-  only Java 17 is available here. Confirmed the gap is pre-existing and
-  environment-wide (every existing rules/functions test fails identically,
-  not just the new ones) rather than something introduced by this change.
-  Both test files type-check and vitest successfully *collects* all cases
-  (92 rules tests, 5 functions tests) before failing on the emulator
-  connection — review the logic directly pending a CI run with the emulator.
+  fork-swap, with `parentId` remapping). The first CI run caught one bad
+  assertion: the cross-songbook isolation test expected a member's write to a
+  second songbook's thread to be denied, but threads are gated purely by
+  songbook membership with no validation against a current pin (see
+  Decisions), so the same write succeeds by design. Fixed by seeding a
+  realistic second songbook pinning the same score and asserting the two
+  same-named threads stay independent documents. All three emulator suites
+  now pass locally under Java 21 (Homebrew `openjdk@21`): rules 110/110,
+  functions 21/21, migrations 26/26.
 - Storybook stories added (`SongbookScorePage.stories.tsx`): own-project
   score, foreign score, missing entry, access denied, loading, songbook not
   found.
