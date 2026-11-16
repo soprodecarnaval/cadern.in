@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import type { ArticleCard } from "../articles";
+import { formatArticleDate, type ArticleCard } from "../articles";
 
 // Article cards sit in a two-column grid (~656px each) on wide screens and
 // one full-width column on phones; half the viewport in between.
@@ -17,8 +17,19 @@ export function ArticleCards({ articles }: { articles: ArticleCard[] }) {
           <div className="landing-article-image">
             <CardImage article={article} />
           </div>
+          {(article.kicker || article.date) && (
+            <p className="landing-article-meta">
+              {article.kicker}
+              {article.kicker && article.date && " · "}
+              {article.date && (
+                <time dateTime={article.date}>
+                  {formatArticleDate(article.date)}
+                </time>
+              )}
+            </p>
+          )}
           <h3>{article.title}</h3>
-          <p>{article.summary}</p>
+          <p className="landing-article-summary">{article.summary}</p>
         </Link>
       ))}
     </div>

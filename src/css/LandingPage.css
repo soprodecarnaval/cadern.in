@@ -649,6 +649,12 @@
   margin: 0 6px 8px;
 }
 
+.landing-article .landing-article-meta {
+  margin: 0 6px 6px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
 .landing-article p {
   margin: 0 6px;
   max-width: 580px;

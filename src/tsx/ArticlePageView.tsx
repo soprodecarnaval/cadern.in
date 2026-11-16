@@ -3,8 +3,10 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import {
+  ARTICLES_PATH,
   articleCards,
   articlePath,
+  formatArticleDate,
   type Article,
   type ArticleBlock,
 } from "../articles";
@@ -19,16 +21,6 @@ import type { ProfileTab } from "./ProfileModalView";
 
 import "../css/LandingPage.css";
 import "../css/ArticlePage.css";
-
-// The articles index doesn't exist yet; it falls through to "not found".
-const ARTICLES_INDEX = "/artigos";
-
-const dateFormat = new Intl.DateTimeFormat("pt-BR", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
 
 export function ArticlePageView({
   article,
@@ -61,7 +53,7 @@ export function ArticlePageView({
         <article className="article">
           <header className="article-header">
             <nav className="article-breadcrumb" aria-label="Você está em">
-              <Link to={ARTICLES_INDEX}>Artigos</Link>
+              <Link to={ARTICLES_PATH}>Artigos</Link>
               {article.kicker && (
                 <>
                   <span className="article-breadcrumb-separator" aria-hidden="true">|</span>
@@ -76,7 +68,7 @@ export function ArticlePageView({
                 Por <strong>{article.author}</strong>
               </span>
               <time dateTime={article.date}>
-                {dateFormat.format(new Date(article.date))}
+                {formatArticleDate(article.date)}
               </time>
               {article.source && (
                 <span>
@@ -116,7 +108,7 @@ export function ArticlePageView({
           <section className="landing-section">
             <SectionTitle>Leia mais</SectionTitle>
             <ArticleCards articles={others.slice(0, 2)} />
-            <MoreLink to={ARTICLES_INDEX}>artigos</MoreLink>
+            <MoreLink to={ARTICLES_PATH}>artigos</MoreLink>
           </section>
         )}
       </main>

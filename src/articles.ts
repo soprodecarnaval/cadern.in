@@ -166,21 +166,39 @@ export type ArticleCard = {
   imageUrl?: string;
   /** Width descriptors for `imageUrl`, when variants exist. */
   imageSrcSet?: string;
+  /** Shown above the title, with the date, when there is one. */
+  kicker?: string;
+  date?: string;
 };
 
+/** The list of every article. */
+export const ARTICLES_PATH = "/artigos";
+
+const dateFormat = new Intl.DateTimeFormat("pt-BR", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+/** "2026-02-22" → "22 de fevereiro de 2026". */
+export function formatArticleDate(isoDate: string): string {
+  return dateFormat.format(new Date(isoDate));
+}
+
 export function articlePath(article: Article): string {
-  return `/artigos/${article.slug}`;
+  return `${ARTICLES_PATH}/${article.slug}`;
 }
 
 // Placeholders until the articles are written: their pages don't exist yet.
-// Without an `imageUrl` the image area shows as a grey box. The first two
-// are shown; the section hides itself if this list is empty.
+// Without an `imageUrl` the image area shows as a grey box.
 const placeholderCards: ArticleCard[] = [
   {
     title: "Como montar o caderninho do seu bloco",
     summary:
       "Um passo a passo da busca de partituras até o PDF pronto para imprimir e levar para a rua.",
     href: "/artigos/como-montar-o-caderninho",
+    kicker: "Guias",
     imageUrl: "/assets/articles/cadernos-impressos-1234.webp",
     imageSrcSet:
       "/assets/articles/cadernos-impressos-360.webp 360w, /assets/articles/cadernos-impressos-670.webp 670w, /assets/articles/cadernos-impressos-1234.webp 1234w",
@@ -190,6 +208,7 @@ const placeholderCards: ArticleCard[] = [
     summary:
       "Como deixar suas partituras no padrão do cadern.in antes de enviá-las para o acervo.",
     href: "/artigos/extensao-musescore",
+    kicker: "Guias",
     // The source photo is 933px wide; the variants stop there on purpose.
     imageUrl: "/assets/articles/trombone-na-rua-933.webp",
     imageSrcSet:
@@ -204,6 +223,8 @@ export const articleCards: ArticleCard[] = [
     summary: article.deck ?? "",
     href: articlePath(article),
     imageUrl: article.lead?.src ?? firstImage(article),
+    kicker: article.kicker,
+    date: article.date,
   })),
   ...placeholderCards,
 ];

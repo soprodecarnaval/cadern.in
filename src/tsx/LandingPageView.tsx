@@ -9,7 +9,7 @@ import { Accordion, Dropdown } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
 import type { SongbookDoc } from "../../types/docs";
-import type { ArticleCard } from "../articles";
+import { ARTICLES_PATH, type ArticleCard } from "../articles";
 import type { WithId } from "../lib/db";
 import type { CollectionContextValue } from "../useCollectionContext";
 import { initialsOf } from "../lib/displayName";
@@ -42,7 +42,6 @@ const PLANNED = {
   contribua: "/contribua",
   ajuda: "/ajuda",
   biblioteca: "/biblioteca",
-  artigos: "/artigos",
   carnaval: "/2027",
   favoritos: "/favoritos",
 };
@@ -222,7 +221,7 @@ export function LandingPageView({
           <section className="landing-section">
             <SectionTitle>Artigos</SectionTitle>
             <ArticleCards articles={articles.slice(0, 2)} />
-            <MoreLink to={PLANNED.artigos}>artigos</MoreLink>
+            <MoreLink to={ARTICLES_PATH}>artigos</MoreLink>
           </section>
         )
         */}
@@ -575,7 +574,7 @@ export function LandingFooter({
             <li><Link to={PLANNED.sobre}>Sobre</Link></li>
             <li><Link to={PLANNED.contribua}>Contribua</Link></li>
             <li><Link to={PLANNED.ajuda}>Ajuda</Link></li>
-            <li><Link to={PLANNED.artigos}>Artigos</Link></li>
+            <li><Link to={ARTICLES_PATH}>Artigos</Link></li>
           </ul>
         </nav>
       </div>

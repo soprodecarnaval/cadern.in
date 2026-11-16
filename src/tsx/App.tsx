@@ -21,6 +21,7 @@ import { SongbookPage } from "./SongbookPage";
 import { SongbookScorePage } from "./SongbookScorePage";
 
 import { ArticlePage } from "./ArticlePage";
+import { ArticlesPage } from "./ArticlesPage";
 import { HomePage } from "./HomePage";
 import { LandingPage } from "./LandingPage";
 
@@ -35,7 +36,10 @@ function App() {
   const { currentUser, pendingUser } = useAuth();
   // The landing and article pages draw their own header and footer.
   const { pathname } = useLocation();
-  const isLanding = pathname === "/" || pathname.startsWith("/artigos/");
+  const isLanding =
+    pathname === "/" ||
+    pathname === "/artigos" ||
+    pathname.startsWith("/artigos/");
 
   useEffect(() => {
     if (!FEATURE_FLAG_COLLAB_FLOW || !currentUser) {
@@ -77,6 +81,12 @@ function App() {
         <Route
           path="/montar"
           element={<HomePage onRequestLogin={() => openUserModal()} />}
+        />
+        <Route
+          path="/artigos"
+          element={
+            <ArticlesPage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
+          }
         />
         <Route
           path="/artigos/:slug"
