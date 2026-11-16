@@ -6,6 +6,7 @@ import { translateWarning } from "../lib/warningMessages";
 import type { User } from "firebase/auth";
 import { useAuth } from "../auth";
 import { describeAuthError } from "../lib/authMessages";
+import type { ExportDeepLinkContext } from "../../types/exportDeepLink";
 import { LoginForm } from "./components/LoginForm";
 import { UploadPanel } from "./components/UploadPanel";
 import { FileDrop } from "./components/FileDrop";
@@ -14,6 +15,25 @@ import {
   type MetadataValues,
 } from "./components/MetadataForm";
 import { PartsTable } from "./components/PartsTable";
+
+/**
+ * The exporter has no destination picker of its own (010): every launch
+ * must come from a cadernin-export:// link, cold (process argv) or warm
+ * (second-instance / macOS open-url). Held above the login gate so a
+ * cold-launch link survives signing in.
+ */
+function useExportContext(): ExportDeepLinkContext | null {
+  const [context, setContext] = useState<ExportDeepLinkContext | null>(null);
+  useEffect(() => {
+    void window.api.getExportContext().then((pending) => {
+      if (pending) {
+        setContext(pending);
+      }
+    });
+    return window.api.onExportContext(setContext);
+  }, []);
+  return context;
+}
 
 /** Library messages are English by policy; the UI is pt-BR. */
 function describeFailure(failure: ExportFailure): string {
@@ -32,6 +52,7 @@ function describeFailure(failure: ExportFailure): string {
 export function App() {
   const { currentUser, pendingUser, logout, resendVerificationEmail } =
     useAuth();
+  const context = useExportContext();
 
   // Login gates the whole app: uploading is the point of it, and a session
   // established up front is one less interruption mid-export. An unverified
@@ -58,11 +79,42 @@ export function App() {
     );
   }
 
+  if (!context) {
+    return (
+      <main className="app app--login">
+        <h1>cadern.in — Exportador</h1>
+        <NoContext onLogout={() => void logout()} />
+      </main>
+    );
+  }
+
   return (
     <ExportApp
       onLogout={() => void logout()}
       user={currentUser}
+      context={context}
     />
+  );
+}
+
+/**
+ * No deep link, no destination — not even an option to proceed (010): opens
+ * from a project page or a songbook-scoped score page on the website, never
+ * from inside the exporter itself.
+ */
+function NoContext({ onLogout }: { onLogout: () => void }) {
+  return (
+    <div className="login-form">
+      <h2>Nenhum destino selecionado</h2>
+      <p>
+        Abra o Exportador a partir da página de um projeto ou de uma
+        partitura em um caderninho no site do cadern.in — o botão “Enviar
+        partitura” abre este app já sabendo para onde enviar.
+      </p>
+      <button type="button" className="btn-link" onClick={onLogout}>
+        Usar outra conta
+      </button>
+    </div>
   );
 }
 
@@ -110,9 +162,11 @@ function PendingVerification({
 function ExportApp({
   onLogout,
   user,
+  context,
 }: {
   onLogout: () => void;
   user: User;
+  context: ExportDeepLinkContext;
 }) {
   const [mscorePath, setMscorePath] = useState<string | null>(null);
   const [resolvingMscore, setResolvingMscore] = useState(true);
@@ -294,6 +348,7 @@ function ExportApp({
           <UploadPanel
             key={msczPath}
             user={user}
+            context={context}
             msczPath={msczPath}
             exportScore={runExport}
             disabled={selected.size === 0}

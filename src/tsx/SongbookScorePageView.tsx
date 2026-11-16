@@ -1,18 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Badge, Col, Container, Row, Spinner } from "react-bootstrap";
+import { Alert, Badge, Button, Col, Container, Row, Spinner } from "react-bootstrap";
 import { Link, useParams } from "react-router-dom";
 
 import type { CommentAnchor, ReviewCommentDoc } from "../../types/docs";
 import type { WithId } from "../lib/db";
 import { commentThreads } from "../lib/comments";
+import { isEditor } from "../lib/roles";
 import { resolveScoreMetadata } from "../lib/scoreMetadata";
 import { publicSongbookPath, songbookPath } from "../lib/songbook";
+import { buildExportDeepLink } from "../../types/exportDeepLink";
 
 import type { ScoreDisplayPart, ScorePin } from "./ScoreDisplay";
 
 interface LoadedScoreThread {
   songbookId: string;
   songbookTitle: string;
+  songbookProjectId: string;
+  // The songbook's revision this page loaded against — the "nova versão"
+  // launch link's expected revision (010), so a stale songbook never gets a
+  // silent re-pin after the upload.
+  songbookRevisionId: string;
   // The score's own project, which may differ from the songbook's — review
   // is authorized by the songbook's membership either way (009); mutating
   // the score itself is not (unaffected by this page, which has no such
@@ -54,6 +61,8 @@ async function load(
   return {
     songbookId: songbook.id,
     songbookTitle: songbook.title,
+    songbookProjectId: songbook.projectId,
+    songbookRevisionId: songbook.currentRevisionId,
     foreign: score.projectId !== songbook.projectId,
     revisionId,
     ...resolveScoreMetadata(score),
@@ -225,9 +234,27 @@ export function SongbookScorePageView({
 
   return (
     <Container className="mt-4">
-      <div className="d-flex align-items-baseline gap-2 mb-1">
-        <h2 className="mb-0">{loaded.title}</h2>
-        {loaded.foreign && <Badge bg="warning">de outro projeto</Badge>}
+      <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
+        <div className="d-flex align-items-baseline gap-2">
+          <h2 className="mb-0">{loaded.title}</h2>
+          {loaded.foreign && <Badge bg="warning">de outro projeto</Badge>}
+        </div>
+        {isEditor(role) && (
+          <Button
+            size="sm"
+            variant="outline-primary"
+            as="a"
+            href={buildExportDeepLink({
+              projectId: loaded.songbookProjectId,
+              scoreId,
+              expectedScoreRevisionId: loaded.revisionId,
+              songbookId: loaded.songbookId,
+              expectedSongbookRevisionId: loaded.songbookRevisionId,
+            })}
+          >
+            Enviar nova versão
+          </Button>
+        )}
       </div>
       <p className="text-muted mb-3">
         Fixada em{" "}

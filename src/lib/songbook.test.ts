@@ -4,6 +4,7 @@ import {
   fromSongbookRevision,
   hasNewerVersion,
   numberSongbookItems,
+  pinnedToRevision,
   repinnedContent,
   songbookScore,
   songbookScoreVersionLabel,
@@ -142,5 +143,18 @@ describe("songbook score version labels", () => {
 
   it("uses the loaded pin when no explicit revision override exists", () => {
     expect(songbookScoreVersionLabel({ ...item, revision: undefined }, "own")).toBe("v5");
+  });
+});
+
+describe("pinnedToRevision", () => {
+  it("pins the given score to the given revision, leaving other pins alone", () => {
+    const current = {
+      entries: [{ type: "score" as const, scoreId: "a", order: 0, index: 1 }],
+      pins: { a: "a-r1", b: "b-r1" },
+      covers: {},
+    };
+    const { content, note } = pinnedToRevision(current, "a", "a-r2", "Música A");
+    expect(content).toEqual({ ...current, pins: { a: "a-r2", b: "b-r1" } });
+    expect(note).toBe("atualiza: Música A");
   });
 });

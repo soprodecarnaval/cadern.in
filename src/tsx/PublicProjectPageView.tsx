@@ -9,12 +9,13 @@ import {
 } from "react-bootstrap";
 import { Link, useParams } from "react-router-dom";
 import type { WithId } from "../lib/db";
-import { isAdmin, isReviewer } from "../lib/roles";
+import { isAdmin, isEditor, isReviewer } from "../lib/roles";
 import {
   projectSettingsPath,
   publicSongbookPath,
   songbookPath,
 } from "../lib/songbook";
+import { buildExportDeepLink } from "../../types/exportDeepLink";
 
 import type {
   ProjectDoc,
@@ -169,6 +170,7 @@ export function PublicProjectPageView({
 
   const myRole = role === "loading" ? undefined : role;
   const canManage = isAdmin(myRole);
+  const canUpload = isEditor(myRole);
 
   return (
     <Container className="mt-4">
@@ -246,7 +248,21 @@ export function PublicProjectPageView({
           </tbody>
         </Table>
       )}
-      {isMember && <h5>Partituras</h5>}
+      {isMember && (
+        <div className="d-flex justify-content-between align-items-center mb-2 gap-2">
+          <h5 className="mb-0">Partituras</h5>
+          {canUpload && (
+            <Button
+              size="sm"
+              variant="outline-primary"
+              as="a"
+              href={buildExportDeepLink({ projectId: project.id })}
+            >
+              Enviar partitura
+            </Button>
+          )}
+        </div>
+      )}
       {!isMember ? null : scoresError ? (
         <Alert variant="danger">Não foi possível carregar as partituras.{" "}
           <Button variant="outline-danger" onClick={() => retryScores((n) => n + 1)}>Tentar novamente</Button>
