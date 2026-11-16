@@ -25,6 +25,7 @@ export function PartsTable({ parts, selected, onToggle }: Props) {
               <td>
                 <input
                   type="checkbox"
+                  aria-label={`Selecionar ${p.name}`}
                   checked={selected.has(p.id)}
                   disabled={!compatible}
                   onChange={() => onToggle(p.id)}

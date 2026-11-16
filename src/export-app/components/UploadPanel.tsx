@@ -1,18 +1,22 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import type { ExportResult } from "../../../scripts/lib/exportScore";
+import { Button } from "../../tsx/atoms/Button";
 import { exportAndUpload, type ExportUploadProgress } from "../exportAndUpload";
 import {
-  createProject,
+  createSongbookRevision,
   getMemberRole,
-  getProjectBySlug,
-  getUserMemberProjects,
-  type WithId,
+  getProject,
+  getScore,
+  getSongbookById,
+  getSongbookRevision,
 } from "../../lib/db";
-import type { ProjectDoc } from "../../../types/docs";
-import { displayNameOf } from "../../lib/displayName";
-import { isEditor } from "../../lib/roles";
-import { slugify } from "../../lib/slugify";
+import {
+  validateExportContext,
+  type ResolvedExportContext,
+} from "../../lib/exportContext";
+import { pinnedToRevision } from "../../lib/songbook";
+import type { ExportDeepLinkContext } from "../../../types/exportDeepLink";
 import type { UploadTarget } from "../../lib/uploadTarget";
 import {
   validateParsedScore,
@@ -21,8 +25,16 @@ import {
 import { translateWarning } from "../../lib/warningMessages";
 import type { Warning } from "../../result";
 
+const services = {
+  getMemberRole,
+  getProject,
+  getScore,
+  getSongbookById,
+};
+
 interface Props {
   user: User;
+  context: ExportDeepLinkContext;
   exportScore: () => Promise<ExportResult>;
   disabled: boolean;
   onBusyChange: (busy: boolean) => void;
@@ -33,103 +45,82 @@ interface Props {
 type Status =
   | { kind: "idle" }
   | ExportUploadProgress
-  | { kind: "done"; scoreId: string; localStamped: boolean; directory: string }
+  | {
+      kind: "done";
+      scoreId: string;
+      localStamped: boolean;
+      directory: string;
+      repin: "updated" | "skipped-stale" | "none";
+    }
   | { kind: "error"; message: string };
 
-// The project <select>'s own sentinel value for "create a new one instead".
-const NEW_PROJECT = "__new__";
+type ContextState =
+  | { kind: "loading" }
+  | { kind: "invalid"; reason: string }
+  | { kind: "valid"; resolved: ResolvedExportContext };
 
-export function UploadPanel({ user, exportScore, msczPath, disabled, onBusyChange }: Props) {
-  const [projects, setProjects] = useState<WithId<ProjectDoc>[]>([]);
-  const [projectId, setProjectId] = useState("");
-  const [loadedProjects, setLoadedProjects] = useState(false);
+export function UploadPanel({
+  user,
+  context,
+  exportScore,
+  msczPath,
+  disabled,
+  onBusyChange,
+}: Props) {
+  const [contextState, setContextState] = useState<ContextState>({
+    kind: "loading",
+  });
   const [parsed, setParsed] = useState<ParsedScore | null>(null);
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [target, setTarget] = useState<UploadTarget | null>(null);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
 
-  // No project yet: every upload needs editor rights on a project, and there
-  // is no auto-created one standing in — the user picks or creates one.
-  const [creatingProject, setCreatingProject] = useState(false);
-  const [newProjectTitle, setNewProjectTitle] = useState("");
-  const [createPending, setCreatePending] = useState(false);
-  const [createError, setCreateError] = useState("");
-
   useEffect(() => {
     let current = true;
-    void (async () => {
-      try {
-        const memberOf = await getUserMemberProjects(user.uid);
-        const roles = await Promise.all(memberOf.map((p) => getMemberRole(p.id, user.uid)));
-        if (!current) {return;}
-        const mine = memberOf.filter((_, i) => isEditor(roles[i]));
-        setProjects(mine);
-        setProjectId(mine[0]?.id ?? "");
-        setCreatingProject(mine.length === 0);
-        setLoadedProjects(true);
-      } catch (e) {
-        if (current) {setStatus({ kind: "error", message: e instanceof Error ? e.message : String(e) });}
-      }
-    })();
-    return () => { current = false; };
-  }, [user]);
-
-  const handleProjectChange = (value: string) => {
-    setStatus({ kind: "idle" });
-    setParsed(null);
-    setTarget(null);
-    setWarnings([]);
-    if (value === NEW_PROJECT) {
-      setCreatingProject(true);
-      return;
-    }
-    setProjectId(value);
-  };
-
-  const handleCreateProject = useCallback(async () => {
-    const title = newProjectTitle.trim();
-    if (!title) {
-      return;
-    }
-    setCreatePending(true);
-    setCreateError("");
-    try {
-      const slug = slugify(title);
-      const existing = await getProjectBySlug(slug);
-      if (existing) {
-        setCreateError(`O slug "${slug}" já está em uso. Escolha outro nome.`);
+    setContextState({ kind: "loading" });
+    void validateExportContext(context, user.uid, services).then((check) => {
+      if (!current) {
         return;
       }
-      await createProject(
-        slug,
-        { title },
-        { uid: user.uid, displayName: displayNameOf(user) },
+      setContextState(
+        check.ok
+          ? { kind: "valid", resolved: check.resolved }
+          : { kind: "invalid", reason: check.reason },
       );
-      setProjects((prev) => [
-        ...prev,
-        { id: slug, title, slug, memberIds: [user.uid] } as WithId<ProjectDoc>,
-      ]);
-      setProjectId(slug);
-      setCreatingProject(false);
-      setNewProjectTitle("");
-    } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Erro ao criar projeto");
-    } finally {
-      setCreatePending(false);
-    }
-  }, [newProjectTitle, user]);
+    });
+    return () => {
+      current = false;
+    };
+  }, [context, user]);
 
-  const busy = status.kind === "exporting" || status.kind === "reading" || status.kind === "uploading";
+  const busy =
+    status.kind === "exporting" ||
+    status.kind === "reading" ||
+    status.kind === "uploading";
 
   const upload = async () => {
-    if (!projectId || creatingProject || disabled || busy) {return;}
+    if (disabled || busy || contextState.kind !== "valid") {
+      return;
+    }
+    // Re-checked right before the write, not just on arrival: a long export
+    // (MuseScore CLI, then the upload itself) leaves plenty of time for the
+    // link to go stale while the window was sitting open.
+    const recheck = await validateExportContext(context, user.uid, services);
+    if (!recheck.ok) {
+      setContextState({ kind: "invalid", reason: recheck.reason });
+      return;
+    }
+    const { projectId } = recheck.resolved;
     onBusyChange(true);
     setParsed(null);
     setTarget(null);
     setWarnings([]);
     try {
       const result = await exportAndUpload({
-        exportScore, projectId, user, msczPath,
+        exportScore,
+        projectId,
+        user,
+        msczPath,
         onProgress: setStatus,
         onParsed: (score, uploadTarget) => {
           setParsed(score);
@@ -137,70 +128,86 @@ export function UploadPanel({ user, exportScore, msczPath, disabled, onBusyChang
           setWarnings([...score.warnings, ...validateParsedScore(score)]);
         },
       });
-      setStatus({ kind: "done", ...result });
+      const repin = await repinSongbook(result.scoreId, result.revisionId);
+      setStatus({ kind: "done", ...result, repin });
     } catch (e) {
-      setStatus({ kind: "error", message: e instanceof Error ? e.message : String(e) });
+      setStatus({
+        kind: "error",
+        message: e instanceof Error ? e.message : String(e),
+      });
     } finally {
       onBusyChange(false);
     }
   };
 
+  // Offers to update the songbook's pin under the role/concurrency rules
+  // already enforced by createSongbookRevision; never touches any other
+  // songbook pinning the same score. A final staleness check right before
+  // this specific write — the gap since the pre-upload check is the whole
+  // export + upload, which can take a while.
+  const repinSongbook = async (
+    scoreId: string,
+    revisionId: string,
+  ): Promise<"updated" | "skipped-stale" | "none"> => {
+    if (!context.songbookId) {
+      return "none";
+    }
+    const songbook = await getSongbookById(context.songbookId);
+    if (
+      !songbook ||
+      songbook.deletedAt ||
+      songbook.currentRevisionId !== context.expectedSongbookRevisionId
+    ) {
+      return "skipped-stale";
+    }
+    const current = await getSongbookRevision(
+      songbook.id,
+      songbook.currentRevisionId,
+    );
+    if (!current) {
+      return "skipped-stale";
+    }
+    const { content, note } = pinnedToRevision(
+      current,
+      scoreId,
+      revisionId,
+      parsed?.title ?? scoreId,
+    );
+    await createSongbookRevision(songbook.id, content, {
+      createdBy: user.uid,
+      note,
+    });
+    return "updated";
+  };
+
+  if (contextState.kind === "loading") {
+    return (
+      <section className="upload-panel">
+        <p className="muted">Verificando destino…</p>
+      </section>
+    );
+  }
+
+  if (contextState.kind === "invalid") {
+    return (
+      <section className="upload-panel">
+        <div className="alert alert-danger" role="alert">
+          {contextState.reason}
+        </div>
+      </section>
+    );
+  }
+
+  const { resolved } = contextState;
+
   return (
     <section className="upload-panel">
       <h2>Destino</h2>
-
-      <label>
-        <span>Projeto</span>
-        {creatingProject ? (
-          <div className="project-create">
-            <input
-              type="text"
-              placeholder="Nome do novo projeto"
-              value={newProjectTitle}
-              disabled={createPending}
-              onChange={(e) => setNewProjectTitle(e.target.value)}
-            />
-            <div className="project-create-actions">
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={createPending || !newProjectTitle.trim()}
-                onClick={() => void handleCreateProject()}
-              >
-                {createPending ? "Criando…" : "Criar projeto"}
-              </button>
-              {projects.length > 0 && (
-                <button
-                  type="button"
-                  className="btn-link"
-                  disabled={createPending}
-                  onClick={() => {
-                    setCreatingProject(false);
-                    setCreateError("");
-                  }}
-                >
-                  Voltar à lista
-                </button>
-              )}
-            </div>
-            {createError && <p className="error">{createError}</p>}
-          </div>
-        ) : (
-          <select
-            value={projectId}
-            disabled={busy || !loadedProjects}
-            onChange={(e) => handleProjectChange(e.target.value)}
-          >
-            {!loadedProjects && <option value="">Carregando projetos…</option>}
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-            <option value={NEW_PROJECT}>Criar novo projeto…</option>
-          </select>
-        )}
-      </label>
+      <p className="upload-context">
+        <strong>{resolved.projectTitle}</strong>
+        {resolved.songbookTitle && <> · {resolved.songbookTitle}</>}
+        {resolved.scoreTitle && <> · {resolved.scoreTitle}</>}
+      </p>
 
       {parsed && (
         <p className="upload-summary">
@@ -249,28 +256,45 @@ export function UploadPanel({ user, exportScore, msczPath, disabled, onBusyChang
         <div className="export-result" role="status">
           <strong>Enviado para o cadern.in</strong>
           <span>{status.scoreId}</span>
-          <button type="button" onClick={() => void window.api.openFolder(status.directory)}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void window.api.openFolder(status.directory)}
+          >
             Abrir pasta
-          </button>
+          </Button>
           {!status.localStamped && (
             <p className="upload-notice">
               Não foi possível atualizar o arquivo original. Feche-o no MuseScore;
               sem isso, o próximo envio pode não reconhecer esta partitura.
             </p>
           )}
+          {status.repin === "updated" && (
+            <p className="upload-notice">
+              Caderninho «{resolved.songbookTitle}» atualizado para esta versão.
+            </p>
+          )}
+          {status.repin === "skipped-stale" && (
+            <p className="upload-notice">
+              O caderninho mudou desde que este link foi gerado — a partitura
+              foi enviada, mas o caderninho não foi atualizado. Abra-o para
+              atualizar manualmente.
+            </p>
+          )}
         </div>
       )}
 
-      {status.kind === "error" && <p className="error">{status.message}</p>}
+      {status.kind === "error" && (
+        <div className="alert alert-danger" role="alert">{status.message}</div>
+      )}
 
-      <button
-        type="button"
-        className="btn-primary"
-        disabled={disabled || !projectId || creatingProject || createPending || busy || !loadedProjects}
+      <Button
+        disabled={disabled || busy}
+        aria-busy={busy}
         onClick={() => void upload()}
       >
         Exportar para o cadern.in
-      </button>
+      </Button>
     </section>
   );
 }

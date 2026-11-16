@@ -1,6 +1,6 @@
 ---
 title: Scope score review pages and comments to songbooks
-status: open
+status: completed
 type: feature
 milestone: collab-flow
 ---
@@ -38,13 +38,15 @@ Difficulty: large. Dependencies: 008 (integrated: commit record in
 - **Re-pin (same score, new revision)**: automatic, empty new thread — no
   dialog, no change from 005's existing "comments never carry over between
   versions" rule, just re-keyed per songbook instead of per score.
-- **Fork-swap (`swapSongbookEntryToFork`) is the one exception**: still
-  automatic (no dialog), but the new fork's thread is seeded by copying the
-  old thread's comments in the same operation. Anchors stay valid because a
-  fork's revision 1 is byte-identical to the revision it was forked from. The
-  old thread is left in place (not deleted/merged) and stays reachable from
-  the songbook's revision history — just no longer the live thread for that
-  entry.
+- **Fork-swap (`swapSongbookEntryToFork`) is *not* an exception, corrected
+  2026-11-16**: it starts an empty thread automatically, same as any other
+  re-pin. The original plan carried the old thread's comments into the
+  fork's, reasoned from "a fork's revision 1 is byte-identical to the
+  revision it was forked from" — wrong: a fork's first revision is whatever
+  the editor just uploaded to fix the issue, not a copy of the source, so a
+  carried-over anchor could point at the wrong spot after notes or measures
+  moved. Reverted before this branch was pushed; see
+  `functions/src/swapSongbookEntry.ts`'s history for the correction.
 
 ## Requirements
 
@@ -57,14 +59,75 @@ Difficulty: large. Dependencies: 008 (integrated: commit record in
 
 ## Implementation plan
 
-1. ✅ Wireframes iterated and approved: [mockup-v1.html](mockup-v1.html) — own-project score, foreign score (review yes/mutate no), fork-swap carrying comments forward, plain re-pin starting empty.
+1. ✅ Wireframes iterated and approved: [mockup-v1.html](mockup-v1.html) — own-project score, foreign score (review yes/mutate no), plain re-pin starting empty. The mockup's fork-swap panel is superseded by the correction above (fork-swap now also starts empty).
 2. ✅ Schema and authorization model agreed (see Decisions above).
-3. Implement schema, songbook-scoped reads/writes and rules; update songbook row links and remove global review entry points. **Not yet implemented** — next stacked step after 008.
+3. ✅ Implemented: schema, songbook-scoped reads/writes, rules, route, and songbook row links (below).
 4. ~~Migration~~ — dropped.
+
+## Implementation
+
+- `src/lib/db.ts`: `getSongbookComments`/`addSongbookComment`/`editSongbookComment`/
+  `softDeleteSongbookComment`, keyed by `songbookScoreThreadId(scoreId, revisionId)`
+  under `songbooks/{id}/scoreThreads/{threadId}/comments`. Mirrors the existing
+  score-scoped functions exactly; reuses `zReviewCommentDoc`/`zReviewCommentData`
+  (identical shape, no new types needed).
+- `firestore.rules`: new `scoreThreads/{threadId}/comments/{commentId}` rules
+  nested under `songbooks/{songbookId}`, authorized by
+  `isReviewer(songbook.projectId)` instead of the score's project — the only
+  behavioral difference from the existing score-comment rules. No validation
+  against a current pin: once a thread exists, read/write stay gated purely
+  by songbook membership, same as `songbookRevisions`.
+- `functions/src/swapSongbookEntry.ts`: unchanged — fork-swap is a plain
+  re-pin to the new `(forkId, revisionId)` pair; the thread for that pair
+  starts empty automatically, same as any other re-pin. (An earlier version
+  of this task copied the old thread's comments across; reverted, see
+  Decisions above.)
+- `src/tsx/SongbookScorePageView.tsx` (new) + `SongbookScorePage.tsx`
+  container, routed at
+  `/project/:slug/songbook/:songbookSlug/manage/score/:scoreId`. Membership
+  gate first (same pattern as `SongbookManagePageView`), then resolves the
+  pin from the songbook's current revision — missing pin shows "não está
+  mais neste caderninho" rather than falling through to the score's latest.
+  No edit/delete controls for the score itself (out of scope — those need
+  the score's own project rights). Reuses `ScoreDisplay`,
+  `ReviewCommentsPanelView` (unchanged) and `commentThreads` as-is; a small
+  inline adapter rebinds `ReviewCommentsPanelView`'s `services` prop to the
+  new songbook-scoped functions instead of the score-scoped ones.
+- `SongbookManagePageView.tsx`: the entry title link in the member table now
+  points to the songbook-scoped score page (`songbookScorePath`) instead of
+  the generic `/score/:id`; the fork and newer-version badge links are
+  unchanged (those point at a *different* score, not yet part of the
+  songbook).
+- `src/lib/songbook.ts`: added `songbookScorePath` helper.
+
+### Checks
+
+- `tsc --noEmit`, `eslint`: clean across all new/changed files (app, functions).
+- `vitest run` (app): 277/277 passing (009 at implementation time; 289/289
+  on the merged tree re-run including 010's tests).
+- Firestore rules tests added (`tests/rules/firestore.test.ts`, "songbook-scoped
+  review comments" — membership, outsider/impersonation denial, foreign-score
+  authorization, cross-songbook isolation, replies, read restriction,
+  author-only edit/soft-delete). The first CI run caught one bad assertion:
+  the cross-songbook isolation test expected a member's write to a second
+  songbook's thread to be denied, but threads are gated purely by songbook
+  membership with no validation against a current pin (see Decisions), so
+  the same write succeeds by design. Fixed by seeding a realistic second
+  songbook pinning the same score and asserting the two same-named threads
+  stay independent documents. A Cloud Functions test for comment-copy on
+  fork-swap was removed together with the feature it covered by this
+  branch's fork-swap revert (see Decisions); the remaining
+  `swapSongbookEntry` suite covers the plain re-pin. Re-ran on the merged
+  tree with this branch's changes (Homebrew `openjdk@21`): rules 110/110,
+  functions 20/20 (one fewer than pre-revert — the comment-copy test went
+  with the feature it covered), migrations 26/26.
+- Storybook stories added (`SongbookScorePage.stories.tsx`): own-project
+  score, foreign score, missing entry, access denied, loading, songbook not
+  found.
 
 ## Validation
 
-Rules and integration checks: same score in two songbooks stays isolated, foreign-score review uses songbook permissions, non-members cannot read/write, anchors/replies work, re-pins isolate versions, unrelated songbook edits preserve threads, fork-swap copies comments with anchors intact.
+Rules and integration checks: same score in two songbooks stays isolated (structurally, by path), foreign-score review uses songbook permissions, non-members cannot read/write, anchors/replies work, re-pins isolate versions, unrelated songbook edits preserve threads, fork-swap starts an empty thread like any other re-pin.
 
 Run focused tests and relevant type/build checks after implementation.
 

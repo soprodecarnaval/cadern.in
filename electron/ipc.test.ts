@@ -27,7 +27,7 @@ afterEach(() => {
 
 describe("export flow", () => {
   it("exports without a destination picker into a fresh temporary folder per attempt", () => {
-    registerIpc();
+    registerIpc({ getPendingExportContext: () => null });
     exportScoreFolder.mockImplementation((options) => {
       expect(fs.statSync(options.destinationDirectory).isDirectory()).toBe(true);
       directories.push(options.destinationDirectory);
@@ -41,7 +41,7 @@ describe("export flow", () => {
   });
 
   it("removes temporary output when export fails", () => {
-    registerIpc();
+    registerIpc({ getPendingExportContext: () => null });
     let directory = "";
     exportScoreFolder.mockImplementation((options) => {
       directory = options.destinationDirectory;

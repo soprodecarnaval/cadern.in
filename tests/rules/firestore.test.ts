@@ -19,7 +19,7 @@ import {
   serverTimestamp,
   type Firestore,
 } from "firebase/firestore";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   ADMIN,
   EDITOR,
@@ -750,6 +750,167 @@ describe("songbooks", () => {
     await assertSucceeds(updateDoc(sbRef(as(ADMIN)), { title: "Outro" }));
     await assertFails(updateDoc(sbRef(as(ADMIN)), { slug: "outro" }));
     await assertFails(deleteDoc(sbRef(as(OWNER))));
+  });
+});
+
+describe("songbook-scoped review comments", () => {
+  const SB = `${PROJECT}~carnaval-2026`;
+  const OTHER = "outro";
+  const FOREIGN_SCORE = "outro-samba";
+  const threadRef = (db: Firestore, scoreId = SCORE, revisionId = "1", id = "c1") =>
+    doc(db, "songbooks", SB, "scoreThreads", `${scoreId}_${revisionId}`, "comments", id);
+  const comment = (authorId: string, extra: Record<string, unknown> = {}) => ({
+    authorId,
+    authorName: authorId,
+    body: "Acorde errado no compasso 9",
+    parentId: null,
+    anchor: null,
+    deletedAt: null,
+    ...extra,
+  });
+
+  async function seedSongbookThread() {
+    await seedProject(testEnv());
+    await seed(async (db) => {
+      await setDoc(doc(db, "songbooks", SB), {
+        title: "Carnaval 2026",
+        projectId: PROJECT,
+        slug: "carnaval-2026",
+        currentRevisionId: "r1",
+        isPublished: false,
+        deletedAt: null,
+      });
+      await setDoc(doc(db, "songbooks", SB, "songbookRevisions", "r1"), {
+        entries: [{ type: "score", scoreId: SCORE, order: 0, index: 1 }],
+        pins: { [SCORE]: "1" },
+        covers: {},
+        revisionNumber: 1,
+        prevRevisionId: null,
+        createdBy: OWNER,
+        note: "",
+      });
+      // A score owned by a different project, to exercise foreign-score
+      // review authorization — reviewing it never depends on membership
+      // there, only on the songbook's own project (009).
+      await setDoc(doc(db, "projects", OTHER), {
+        title: "Outro bloco", slug: OTHER, memberIds: [], deletedAt: null,
+      });
+      await setDoc(doc(db, "scores", FOREIGN_SCORE), {
+        title: "Samba", projectId: OTHER, uploadedBy: OUTSIDER,
+        latestRevisionId: "1", deletedAt: null,
+      });
+    });
+  }
+
+  const seedRoot = () =>
+    seed((db) => setDoc(threadRef(db), comment(REVIEWER)));
+
+  it("lets any songbook project member comment on the pinned revision", async () => {
+    await seedSongbookThread();
+    await assertSucceeds(setDoc(threadRef(as(REVIEWER)), comment(REVIEWER)));
+    await assertSucceeds(
+      setDoc(threadRef(as(EDITOR), SCORE, "1", "c2"), comment(EDITOR)),
+    );
+  });
+
+  it("denies outsiders and impersonation", async () => {
+    await seedSongbookThread();
+    await assertFails(setDoc(threadRef(as(OUTSIDER)), comment(OUTSIDER)));
+    await assertFails(setDoc(threadRef(as(EDITOR)), comment(REVIEWER)));
+  });
+
+  it("authorizes a foreign score by the songbook's project, not the score's", async () => {
+    await seedSongbookThread();
+    // REVIEWER has no role on OTHER, yet reviews fine via the songbook.
+    await assertSucceeds(
+      setDoc(
+        threadRef(as(REVIEWER), FOREIGN_SCORE, "1"),
+        comment(REVIEWER),
+      ),
+    );
+    // Mutating the foreign score itself is untouched by this rule and still
+    // denied by the scores rules (unrelated to comments).
+    await assertFails(
+      updateDoc(doc(as(REVIEWER), "scores", FOREIGN_SCORE), {
+        "metadataOverride.title": "x",
+      }),
+    );
+  });
+
+  it("isolates threads per songbook, even for the same score and revision", async () => {
+    await seedSongbookThread();
+    // A second songbook of the same project pinning the same score at the
+    // same revision: same thread id, a different thread. Threads aren't
+    // validated against a current pin (009) — access stays gated purely by
+    // songbook membership, like songbookRevisions — so isolation rests on
+    // the path itself: the two never alias each other.
+    const SB2 = `${PROJECT}~outro-caderninho`;
+    const sb2ThreadRef = (db: Firestore, id = "c1") =>
+      doc(db, "songbooks", SB2, "scoreThreads", `${SCORE}_1`, "comments", id);
+    await seed(async (db) => {
+      await setDoc(doc(db, "songbooks", SB2), {
+        title: "Outro caderninho", projectId: PROJECT, slug: "outro-caderninho",
+        currentRevisionId: "r1", isPublished: false, deletedAt: null,
+      });
+      await setDoc(doc(db, "songbooks", SB2, "songbookRevisions", "r1"), {
+        entries: [{ type: "score", scoreId: SCORE, order: 0, index: 1 }],
+        pins: { [SCORE]: "1" },
+        covers: {},
+        revisionNumber: 1,
+        prevRevisionId: null,
+        createdBy: OWNER,
+        note: "",
+      });
+    });
+    await assertSucceeds(
+      setDoc(threadRef(as(REVIEWER)), comment(REVIEWER, { body: "Do caderninho" })),
+    );
+    await assertSucceeds(
+      setDoc(sb2ThreadRef(as(REVIEWER)), comment(REVIEWER, { body: "Do outro" })),
+    );
+    // Same thread and comment ids under two songbooks stay two docs:
+    // writing one never reaches the other.
+    expect((await getDoc(threadRef(as(REVIEWER)))).data()?.body)
+      .toBe("Do caderninho");
+    expect((await getDoc(sb2ThreadRef(as(REVIEWER)))).data()?.body)
+      .toBe("Do outro");
+  });
+
+  it("allows replies to roots only, without an anchor", async () => {
+    await seedSongbookThread();
+    await seedRoot();
+    await assertSucceeds(
+      setDoc(
+        threadRef(as(EDITOR), SCORE, "1", "r1"),
+        comment(EDITOR, { parentId: "c1", anchor: null }),
+      ),
+    );
+    await assertFails(
+      setDoc(
+        threadRef(as(EDITOR), SCORE, "1", "r2"),
+        comment(EDITOR, { parentId: "missing", anchor: null }),
+      ),
+    );
+  });
+
+  it("restricts reading to songbook project members", async () => {
+    await seedSongbookThread();
+    await seedRoot();
+    await assertSucceeds(getDoc(threadRef(as(REVIEWER))));
+    await assertFails(getDoc(threadRef(as(OUTSIDER))));
+    await assertFails(getDoc(threadRef(as(null))));
+  });
+
+  it("lets authors edit and soft-delete their own, and nobody else", async () => {
+    await seedSongbookThread();
+    await seedRoot();
+    await assertSucceeds(
+      updateDoc(threadRef(as(REVIEWER)), { body: "Acorde corrigido" }),
+    );
+    await assertSucceeds(
+      updateDoc(threadRef(as(REVIEWER)), { deletedAt: serverTimestamp() }),
+    );
+    await assertFails(updateDoc(threadRef(as(OWNER)), { body: "x" }));
   });
 });
 

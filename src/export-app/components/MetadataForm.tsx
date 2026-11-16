@@ -1,3 +1,5 @@
+import { Input } from "../../tsx/atoms/Input";
+
 export interface MetadataValues {
   title: string;
   composer: string;
@@ -31,7 +33,7 @@ export function MetadataForm({ value, onChange }: Props) {
             {field.label}
             <small>cadern.in: {field.mapping}</small>
           </span>
-          <input
+          <Input
             value={value[field.key]}
             onChange={(event) =>
               onChange({ ...value, [field.key]: event.target.value })

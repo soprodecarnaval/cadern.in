@@ -10,6 +10,12 @@ files:
   - '!node_modules/**/*'
 asar: true
 npmRebuild: false
+# Registers cadernin-export:// (010): CFBundleURLTypes on mac, registry on
+# Windows (nsis), MimeType in the .desktop file on Linux.
+protocols:
+  name: cadernin-export
+  schemes:
+    - cadernin-export
 mac:
   category: public.app-category.music
   identity: null

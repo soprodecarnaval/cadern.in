@@ -7,9 +7,9 @@ import "@fontsource/inter/latin-400.css";
 import "@fontsource/inter/latin-500.css";
 import "@fontsource/inter/latin-600.css";
 import "@fontsource/inter/latin-700.css";
-import "../src/main.css";
+import "../src/styles/global.css";
 import "bootstrap/dist/css/bootstrap.css";
-import "../src/css/App.css";
+import "../src/styles/app.css";
 
 const preview: Preview = {
   decorators: [

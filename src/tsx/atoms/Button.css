@@ -1,0 +1,72 @@
+@import "../../styles/tokens.css";
+
+/* Buttons: yellow main action, as "Baixar" on the homepage. */
+
+:is(.brand-modal .btn, .ds-button) {
+  border-radius: var(--ds-radius-button);
+  font-size: var(--ds-text);
+  font-weight: var(--ds-weight-action);
+}
+
+:is(.brand-modal .btn-primary, .ds-button.btn-primary) {
+  --bs-btn-color: var(--ds-ink);
+  --bs-btn-bg: var(--ds-yellow);
+  --bs-btn-border-color: var(--ds-yellow);
+  --bs-btn-hover-color: var(--ds-yellow);
+  --bs-btn-hover-bg: var(--ds-ink);
+  --bs-btn-hover-border-color: var(--ds-ink);
+  --bs-btn-active-color: var(--ds-yellow);
+  --bs-btn-active-bg: var(--ds-ink);
+  --bs-btn-active-border-color: var(--ds-ink);
+  --bs-btn-disabled-color: #777;
+  --bs-btn-disabled-bg: #eee;
+  --bs-btn-disabled-border-color: #eee;
+  padding: 8px 28px;
+}
+
+/* "Continuar com Google" and other secondary actions. */
+
+:is(.brand-modal .btn-outline-secondary, .ds-button.btn-outline-secondary) {
+  --bs-btn-color: var(--ds-ink);
+  --bs-btn-border-color: var(--ds-ink);
+  --bs-btn-hover-color: var(--ds-ink);
+  --bs-btn-hover-bg: var(--ds-yellow);
+  --bs-btn-hover-border-color: var(--ds-ink);
+  --bs-btn-active-color: var(--ds-ink);
+  --bs-btn-active-bg: var(--ds-yellow);
+  --bs-btn-active-border-color: var(--ds-ink);
+  --bs-btn-disabled-color: #777;
+  --bs-btn-disabled-border-color: #999;
+  border-width: var(--ds-border);
+  padding: 7px 28px;
+}
+
+/* Text links ("Esqueci a senha", "Reenviar email"…): black, underlined. */
+
+:is(.brand-modal .btn-link, .ds-button.btn-link) {
+  --bs-btn-color: var(--ds-ink);
+  --bs-btn-hover-color: var(--ds-ink);
+  --bs-btn-active-color: var(--ds-ink);
+  --bs-btn-disabled-color: #777;
+  font-weight: var(--ds-weight-body);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+:is(.brand-modal .btn, .ds-button):focus-visible {
+  box-shadow: none;
+  outline: var(--ds-border) solid var(--ds-ink);
+  outline-offset: 2px;
+}
+
+.ds-button { font-family: var(--ds-font); }
+
+:is(.brand-modal .btn-sm, .ds-button.btn-sm) {
+  padding: var(--ds-space-1) var(--ds-space-3);
+  font-size: var(--ds-caption);
+}
+
+:is(.brand-modal .btn-lg, .ds-button.btn-lg) {
+  padding: var(--ds-space-3) var(--ds-space-8);
+  font-size: var(--ds-heading);
+}

@@ -37,7 +37,16 @@ export function FileDrop({ onPick, disabled }: Props) {
   return (
     <div
       className={`dropzone${drag ? " drag" : ""}${disabled ? " disabled" : ""}`}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled}
       onClick={() => void choose()}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          void choose();
+        }
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         if (!disabled) {

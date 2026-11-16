@@ -31,6 +31,13 @@ export const publicSongbookPath = (projectId: string, slug: string) =>
 export const songbookPath = (projectId: string, slug: string) =>
   `${publicSongbookPath(projectId, slug)}/manage`;
 
+/** Review for one entry's pinned revision, scoped to this songbook (009). */
+export const songbookScorePath = (
+  projectId: string,
+  slug: string,
+  scoreId: string,
+) => `${songbookPath(projectId, slug)}/score/${encodeURIComponent(scoreId)}`;
+
 export const isSongbookSection = (
   item: SongbookItemViewModel,
 ): item is SongbookSectionViewModel => item.type === "section";
@@ -167,5 +174,26 @@ export function repinnedContent(
   return {
     content: { entries: current.entries, pins, covers: current.covers },
     note: `atualiza: ${titles.join(", ")}`,
+  };
+}
+
+/**
+ * The current revision's content with one score pinned to a specific
+ * revision — a contextual exporter upload (010), which knows the exact
+ * revision it just created rather than comparing against "latest".
+ */
+export function pinnedToRevision(
+  current: SongbookRevisionContent,
+  scoreId: string,
+  revisionId: string,
+  title: string,
+): { content: SongbookRevisionContent; note: string } {
+  return {
+    content: {
+      entries: current.entries,
+      pins: { ...current.pins, [scoreId]: revisionId },
+      covers: current.covers,
+    },
+    note: `atualiza: ${title}`,
   };
 }
