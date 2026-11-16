@@ -70,4 +70,6 @@ Validation: 32 modal/songbook stories, 18 unit tests, real generated-PDF pixel
 comparisons (PNG, JPEG, carnival, default), corrupt image rejection, desktop/mobile
 layout, backdrop cancellation and URL cleanup. TypeScript/lint/demo build passed.
 Persistence mocked; no backend writes. Added `pdfjs-dist@6.5.438`; no schema changes.
-Exact implementation commit/PR follows after committing. Human acceptance pending.
+Implementation commit: `39988608d241348998dbdffaa6c9a0bb9de6ace8`.
+PR: https://github.com/soprodecarnaval/cadern.in/pull/438, stacked on #436 with
+`main` base per chat override. Human acceptance pending.
