@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn, userEvent, within, expect, waitFor } from "@storybook/test";
 import type { User } from "firebase/auth";
+import { FirebaseError } from "firebase/app";
 import { AuthModalView } from "./AuthModalView";
 import { noop } from "../../../../.storybook/fixtures/components";
 
@@ -50,7 +51,9 @@ export const Registration: Story = {
 };
 export const RejectedLogin: Story = {
   args: {
-    login: fn(() => Promise.reject(new Error("Email ou senha inválidos."))),
+    login: fn(() =>
+      Promise.reject(new FirebaseError("auth/invalid-credential", "rejected")),
+    ),
   },
   play: async () => {
     const dialog = await enterEmail();
@@ -60,7 +63,7 @@ export const RejectedLogin: Story = {
     );
     await userEvent.click(dialog.getByRole("button", { name: "Entrar" }));
     await expect(await dialog.findByRole("alert")).toHaveTextContent(
-      "Email ou senha inválidos.",
+      "E-mail ou senha incorretos",
     );
   },
 };
@@ -92,7 +95,7 @@ export const PendingVerification: Story = {
 export const ResetError: Story = {
   args: {
     resetPassword: fn(() =>
-      Promise.reject(new Error("Falha ao enviar email.")),
+      Promise.reject(new FirebaseError("auth/network-request-failed", "offline")),
     ),
   },
   play: async () => {
@@ -101,7 +104,7 @@ export const ResetError: Story = {
       dialog.getByRole("button", { name: "Esqueci a senha" }),
     );
     await expect(await dialog.findByRole("alert")).toHaveTextContent(
-      "Falha ao enviar email.",
+      "Sem conexão. Verifique sua internet e tente de novo.",
     );
   },
 };

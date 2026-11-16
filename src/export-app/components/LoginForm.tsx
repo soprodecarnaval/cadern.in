@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { GoogleLinkRequiredError, useAuth } from "../../auth";
+import { useAuth } from "../../auth";
+import { GoogleLinkRequiredError } from "../../lib/googleLinkRequiredError";
 import { Button } from "../../tsx/atoms/Button";
 import { Input } from "../../tsx/atoms/Input";
 import { describeAuthError } from "../../lib/authMessages";

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Tab, Tabs } from "react-bootstrap";
 import type { User } from "firebase/auth";
-import { GoogleLinkRequiredError } from "../../../auth";
+import { GoogleLinkRequiredError } from "../../../lib/googleLinkRequiredError";
 import { Button } from "../../atoms/Button";
 import { Input } from "../../atoms/Input";
 import { Modal } from "../../atoms/Modal";
