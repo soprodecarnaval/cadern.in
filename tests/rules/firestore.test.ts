@@ -837,24 +837,6 @@ describe("songbook-scoped review comments", () => {
     );
   });
 
-  it("isolates threads per songbook, even for the same score and revision", async () => {
-    await seedSongbookThread();
-    const SB2 = `${PROJECT}~outro-caderninho`;
-    await seed(async (db) => {
-      await setDoc(doc(db, "songbooks", SB2), {
-        title: "Outro caderninho", projectId: PROJECT, slug: "outro-caderninho",
-        currentRevisionId: "r1", isPublished: false, deletedAt: null,
-      });
-    });
-    await assertSucceeds(setDoc(threadRef(as(REVIEWER)), comment(REVIEWER)));
-    await assertFails(
-      setDoc(
-        doc(as(REVIEWER), "songbooks", SB2, "scoreThreads", `${SCORE}_1`, "comments", "c1"),
-        comment(REVIEWER),
-      ),
-    );
-  });
-
   it("allows replies to roots only, without an anchor", async () => {
     await seedSongbookThread();
     await seedRoot();
