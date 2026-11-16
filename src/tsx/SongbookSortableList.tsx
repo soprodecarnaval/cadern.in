@@ -227,7 +227,7 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
   return (
     <>
       <p className="songbook-tip text-muted small lh-sm">
-        Arraste pela alça. Seções levam suas músicas. Teclado: Espaço, setas e Escape.
+        Arraste a música ou seção para alterar a ordem. No teclado, use Espaço, setas e Esc.
       </p>
       <div ref={container} className="songbook-card-list" role="list"
         aria-label="Músicas e seções do caderninho">
