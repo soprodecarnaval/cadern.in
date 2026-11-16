@@ -1,6 +1,12 @@
 import { app, BrowserWindow } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  EXPORT_DEEP_LINK_PROTOCOL,
+  findExportDeepLinkArg,
+  parseExportDeepLink,
+  type ExportDeepLinkContext,
+} from "../types/exportDeepLink";
 import { registerIpc } from "./ipc";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -9,6 +15,64 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
 
 let win: BrowserWindow | null = null;
+
+// Set by a cold-launch argv or a warm `open-url`/`second-instance` before the
+// renderer has a chance to ask for it; cleared once delivered (010).
+let pendingExportContext: ExportDeepLinkContext | null = null;
+
+export function takePendingExportContext(): ExportDeepLinkContext | null {
+  const context = pendingExportContext;
+  pendingExportContext = null;
+  return context;
+}
+
+function deliverExportContext(url: string) {
+  const context = parseExportDeepLink(url);
+  if (!context) {
+    return;
+  }
+  if (win && !win.webContents.isLoading()) {
+    win.webContents.send("export-context", context);
+  } else {
+    pendingExportContext = context;
+  }
+  win?.focus();
+}
+
+// Dev mode runs through `electron .`, not a packaged app, so registration
+// needs the exec path + script args Windows/Linux use to relaunch it.
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(
+      EXPORT_DEEP_LINK_PROTOCOL,
+      process.execPath,
+      [path.resolve(process.argv[1])],
+    );
+  }
+} else {
+  app.setAsDefaultProtocolClient(EXPORT_DEEP_LINK_PROTOCOL);
+}
+
+// Windows/Linux deliver the link as a launch argument, so a second instance
+// (the OS always starts one on a link click) must hand it to the first and
+// exit — there is only ever one export window.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+}
+
+app.on("second-instance", (_event, argv) => {
+  const url = findExportDeepLinkArg(argv);
+  if (url) {
+    deliverExportContext(url);
+  }
+});
+
+// macOS delivers the link through this event instead, cold or warm.
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  deliverExportContext(url);
+});
 
 function createWindow() {
   win = new BrowserWindow({
@@ -48,9 +112,16 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
-  registerIpc();
+void app.whenReady().then(() => {
+  registerIpc({ getPendingExportContext: takePendingExportContext });
   createWindow();
+
+  // Windows/Linux cold launch: the link is this instance's own argv, not a
+  // second-instance event.
+  const url = findExportDeepLinkArg(process.argv);
+  if (url) {
+    deliverExportContext(url);
+  }
 });
 
 app.on("window-all-closed", () => {

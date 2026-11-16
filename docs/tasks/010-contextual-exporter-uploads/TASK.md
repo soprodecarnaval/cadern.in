@@ -1,6 +1,6 @@
 ---
 title: Launch exporter uploads from project and songbook contexts
-status: open
+status: completed
 type: feature
 milestone: collab-flow
 ---
@@ -57,15 +57,97 @@ Difficulty: large. Dependencies: 008, 009. Execution order: [workstreams](../WOR
 ## Implementation plan
 
 1. ✅ Re-pin/staleness contract agreed (see Decisions above).
-2. Electron: `app.setAsDefaultProtocolClient`, `requestSingleInstanceLock`,
-   `open-url` (macOS) + `second-instance` (Win/Linux) → IPC into the
-   renderer. **Not yet implemented** — no protocol registration exists today
-   (`electron/main.ts`); next stacked step after 008/009.
-3. Website launch controls on the project page and the songbook-scoped score
-   page (009); exporter's no-link / stale-link messages.
-4. Remove `UploadPanel`'s manual project picker; wire deep-link context
-   through `exportAndUpload`/`resolveUploadTarget` (reused as-is) into the
-   existing upload pipeline; update packaging/docs.
+2. ✅ Electron: protocol registration, single-instance lock, `open-url` +
+   `second-instance`, cold-launch argv.
+3. ✅ Website launch controls on the project page and the songbook-scoped
+   score page (009); exporter's no-link / stale-link messages.
+4. ✅ Removed `UploadPanel`'s manual project picker; wired deep-link context
+   through validation into the existing upload pipeline; packaging config
+   updated.
+
+## Implementation
+
+- `types/exportDeepLink.ts` (new): `ExportDeepLinkContext` payload
+  (`projectId`, optional `scoreId`/`expectedScoreRevisionId`, optional
+  `songbookId`/`expectedSongbookRevisionId`), `buildExportDeepLink`,
+  `parseExportDeepLink`, `findExportDeepLinkArg`. Pure, dependency-free —
+  shared by the website, Electron main and the renderer.
+- `electron/main.ts`: `app.setAsDefaultProtocolClient("cadernin-export", …)`
+  (with the `process.defaultApp` dev-mode exec-path form), single-instance
+  lock, `open-url` (macOS) and `second-instance` (Windows/Linux) handlers,
+  cold-launch argv check in `whenReady`. A pending context is held in module
+  state until the renderer asks (`export:getContext`) or, if the window is
+  already up, pushed directly (`export-context` event) — handles cold vs.
+  warm launch and auth continuation (the context is held above the login
+  gate in `App.tsx`, so it survives signing in).
+- `electron/ipc.ts`: `registerIpc` now takes `{ getPendingExportContext }` as
+  an explicit dependency rather than importing it from `./main` — that
+  module runs app-lifecycle/protocol registration as load-time side effects
+  that would otherwise fire against `ipc.ts`'s own import, including in
+  tests that mock `"electron"` minimally.
+- `electron/preload.ts` / `global.d.ts`: `getExportContext()` (pull, cold
+  launch) and `onExportContext(callback)` (push, warm relaunch).
+- `electron-builder.yml`: added `protocols:` (name + `cadernin-export`
+  scheme) — registers `CFBundleURLTypes` on mac, the registry entry on
+  Windows (nsis), and the `.desktop` MimeType on Linux.
+- `src/lib/exportContext.ts` (new): `validateExportContext` — revalidates
+  auth (editor role) and membership against the *given* `projectId` live,
+  then checks any present expected revision against the live score/songbook.
+  Returns a typed ok/invalid result with resolved display titles. A foreign
+  score (its own `projectId` differs from the link's) is deliberately **not**
+  checked against — review/upload authorization for it comes entirely from
+  the link's `projectId`, matching `resolveUploadTarget`'s existing
+  fork-vs-version logic (unchanged, reused as-is).
+- `src/lib/songbook.ts`: `pinnedToRevision` — pins one score to a specific
+  revision id (the one `uploadScore` just created), distinct from
+  `repinnedContent` which compares against "latest".
+- `src/export-app/exportAndUpload.ts`: unchanged except its return value now
+  includes `revisionId` (previously discarded) — needed for the re-pin.
+- `src/export-app/App.tsx`: deep-link context held in state above the login
+  gate (`useExportContext`, pull + push); with no context, renders a
+  blocking pt-BR message with no path to an unscoped upload — the
+  `ExportApp` component (file drop, metadata form, upload) is simply never
+  reached.
+- `src/export-app/components/UploadPanel.tsx`: manual project `<select>` +
+  inline "create project" form removed entirely. Validates the context on
+  mount (loading/invalid/valid states) and **again right before the upload
+  starts** — a deliberate addition beyond the written decision: the
+  upfront check only proves the link was fresh when the panel mounted, but
+  exporting (MuseScore CLI, then the upload itself) can take a while, so a
+  second, cheap check right before the write closes that gap. After a
+  successful upload, if the link named a songbook, re-fetches it for a
+  **third** check (same staleness rule) before re-pinning — scoped to just
+  the re-pin, not the whole operation: the score upload has already
+  succeeded and can't be undone, so a songbook that moved on during the
+  upload skips only the pin update (`"skipped-stale"`), surfaced as a notice
+  rather than failing the result.
+- Launch controls: `PublicProjectPageView` gets an "Enviar partitura" button
+  (editor+, project-only link) next to "Partituras"; `SongbookScorePageView`
+  gets an "Enviar nova versão" button (editor+ on the songbook's project)
+  carrying `scoreId`/`expectedScoreRevisionId`/`songbookId`/
+  `expectedSongbookRevisionId`. Both are plain `<a href>`s to the custom
+  protocol, not app routes.
+
+### Checks
+
+- `tsc --noEmit`, `eslint`: clean across every changed/added file.
+- `vitest run`: 289/289 passing, including new unit tests for
+  `exportDeepLink` (round-trip, malformed/wrong-protocol/missing-projectId
+  rejection, argv extraction), `validateExportContext` (editor-only,
+  project/score/songbook not-found, score and songbook staleness, foreign
+  score authorized purely by the given project), and `pinnedToRevision`.
+- `npx vite build --config vite.electron.config.ts`: **succeeds** — both the
+  renderer bundle and the Electron main/preload bundles compile, validating
+  the `ipc.ts`/`main.ts` dependency wiring end to end.
+- `npx vite build` (main website): succeeds.
+- **Not verified in this environment, flagged rather than skipped**: actual
+  OS-level protocol registration and cold/warm launch behavior on a packaged
+  app (macOS `CFBundleURLTypes`, Windows registry, Linux `.desktop` MimeType)
+  — needs real installers built per-OS and a GUI to click a link against a
+  running/not-running app; electron-builder itself wasn't run. Live
+  Firestore/auth interaction for `validateExportContext` in the real app
+  (covered by unit tests against mocked services, not an emulator — no
+  Java 21 available here, same gap noted in 009's TASK.md).
 
 ## Validation
 

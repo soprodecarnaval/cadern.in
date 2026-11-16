@@ -20,6 +20,7 @@ interface Options {
 
 export async function exportAndUpload(options: Options): Promise<{
   scoreId: string;
+  revisionId: string;
   localStamped: boolean;
   directory: string;
 }> {
@@ -50,5 +51,10 @@ export async function exportAndUpload(options: Options): Promise<{
   const localStamped = await window.api.stampMsczFile(msczPath, identity)
     .then(() => true)
     .catch(() => false);
-  return { scoreId: identity.scoreId, localStamped, directory: result.directory };
+  return {
+    scoreId: identity.scoreId,
+    revisionId: identity.revisionId,
+    localStamped,
+    directory: result.directory,
+  };
 }

@@ -6,6 +6,7 @@ import type {
 } from "../../scripts/lib/exportScore";
 import type { ExportOutcome } from "../../scripts/lib/exportError";
 import type { ScoreIdentity } from "../../types/metajson";
+import type { ExportDeepLinkContext } from "../../types/exportDeepLink";
 
 // Bridge exposed by electron/preload.ts via contextBridge.
 export interface ExportApi {
@@ -42,6 +43,12 @@ export interface ExportApi {
   openMuseScoreDownload(): Promise<void>;
   /** Fires when an OAuth popup window closes; returns an unsubscribe fn. */
   onOAuthPopupClosed(callback: () => void): () => void;
+  /** The deep link parsed before the renderer asked (cold launch), if any. */
+  getExportContext(): Promise<ExportDeepLinkContext | null>;
+  /** Fires on a warm relaunch (second-instance / macOS open-url). */
+  onExportContext(
+    callback: (context: ExportDeepLinkContext) => void,
+  ): () => void;
 }
 
 declare global {

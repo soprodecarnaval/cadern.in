@@ -15,6 +15,7 @@ import {
   type RunExportOptions,
 } from "../scripts/lib/exportScore";
 import { ExportError, toExportFailure } from "../scripts/lib/exportError";
+import type { ExportDeepLinkContext } from "../types/exportDeepLink";
 import { getMscorePath, setMscorePath } from "./settings";
 
 // Expand a leading ~ from manually-typed paths (native pickers return absolute).
@@ -42,7 +43,17 @@ function resolveMscorePath(): string | null {
   return null;
 }
 
-export function registerIpc(): void {
+export function registerIpc(deps: {
+  // Injected rather than imported from "./main" (010): that module runs
+  // Electron app-lifecycle/protocol registration as a load-time side
+  // effect, which would otherwise fire against this module's own import —
+  // including in tests that mock "electron" with no "app" export.
+  getPendingExportContext: () => ExportDeepLinkContext | null;
+}): void {
+  // Cold-launch deep link (010): set once before the window finished
+  // loading, so the renderer pulls it instead of missing a push event.
+  ipcMain.handle("export:getContext", () => deps.getPendingExportContext());
+
   ipcMain.handle("mscore:get", () => resolveMscorePath());
 
   ipcMain.handle("mscore:set", (_e, mscorePath: string): SetResult => {

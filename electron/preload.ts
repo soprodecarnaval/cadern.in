@@ -44,4 +44,20 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.on("oauth-popup-closed", listener);
     return () => ipcRenderer.removeListener("oauth-popup-closed", listener);
   },
+  // Cold launch: a deep link already parsed before the renderer asked.
+  getExportContext: () => ipcRenderer.invoke("export:getContext"),
+  // Warm launch (second-instance / macOS open-url) while the window was
+  // already open; returns an unsubscribe fn.
+  onExportContext: (
+    callback: (
+      context: import("../types/exportDeepLink").ExportDeepLinkContext,
+    ) => void,
+  ) => {
+    const listener = (
+      _e: unknown,
+      context: import("../types/exportDeepLink").ExportDeepLinkContext,
+    ) => callback(context);
+    ipcRenderer.on("export-context", listener);
+    return () => ipcRenderer.removeListener("export-context", listener);
+  },
 });

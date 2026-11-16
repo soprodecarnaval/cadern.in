@@ -1234,6 +1234,6 @@ UI work requires wireframe iteration and approval before implementation.
 - [007 — Invite project members by email](../../tasks/007-email-project-invitations/TASK.md) — open.
 - [008 — Separate public and member songbook routes](../../tasks/008-public-member-songbook-routes/TASK.md) — completed.
 - [009 — Scope score review pages and comments to songbooks](../../tasks/009-songbook-scoped-review/TASK.md) — completed; rules/functions tests written but unexecuted (no Java 21 for the emulator in this environment).
-- [010 — Launch exporter uploads from project and songbook contexts](../../tasks/010-contextual-exporter-uploads/TASK.md) — open; re-pin/staleness contract decided, implementation not started.
+- [010 — Launch exporter uploads from project and songbook contexts](../../tasks/010-contextual-exporter-uploads/TASK.md) — completed; packaged cold/warm launch across OSes not verified in this environment (see TASK.md Checks).
 
 Sequence and dependencies: [three workstreams](../../tasks/WORKSTREAMS.md).
