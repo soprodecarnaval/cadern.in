@@ -45,6 +45,10 @@ to reimplement. Preserve its completed status and implementation history.
 
 - 005: “own project” means songbook project? Version label format?
 - 007: unregistered-email invitations? Baseline is existing accounts.
-- 008: member route suffix `/manage`? Public route fixed as requested.
-- 009: legacy score comment mapping/archive policy?
-- 010: foreign-score fork behavior and explicit versus automatic re-pin?
+- 008: resolved — `/manage` suffix approved; canonical prefix for the whole
+  project namespace is singular (`/project/:slug`), no legacy redirects.
+- 009: resolved — no migration needed (collab-flow never deployed); threads
+  keyed `songbooks/{id}/scoreThreads/{scoreId}_{revisionId}`.
+- 010: resolved — fork-vs-version already automatic (unchanged); re-pin is
+  automatic but gated by a hard staleness check on both score and songbook
+  expected revisions (abort, no partial upload, on mismatch).

@@ -1,0 +1,176 @@
+<title>010 — Re-pin after upload: automatic vs. explicit</title>
+<style>
+  :root {
+    --ink: #1b2430; --ink-soft: #4b5768; --paper: #f4f6f9; --panel: #ffffff;
+    --line: #d7dde6; --accent: #3457d5; --accent-soft: #e7ecfb; --accent-ink: #1f3aa8;
+    --ok: #1f7a4d; --ok-soft: #e4f3ea; --warn: #b5650d; --warn-soft: #fbead8;
+    --danger: #b3261e; --danger-soft: #fbe6e4;
+    --chrome: #e4e8ee; --dot: #c7ced8;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e8ecf2; --ink-soft: #a7b2c2; --paper: #11151c; --panel: #171c25;
+      --line: #2b3240; --accent: #7c9bff; --accent-soft: #202a44; --accent-ink: #b7c6ff;
+      --ok: #5fcf96; --ok-soft: #163024; --warn: #e2a04c; --warn-soft: #3a2a14;
+      --danger: #ff8178; --danger-soft: #3a1c1a; --chrome: #1f2530; --dot: #3a4252;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #e8ecf2; --ink-soft: #a7b2c2; --paper: #11151c; --panel: #171c25;
+    --line: #2b3240; --accent: #7c9bff; --accent-soft: #202a44; --accent-ink: #b7c6ff;
+    --ok: #5fcf96; --ok-soft: #163024; --warn: #e2a04c; --warn-soft: #3a2a14;
+    --danger: #ff8178; --danger-soft: #3a1c1a; --chrome: #1f2530; --dot: #3a4252;
+  }
+  :root[data-theme="light"] {
+    --ink: #1b2430; --ink-soft: #4b5768; --paper: #f4f6f9; --panel: #ffffff;
+    --line: #d7dde6; --accent: #3457d5; --accent-soft: #e7ecfb; --accent-ink: #1f3aa8;
+    --ok: #1f7a4d; --ok-soft: #e4f3ea; --warn: #b5650d; --warn-soft: #fbead8;
+    --danger: #b3261e; --danger-soft: #fbe6e4; --chrome: #e4e8ee; --dot: #c7ced8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.45; }
+  .page { max-width: 1080px; margin: 0 auto; padding: 48px 28px 80px; }
+  header.intro { margin-bottom: 36px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink); margin: 0 0 10px; }
+  h1 { font-size: 26px; margin: 0 0 10px; text-wrap: balance; letter-spacing: -0.01em; }
+  .intro p { max-width: 66ch; color: var(--ink-soft); margin: 0; font-size: 15px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 10px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .col > h2 { font-size: 14px; font-weight: 700; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+  .col > .verdict { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 14px; }
+  .pick { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 5px; }
+  .pick.rec { color: var(--ok); background: var(--ok-soft); }
+  .pick.alt { color: var(--ink-soft); background: var(--chrome); }
+
+  .window { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); box-shadow: 0 2px 10px rgb(0 0 0 / 6%); }
+  .titlebar { background: var(--chrome); padding: 9px 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+  .titlebar .dots { display: flex; gap: 5px; }
+  .titlebar .dots span { width: 9px; height: 9px; border-radius: 50%; background: var(--dot); display: block; }
+  .titlebar .t { font-size: 12px; color: var(--ink-soft); font-weight: 600; margin-left: 4px; }
+  .body { padding: 16px; display: flex; flex-direction: column; gap: 10px; position: relative; min-height: 230px; }
+
+  .ctx-head { font-size: 11px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; }
+  .ctx-head .seg { font-family: var(--mono); }
+  .ctx-head .arrow { opacity: .5; }
+
+  .result-card { border: 1px solid var(--ok); background: var(--ok-soft); border-radius: 8px; padding: 10px 12px; }
+  .result-card .h { font-size: 13px; font-weight: 700; color: var(--ok); display: flex; align-items: center; gap: 6px; }
+  .result-card .d { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+
+  .auto-line { display: flex; align-items: center; gap: 7px; font-size: 12.5px; padding: 8px 10px; border-radius: 7px; background: var(--accent-soft); color: var(--accent-ink); border: 1px solid transparent; }
+  .auto-line .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: 0 0 auto; }
+
+  .confirm {
+    border: 1px solid var(--line); border-radius: 9px; background: var(--panel);
+    padding: 12px 14px; box-shadow: 0 6px 18px rgb(0 0 0 / 10%);
+  }
+  .confirm .q { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .confirm .q em { font-style: normal; color: var(--accent-ink); }
+  .confirm .sub { font-size: 11.5px; color: var(--ink-soft); margin-bottom: 10px; }
+  .confirm .row { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn { font-size: 12px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-soft); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.quiet { border-color: transparent; }
+
+  .later-note { font-size: 11.5px; color: var(--ink-soft); display: flex; gap: 6px; align-items: flex-start; }
+  .later-note .ic { flex: 0 0 auto; }
+
+  .risk { margin-top: 10px; border-radius: 8px; padding: 9px 11px; font-size: 12px; display: flex; gap: 8px; }
+  .risk.bad { background: var(--danger-soft); color: var(--danger); }
+  .risk.good { background: var(--ok-soft); color: var(--ok); }
+  .risk .ic { flex: 0 0 auto; }
+  .risk .t { color: var(--ink); }
+
+  .scenario { margin-top: 30px; }
+  .scenario h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); border-bottom: 1px solid var(--line); padding-bottom: 8px; margin: 0 0 14px; }
+  .scenario p { font-size: 13px; color: var(--ink-soft); max-width: 72ch; }
+  .scenario p strong { color: var(--ink); }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">Task 010 · decision</p>
+    <h1>After a songbook-scoped upload: silent re-pin, or ask first?</h1>
+    <p>
+      Both start the same way: the deep link named a project, a songbook and
+      a score; the export app uploaded a new revision. The question is only
+      what happens next to that songbook's pin.
+    </p>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <h2>A · Automatic <span class="pick alt">today's 009 pattern</span></h2>
+      <p class="verdict">Pin updates the instant the upload finishes. Nothing to click.</p>
+      <div class="window">
+        <div class="titlebar"><div class="dots"><span></span><span></span><span></span></div><span class="t">cadern.in — Exportador</span></div>
+        <div class="body">
+          <div class="ctx-head">
+            <span class="seg">Surdo & Cia</span><span class="arrow">›</span>
+            <span class="seg">Carnaval 2026</span><span class="arrow">›</span>
+            <span class="seg">Mineirinho</span>
+          </div>
+          <div class="result-card">
+            <div class="h">✓ Enviado para o cadern.in</div>
+            <div class="d">Mineirinho · versão #4</div>
+          </div>
+          <div class="auto-line"><span class="dot"></span>Caderninho "Carnaval 2026" atualizado para a versão #4.</div>
+          <div class="risk bad">
+            <span class="ic">⚠</span>
+            <span class="t">If this link sat unused for two weeks and someone else already re-pinned or edited the songbook since, this silently overwrites that — the uploader never sees what they're changing.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <h2>B · Explicit <span class="pick rec">recommended</span></h2>
+      <p class="verdict">Upload finishes; a confirmation names exactly what would change before it does.</p>
+      <div class="window">
+        <div class="titlebar"><div class="dots"><span></span><span></span><span></span></div><span class="t">cadern.in — Exportador</span></div>
+        <div class="body">
+          <div class="ctx-head">
+            <span class="seg">Surdo & Cia</span><span class="arrow">›</span>
+            <span class="seg">Carnaval 2026</span><span class="arrow">›</span>
+            <span class="seg">Mineirinho</span>
+          </div>
+          <div class="result-card">
+            <div class="h">✓ Enviado para o cadern.in</div>
+            <div class="d">Mineirinho · versão #4</div>
+          </div>
+          <div class="confirm">
+            <div class="q">Atualizar <em>Mineirinho</em> no caderninho <em>Carnaval 2026</em> para a versão #4?</div>
+            <div class="sub">O caderninho está atualmente na versão #3. Esta ação cria uma nova revisão do caderninho.</div>
+            <div class="row">
+              <button class="btn quiet">Agora não</button>
+              <button class="btn primary">Atualizar caderninho</button>
+            </div>
+          </div>
+          <div class="later-note"><span class="ic">ⓘ</span>Escolhendo "Agora não": a partitura já foi enviada: só o caderninho continua na versão antiga, atualizável depois em <code style="font-family:var(--mono)">/manage</code>.</div>
+          <div class="risk good">
+            <span class="ic">✓</span>
+            <span class="t">Catches a stale link cleanly: the uploader sees the songbook's current version before committing, every time.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scenario">
+    <h3>Why this one leans explicit, unlike 009's thread copy</h3>
+    <p>
+      009's automatic choice was safe because it only ever <strong>adds</strong> an empty
+      or copied comment thread — nothing existing is overwritten, and a wrong
+      guess costs nothing. A re-pin instead <strong>replaces</strong> what every reader of
+      that songbook currently sees, for a link that may be hours or weeks
+      old by the time the export finishes (export + review + re-export is a
+      slow loop). One confirmation click, scoped to the exact songbook and
+      version named, removes that gap — and still never touches any other
+      songbook pinning the same score.
+    </p>
+  </div>
+</div>

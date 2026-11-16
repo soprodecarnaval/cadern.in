@@ -17,12 +17,19 @@ import type {
 export const REMOVED_SCORES_NOTE =
   "Partituras riscadas foram removidas do acervo.";
 
-export const songbookPath = (projectId: string, slug: string) =>
-  `/projects/${encodeURIComponent(projectId)}/songbooks/${encodeURIComponent(slug)}`;
+export const projectPath = (projectId: string) =>
+  `/project/${encodeURIComponent(projectId)}`;
+
+export const projectSettingsPath = (projectId: string) =>
+  `${projectPath(projectId)}/settings`;
 
 /** Short, shareable URL of a published songbook. */
 export const publicSongbookPath = (projectId: string, slug: string) =>
-  `/songbooks/${encodeURIComponent(projectId)}/${encodeURIComponent(slug)}`;
+  `${projectPath(projectId)}/songbook/${encodeURIComponent(slug)}`;
+
+/** Member workspace: edit, re-pin, publish, history, delete. */
+export const songbookPath = (projectId: string, slug: string) =>
+  `${publicSongbookPath(projectId, slug)}/manage`;
 
 export const isSongbookSection = (
   item: SongbookItemViewModel,

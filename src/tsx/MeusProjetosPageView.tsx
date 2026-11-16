@@ -13,6 +13,7 @@ import { Link } from "react-router-dom";
 
 import type { WithId } from "../lib/db";
 import { isAdmin } from "../lib/roles";
+import { projectPath, projectSettingsPath } from "../lib/songbook";
 
 import type { ProjectDoc, UserProjectRole } from "../../types/docs";
 
@@ -80,13 +81,13 @@ function ProjectCard({
           )}
         </div>
         <div className="d-flex gap-2">
-          <Link to={`/projects/${project.slug}`}>
+          <Link to={projectPath(project.slug)}>
             <Button size="sm" variant="outline-secondary">
               Ver
             </Button>
           </Link>
           {myRole !== "loading" && isAdmin(myRole) && (
-            <Link to={`/projects/${project.slug}/settings`}>
+            <Link to={projectSettingsPath(project.slug)}>
               <Button size="sm" variant="outline-primary">
                 Configurações
               </Button>

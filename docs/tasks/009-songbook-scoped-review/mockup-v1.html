@@ -1,0 +1,315 @@
+<title>009 — Songbook-scoped review</title>
+<style>
+  :root {
+    --ink: #1b2430;
+    --ink-soft: #4b5768;
+    --paper: #f4f6f9;
+    --panel: #ffffff;
+    --line: #d7dde6;
+    --accent: #3457d5;
+    --accent-soft: #e7ecfb;
+    --accent-ink: #1f3aa8;
+    --ok: #1f7a4d;
+    --ok-soft: #e4f3ea;
+    --warn: #b5650d;
+    --warn-soft: #fbead8;
+    --danger: #b3261e;
+    --danger-soft: #fbe6e4;
+    --fork: #7d4ec0;
+    --fork-soft: #efe6fa;
+    --chrome: #e4e8ee;
+    --dot: #c7ced8;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e8ecf2; --ink-soft: #a7b2c2; --paper: #11151c; --panel: #171c25;
+      --line: #2b3240; --accent: #7c9bff; --accent-soft: #202a44; --accent-ink: #b7c6ff;
+      --ok: #5fcf96; --ok-soft: #163024; --warn: #e2a04c; --warn-soft: #3a2a14;
+      --danger: #ff8178; --danger-soft: #3a1c1a; --fork: #b89bea; --fork-soft: #2c2440;
+      --chrome: #1f2530; --dot: #3a4252;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #e8ecf2; --ink-soft: #a7b2c2; --paper: #11151c; --panel: #171c25;
+    --line: #2b3240; --accent: #7c9bff; --accent-soft: #202a44; --accent-ink: #b7c6ff;
+    --ok: #5fcf96; --ok-soft: #163024; --warn: #e2a04c; --warn-soft: #3a2a14;
+    --danger: #ff8178; --danger-soft: #3a1c1a; --fork: #b89bea; --fork-soft: #2c2440;
+    --chrome: #1f2530; --dot: #3a4252;
+  }
+  :root[data-theme="light"] {
+    --ink: #1b2430; --ink-soft: #4b5768; --paper: #f4f6f9; --panel: #ffffff;
+    --line: #d7dde6; --accent: #3457d5; --accent-soft: #e7ecfb; --accent-ink: #1f3aa8;
+    --ok: #1f7a4d; --ok-soft: #e4f3ea; --warn: #b5650d; --warn-soft: #fbead8;
+    --danger: #b3261e; --danger-soft: #fbe6e4; --fork: #7d4ec0; --fork-soft: #efe6fa;
+    --chrome: #e4e8ee; --dot: #c7ced8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.45; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 48px 28px 80px; }
+  header.intro { margin-bottom: 36px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink); margin: 0 0 10px; }
+  h1 { font-size: 28px; margin: 0 0 10px; text-wrap: balance; letter-spacing: -0.01em; }
+  .intro p { max-width: 64ch; color: var(--ink-soft); margin: 0; font-size: 15px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 44px; }
+  .legend .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-soft); }
+  .chip .sw { width: 8px; height: 8px; border-radius: 50%; }
+
+  .group { margin-bottom: 52px; }
+  .group > h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); font-weight: 600; margin: 0 0 6px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .group > .sub { font-size: 13px; color: var(--ink-soft); margin: 0 0 16px; max-width: 70ch; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .grid.single { grid-template-columns: 1fr; max-width: 640px; }
+
+  .frame { display: flex; flex-direction: column; gap: 10px; }
+  .browser { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); box-shadow: 0 1px 2px rgb(0 0 0 / 4%); }
+  .chrome-bar { background: var(--chrome); padding: 9px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--line); }
+  .dots { display: flex; gap: 5px; flex: 0 0 auto; }
+  .dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--dot); display: block; }
+  .urlbar { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; font-family: var(--mono); font-size: 12px; color: var(--ink-soft); white-space: nowrap; overflow-x: auto; display: flex; align-items: center; gap: 6px; }
+  .urlbar .lock { flex: 0 0 auto; opacity: 0.6; font-size: 11px; }
+  .urlbar .path-slug { color: var(--accent-ink); font-weight: 600; }
+  .viewport { padding: 16px 16px 18px; min-height: 160px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px; }
+  .badge.own { color: var(--accent-ink); background: var(--accent-soft); }
+  .badge.foreign { color: var(--warn); background: var(--warn-soft); }
+  .badge.fork { color: var(--fork); background: var(--fork-soft); }
+  .badge.denied { color: var(--danger); background: var(--danger-soft); }
+
+  .mock-h { display: flex; align-items: baseline; gap: 8px; margin: 10px 0 2px; flex-wrap: wrap; }
+  .mock-h .title { font-size: 16px; font-weight: 700; }
+  .mock-sub { font-size: 12px; color: var(--ink-soft); margin-bottom: 10px; }
+
+  .two-col { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; margin-top: 10px; }
+  .score-stub { border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; background: var(--chrome); }
+  .score-stub .staff { width: 90%; height: 1px; background: var(--line); position: relative; }
+  .score-stub .pin { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 9px; display: flex; align-items: center; justify-content: center; font-weight: 700; top: -8px; }
+
+  .panel { border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .panel-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
+  .thread { border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; font-size: 12px; }
+  .thread .who { font-weight: 600; font-size: 11.5px; }
+  .thread .body { color: var(--ink-soft); margin-top: 2px; }
+  .thread.copied { border-style: dashed; border-color: var(--fork); background: var(--fork-soft); }
+  .thread.copied .tag { font-family: var(--mono); font-size: 9.5px; color: var(--fork); text-transform: uppercase; letter-spacing: 0.03em; }
+
+  .mock-toolbar { display: flex; gap: 8px; margin: 10px 0 2px; flex-wrap: wrap; }
+  .mock-btn { font-size: 11.5px; padding: 5px 9px; border-radius: 6px; border: 1px solid var(--line); color: var(--ink-soft); background: var(--panel); }
+  .mock-btn.primary { color: var(--accent-ink); border-color: var(--accent); background: var(--accent-soft); }
+  .mock-btn.ghost-danger { color: var(--danger); border-color: var(--danger); background: var(--danger-soft); opacity: 0.55; }
+
+  .mock-note { font-size: 11.5px; color: var(--ink-soft); margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  .mock-note strong { color: var(--ink); }
+
+  .center-state { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; padding: 26px 10px; }
+  .center-state .big { font-size: 14.5px; font-weight: 700; }
+  .center-state .small { font-size: 12px; color: var(--ink-soft); max-width: 38ch; }
+
+  .caption { font-size: 12.5px; color: var(--ink-soft); padding: 0 2px; }
+  .caption strong { color: var(--ink); }
+
+  .flow {
+    display: flex; align-items: stretch; gap: 14px; flex-wrap: wrap;
+  }
+  .flow .step {
+    flex: 1; min-width: 220px; border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px; background: var(--panel); position: relative;
+  }
+  .flow .step .k { font-family: var(--mono); font-size: 10.5px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; }
+  .flow .step .t { font-size: 13px; font-weight: 600; margin: 4px 0 6px; }
+  .flow .step .d { font-size: 12px; color: var(--ink-soft); }
+  .flow .arrow { align-self: center; color: var(--ink-soft); font-size: 18px; flex: 0 0 auto; }
+  @media (max-width: 760px) { .flow .arrow { display: none; } }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">Task 009 · wireframes</p>
+    <h1>Songbook-scoped score review</h1>
+    <p>
+      Opening a score from inside a songbook's <code style="font-family:var(--mono)">/manage</code>
+      area reviews that songbook's pinned revision, in a thread that belongs
+      to the songbook — not the score. Same score pinned in two songbooks
+      never shares a conversation.
+    </p>
+  </header>
+
+  <div class="legend">
+    <span class="chip"><span class="sw" style="background:var(--accent)"></span>Own project — full rights</span>
+    <span class="chip"><span class="sw" style="background:var(--warn)"></span>Foreign score — review only, no mutation</span>
+    <span class="chip"><span class="sw" style="background:var(--fork)"></span>Fork — comments copied from the source thread</span>
+    <span class="chip"><span class="sw" style="background:var(--danger)"></span>Denied / blocked action</span>
+  </div>
+
+  <section class="group">
+    <h2>1 · Own-project score, pinned revision</h2>
+    <p class="sub">The common case: reviewing a score the songbook's project itself uploaded.</p>
+    <div class="grid single">
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar"><span class="lock">🔒</span>cadern.in/<span class="path-slug">project/surdo-e-cia/songbook/carnaval-2026/manage/score/mineirinho</span></div>
+          </div>
+          <div class="viewport">
+            <span class="badge own">Partitura do projeto</span>
+            <div class="mock-h"><span class="title">Mineirinho</span><span class="mock-sub" style="margin:0">versão #2 · fixada em "Carnaval 2026"</span></div>
+            <div class="two-col">
+              <div class="score-stub">
+                <div class="staff"><span class="pin">1</span></div>
+                <div class="staff" style="margin-top:28px"><span class="pin" style="background:var(--warn)">2</span></div>
+              </div>
+              <div class="panel">
+                <div class="panel-title">Comentários (2)</div>
+                <div class="thread"><div class="who">Gustavo</div><div class="body">Essa frase tá rápida demais pro naipe de metais.</div></div>
+                <div class="thread"><div class="who">Bebeto</div><div class="body">Confirmar repique no compasso 12.</div></div>
+                <div class="mock-toolbar" style="margin-top:0"><span class="mock-btn primary">📍 Marcar ponto</span></div>
+              </div>
+            </div>
+            <div class="mock-note">Thread key: <strong>mineirinho_v2</strong> under this songbook — same score pinned in another songbook has its own, empty thread.</div>
+          </div>
+        </div>
+        <p class="caption">Reviewer, editor, admin and owner of <strong>Surdo & Cia</strong> all get this — same role rules as today, just scoped per songbook.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>2 · Foreign score — review yes, mutate no</h2>
+    <p class="sub">The songbook pins a score owned by a different project. Songbook membership grants review, never edit/upload/delete rights over the score.</p>
+    <div class="grid">
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar"><span class="lock">🔒</span>cadern.in/<span class="path-slug">project/surdo-e-cia/songbook/carnaval-2026/manage/score/aquarela</span></div>
+          </div>
+          <div class="viewport">
+            <span class="badge foreign">De outro projeto · Bloco da Terceira</span>
+            <div class="mock-h"><span class="title">Aquarela do Brasil</span><span class="mock-sub" style="margin:0">versão #1 · fixada aqui</span></div>
+            <div class="two-col">
+              <div class="score-stub"><div class="staff"></div></div>
+              <div class="panel">
+                <div class="panel-title">Comentários (0)</div>
+                <div class="mock-note" style="margin:0;border:none;padding:0">Ainda sem comentários.</div>
+                <div class="mock-toolbar" style="margin-top:4px"><span class="mock-btn primary">📍 Marcar ponto</span></div>
+              </div>
+            </div>
+            <div class="mock-toolbar">
+              <span class="mock-btn ghost-danger" title="Requer papel em Bloco da Terceira">Editar metadados</span>
+              <span class="mock-btn ghost-danger" title="Requer papel em Bloco da Terceira">Excluir partitura</span>
+            </div>
+            <div class="mock-note">Review is authorized by <strong>Surdo & Cia</strong> membership. The two disabled actions need a role in <strong>Bloco da Terceira</strong> instead — unaffected by this songbook.</div>
+          </div>
+        </div>
+        <p class="caption">Comment, reply, and pin freely. Can't touch the score itself.</p>
+      </div>
+
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar">cadern.in/<span class="path-slug">project/surdo-e-cia/songbook/carnaval-2026</span></div>
+          </div>
+          <div class="viewport">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <span class="badge own">Editor</span>
+            </div>
+            <div class="mock-h"><span class="title">Carnaval 2026</span></div>
+            <table style="width:100%;font-size:13px;border-collapse:collapse">
+              <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 0">2</td><td>Aquarela do Brasil</td>
+                <td style="text-align:right">
+                  <span class="badge fork">derivação disponível</span>
+                </td>
+              </tr>
+            </table>
+            <div class="mock-toolbar"><span class="mock-btn primary">trocar pela derivação</span></div>
+            <div class="mock-note">Needing a fix the editor can't upload directly, the project forked <strong>Aquarela do Brasil</strong> on export. Swapping the entry is still a one-click action here — unchanged from today.</div>
+          </div>
+        </div>
+        <p class="caption">Entry point to the fork-swap: lives on the songbook table, not the score page.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>3 · Fork-swap carries the conversation forward</h2>
+    <p class="sub">Clicking "trocar pela derivação" re-pins the entry to the fork <em>and</em> copies its thread into the fork's — one action, no dialog.</p>
+    <div class="flow" style="margin-bottom:18px">
+      <div class="step">
+        <div class="k">Before</div>
+        <div class="t">Entry → Aquarela do Brasil v1 <span class="badge foreign" style="margin-left:4px">foreign</span></div>
+        <div class="d">Thread "aquarela_v1" has 2 comments flagging a wrong chord.</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step">
+        <div class="k">Click</div>
+        <div class="t">"trocar pela derivação"</div>
+        <div class="d">Same action as today. Re-pins the entry <em>and</em> seeds the new thread — both in one write.</div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="step">
+        <div class="k">After</div>
+        <div class="t">Entry → Aquarela do Brasil (derivação) v1 <span class="badge own" style="margin-left:4px">own</span></div>
+        <div class="d">Thread "aquarela-fork_v1" opens with the 2 comments already there, tagged as copied.</div>
+      </div>
+    </div>
+    <div class="grid single">
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar"><span class="lock">🔒</span>cadern.in/<span class="path-slug">project/surdo-e-cia/songbook/carnaval-2026/manage/score/aquarela-fork</span></div>
+          </div>
+          <div class="viewport">
+            <span class="badge own">Partitura do projeto · derivação</span>
+            <div class="mock-h"><span class="title">Aquarela do Brasil (derivação)</span><span class="mock-sub" style="margin:0">versão #1 · fixada aqui</span></div>
+            <div class="two-col">
+              <div class="score-stub"><div class="staff"><span class="pin">1</span></div></div>
+              <div class="panel">
+                <div class="panel-title">Comentários (2)</div>
+                <div class="thread copied"><div class="tag">copiado · aquarela_v1</div><div class="who">Bebeto</div><div class="body">Acorde errado no compasso 9, confirmar com a partitura original.</div></div>
+                <div class="thread copied"><div class="tag">copiado · aquarela_v1</div><div class="who">Gustavo</div><div class="body">Concordo, dó deveria ser sol.</div></div>
+              </div>
+            </div>
+            <div class="mock-note">Anchors land in the same spot: a fork's revision 1 is byte-identical to the version it was forked from, so the copied pins still point at the right note.</div>
+          </div>
+        </div>
+        <p class="caption">The original "aquarela_v1" thread stays put, reachable from the songbook's revision history — not deleted, just no longer the live thread for this entry.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>4 · Plain re-pin — still starts empty (unchanged from 005)</h2>
+    <p class="sub">Re-pinning to a newer version of the <em>same</em> score — no fork involved — keeps the existing rule: new version, new empty thread.</p>
+    <div class="grid single">
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar"><span class="lock">🔒</span>cadern.in/<span class="path-slug">project/surdo-e-cia/songbook/carnaval-2026/manage/score/mineirinho</span>?versao=3</div>
+          </div>
+          <div class="viewport">
+            <span class="badge own">Partitura do projeto</span>
+            <div class="mock-h"><span class="title">Mineirinho</span><span class="mock-sub" style="margin:0">versão #3 · fixada aqui</span></div>
+            <div class="two-col">
+              <div class="score-stub"><div class="staff"></div></div>
+              <div class="panel">
+                <div class="panel-title">Comentários (0)</div>
+                <div class="mock-note" style="margin:0;border:none;padding:0">Ainda sem comentários nesta versão.</div>
+              </div>
+            </div>
+            <div class="mock-note">The v2 thread shown in section 1 ("mineirinho_v2") still exists and stays reachable from the songbook's version history — it just isn't this entry's live thread anymore.</div>
+          </div>
+        </div>
+        <p class="caption">No dialog, no choice offered — same one-click "atualizar" as today.</p>
+      </div>
+    </div>
+  </section>
+</div>

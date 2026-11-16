@@ -1,0 +1,479 @@
+<title>008 — Public/member songbook routes</title>
+<style>
+  :root {
+    --ink: #1b2430;
+    --ink-soft: #4b5768;
+    --paper: #f4f6f9;
+    --panel: #ffffff;
+    --line: #d7dde6;
+    --accent: #3457d5;
+    --accent-soft: #e7ecfb;
+    --accent-ink: #1f3aa8;
+    --ok: #1f7a4d;
+    --ok-soft: #e4f3ea;
+    --warn: #b5650d;
+    --warn-soft: #fbead8;
+    --danger: #b3261e;
+    --danger-soft: #fbe6e4;
+    --chrome: #e4e8ee;
+    --dot: #c7ced8;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e8ecf2;
+      --ink-soft: #a7b2c2;
+      --paper: #11151c;
+      --panel: #171c25;
+      --line: #2b3240;
+      --accent: #7c9bff;
+      --accent-soft: #202a44;
+      --accent-ink: #b7c6ff;
+      --ok: #5fcf96;
+      --ok-soft: #163024;
+      --warn: #e2a04c;
+      --warn-soft: #3a2a14;
+      --danger: #ff8178;
+      --danger-soft: #3a1c1a;
+      --chrome: #1f2530;
+      --dot: #3a4252;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #e8ecf2;
+    --ink-soft: #a7b2c2;
+    --paper: #11151c;
+    --panel: #171c25;
+    --line: #2b3240;
+    --accent: #7c9bff;
+    --accent-soft: #202a44;
+    --accent-ink: #b7c6ff;
+    --ok: #5fcf96;
+    --ok-soft: #163024;
+    --warn: #e2a04c;
+    --warn-soft: #3a2a14;
+    --danger: #ff8178;
+    --danger-soft: #3a1c1a;
+    --chrome: #1f2530;
+    --dot: #3a4252;
+  }
+  :root[data-theme="light"] {
+    --ink: #1b2430;
+    --ink-soft: #4b5768;
+    --paper: #f4f6f9;
+    --panel: #ffffff;
+    --line: #d7dde6;
+    --accent: #3457d5;
+    --accent-soft: #e7ecfb;
+    --accent-ink: #1f3aa8;
+    --ok: #1f7a4d;
+    --ok-soft: #e4f3ea;
+    --warn: #b5650d;
+    --warn-soft: #fbead8;
+    --danger: #b3261e;
+    --danger-soft: #fbe6e4;
+    --chrome: #e4e8ee;
+    --dot: #c7ced8;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.45;
+  }
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 48px 28px 80px;
+  }
+  header.intro {
+    margin-bottom: 36px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-size: 28px;
+    margin: 0 0 10px;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+  .intro p {
+    max-width: 62ch;
+    color: var(--ink-soft);
+    margin: 0;
+    font-size: 15px;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 22px 0 44px;
+  }
+  .legend .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink-soft);
+  }
+  .chip .sw { width: 8px; height: 8px; border-radius: 50%; }
+
+  .group {
+    margin-bottom: 52px;
+  }
+  .group > h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    font-weight: 600;
+    margin: 0 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .frame {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .browser {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--panel);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+  }
+  .chrome-bar {
+    background: var(--chrome);
+    padding: 9px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .dots { display: flex; gap: 5px; flex: 0 0 auto; }
+  .dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--dot); display: block; }
+  .urlbar {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow-x: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .urlbar .lock { flex: 0 0 auto; opacity: 0.6; font-size: 11px; }
+  .urlbar .path-slug { color: var(--accent-ink); font-weight: 600; }
+
+  .viewport {
+    padding: 18px 18px 20px;
+    min-height: 180px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 5px;
+  }
+  .badge.public { color: var(--ok); background: var(--ok-soft); }
+  .badge.member { color: var(--accent-ink); background: var(--accent-soft); }
+  .badge.denied { color: var(--danger); background: var(--danger-soft); }
+  .badge.gone { color: var(--warn); background: var(--warn-soft); }
+
+  .mock-h {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .mock-h .title { font-size: 17px; font-weight: 700; }
+  .mock-sub { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 14px; }
+
+  .mock-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+  .mock-row:last-child { border-bottom: none; }
+  .mock-row .lnk { color: var(--accent); }
+  .mock-row .idx { color: var(--ink-soft); font-size: 12px; width: 18px; }
+  .mock-row .dim { color: var(--ink-soft); }
+
+  .mock-toolbar {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0 4px;
+    flex-wrap: wrap;
+  }
+  .mock-btn {
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    background: var(--panel);
+  }
+  .mock-btn.primary { color: var(--accent-ink); border-color: var(--accent); background: var(--accent-soft); }
+
+  .mock-note {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+  }
+
+  .center-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 6px;
+    padding: 30px 10px;
+  }
+  .center-state .big { font-size: 15px; font-weight: 700; }
+  .center-state .small { font-size: 12.5px; color: var(--ink-soft); max-width: 36ch; }
+
+  .caption {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    padding: 0 2px;
+  }
+  .caption strong { color: var(--ink); }
+
+  .diff-strip {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .diff-strip span {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+  }
+  .diff-strip span.off {
+    background: var(--danger-soft);
+    color: var(--danger);
+    text-decoration: line-through;
+  }
+
+  .skeleton {
+    height: 11px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--chrome), var(--line), var(--chrome));
+    margin: 7px 0;
+  }
+  .avatar-ring {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--line);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--ink-soft);
+  }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">Task 008 · wireframes</p>
+    <h1>Public and member songbook routes</h1>
+    <p>
+      Six states across the project/songbook namespace: who sees what at
+      each URL, and what a role switch or a stale legacy link does. Ports
+      from the current <code style="font-family:var(--mono)">/projects/:slug/songbooks/:songbookSlug</code>
+      dual-purpose page into two routes that never leak into each other.
+    </p>
+  </header>
+
+  <div class="legend">
+    <span class="chip"><span class="sw" style="background:var(--ok)"></span>Public — anyone, published only</span>
+    <span class="chip"><span class="sw" style="background:var(--accent)"></span>Member — role-checked, full content</span>
+    <span class="chip"><span class="sw" style="background:var(--danger)"></span>Denied — authenticated but not a member</span>
+    <span class="chip"><span class="sw" style="background:var(--warn)"></span>Gone — legacy path, no redirect</span>
+  </div>
+
+  <section class="group">
+    <h2>1 · Project page — same URL, role changes what renders</h2>
+    <div class="grid">
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar">cadern.in/<span class="path-slug">project/surdo-e-cia</span></div>
+          </div>
+          <div class="viewport">
+            <span class="badge public">Public</span>
+            <div class="mock-h" style="margin-top:10px"><span class="title">Surdo & Cia</span></div>
+            <div class="mock-sub">/surdo-e-cia</div>
+            <div class="mock-row"><span>Carnaval 2026</span><span class="dim"></span></div>
+            <div class="mock-row"><span>Bloco de Garagem</span><span class="dim"></span></div>
+            <div class="mock-note">Songbook links point to <span style="font-family:var(--mono)">/project/surdo-e-cia/songbook/:slug</span>. No score list, no "novo caderninho".</div>
+          </div>
+        </div>
+        <p class="caption">Logged out, or logged in without a role on this project.</p>
+      </div>
+
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar"><span class="lock">🔒</span>cadern.in/<span class="path-slug">project/surdo-e-cia</span></div>
+          </div>
+          <div class="viewport">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <span class="badge member">Editor</span>
+              <span class="avatar-ring">GB</span>
+            </div>
+            <div class="mock-h" style="margin-top:10px"><span class="title">Surdo & Cia</span></div>
+            <div class="mock-sub">/surdo-e-cia</div>
+            <div class="mock-row"><span>Carnaval 2026</span><span class="dim">publicado</span></div>
+            <div class="mock-row"><span>Bloco de Garagem</span><span class="dim">não publicado</span></div>
+            <div class="mock-toolbar"><span class="mock-btn primary">+ Novo caderninho</span></div>
+            <div class="mock-note">Links point to <span style="font-family:var(--mono)">/project/surdo-e-cia/songbook/:slug/manage</span> instead — same row, different destination.</div>
+          </div>
+        </div>
+        <p class="caption">Same URL, signed in as a project member — row links resolve to <strong>/manage</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>2 · Songbook — public reader vs. member workspace</h2>
+    <div class="grid">
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar">cadern.in/<span class="path-slug">project/surdo-e-cia/songbook/carnaval-2026</span></div>
+          </div>
+          <div class="viewport">
+            <span class="badge public">Public</span>
+            <div class="mock-h" style="margin-top:10px"><span class="title">Carnaval 2026</span></div>
+            <div class="mock-row"><span class="idx">1</span><span class="lnk">Mineirinho</span></div>
+            <div class="mock-row"><span class="idx">2</span><span class="lnk">Aquarela do Brasil</span></div>
+            <div class="mock-row"><span class="idx">3</span><span class="lnk">Na Baixa do Sapateiro</span></div>
+            <div class="diff-strip">
+              <span class="off">?detalhes</span>
+              <span class="off">histórico</span>
+              <span class="off">editar / publicar / excluir</span>
+            </div>
+            <div class="mock-note">Current revision only, even for a signed-in member who got here by typing the public URL directly.</div>
+          </div>
+        </div>
+        <p class="caption">Reader only. No route param, no query string, unlocks the detail view — it doesn't exist here.</p>
+      </div>
+
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar"><span class="lock">🔒</span>cadern.in/<span class="path-slug">project/surdo-e-cia/songbook/carnaval-2026/manage</span></div>
+          </div>
+          <div class="viewport">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <span class="badge member">Editor</span>
+              <span class="avatar-ring">GB</span>
+            </div>
+            <div class="mock-h" style="margin-top:10px">
+              <span class="title">Carnaval 2026</span>
+              <span class="dim" style="font-size:12px;color:var(--ink-soft)">versão #4</span>
+            </div>
+            <div class="mock-toolbar">
+              <span class="mock-btn primary">Editar</span>
+              <span class="mock-btn">Atualizar todas (2)</span>
+              <span class="mock-btn">Publicar</span>
+            </div>
+            <div class="mock-row"><span class="idx">1</span><span class="lnk">Mineirinho</span></div>
+            <div class="mock-row"><span class="idx">2</span><span class="lnk">Aquarela do Brasil</span><span class="dim" style="font-size:11px">nova versão</span></div>
+            <div class="mock-note">Histórico de versões and the danger-zone delete live below the fold — reviewer role and up.</div>
+          </div>
+        </div>
+        <p class="caption">Member workspace at <strong>/manage</strong>: edit, re-pin, publish, history, delete.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>3 · Edge states</h2>
+    <div class="grid">
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar"><span class="lock">🔒</span>cadern.in/<span class="path-slug">project/surdo-e-cia/songbook/carnaval-2026/manage</span></div>
+          </div>
+          <div class="viewport">
+            <div class="center-state">
+              <span class="badge denied" style="margin-bottom:6px">Acesso negado</span>
+              <div class="big">Você não é membro deste projeto.</div>
+              <div class="small">Entre com uma conta convidada para Surdo &amp; Cia, ou veja a versão pública deste caderninho.</div>
+              <span class="mock-btn primary" style="margin-top:8px">Ver caderninho público</span>
+            </div>
+          </div>
+        </div>
+        <p class="caption">Signed in, but no role on the songbook's owning project — checked server-side, not just hidden in the UI.</p>
+      </div>
+
+      <div class="frame">
+        <div class="browser">
+          <div class="chrome-bar">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <div class="urlbar">cadern.in/<span class="path-slug">projects/surdo-e-cia/songbooks/carnaval-2026</span></div>
+          </div>
+          <div class="viewport">
+            <div class="center-state">
+              <span class="badge gone" style="margin-bottom:6px">404</span>
+              <div class="big">Página não encontrada.</div>
+              <div class="small">The old plural routes (<span style="font-family:var(--mono)">/projects/:slug/…</span>, <span style="font-family:var(--mono)">/songbooks/:slug/:songbookSlug</span>) are dropped, not redirected — per your call, no bookmarks to preserve yet.</div>
+            </div>
+          </div>
+        </div>
+        <p class="caption">Legacy path falls through to the existing catch-all <span style="font-family:var(--mono)">NotFoundPage</span>.</p>
+      </div>
+    </div>
+  </section>
+</div>

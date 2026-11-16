@@ -263,7 +263,7 @@ export function ProjectSettingsPageView({
               required
             />
             <Form.Text className="text-muted">
-              Slug: <code>/projects/{project.slug}</code> (imutável)
+              Slug: <code>/project/{project.slug}</code> (imutável)
             </Form.Text>
           </Form.Group>
           <Button type="submit" size="sm" disabled={titlePending}>
