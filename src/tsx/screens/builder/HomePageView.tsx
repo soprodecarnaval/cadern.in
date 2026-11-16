@@ -1,10 +1,11 @@
 import { Page } from "../../atoms/Page";
 import { Button } from "../../atoms/Button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Col, Row } from "react-bootstrap";
 
 import { ScoreSearchResultsView } from "./search/ScoreSearchResultsView";
 import { SearchBarView } from "./search/SearchBarView";
+import { ColumnDivider, type CollapsedSide } from "./ColumnDivider";
+import "./MontarColumns.css";
 import { SongbookDragProvider } from "../../components/songbooks/editor/SongbookDragProvider";
 import type { SongbookSortableListHandle } from "../../components/songbooks/editor/SongbookSortableList";
 import { SongBookTableView } from "../../components/songbooks/editor/SongBookTableView";
@@ -59,6 +60,8 @@ export function HomePageView({
   const { status, allScores } = collection;
   const [restored, setRestored] = useState(false);
   const [showSave, setShowSave] = useState(false);
+  // Resultados (left) or Caderninho (right) hidden by the column divider.
+  const [collapsed, setCollapsed] = useState<CollapsedSide>(null);
   const songbookRef = useRef<SongbookSortableListHandle>(null);
   const [sort, setSort] = useState<{
     column: SortColumn;
@@ -136,25 +139,35 @@ export function HomePageView({
   return (
     <>
       <Page>
-        <Row>
-          <Col sm={6}>
-            <SearchBarView
-              status={collection.status}
-              search={collection.search}
-              handleResults={handleSearchResults}
-            />
-          </Col>
-          <Col sm={6}>
-            <components.PDFGenerator songBook={songBook} />
-          </Col>
-        </Row>
         <SongbookDragProvider
           songbookRef={songbookRef}
           onAddAt={handleAddScore}
           onRemove={handleRemoveScore}
         >
-          <Row className="mt-4">
-            <Col sm={6}>
+          <div
+            className={
+              collapsed
+                ? `montar-columns is-${collapsed}-collapsed`
+                : "montar-columns"
+            }
+          >
+            <div className="montar-cell montar-search">
+              <SearchBarView
+                status={collection.status}
+                search={collection.search}
+                handleResults={handleSearchResults}
+              />
+            </div>
+            <div className="montar-cell montar-generate">
+              <components.PDFGenerator songBook={songBook} />
+            </div>
+            <ColumnDivider
+              collapsed={collapsed}
+              onChange={setCollapsed}
+              leftLabel="Resultados"
+              rightLabel="Caderninho"
+            />
+            <div className="montar-cell montar-results">
               <ScoreSearchResultsView
                 collection={collection}
                 Card={components.Card}
@@ -163,8 +176,8 @@ export function HomePageView({
                 onSortBy={handleResultsSortBy}
                 onSelectSong={handleSelectSong}
               />
-            </Col>
-            <Col sm={6}>
+            </div>
+            <div className="montar-cell montar-songbook">
               <div className="d-flex justify-content-between align-items-baseline">
                 <h3 className="results">Caderninho</h3>
                 {collabEnabled && (
@@ -193,8 +206,8 @@ export function HomePageView({
                 handleSelect={handleSelectSong}
                 handleClear={clearSelected}
               />
-            </Col>
-          </Row>
+            </div>
+          </div>
         </SongbookDragProvider>
       </Page>
     </>
