@@ -4,38 +4,15 @@ import { FEATURE_FLAG_COLLAB_FLOW as collabEnabled } from "../../../featureFlags
 import { getPublishedSongbooks, getSongbookRevision } from "../../../lib/db";
 import { representativeCoverUrl } from "../../../lib/songbookCovers";
 import { useCollectionContext } from "../../../useCollectionContext";
+// Only articles with pages: the placeholders would lead to "not found".
+import { publishedArticleCards as articles } from "../../../articles";
 import {
   LandingPageView,
-  type LandingArticle,
   type LandingSongbook,
   type LandingSongbooks,
 } from "./LandingPageView";
 import type { ProfileTab } from "../account/ProfileModalView";
 
-// Placeholders until the articles are written: their pages don't exist yet.
-// Without an `imageUrl` the image area shows as a grey box. The first two
-// are shown; the section hides itself if this list is empty.
-const articles: LandingArticle[] = [
-  {
-    title: "Como montar o caderninho do seu bloco",
-    summary:
-      "Um passo a passo da busca de partituras até o PDF pronto para imprimir e levar para a rua.",
-    href: "/artigos/como-montar-o-caderninho",
-    imageUrl: "/assets/articles/cadernos-impressos-1234.webp",
-    imageSrcSet:
-      "/assets/articles/cadernos-impressos-360.webp 360w, /assets/articles/cadernos-impressos-670.webp 670w, /assets/articles/cadernos-impressos-1234.webp 1234w",
-  },
-  {
-    title: "Formatando partituras com a extensão para Musescore",
-    summary:
-      "Como deixar suas partituras no padrão do cadern.in antes de enviá-las para o acervo.",
-    href: "/artigos/extensao-musescore",
-    // The source photo is 933px wide; the variants stop there on purpose.
-    imageUrl: "/assets/articles/trombone-na-rua-933.webp",
-    imageSrcSet:
-      "/assets/articles/trombone-na-rua-360.webp 360w, /assets/articles/trombone-na-rua-670.webp 670w, /assets/articles/trombone-na-rua-933.webp 933w",
-  },
-];
 
 export function LandingPage(props: {
   inboxCount: number;

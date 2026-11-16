@@ -1,0 +1,242 @@
+/* Article pages: the landing page's header, footer, type and colors, with a
+   narrow reading column. Wide figures break out to the page's width. */
+.article {
+  --article-measure: 720px;
+  --article-wide: 1100px;
+  margin: 18px auto 0;
+}
+
+.article-header,
+.article-body,
+.article-source {
+  max-width: var(--article-measure);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.article-breadcrumb {
+  display: flex;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+/* Decorative, so the low contrast of yellow on white is fine. */
+.article-breadcrumb-separator {
+  color: var(--landing-yellow);
+  font-weight: 900;
+}
+
+.article-breadcrumb a:hover {
+  text-decoration: underline !important;
+}
+
+.article-title {
+  font-size: clamp(2rem, 4.4vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin: 0 0 20px;
+  text-wrap: balance;
+}
+
+.article-deck {
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  line-height: 1.35;
+  margin: 0 0 24px;
+  text-wrap: pretty;
+}
+
+.article-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  padding-top: 12px;
+  border-top: 3px solid var(--landing-ink);
+  font-size: 16px;
+  margin: 0;
+}
+
+.article-meta strong {
+  font-weight: 700;
+}
+
+.article-meta a,
+.article-source p a {
+  font-weight: 500;
+  background: linear-gradient(transparent 60%, var(--landing-yellow) 60%);
+}
+
+.article-body a {
+  font-weight: 500;
+  text-decoration: underline !important;
+  text-decoration-color: var(--landing-yellow) !important;
+  text-decoration-thickness: 4px !important;
+  text-underline-offset: 2px;
+}
+
+.article-body strong {
+  font-weight: 700;
+}
+
+.article-meta a:hover,
+.article-source p a:hover,
+.article-body a:hover {
+  background: var(--landing-yellow);
+}
+
+/* Figures */
+
+.article-figure {
+  margin: 40px auto;
+}
+
+.article-figure.is-text {
+  max-width: var(--article-measure);
+}
+
+.article-figure.is-narrow {
+  max-width: min(480px, var(--article-measure));
+}
+
+.article-figure.is-wide {
+  max-width: var(--article-wide);
+}
+
+/* Inside the text column, a wide figure grows past it, centered. */
+.article-body > .article-figure.is-wide {
+  width: min(var(--article-wide), 100vw - 2 * var(--landing-gutter));
+  max-width: none;
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+
+.article-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--landing-radius);
+  background: var(--landing-muted);
+}
+
+.article-figure figcaption {
+  margin-top: 10px;
+  font-size: 15px;
+  color: #555;
+}
+
+.article-lead {
+  margin-top: 36px;
+}
+
+.article-lead img {
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+
+/* Body */
+
+.article-body {
+  font-size: 20px;
+  line-height: 1.6;
+}
+
+.article-body > p {
+  margin: 0 0 1.2em;
+  text-wrap: pretty;
+}
+
+.article-body > p:first-of-type::first-letter {
+  float: left;
+  font-size: 4.1em;
+  line-height: 0.85;
+  font-weight: 700;
+  margin: 0.06em 0.1em 0 0;
+}
+
+/* The home's section titles, with the yellow band repeated on each line. */
+.article-body > .article-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 30px;
+  margin: 48px 0 20px;
+}
+
+.article-heading span {
+  background: linear-gradient(
+    transparent 0 3px,
+    var(--landing-yellow) 3px 20.5px,
+    transparent 20.5px
+  );
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.article-quote {
+  margin: 44px 0;
+  padding: 20px 0 20px 24px;
+  border-left: 8px solid var(--landing-yellow);
+}
+
+.article-quote p {
+  margin: 0;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.article-quote p::before {
+  content: "“";
+}
+
+.article-quote p::after {
+  content: "”";
+}
+
+.article-quote cite {
+  display: block;
+  margin-top: 12px;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.article-quote cite::before {
+  content: "— ";
+}
+
+/* Source box */
+
+.article-source {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 48px;
+  /* 50px tall with its borders, like the home's closed dropdowns. */
+  min-height: 50px;
+  padding: 4px 22px;
+  border: 3px solid var(--landing-ink);
+  border-radius: 14px;
+}
+
+.article-source p {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+}
+
+@media (max-width: 767px) {
+  .article-body {
+    font-size: 18px;
+  }
+
+  .article-figure {
+    margin: 28px auto;
+  }
+
+  .article-source {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -20,6 +20,8 @@ import { SongbookManagePage } from "./screens/songbooks/manage/SongbookManagePag
 import { SongbookPage } from "./screens/songbooks/public/SongbookPage";
 import { SongbookScorePage } from "./screens/songbooks/review/SongbookScorePage";
 
+import { ArticlePage } from "./screens/articles/ArticlePage";
+import { ArticlesPage } from "./screens/articles/ArticlesPage";
 import { HomePage } from "./screens/builder/HomePage";
 import { LandingPage } from "./screens/landing/LandingPage";
 
@@ -32,8 +34,12 @@ function App() {
   };
   const [inboxCount, setInboxCount] = useState(0);
   const { currentUser, pendingUser } = useAuth();
-  // The landing page draws its own header and footer.
-  const isLanding = useLocation().pathname === "/";
+  // The landing and article pages draw their own header and footer.
+  const { pathname } = useLocation();
+  const isLanding =
+    pathname === "/" ||
+    pathname === "/artigos" ||
+    pathname.startsWith("/artigos/");
 
   useEffect(() => {
     if (!FEATURE_FLAG_COLLAB_FLOW || !currentUser) {
@@ -75,6 +81,18 @@ function App() {
         <Route
           path="/montar"
           element={<HomePage onRequestLogin={() => openUserModal()} />}
+        />
+        <Route
+          path="/artigos"
+          element={
+            <ArticlesPage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
+          }
+        />
+        <Route
+          path="/artigos/:slug"
+          element={
+            <ArticlePage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
+          }
         />
         <Route path="/score/:scoreId" element={<ScorePage />} />
         <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />

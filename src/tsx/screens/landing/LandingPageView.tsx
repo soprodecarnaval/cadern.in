@@ -1,5 +1,6 @@
 import { Button } from "../../atoms/Button";
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -9,10 +10,12 @@ import { Accordion, Dropdown } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
 import type { SongbookDoc } from "../../../../types/docs";
+import { ARTICLES_PATH, type ArticleCard } from "../../../articles";
 import type { WithId } from "../../../lib/db";
 import type { CollectionContextValue } from "../../../useCollectionContext";
 import { initialsOf } from "../../../lib/displayName";
 import { publicSongbookPath } from "../../../lib/songbook";
+import { ArticleCards } from "../articles/ArticleCards";
 import type { ProfileTab } from "../account/ProfileModalView";
 
 import arrowNext from "../../../assets/brand/arrow-next.svg";
@@ -25,14 +28,7 @@ import logo from "../../../assets/brand/logo.svg";
 import search from "../../../assets/brand/search.svg";
 import "./LandingPage.css";
 
-export type LandingArticle = {
-  title: string;
-  summary: string;
-  href: string;
-  imageUrl?: string;
-  /** Width descriptors for `imageUrl`, when variants exist. */
-  imageSrcSet?: string;
-};
+export type LandingArticle = ArticleCard;
 
 /** A published songbook and, when it has one, a cover image to show. */
 export type LandingSongbook = WithId<SongbookDoc> & { coverUrl?: string };
@@ -49,7 +45,6 @@ const PLANNED = {
   contribua: "/contribua",
   ajuda: "/ajuda",
   biblioteca: "/biblioteca",
-  artigos: "/artigos",
   carnaval: "/2027",
   favoritos: "/favoritos",
 };
@@ -62,10 +57,18 @@ const STATIC = {
 
 const MAX_SEARCH_RESULTS = 8;
 const EXPORTER_ANCHOR = "exportador";
-// Article cards sit in a two-column grid (~656px each) on wide screens and
-// one full-width column on phones; half the viewport in between.
-// const ARTICLE_IMAGE_SIZES =
-//   "(min-width: 1100px) 656px, (min-width: 628px) 50vw, calc(100vw - 32px)";
+
+export function SectionTitle({ children }: { children: ReactNode }) {
+  return <h2 className="landing-section-title">{children}</h2>;
+}
+
+export function MoreLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Link to={to} className="landing-more">
+      +{children}
+    </Link>
+  );
+}
 
 export function LandingPageView({
   currentUser,
@@ -73,7 +76,7 @@ export function LandingPageView({
   inboxCount,
   collection,
   songbooks,
-  // articles,
+  articles,
   onOpenUserModal,
   onSignOut,
 }: {
@@ -86,7 +89,19 @@ export function LandingPageView({
   onOpenUserModal: (tab?: ProfileTab) => void;
   onSignOut: () => void;
 }) {
-  const [openTools, setOpenTools] = useState<string[]>(["plugin"]);
+  // Arriving from another page's "Exportador desktop" link opens its panel.
+  const [openTools, setOpenTools] = useState<string[]>(() =>
+    window.location.hash === `#${EXPORTER_ANCHOR}`
+      ? ["plugin", "exporter"]
+      : ["plugin"],
+  );
+  useEffect(() => {
+    if (window.location.hash === `#${EXPORTER_ANCHOR}`) {
+      document
+        .getElementById(EXPORTER_ANCHOR)
+        ?.scrollIntoView({ block: "center" });
+    }
+  }, []);
   // The exporter has no page of its own yet: links to it open its panel here.
   const showExporter = () => {
     setOpenTools((open) =>
@@ -204,36 +219,13 @@ export function LandingPageView({
           </div>
         </section>
 
-        {/* TBD: restore when articles are ready.
-        articles.length > 0 && (
+        {articles.length > 0 && (
           <section className="landing-section">
             <SectionTitle>Artigos</SectionTitle>
-            <div className="landing-articles">
-              {articles.slice(0, 2).map((article) => (
-                <Link
-                  key={article.href}
-                  className="landing-article"
-                  to={article.href}
-                >
-                  <div className="landing-article-image">
-                    {article.imageUrl && (
-                      <img
-                        src={article.imageUrl}
-                        srcSet={article.imageSrcSet}
-                        sizes={ARTICLE_IMAGE_SIZES}
-                        alt=""
-                      />
-                    )}
-                  </div>
-                  <h3>{article.title}</h3>
-                  <p>{article.summary}</p>
-                </Link>
-              ))}
-            </div>
-            <MoreLink to={PLANNED.artigos}>artigos</MoreLink>
+            <ArticleCards articles={articles.slice(0, 2)} />
+            <MoreLink to={ARTICLES_PATH}>artigos</MoreLink>
           </section>
-        )
-        */}
+        )}
       </main>
       <LandingFooter
         currentUser={currentUser}
@@ -253,7 +245,7 @@ function Logo({ inverted }: { inverted?: boolean }) {
   );
 }
 
-function LandingHeader({
+export function LandingHeader({
   currentUser,
   collabEnabled,
   inboxCount,
@@ -485,18 +477,6 @@ function SongbookCarousel({ songbooks }: { songbooks: LandingSongbooks }) {
   );
 }
 
-function SectionTitle({ children }: { children: ReactNode }) {
-  return <h2 className="landing-section-title">{children}</h2>;
-}
-
-function MoreLink({ to, children }: { to: string; children: ReactNode }) {
-  return (
-    <Link to={to} className="landing-more">
-      +{children}
-    </Link>
-  );
-}
-
 function ActionCard({
   title,
   text,
@@ -526,7 +506,7 @@ function ActionCard({
   );
 }
 
-function LandingFooter({
+export function LandingFooter({
   currentUser,
   collabEnabled,
   onOpenUserModal,
@@ -535,7 +515,8 @@ function LandingFooter({
   currentUser: import("firebase/auth").User | null;
   collabEnabled: boolean;
   onOpenUserModal: () => void;
-  onShowExporter: () => void;
+  /** Off the landing page, the link goes to the landing page's panel. */
+  onShowExporter?: () => void;
 }) {
   return (
     <footer className="landing-footer">
@@ -585,22 +566,26 @@ function LandingFooter({
             )}
             <li><Link to={PLANNED.carnaval}>Carnaval 2027</Link></li>
             <li>
-              <a
-                href={`#${EXPORTER_ANCHOR}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  onShowExporter();
-                }}
-              >
-                Exportador desktop
-              </a>
+              {onShowExporter ? (
+                <a
+                  href={`#${EXPORTER_ANCHOR}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onShowExporter();
+                  }}
+                >
+                  Exportador desktop
+                </a>
+              ) : (
+                <Link to={`/#${EXPORTER_ANCHOR}`}>Exportador desktop</Link>
+              )}
             </li>
           </ul>
           <ul>
             <li><Link to={PLANNED.sobre}>Sobre</Link></li>
             <li><Link to={PLANNED.contribua}>Contribua</Link></li>
             <li><Link to={PLANNED.ajuda}>Ajuda</Link></li>
-            <li><Link to={PLANNED.artigos}>Artigos</Link></li>
+            <li><Link to={ARTICLES_PATH}>Artigos</Link></li>
           </ul>
         </nav>
       </div>
