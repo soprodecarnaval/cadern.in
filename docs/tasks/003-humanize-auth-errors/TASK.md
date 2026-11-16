@@ -1,6 +1,6 @@
 ---
 title: Humanize all authentication errors
-status: open
+status: in-progress
 type: feature
 milestone: auth-improvements
 ---
@@ -37,3 +37,11 @@ Run focused tests and relevant type/build checks after implementation. This task
 ## Unresolved questions
 
 None.
+
+## Approved wireframes
+
+Approved 2026-11-14: retain existing site modal and exporter form layouts; show humanized errors in their existing alert locations. Empty and loading states retain existing controls. Verification and password errors appear beside their respective actions. Unknown failures use a generic retry message without codes.
+
+## Progress
+
+Shared mapping applied to site authentication, password changes, and exporter login and verification. Mapper tests, targeted lint, typecheck and website/exporter builds pass with dummy Firebase configuration. Live UI flow validation remains.

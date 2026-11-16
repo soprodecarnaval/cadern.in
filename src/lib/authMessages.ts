@@ -9,6 +9,11 @@ const MESSAGES: Record<string, string> = {
   "auth/invalid-credential": "E-mail ou senha incorretos",
   "auth/wrong-password": "E-mail ou senha incorretos",
   "auth/user-not-found": "E-mail ou senha incorretos",
+  "auth/weak-password": "Escolha uma senha mais forte e tente novamente.",
+  "auth/email-already-in-use": "Não foi possível criar a conta. Tente entrar ou recuperar sua senha.",
+  "auth/requires-recent-login": "Entre novamente para continuar.",
+  "auth/popup-closed-by-user": "Login cancelado.",
+  "auth/popup-blocked": "Permita janelas pop-up e tente novamente.",
   "auth/user-disabled": "Esta conta foi desativada",
   "auth/too-many-requests":
     "Muitas tentativas. Aguarde alguns minutos e tente de novo.",
@@ -20,7 +25,7 @@ export function describeAuthError(error: unknown): string {
   if (error instanceof FirebaseError) {
     // Wrong credentials and a missing account are reported identically, so a
     // stranger cannot use the form to discover which e-mails are registered.
-    return MESSAGES[error.code] ?? `Não foi possível entrar (${error.code})`;
+    return MESSAGES[error.code] ?? "Não foi possível concluir. Tente novamente.";
   }
-  return "Não foi possível entrar";
+  return "Não foi possível concluir. Tente novamente.";
 }

@@ -3,6 +3,7 @@ import { Modal, Tab, Tabs } from "react-bootstrap";
 import type { User } from "firebase/auth";
 import { GoogleLinkRequiredError } from "../auth";
 import "../css/BrandModal.css";
+import { describeAuthError } from "../lib/authMessages";
 
 export interface AuthModalViewProps {
   login: (email: string, password: string) => Promise<void>;
@@ -110,7 +111,7 @@ export function AuthModalView({
       setResetSent(true);
       startCountdown();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erro ao enviar email");
+      setError(describeAuthError(err));
     } finally {
       setResetPending(false);
     }
@@ -123,7 +124,7 @@ export function AuthModalView({
       await login(email, password);
       handleHide();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erro ao entrar");
+      setError(describeAuthError(err));
     }
   };
 
@@ -133,7 +134,7 @@ export function AuthModalView({
     try {
       await register(email, password, displayName);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erro ao criar conta");
+      setError(describeAuthError(err));
     }
   };
 
@@ -159,7 +160,7 @@ export function AuthModalView({
       setResendSent(true);
       startResendCountdown();
     } catch (err: unknown) {
-      setVerifyError(err instanceof Error ? err.message : "Erro ao reenviar");
+      setVerifyError(describeAuthError(err));
     } finally {
       setResendPending(false);
     }
@@ -171,7 +172,7 @@ export function AuthModalView({
     try {
       await refreshVerificationStatus();
     } catch (err: unknown) {
-      setVerifyError(err instanceof Error ? err.message : "Erro ao verificar");
+      setVerifyError(describeAuthError(err));
     } finally {
       setRefreshPending(false);
     }
@@ -187,7 +188,7 @@ export function AuthModalView({
       if (err instanceof GoogleLinkRequiredError) {
         setLinkRequest(err);
       } else {
-        setError(err instanceof Error ? err.message : "Erro ao entrar");
+        setError(describeAuthError(err));
       }
     } finally {
       setGooglePending(false);
@@ -207,7 +208,7 @@ export function AuthModalView({
       setLinkPassword("");
       handleHide();
     } catch (err: unknown) {
-      setLinkError(err instanceof Error ? err.message : "Erro ao conectar");
+      setLinkError(describeAuthError(err));
     } finally {
       setLinkPending(false);
     }

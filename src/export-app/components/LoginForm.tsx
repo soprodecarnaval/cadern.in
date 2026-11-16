@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { GoogleLinkRequiredError, useAuth } from "../../auth";
-import { describeAuthError } from "../authMessages";
+import { describeAuthError } from "../../lib/authMessages";
 
 // Signals the user closed the OAuth popup without finishing; distinct from a
 // Firebase error so it gets its own message instead of a generic one.
