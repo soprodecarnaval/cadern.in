@@ -36,7 +36,12 @@ export async function saveSongbookCovers(input: {
   added: Map<Instrument, File>;
   removed: Instrument[];
   user: User;
-}): Promise<void> {
+}): Promise<SongbookRevisionDoc["covers"]> {
+  for (const file of input.added.values()) {
+    if (!COVER_TYPES.includes(file.type)) {
+      throw new Error("Selecione uma imagem PNG ou JPEG.");
+    }
+  }
   const revisionId = newSongbookRevisionId(input.songbook.title);
   const base = songbookRevisionStoragePath(
     input.songbook.projectId, input.songbook.id, revisionId,
@@ -66,4 +71,5 @@ export async function saveSongbookCovers(input: {
       revisionId,
     },
   );
+  return covers;
 }

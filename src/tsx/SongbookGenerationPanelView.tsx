@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Form,
@@ -20,9 +20,8 @@ import {
   computeInstrumentStats,
   instrumentFallbacks,
 } from "../lib/pdfGeneration";
+import { SongbookCoverModal } from "./SongbookCoverModal";
 import { isSongbookSection } from "../lib/songbook";
-
-const COVER_TYPES = ["image/png", "image/jpeg"];
 
 const CarnivalModeTooltip = (
   <Tooltip id="carnival-tooltip">
@@ -50,18 +49,11 @@ const HelpIcon = ({ tooltip }: { tooltip: JSX.Element }) => (
   </OverlayTrigger>
 );
 
-/**
- * Project songbook's PDF generation: inline, no title field (uses
- * songbook.title) and no modal — merges PdfGenerator's instrument picker
- * with per-instrument cover editing (SongbookCoversEditor's old job).
- * Generation stays available to any viewer on any version, matching today's
- * unconditional PDFGenerator; `canEditCovers` only gates the cover actions,
- * same as today's "Capas" button (editor role + current version).
- */
 export function SongbookGenerationPanelView({
   currentUser,
   generateSongbookPdfs,
   saveSongbookCovers,
+  createCoverPreview,
 
   songbook,
   revision,
@@ -72,6 +64,7 @@ export function SongbookGenerationPanelView({
   currentUser: import("firebase/auth").User | null;
   generateSongbookPdfs: typeof import("../lib/generateSongbookPdfs").generateSongbookPdfs;
   saveSongbookCovers: typeof import("../lib/songbookCovers").saveSongbookCovers;
+  createCoverPreview: typeof import("../lib/pdfPreview").createSongbookCoverPreview;
 
   songbook: WithId<SongbookDoc>;
   revision: SongbookRevisionDoc;
@@ -99,14 +92,20 @@ export function SongbookGenerationPanelView({
   const [antiAssedioPages, setAntiAssedioPages] = useState(false);
   const [debugBoundingBoxes, setDebugBoundingBoxes] = useState(false);
 
-  const [addedCovers, setAddedCovers] = useState<Map<Instrument, File>>(
-    new Map(),
-  );
-  const [removedCovers, setRemovedCovers] = useState<Set<Instrument>>(
-    new Set(),
-  );
-  const [savingCovers, setSavingCovers] = useState(false);
-  const [coversError, setCoversError] = useState("");
+  const [coverInstrument, setCoverInstrument] = useState<Instrument | null>(null);
+  const [savedCovers, setSavedCovers] = useState<SongbookRevisionDoc["covers"] | null>(null);
+  const covers = savedCovers ?? revision.covers;
+  useEffect(() => {
+    setSavedCovers(null);
+    setCoverInstrument(null);
+  }, [revision]);
+
+  const coverOptions = useMemo(() => coverInstrument ? ({
+    title: songbook.title,
+    instrument: coverInstrument,
+    coverImageUrl: covers[coverInstrument]?.url ?? "",
+    carnivalMode,
+  }) : null, [coverInstrument, songbook.title, covers, carnivalMode]);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
@@ -124,71 +123,6 @@ export function SongbookGenerationPanelView({
       return next;
     });
 
-  const setCover = (instrument: Instrument, file: File | null) => {
-    setAddedCovers((prev) => {
-      const next = new Map(prev);
-      if (file) {
-        next.set(instrument, file);
-      } else {
-        next.delete(instrument);
-      }
-      return next;
-    });
-    setRemovedCovers((prev) => {
-      const next = new Set(prev);
-      if (file) {
-        next.delete(instrument);
-      }
-      return next;
-    });
-  };
-
-  const removeCover = (instrument: Instrument) => {
-    setAddedCovers((prev) => {
-      const next = new Map(prev);
-      next.delete(instrument);
-      return next;
-    });
-    setRemovedCovers((prev) => new Set(prev).add(instrument));
-  };
-
-  const coverUrl = (instrument: Instrument): string | undefined => {
-    const added = addedCovers.get(instrument);
-    if (added) {
-      return URL.createObjectURL(added);
-    }
-    if (removedCovers.has(instrument)) {
-      return undefined;
-    }
-    return revision.covers[instrument]?.url;
-  };
-
-  const handleSaveCovers = async () => {
-    if (!currentUser) {
-      return;
-    }
-    setSavingCovers(true);
-    setCoversError("");
-    try {
-      await saveSongbookCovers({
-        songbook,
-        current: revision,
-        added: addedCovers,
-        removed: [...removedCovers],
-        user: currentUser,
-      });
-      setAddedCovers(new Map());
-      setRemovedCovers(new Set());
-      onCoversSaved();
-    } catch (err: unknown) {
-      setCoversError(
-        err instanceof Error ? err.message : "Erro ao salvar capas",
-      );
-    } finally {
-      setSavingCovers(false);
-    }
-  };
-
   const handleGenerate = async () => {
     if (included.size === 0) {
       alert("Selecione ao menos um instrumento!");
@@ -201,14 +135,14 @@ export function SongbookGenerationPanelView({
     try {
       const sections = buildSongbookSections(items);
       const instruments = Array.from(included);
-      const covers = Object.fromEntries(
-        instruments.map((i) => [i, coverUrl(i) ?? ""]),
+      const generationCovers = Object.fromEntries(
+        instruments.map((i) => [i, covers[i]?.url ?? ""]),
       );
       await generateSongbookPdfs({
         sections,
         instruments,
         title: songbook.title,
-        covers,
+        covers: generationCovers,
         fallbackInstruments: enabledFallbacks,
         carnivalMode,
         backSheetPageNumber,
@@ -239,7 +173,7 @@ export function SongbookGenerationPanelView({
             const isCompleted = completedInstruments.has(instrument);
             const isCurrent = currentInstrument === instrument;
             const isGreyedOut = isGenerating && !isIncluded;
-            const hasCover = !!coverUrl(instrument);
+            const hasCover = !!covers[instrument]?.url;
             const fallback = instrumentFallbacks[instrument];
             const hasFallback =
               fallback && countWithFallback && countWithFallback > count;
@@ -290,40 +224,18 @@ export function SongbookGenerationPanelView({
                   <span className="text-muted me-2">
                     ({displayCount}/{instrumentStats.totalScores})
                   </span>
-                  {!isGenerating && canEditCovers && (
-                    <>
-                      <Form.Label
-                        htmlFor={`cover-${instrument}`}
-                        className={`btn btn-sm ${hasCover ? "btn-success" : "btn-outline-secondary"} mb-0`}
-                        style={{ cursor: "pointer", fontSize: "0.75rem" }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {hasCover ? "✓ Trocar capa" : "Capa"}
-                      </Form.Label>
-                      <Form.Control
-                        id={`cover-${instrument}`}
-                        type="file"
-                        hidden
-                        accept={COVER_TYPES.join(",")}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          setCover(instrument, e.target.files?.[0] ?? null)
-                        }
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      {hasCover && (
-                        <Button
-                          size="sm"
-                          variant="link"
-                          className="text-danger"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeCover(instrument);
-                          }}
-                        >
-                          remover
-                        </Button>
-                      )}
-                    </>
+                  {!isGenerating && canEditCovers && currentUser && (
+                    <Button
+                      size="sm"
+                      variant={hasCover ? "success" : "outline-secondary"}
+                      aria-label={`Capa de ${instrument}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setCoverInstrument(instrument);
+                      }}
+                    >
+                      {hasCover ? "✓ Trocar capa" : "Capa"}
+                    </Button>
                   )}
                   {!isGenerating && !canEditCovers && hasCover && (
                     <span className="text-success small">✓ Capa</span>
@@ -419,22 +331,6 @@ export function SongbookGenerationPanelView({
         </div>
       )}
       <div className="d-flex gap-2 mt-3">
-        {canEditCovers && (
-          <Button
-            variant="outline-primary"
-            disabled={
-              savingCovers ||
-              (addedCovers.size === 0 && removedCovers.size === 0)
-            }
-            onClick={() => void handleSaveCovers()}
-          >
-            {savingCovers ? (
-              <Spinner animation="border" size="sm" />
-            ) : (
-              "Salvar capas"
-            )}
-          </Button>
-        )}
         <Button
           variant="primary"
           disabled={isGenerating || included.size === 0}
@@ -445,7 +341,24 @@ export function SongbookGenerationPanelView({
             : `Gerar ${included.size} caderninho${included.size !== 1 ? "s" : ""}`}
         </Button>
       </div>
-      {coversError && <div className="text-danger mt-2">{coversError}</div>}
+      {coverInstrument && coverOptions && canEditCovers && currentUser && (
+        <SongbookCoverModal
+          key={`${songbook.currentRevisionId}:${coverInstrument}`}
+          instrument={coverInstrument}
+          songbook={songbook}
+          revision={{ ...revision, covers }}
+          user={currentUser}
+          options={coverOptions}
+          createPreview={createCoverPreview}
+          saveCovers={saveSongbookCovers}
+          onHide={() => setCoverInstrument(null)}
+          onSaved={(newCovers) => {
+            setSavedCovers(newCovers);
+            setCoverInstrument(null);
+            onCoversSaved();
+          }}
+        />
+      )}
     </section>
   );
 }

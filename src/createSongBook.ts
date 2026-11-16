@@ -2,6 +2,7 @@ import SVGtoPDF from "svg-to-pdfkit";
 import type { Instrument } from "../types/instrument";
 import type { ScoreViewModel, PartViewModel } from "../types/viewModels";
 import { Section } from "./lib/pdfGeneration";
+import { COVER_LAYOUT, POINTS_PER_CM, carnivalCoverUrl } from "./lib/pdfPreview";
 import { REMOVED_SCORES_NOTE } from "./lib/songbook";
 
 interface PDFBlobStream extends NodeJS.WritableStream {
@@ -14,11 +15,10 @@ declare const window: Window &
     blobStream: () => PDFBlobStream;
   };
 
-const cm2pt = 28.3465;
+const cm2pt = POINTS_PER_CM;
 
-// A5 page dimensions in points
-const pageWidth = 18 * cm2pt;
-const pageHeight = 13 * cm2pt;
+const pageWidth = COVER_LAYOUT.pageWidth;
+const pageHeight = COVER_LAYOUT.pageHeight;
 
 // TODO: use SongBook type instead of CreateSongBookOptions
 export interface CreateSongBookOptions {
@@ -65,46 +65,13 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
   const doc = createDoc();
   await loadFonts(doc);
 
-  const { title, instrument, sections, coverImageUrl, carnivalMode } = opts;
+  const { sections, instrument } = opts;
+  const promises = drawCoverPage(doc, opts);
   let pageNumber = 0;
-  const promises: Promise<void>[] = [];
-
-  if (coverImageUrl != "") {
-    promises.push(drawImage(doc, coverImageUrl, 0));
-    doc
-      .fontSize(25)
-      .text(title.toUpperCase(), 120, 100)
-      .fontSize(22)
-      .text(instrument.toUpperCase(), 120, 125);
-  } else if (carnivalMode) {
-    promises.push(
-      drawImage(
-        doc,
-        `/assets/capa_carnaval_2026_${instrument.replace(/[ ]/g, "_")}.png`,
-        pageNumber,
-      ),
-    );
-
-    // doc
-    //   .font("Roboto-Medium")
-    //   .fontSize(14)
-    //   // .rect(142, 213, 220, 15)
-    //   // .fill("red")
-    //   .text(instrument.toUpperCase(), 142, 203, {
-    //     width: 220,
-    //     align: "center",
-    //   });
-
+  if (!opts.coverImageUrl && opts.carnivalMode) {
     doc.addPage();
     pageNumber++;
-  } else {
-    doc
-      .fontSize(25)
-      .text(title.toUpperCase(), 120, 100)
-      .fontSize(22)
-      .text(instrument.toUpperCase(), 120, 125);
   }
-
   pageNumber += addIndexPage(doc, opts);
 
   if (opts.antiAssedioPages) {
@@ -200,6 +167,36 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
     download(doc, createFileName(opts));
   }
 };
+
+function drawCoverPage(doc: PDFKit.PDFDocument, opts: CreateSongBookOptions) {
+  const { title, instrument, coverImageUrl, carnivalMode } = opts;
+  const promises: Promise<void>[] = [];
+
+  if (coverImageUrl != "") {
+    promises.push(drawImage(doc, coverImageUrl, 0));
+    doc
+      .fontSize(COVER_LAYOUT.titleFontSize)
+      .text(title.toUpperCase(), COVER_LAYOUT.textX, COVER_LAYOUT.titleY)
+      .fontSize(COVER_LAYOUT.instrumentFontSize)
+      .text(instrument.toUpperCase(), COVER_LAYOUT.textX, COVER_LAYOUT.instrumentY);
+  } else if (carnivalMode) {
+    promises.push(
+      drawImage(
+        doc,
+        carnivalCoverUrl(instrument),
+        0,
+      ),
+    );
+  } else {
+    doc
+      .fontSize(COVER_LAYOUT.titleFontSize)
+      .text(title.toUpperCase(), COVER_LAYOUT.textX, COVER_LAYOUT.titleY)
+      .fontSize(COVER_LAYOUT.instrumentFontSize)
+      .text(instrument.toUpperCase(), COVER_LAYOUT.textX, COVER_LAYOUT.instrumentY);
+  }
+
+  return promises;
+}
 
 const sectionTitleOutlines = new Map<string, PDFKit.PDFOutline>();
 
