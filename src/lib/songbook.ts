@@ -51,6 +51,16 @@ export const getScoreRevision = (
   item: SongbookScoreViewModel,
 ): ScoreRevisionViewModel => item.revision ?? item.score.latestRevision;
 
+export function songbookScoreVersionLabel(
+  item: SongbookScoreViewModel,
+  songbookProjectId?: string,
+): string {
+  const version = `v${getScoreRevision(item).revisionNumber}`;
+  return item.score.projectId === songbookProjectId
+    ? version
+    : `${item.score.projectId}/${version}`;
+}
+
 /**
  * Numbers a list's scores by position, sections excluded — the numbering a
  * saved revision freezes and every PDF prints.

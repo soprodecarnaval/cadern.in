@@ -36,6 +36,7 @@ import {
   publicSongbookPath,
   repinnedContent,
   songbookScore,
+  songbookScoreVersionLabel,
   toSongbookRevisionContent,
 } from "../lib/songbook";
 
@@ -279,6 +280,7 @@ export function SongbookManagePageView({
     return (
       <components.SongbookReader
         title={songbook.title}
+        projectId={songbook.projectId}
         badges={badges}
         items={items}
         actions={<Link to={withDetails(true)}>Detalhes, PDF e versões</Link>}
@@ -358,6 +360,7 @@ export function SongbookManagePageView({
             </div>
           )}
           <SongbookContents
+            projectId={songbook.projectId}
             items={items}
             showNewerVersions={isReviewer(role)}
             onRepin={canRepin ? (id) => void handleRepin([id]) : undefined}
@@ -460,12 +463,14 @@ function DeleteSongbookSection({
 }
 
 function SongbookContents({
+  projectId,
   items,
   showNewerVersions,
   onRepin,
   forks,
   onSwap,
 }: {
+  projectId: string;
   items: NumberedSongbookItemViewModel[];
   // Members see which scores have a newer version than the one pinned; the
   // public sees the songbook as published.
@@ -503,6 +508,9 @@ function SongbookContents({
                       {item.score.title}
                     </Link>
                   )}
+                  <div className="text-muted small text-break">
+                    {songbookScoreVersionLabel(item, projectId)}
+                  </div>
                 </td>
                 <td className="text-muted">{item.score.composer}</td>
                 <td className="text-end">
@@ -652,6 +660,7 @@ function SongbookEditor({
             <h5>Caderninho</h5>
             <SongBookTableView
               Card={components.ScoreCard}
+              songbookProjectId={songbook.projectId}
               ref={songbookRef}
               rows={items}
               setItems={setItems}

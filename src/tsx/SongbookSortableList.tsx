@@ -46,11 +46,12 @@ function EmptySongbookDropzone() {
 export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
   Card: import("react").ComponentType<import("./ScoreCardView").ScoreCardProps>;
   rows: SongbookItemViewModel[];
+  songbookProjectId?: string;
   onReorder: (rows: SongbookItemViewModel[]) => void;
   onDelete: (index: number) => void;
   onSelect: (score: ScoreViewModel, checked: boolean) => void;
   onUpdate: (index: number, update: ScoreEditUpdate) => void;
-}>(function SongbookSortableList({ Card, rows, onReorder, onDelete, onSelect, onUpdate }, ref) {
+}>(function SongbookSortableList({ Card, songbookProjectId, rows, onReorder, onDelete, onSelect, onUpdate }, ref) {
   const entries = useSongbookEditorItems(rows);
   const container = useRef<HTMLDivElement>(null);
   const [preparingId, setPreparingId] = useState<string | null>(null);
@@ -226,12 +227,12 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
   return (
     <>
       <p className="songbook-tip text-muted small lh-sm">
-        Arraste pela alça. Seções levam suas músicas. Teclado: Espaço, setas e Escape.
+        Arraste a música ou seção para alterar a ordem. No teclado, use Espaço, setas e Esc.
       </p>
       <div ref={container} className="songbook-card-list" role="list"
         aria-label="Músicas e seções do caderninho">
         {entries.map((entry, index) => (
-          <SortableSongbookRow Card={Card} key={entry.id} entry={entry} index={index}
+          <SortableSongbookRow Card={Card} songbookProjectId={songbookProjectId} key={entry.id} entry={entry} index={index}
             sorting={!sectionDrag && carried(index)}
             carried={activeId !== null && carried(index)}
             disableDrop={sectionDrag && ((carried(index) && index !== draggedIndex) ||

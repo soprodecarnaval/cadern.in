@@ -112,6 +112,24 @@
   white-space: nowrap;
 }
 
+.reader-row-details {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0;
+}
+
+.reader-row-details .reader-row-t {
+  display: block;
+}
+
+.reader-row-meta {
+  display: block;
+  color: var(--bs-secondary-color);
+  font-size: 0.75rem;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
 .reader-row-s {
   color: var(--bs-secondary-color);
   font-size: 0.75rem;

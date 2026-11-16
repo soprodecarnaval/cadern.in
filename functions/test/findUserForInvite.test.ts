@@ -5,7 +5,6 @@ import { getFirestore } from "firebase-admin/firestore";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   findUserForInviteHandler,
-  normalizeName,
 } from "../src/findUserForInvite";
 import { resetAuth, resetFirestore, useEmulators } from "./emulator";
 
@@ -26,39 +25,34 @@ beforeEach(async () => {
 const createUser = (uid: string, displayName?: string) =>
   getAuth().createUser({ uid, displayName, email: `${uid}@x.com` });
 
-const find = (caller: string | undefined, displayName: string) =>
-  findUserForInviteHandler(caller, { projectId: PROJECT, displayName });
+const find = (caller: string | undefined, email: string) =>
+  findUserForInviteHandler(caller, { projectId: PROJECT, email });
 
 describe("findUserForInvite", () => {
-  it("finds a user by display name, ignoring case and spaces", async () => {
+  it("finds an existing account by email with surrounding spaces", async () => {
     await createUser("ana", "Ana Souza");
-    await expect(find("admin", "  ana souza ")).resolves.toEqual({
+    await expect(find("admin", "  ana@x.com ")).resolves.toEqual({
       status: "found",
       uid: "ana",
       displayName: "Ana Souza",
     });
   });
 
-  it("reports nobody and ambiguity without naming anyone", async () => {
-    await createUser("ana1", "Ana");
-    await createUser("ana2", "ana");
-    await expect(find("admin", "Bia")).resolves.toEqual({
+  it("reports an unknown email without returning account details", async () => {
+    await expect(find("admin", "unknown@x.com")).resolves.toEqual({
       status: "not-found",
-    });
-    await expect(find("admin", "Ana")).resolves.toEqual({
-      status: "ambiguous",
     });
   });
 
   it("rejects callers who are not admins of the project", async () => {
     await createUser("ana", "Ana");
-    await expect(find("editor", "Ana")).rejects.toMatchObject({
+    await expect(find("editor", "ana@x.com")).rejects.toMatchObject({
       code: "permission-denied",
     });
-    await expect(find("stranger", "Ana")).rejects.toMatchObject({
+    await expect(find("stranger", "ana@x.com")).rejects.toMatchObject({
       code: "permission-denied",
     });
-    await expect(find(undefined, "Ana")).rejects.toMatchObject({
+    await expect(find(undefined, "ana@x.com")).rejects.toMatchObject({
       code: "unauthenticated",
     });
   });
@@ -66,20 +60,14 @@ describe("findUserForInvite", () => {
   it("rejects a deleted project", async () => {
     await getFirestore().collection("projects").doc(PROJECT)
       .update({ deletedAt: new Date() });
-    await expect(find("admin", "x")).rejects.toMatchObject({
+    await expect(find("admin", "x@x.com")).rejects.toMatchObject({
       code: "permission-denied",
     });
   });
 
   it("rejects malformed requests", async () => {
-    await expect(find("admin", " ")).rejects.toMatchObject({
+    await expect(find("admin", "not-an-email")).rejects.toMatchObject({
       code: "invalid-argument",
     });
-  });
-});
-
-describe("normalizeName", () => {
-  it("unifies composed and decomposed accents", () => {
-    expect(normalizeName("José")).toBe(normalizeName("José"));
   });
 });

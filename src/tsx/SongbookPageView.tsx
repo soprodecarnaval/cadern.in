@@ -93,6 +93,7 @@ export function SongbookPageView({
   return (
     <components.SongbookReader
       title={songbook.title}
+      projectId={songbook.projectId}
       items={items}
       onDownloadPdf={(instrument) =>
         services.generateSongbookPdfs({

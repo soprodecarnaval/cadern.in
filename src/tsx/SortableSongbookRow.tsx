@@ -4,12 +4,14 @@ import { OptimisticSortingPlugin } from "@dnd-kit/dom/sortable";
 import { BsFillTrashFill, BsPencilFill } from "react-icons/bs";
 import type { ScoreViewModel } from "../../types/viewModels";
 import type { SongbookEditorItem } from "../lib/songbookReorder";
+import { songbookScoreVersionLabel } from "../lib/songbook";
 import { DragHandle } from "./DragHandle";
 import { SongBookSectionRow } from "./SongBookSectionRow";
 import { ScoreEditModal, type ScoreEditUpdate } from "./ScoreEditModal";
 
 function SongbookScoreCard({ Card,
   score,
+  versionLabel,
   dragHandle,
   hideDetails,
   handleDelete,
@@ -18,6 +20,7 @@ function SongbookScoreCard({ Card,
   Card: import("react").ComponentType<import("./ScoreCardView").ScoreCardProps>;
 
   score: ScoreViewModel;
+  versionLabel?: string;
   dragHandle: ReactNode;
   hideDetails: boolean;
   handleDelete: (score: ScoreViewModel, checked: boolean) => void;
@@ -30,6 +33,7 @@ function SongbookScoreCard({ Card,
     <>
       <Card
         score={score}
+        versionLabel={versionLabel}
         mode={hideDetails ? "compact" : mode}
         onToggleMode={() => setMode(mode === "compact" ? "expanded" : "compact")}
         leading={dragHandle}
@@ -58,11 +62,12 @@ function SongbookScoreCard({ Card,
   );
 }
 
-export function SortableSongbookRow({ Card, entry, index, sorting, insertion, emptySection, onDelete,
+export function SortableSongbookRow({ Card, songbookProjectId, entry, index, sorting, insertion, emptySection, onDelete,
   onSelect, onUpdate, onPrepareDrag, carried, disableDrop, scoreCount }: {
   Card: import("react").ComponentType<import("./ScoreCardView").ScoreCardProps>;
 
   entry: SongbookEditorItem;
+  songbookProjectId?: string;
   index: number;
   sorting: boolean;
   emptySection: boolean;
@@ -113,7 +118,9 @@ export function SortableSongbookRow({ Card, entry, index, sorting, insertion, em
           </div>}
         </>
       ) : (
-        <SongbookScoreCard Card={Card} score={item.score} dragHandle={handle} hideDetails={sorting}
+        <SongbookScoreCard Card={Card} score={item.score}
+          versionLabel={songbookProjectId ? songbookScoreVersionLabel(item, songbookProjectId) : undefined}
+          dragHandle={handle} hideDetails={sorting}
           handleDelete={onSelect} handleUpdateScore={onUpdate} />
       )}
     </div>
