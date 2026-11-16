@@ -509,22 +509,21 @@ export async function cancelUserProjectInvitation(
 /** Mirrors `FindUserForInviteResult` in functions/src/findUserForInvite.ts. */
 export type FindUserForInviteResult =
   | { status: "found"; uid: string; displayName: string }
-  | { status: "not-found" }
-  | { status: "ambiguous" };
+  | { status: "not-found" };
 
 /**
- * Looks a user up by display name. Runs server-side: `users` is not readable
+ * Looks an existing user up by email. Runs server-side: `users` is not readable
  * by other users, and display names live in Firebase Auth.
  */
 export async function findUserForInvite(
   projectId: string,
-  displayName: string,
+  email: string,
 ): Promise<FindUserForInviteResult> {
   const call = httpsCallable<
-    { projectId: string; displayName: string },
+    { projectId: string; email: string },
     FindUserForInviteResult
   >(functions, "findUserForInvite");
-  return (await call({ projectId, displayName })).data;
+  return (await call({ projectId, email })).data;
 }
 
 // -- Songbooks --

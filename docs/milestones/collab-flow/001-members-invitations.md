@@ -1,5 +1,7 @@
 # 001 — Members & invitations
 
+> Invitation lookup by username described below is superseded by [task 007](../../tasks/007-email-project-invitations/TASK.md): existing accounts are found by email via the authorized backend.
+
 **Goal:** Membership as `projects/{pid}/members/{uid}` documents and invitations at
 `projects/{pid}/invitations/{uid}`, with the role restrictions enforced in rules.
 Fixes the live bug that invitation acceptance is denied by the deployed rules, and

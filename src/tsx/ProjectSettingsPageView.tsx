@@ -94,7 +94,7 @@ export function ProjectSettingsPageView({
   const [titleSuccess, setTitleSuccess] = useState("");
   const [titleError, setTitleError] = useState("");
 
-  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<InvitableRole>("reviewer");
   const [invitePending, setInvitePending] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<{
@@ -170,16 +170,9 @@ export function ProjectSettingsPageView({
     setInvitePending(true);
     setInviteMessage(null);
     try {
-      const result = await services.findUserForInvite(slug, inviteName.trim());
+      const result = await services.findUserForInvite(slug, inviteEmail.trim());
       if (result.status === "not-found") {
-        setInviteMessage({ ok: false, text: "Usuário não encontrado." });
-        return;
-      }
-      if (result.status === "ambiguous") {
-        setInviteMessage({
-          ok: false,
-          text: "Mais de um usuário com esse nome. Peça para a pessoa mudar o nome de usuário.",
-        });
+        setInviteMessage({ ok: false, text: "Nenhuma conta encontrada para este e-mail." });
         return;
       }
       if (members.some((m) => m.uid === result.uid)) {
@@ -204,11 +197,11 @@ export function ProjectSettingsPageView({
         ok: true,
         text: `Convite enviado para ${result.displayName}!`,
       });
-      setInviteName("");
-    } catch (err: unknown) {
+      setInviteEmail("");
+    } catch {
       setInviteMessage({
         ok: false,
-        text: err instanceof Error ? err.message : "Erro ao enviar convite",
+        text: "Não foi possível enviar o convite. Tente novamente.",
       });
     } finally {
       setInvitePending(false);
@@ -365,12 +358,13 @@ export function ProjectSettingsPageView({
             className="d-flex gap-2 align-items-end flex-wrap"
           >
             <Form.Group>
-              <Form.Label>Nome de usuário</Form.Label>
+              <Form.Label>E-mail</Form.Label>
               <Form.Control
-                type="text"
-                value={inviteName}
-                onChange={(e) => setInviteName(e.target.value)}
-                placeholder="Nome de usuário"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                onBlur={() => setInviteEmail((email) => email.trim())}
+                placeholder="E-mail"
                 required
                 style={{ width: 240 }}
               />
