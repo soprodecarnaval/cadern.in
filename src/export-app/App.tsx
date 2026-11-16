@@ -5,6 +5,7 @@ import type { ExportFailure } from "../../scripts/lib/exportError";
 import { translateWarning } from "../lib/warningMessages";
 import type { User } from "firebase/auth";
 import { useAuth } from "../auth";
+import { describeAuthError } from "../lib/authMessages";
 import { LoginForm } from "./components/LoginForm";
 import { UploadPanel } from "./components/UploadPanel";
 import { FileDrop } from "./components/FileDrop";
@@ -83,7 +84,7 @@ function PendingVerification({
       await onResend();
       setSent(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao reenviar");
+      setError(describeAuthError(e));
     }
   };
 

@@ -1,6 +1,6 @@
 ---
 title: Invite project members by email
-status: open
+status: in-progress
 type: feature
 milestone: collab-flow
 ---
@@ -38,4 +38,12 @@ Run focused tests and relevant type/build checks after implementation. This task
 
 ## Unresolved questions
 
-Invite unregistered emails too? Baseline: existing accounts.
+Resolved: existing accounts only.
+
+## Approved wireframe
+
+Keep the existing invite form and pending list. Replace username with email; show sending, invalid, unknown-account, existing-member and success states inline. Invitation controls remain restricted to admins and owners. Approved 2026-11-14.
+
+## Validation progress
+
+Functions emulator suite (20 tests), Firestore and Storage rules suite (103 tests), TypeScript and targeted lint passed. Live UI invitation flow has not been exercised.
