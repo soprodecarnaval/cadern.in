@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within, waitFor } from "@storybook/test";
-import { ProjectSongbooksPage } from "./ProjectSongbooksPage";
 import { PublicProjectPageView } from "./PublicProjectPageView";
 import { pending, services, user, songbook } from "./screenFixtures";
 
@@ -129,14 +128,6 @@ export const Creating: Story = {
     await expect(canvas.getByRole("button", { name: "Cancelar" })).toBeDisabled();
   },
 };
-export const LegacyListRedirect: Story = {
-  parameters: { route: "/projects/bloco-exemplo/songbooks", routePath: "/projects/:slug/songbooks" },
-  render: () => <ProjectSongbooksPage />,
-  play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText("/projects/bloco-exemplo")).toBeVisible();
-  },
-};
-
 export const InvalidTitle: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
