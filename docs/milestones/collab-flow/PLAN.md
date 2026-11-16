@@ -1,5 +1,7 @@
 # Collaborative Flow — Design Spec
 
+> Invitation lookup by username described below is superseded by [task 007](../../tasks/007-email-project-invitations/TASK.md): existing accounts are found by email via the authorized backend.
+
 Status: **reviewed, ready for implementation**. Derived from `REQUIREMENTS.md` and
 the current implementation. Supersedes the data-model sections of `firebase.md`.
 Tasks live in the numbered files next to this one (§9).
