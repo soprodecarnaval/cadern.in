@@ -216,16 +216,21 @@ const placeholderCards: ArticleCard[] = [
   },
 ];
 
-/** Written articles first, then the placeholders. */
-export const articleCards: ArticleCard[] = [
-  ...articles.map((article) => ({
+/** The articles that have pages, as cards. */
+export const publishedArticleCards: ArticleCard[] = articles.map(
+  (article) => ({
     title: article.title,
     summary: article.deck ?? "",
     href: articlePath(article),
     imageUrl: article.lead?.src ?? firstImage(article),
     kicker: article.kicker,
     date: article.date,
-  })),
+  }),
+);
+
+/** Written articles first, then the placeholders. */
+export const articleCards: ArticleCard[] = [
+  ...publishedArticleCards,
   ...placeholderCards,
 ];
 

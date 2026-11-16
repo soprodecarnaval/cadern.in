@@ -4,7 +4,8 @@ import { FEATURE_FLAG_COLLAB_FLOW as collabEnabled } from "../featureFlags";
 import { getPublishedSongbooks, getSongbookRevision } from "../lib/db";
 import { representativeCoverUrl } from "../lib/songbookCovers";
 import { useCollectionContext } from "../useCollectionContext";
-import { articleCards as articles } from "../articles";
+// Only articles with pages: the placeholders would lead to "not found".
+import { publishedArticleCards as articles } from "../articles";
 import {
   LandingPageView,
   type LandingSongbook,

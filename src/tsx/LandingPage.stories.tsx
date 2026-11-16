@@ -75,6 +75,25 @@ export const WithArticles: Story = {
     ],
   },
 };
+// More than the four the section can show, so "+artigos" expands first.
+const manyArticles = [1, 2, 3, 4, 5].map((n) => ({
+  title: `Artigo de exemplo ${n}`,
+  summary: "Um resumo curto do artigo, em uma ou duas linhas.",
+  href: `/artigos/exemplo-${n}`,
+  kicker: "Guias",
+  date: `2026-0${n}-10`,
+}));
+export const ManyArticles: Story = { args: { articles: manyArticles } };
+export const ArticlesExpanded: Story = {
+  args: { articles: manyArticles },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.queryByText("Artigo de exemplo 3")).toBeNull();
+    await userEvent.click(canvas.getByRole("link", { name: "+artigos" }));
+    await expect(canvas.getByText("Artigo de exemplo 4")).toBeVisible();
+    await expect(canvas.queryByText("Artigo de exemplo 5")).toBeNull();
+  },
+};
 export const Search: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
