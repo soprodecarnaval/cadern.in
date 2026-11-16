@@ -4,7 +4,7 @@ import { SearchBarView } from "./SearchBarView";
 import { score } from "../../../../../.storybook/fixtures/components";
 
 const meta = {
-  title: "Components/SearchBar",
+  title: "Screens/SearchBar",
   component: SearchBarView,
   args: {
     status: "ready",

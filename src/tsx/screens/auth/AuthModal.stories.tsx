@@ -6,7 +6,7 @@ import { AuthModalView } from "./AuthModalView";
 import { noop } from "../../../../.storybook/fixtures/components";
 
 const meta = {
-  title: "Components/AuthModal",
+  title: "Screens/AuthModal",
   component: AuthModalView,
   args: {
     show: true,

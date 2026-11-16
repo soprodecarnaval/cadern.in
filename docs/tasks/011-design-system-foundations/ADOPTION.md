@@ -10,7 +10,7 @@ Further batches require affected screen/wireframe review per TASK.md step 6.
 | 1 — navigation/projects | AppNavigation, AuthButton, project list/create/public/settings, CreateSongbookForm, NotFoundPage | Implemented; 43 relevant stories pass |
 | 2 — builder/dialogs | HomePage, search/results/cards, SongBookTable/sortable rows, save, PDF selection, metadata/score edit, detail and profile dialogs | Implemented; focused checks pass |
 | 3 — songbook/review | Public/member songbook pages, scoped score page, generation/cover modal, score page/revisions/lineage, comments, reader/part controls | Implemented; 73 relevant stories pass |
-| 4 — exporter | App shell, LoginForm, file/parts/metadata/upload/progress, contextual launch states | Awaiting screen review; validate actual Electron UI |
+| 4 — exporter | App shell, LoginForm, file/parts/metadata/upload/progress, contextual launch states | Implemented; built-render checks pass |
 
 Batch review uses existing screen stories with proposed design-system treatment,
 including mobile/desktop, empty/loading/error and permission states. Preserve
@@ -22,6 +22,9 @@ reconcile detailed component inventory before closing task 011.
 
 - `Button`: native button props/ref; `variant="primary" | "secondary" | "text" | "danger" | "danger-secondary"`; default `type="button"`, use `type="submit"` for form actions. Native `disabled` and `aria-busy` remain available; loading copy/spinner belongs to caller.
 - `Input`: native input props/ref; label via `htmlFor` or accessible name; caller sets `aria-invalid`, `aria-describedby` and feedback. Preserves controlled/uncontrolled usage.
+- `TextArea`: native textarea props/ref; same styling and accessibility contract as `Input`.
+- `Select`: React Bootstrap `FormSelect` props/ref, preserving `Form.Group` context with shared field styling.
+- `List`: React Bootstrap `ListGroup` surface with `List.Item`; shared borders and yellow active/hover states.
 - `Modal`: React Bootstrap Modal props with branded surface; `.Header`, `.Title`, `.Body`, `.Footer` reuse Bootstrap primitives. Retains focus trap, Escape and restoration behavior.
 - Navigation links remain anchors/router links, using shared tokens/classes as appropriate. Do not turn navigation into button callbacks.
 - `src/styles/tokens.css`: shared `--ds-*` palette, type, spacing, border, radius and focus values. Existing `brand-modal` and landing aliases bridge older components during adoption.
@@ -94,3 +97,23 @@ stories each), including login fields, no-context message, upload-disabled
 controls, simulated progress and failure alert. No console errors or horizontal
 overflow. Storybook typecheck and whitespace checks pass. Production exporter
 migration awaits approval.
+
+Batch 4 implemented after approval: exporter entry loads Bootstrap, Inter and
+shared tokens; App shell, login/verification/no-context states, metadata form,
+part selection and upload panel use atoms. Exporter styles use black/yellow
+tokens, with no blue accents. FileDrop gained keyboard activation; part
+checkboxes gained accessible names. Errors use shared alert styling. The
+Electron binary is unavailable in this checkout, so the built renderer was
+served in Chromium with a stubbed preload: login screen, fields, enabled/
+disabled buttons and focus outlines verified. `export-app:build`, app
+typecheck and exporter lint pass.
+
+## Storybook organization
+
+Storybook now uses three flat sections: `Atoms/Name`, `Components/Name` and
+`Screens/Name`, with no intermediate folder levels. The design-system reference
+moved to `Atoms/Reference` (`atoms-reference--overview`) with its stylesheet
+beside the atoms. The approved batch preview stories were removed; production
+screens now carry the design-system treatment. The exporter remains outside
+`src/tsx` and has no stories yet; task 013 covers presentational extraction and
+coverage.

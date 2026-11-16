@@ -11,7 +11,7 @@ import {
 import { noop } from "../../../../../.storybook/fixtures/components";
 
 const meta = {
-  title: "Screens/ScoreDetailModal",
+  title: "Components/ScoreDetailModal",
   component: ScoreDetailModalView,
   render: (args) => (
     <DialogStory args={args} Component={ScoreDetailModalView} />

@@ -51,14 +51,14 @@ None blocking. Scope approved: Storybook reference page, shared foundations, hom
 ## Reference review — iteration 1
 
 - Approved to build the Storybook reference first; production extraction/adoption awaits visual approval.
-- Story: `Design System/Reference → Overview` (`design-system-reference--overview`).
+- Story: `Atoms/Reference → Overview` (`atoms-reference--overview`).
 - Source: `src/tsx/DesignSystem.stories.tsx`; story-only layout: `src/css/DesignSystemSpecimen.css`.
 - Reuses existing BrandModal controls and actual Bootstrap modal behavior. Shows home/auth colors and type, proposed spacing scale, button states, editable/invalid/disabled fields, feedback and composition examples.
 - Proposed accessibility adjustments are isolated to this reference: visible field focus and a red invalid border. Existing production styles suppress field focus and can override the invalid border; review this treatment before adoption.
 - Hover/focus can be exercised with pointer/Tab; modal open/cancel and field clear have a story interaction check. Mobile widths use wrapping layouts.
 - Production screens/styles remain unchanged in this iteration.
 
-Reference validation passed: Storybook typecheck, targeted ESLint, static Storybook build and whitespace check. Chromium checked story render/play, field edit/clear, modal open/cancel and no horizontal overflow at 1280px and 390px. Static build preceded the final interaction-selector correction; the final source passed typecheck and live-browser checks. Existing Node engine and Storybook bundling warnings remain. Review URL: http://127.0.0.1:6006/?path=/story/design-system-reference--overview.
+Reference validation passed: Storybook typecheck, targeted ESLint, static Storybook build and whitespace check. Chromium checked story render/play, field edit/clear, modal open/cancel and no horizontal overflow at 1280px and 390px. Static build preceded the final interaction-selector correction; the final source passed typecheck and live-browser checks. Existing Node engine and Storybook bundling warnings remain. Review URL: http://127.0.0.1:6006/?path=/story/atoms-reference--overview.
 
 ## Shared foundations and first adoption
 
@@ -143,3 +143,24 @@ Next gate is the exporter treatment under Design System/Exporter batch.
 Exporter preview validation: 10/10 checks pass at 1280px and 390px (five
 stories each). Storybook typecheck and whitespace checks pass. Production
 exporter migration awaits approval.
+
+## Exporter migration
+
+User approved the exporter treatment and renamed the `Textarea` atom to
+`TextArea`. The exporter entry now loads Bootstrap, Inter and shared tokens;
+shell, login/verification/no-context states, metadata, parts and upload panel
+use `Page`, `Button` and `Input`. Styles use black/yellow tokens; blue accents
+were removed. FileDrop supports Enter/Space, and part checkboxes have accessible
+names. Built renderer checks pass for login, enabled/disabled actions, fields
+and focus outlines using a stubbed preload. Electron binary unavailable locally,
+so the packaged window remains unverified. `export-app:build`, typecheck and
+lint pass. Changes uncommitted.
+
+## Storybook organization
+
+Storybook uses three flat sections: `Atoms/Name`, `Components/Name` and
+`Screens/Name`, with no intermediate folder levels. The reference moved to
+`Atoms/Reference` (`atoms-reference--overview`) with `Reference.css` beside the
+atoms. Approved batch preview stories were removed. The exporter remains outside
+`src/tsx` and has no stories; task 013 covers extracting presentational views
+and injecting auth, preload IPC and deep-link dependencies.

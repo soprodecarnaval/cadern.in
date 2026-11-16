@@ -22,9 +22,3 @@
 .ds-reference-card a, .ds-reference-card button { color: #000; font: inherit; text-decoration: underline; background: none; border: none; padding: 0; text-align: left; }
 .ds-reference :is(button, a, input):focus-visible { outline: 3px solid #000; outline-offset: 3px; }
 .ds-reference .invalid-feedback { color: var(--ds-invalid); }
-
-.ds-project-preview h2 {
-  background: linear-gradient(transparent 2px, var(--ds-yellow) 2px 20px, transparent 20px);
-}
-.ds-project-preview .form-label { display: block; margin-bottom: var(--ds-space-2); }
-.ds-project-preview .ds-field { max-width: 560px; }

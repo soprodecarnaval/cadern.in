@@ -1,11 +1,10 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Button } from "../../src/tsx/atoms/Button";
-import { Input } from "../../src/tsx/atoms/Input";
-import { Modal } from "../../src/tsx/atoms/Modal";
+import { Button } from "./Button";
+import { Input } from "./Input";
+import { Modal } from "./Modal";
 import { expect, userEvent, within, waitFor } from "@storybook/test";
-import "../../src/tsx/atoms/Modal.css";
-import "./DesignSystemSpecimen.css";
+import "./Reference.css";
 
 const colors = [
   ["Amarelo", "#fcee21"], ["Tinta", "#000000"],
@@ -113,7 +112,7 @@ function ReferencePage() {
 }
 
 const meta = {
-  title: "Design System/Reference",
+  title: "Atoms/Reference",
   component: ReferencePage,
   parameters: { fullScreen: true, layout: "fullscreen" },
 } satisfies Meta<typeof ReferencePage>;
@@ -134,55 +133,3 @@ export const Overview: Story = {
     await waitFor(() => expect(within(document.body).queryByRole("dialog")).not.toBeInTheDocument());
   },
 };
-
-
-function ProjectBatchReference() {
-  const [screen, setScreen] = useState("Projeto");
-  const [name, setName] = useState("Bloco Exemplo");
-  return (
-    <main className="ds-reference ds-project-preview">
-      <header>
-        <p className="ds-reference-kicker">Proposta · lote 1 · navegação e projetos</p>
-        <h1>Seus projetos no cadern.in</h1>
-        <p>Mesmas ações e organização; tipografia, campos e botões compartilhados com a home e a conta.</p>
-        <nav aria-label="Telas em revisão" className="ds-reference-row">
-          {["Projetos", "Novo projeto", "Projeto", "Configurações"].map((label) => (
-            <Button key={label} variant={screen === label ? "primary" : "secondary"} aria-pressed={screen === label} onClick={() => setScreen(label)}>{label}</Button>
-          ))}
-        </nav>
-      </header>
-      {screen === "Projetos" && <section>
-        <h2>Meus projetos</h2>
-        <article className="ds-reference-card">
-          <h3>Bloco Exemplo</h3><p>Seu papel: proprietário</p>
-          <Button variant="text" onClick={() => setScreen("Projeto")}>Abrir projeto</Button>
-        </article>
-      </section>}
-      {screen === "Novo projeto" && <section>
-        <h2>Criar projeto</h2>
-        <label className="form-label" htmlFor="project-new-name">Nome do projeto</label>
-        <Input id="project-new-name" placeholder="Nome do projeto" />
-        <p className="ds-reference-caption mt-2">O endereço é gerado a partir do nome.</p>
-        <Button onClick={() => setScreen("Projeto")}>Criar projeto</Button>
-      </section>}
-      {screen === "Projeto" && <>
-        <section><h2>Bloco Exemplo</h2><p>Partituras e cadernos do projeto.</p><Button variant="secondary" onClick={() => setScreen("Configurações")}>Configurações</Button></section>
-        <section><h2>Caderninhos</h2><div className="ds-reference-card"><h3>Carnaval 2026</h3><p>Publicado · 12 partituras</p><Button variant="text">Abrir caderninho</Button></div><Button className="mt-3">+ Novo caderninho</Button></section>
-        <section><h2>Partituras</h2><div className="ds-reference-card"><h3>Abre Alas</h3><p>Chiquinha Gonzaga · versão 2</p><Button variant="secondary">Enviar partitura</Button></div></section>
-      </>}
-      {screen === "Configurações" && <section>
-        <h2>Configurações do projeto</h2>
-        <label className="form-label" htmlFor="project-name">Nome</label>
-        <Input id="project-name" value={name} onChange={(event) => setName(event.target.value)} />
-        <Button className="my-3">Salvar</Button>
-        <h3>Convidar participante</h3>
-        <label className="form-label" htmlFor="invite-email">Email</label>
-        <Input id="invite-email" type="email" placeholder="voce@exemplo.com" />
-        <Button className="mt-3">Convidar</Button>
-      </section>}
-      <p className="ds-reference-caption">Wireframe de revisão com dados fictícios. Ações de salvar, convidar e enviar são ilustrativas; não alteram dados. Permissões e estados de cada tela serão preservados na migração.</p>
-    </main>
-  );
-}
-
-export const ProjectBatch: Story = { render: () => <ProjectBatchReference /> };

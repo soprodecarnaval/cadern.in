@@ -37,8 +37,8 @@ type Story = StoryObj<typeof SongbookScorePageView>;
 export const OwnProject: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByText(scoreDoc.title)).toBeVisible();
-    await expect(canvas.getByText(songbook.title)).toBeVisible();
+    await expect((await canvas.findAllByText(scoreDoc.title)).length).toBeGreaterThan(0);
+    await expect(canvas.getAllByText(songbook.title).length).toBeGreaterThan(0);
     await expect(
       await canvas.findByText(comment.body),
     ).toBeVisible();

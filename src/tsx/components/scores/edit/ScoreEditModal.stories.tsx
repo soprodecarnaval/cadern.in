@@ -4,7 +4,7 @@ import { fn } from "@storybook/test";
 import { ScoreEditModal } from "./ScoreEditModal";
 import { score } from "../../../../../.storybook/fixtures/screens";
 const meta = {
-  title: "Dialogs/ScoreEditModal",
+  title: "Components/ScoreEditModal",
   component: ScoreEditModal,
   render: (args) => <DialogStory args={args} Component={ScoreEditModal} />,
   args: { show: true, score, onHide: fn(), onSave: fn() },

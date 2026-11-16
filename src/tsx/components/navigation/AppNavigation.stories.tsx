@@ -3,7 +3,7 @@ import { fn } from "@storybook/test";
 import { AppNavigation } from "./AppNavigation";
 import { user } from "../../../../.storybook/fixtures/screens";
 const meta = {
-  title: "Screens/Navigation",
+  title: "Components/AppNavigation",
   component: AppNavigation,
   parameters: { fullScreen: true },
   args: {

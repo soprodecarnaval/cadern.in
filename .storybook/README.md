@@ -10,8 +10,10 @@ retain their connected wrappers; stories import the corresponding `*View` and
 inject fixture data and callbacks through props. PaginationBar is already pure.
 
 Add stories beside components in `src/tsx/**/*.stories.tsx`, using typed CSF metadata
-and a stable `Components/Name` title. Shared sample data lives in
-`.storybook/fixtures/components.ts`. Do not import connected wrappers into stories.
+and a title under one of three flat sections (`Atoms/Name`, `Components/Name`,
+`Screens/Name`). Do not add intermediate folders to story titles. Shared sample
+data lives in `.storybook/fixtures/components.ts`. Do not import connected
+wrappers into stories.
 
 Auth stories use play functions to reach registration/error/reset states on
 navigation. ResetPending intentionally leaves its fixture promise pending.
@@ -68,8 +70,8 @@ and verifies stories leave the homepage builder's saved storage untouched.
 ## UI ownership
 
 Production UI is organized under `src/tsx/atoms`, `components`, and `screens`.
-Keep component-specific stories and styles alongside their owner. Shared fixture
-modules live in `.storybook/fixtures`; cross-screen design-system references and
-their specimen stylesheet live in `.storybook/stories`. The recursive story glob
-includes colocated stories and the reference stories. Preserve existing CSF titles
-so story IDs and the browser-check harness remain stable.
+Keep component-specific stories and styles alongside their owner, and place the
+story in the matching flat section (`Atoms`, `Components`, `Screens`). Shared
+fixture modules live in `.storybook/fixtures`; the atom reference gallery and its
+stylesheet live in `src/tsx/atoms`. The story glob includes only colocated
+`src/tsx` stories.

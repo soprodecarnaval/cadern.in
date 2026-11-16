@@ -25,7 +25,7 @@ const saveCovers = fn<typeof import("../../../../lib/songbookCovers").saveSongbo
   return Promise.resolve(result);
 });
 const meta = {
-  title: "Screens/SongbookGenerationPanel",
+  title: "Components/SongbookGenerationPanel",
   component: SongbookGenerationPanelView,
   args: {
     currentUser: user,

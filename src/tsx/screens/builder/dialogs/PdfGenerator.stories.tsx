@@ -4,7 +4,7 @@ import { PDFGeneratorView } from "./PdfGeneratorView";
 import { generate, numberedItems, pending } from "../../../../../.storybook/fixtures/screens";
 
 const meta = {
-  title: "Dialogs/PdfGenerator",
+  title: "Screens/PdfGenerator",
   component: PDFGeneratorView,
   args: { songBook: { items: numberedItems }, generateSongbookPdfs: generate },
 } satisfies Meta<typeof PDFGeneratorView>;
