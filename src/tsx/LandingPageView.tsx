@@ -3,7 +3,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type MouseEvent,
   type ReactNode,
 } from "react";
 import { Accordion, Dropdown } from "react-bootstrap";
@@ -55,27 +54,15 @@ const STATIC = {
 };
 
 const MAX_SEARCH_RESULTS = 8;
-// Article cards on the home page, before and after "+artigos" is clicked.
-const ARTICLES_COLLAPSED = 2;
-const ARTICLES_EXPANDED = 4;
 const EXPORTER_ANCHOR = "exportador";
 
 export function SectionTitle({ children }: { children: ReactNode }) {
   return <h2 className="landing-section-title">{children}</h2>;
 }
 
-export function MoreLink({
-  to,
-  onClick,
-  children,
-}: {
-  to: string;
-  /** Runs before following the link; it can call `preventDefault`. */
-  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
-  children: ReactNode;
-}) {
+export function MoreLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <Link to={to} className="landing-more" onClick={onClick}>
+    <Link to={to} className="landing-more">
       +{children}
     </Link>
   );
@@ -101,14 +88,6 @@ export function LandingPageView({
   onSignOut: () => void;
 }) {
   // Arriving from another page's "Exportador desktop" link opens its panel.
-  // "+artigos" first shows more cards here, then goes to the list.
-  const [articlesExpanded, setArticlesExpanded] = useState(false);
-  const shownArticles = articles.slice(
-    0,
-    articlesExpanded ? ARTICLES_EXPANDED : ARTICLES_COLLAPSED,
-  );
-  const canExpandArticles =
-    !articlesExpanded && articles.length > ARTICLES_COLLAPSED;
   const [openTools, setOpenTools] = useState<string[]>(() =>
     window.location.hash === `#${EXPORTER_ANCHOR}`
       ? ["plugin", "exporter"]
@@ -241,18 +220,8 @@ export function LandingPageView({
         {articles.length > 0 && (
           <section className="landing-section">
             <SectionTitle>Artigos</SectionTitle>
-            <ArticleCards articles={shownArticles} />
-            <MoreLink
-              to={ARTICLES_PATH}
-              onClick={(event) => {
-                if (canExpandArticles) {
-                  event.preventDefault();
-                  setArticlesExpanded(true);
-                }
-              }}
-            >
-              artigos
-            </MoreLink>
+            <ArticleCards articles={articles.slice(0, 2)} />
+            <MoreLink to={ARTICLES_PATH}>artigos</MoreLink>
           </section>
         )}
       </main>
