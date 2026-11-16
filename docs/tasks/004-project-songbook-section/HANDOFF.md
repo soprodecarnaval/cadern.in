@@ -57,3 +57,17 @@ targeted ESLint and demo build passed. No new reads or dependencies.
 005 implementation commit: `2483e1af019bd0f5b8292c277c39d19e2c346cfb`.
 PR: https://github.com/soprodecarnaval/cadern.in/pull/436, stacked on #433
 with `main` base per chat override. User accepted (`yes pls`). 006 remains open.
+
+## B/006 ready for human review
+
+Approved mockup implemented on `workstream/b-songbook-ui-006`, stacked on accepted
+005/#436. New `SongbookCoverModal.tsx`; generation panel/view updated; no edits to
+SongbookPageView or routes in 006. Existing save service now returns persisted
+cover URLs and rejects unsupported file types. `createSongBook.ts` shares its cover
+page renderer with preview; lazy PDF.js rasterizes the first page.
+
+Validation: 32 modal/songbook stories, 18 unit tests, real generated-PDF pixel
+comparisons (PNG, JPEG, carnival, default), corrupt image rejection, desktop/mobile
+layout, backdrop cancellation and URL cleanup. TypeScript/lint/demo build passed.
+Persistence mocked; no backend writes. Added `pdfjs-dist@6.5.438`; no schema changes.
+Exact implementation commit/PR follows after committing. Human acceptance pending.

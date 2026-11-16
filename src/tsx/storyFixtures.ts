@@ -161,3 +161,22 @@ export const pinnedVersionItems: NumberedSongbookItemViewModel[] = [
     },
   })),
 ];
+
+export function coverPreviewFixture(options?: { instrument: string }): Promise<string> {
+  const canvas = document.createElement("canvas");
+  canvas.width = 720;
+  canvas.height = 520;
+  const context = canvas.getContext("2d")!;
+  context.fillStyle = "#f5e9d0";
+  context.fillRect(0, 0, 720, 520);
+  context.fillStyle = "#173d44";
+  context.font = "bold 46px sans-serif";
+  context.fillText("CARNAVAL 2026", 62, 190);
+  context.font = "28px sans-serif";
+  context.fillText(options?.instrument.toUpperCase() ?? "FLAUTA", 62, 245);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) { resolve(URL.createObjectURL(blob)); } else { reject(new Error("Fixture image failed")); }
+    }, "image/png");
+  });
+}

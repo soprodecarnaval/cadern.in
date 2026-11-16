@@ -28,6 +28,7 @@ import { ScoreDisplayView } from "./ScoreDisplayView";
 import { ScoreLineageView } from "./ScoreLineageView";
 import { ScoreMetadataEditorView } from "./ScoreMetadataEditorView";
 import { ScoreRevisionListView } from "./ScoreRevisionListView";
+import { coverPreviewFixture } from "./storyFixtures";
 import { SongbookGenerationPanelView } from "./SongbookGenerationPanelView";
 import { noop, part } from "./storyFixtures";
 
@@ -372,7 +373,8 @@ function Generation(
       {...props}
       currentUser={user}
       generateSongbookPdfs={generate}
-      saveSongbookCovers={resolve}
+      saveSongbookCovers={(input) => Promise.resolve(input.current.covers)}
+      createCoverPreview={coverPreviewFixture}
     />
   );
 }

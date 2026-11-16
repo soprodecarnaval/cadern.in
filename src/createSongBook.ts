@@ -65,46 +65,13 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
   const doc = createDoc();
   await loadFonts(doc);
 
-  const { title, instrument, sections, coverImageUrl, carnivalMode } = opts;
+  const { sections, instrument } = opts;
+  const promises = drawCoverPage(doc, opts);
   let pageNumber = 0;
-  const promises: Promise<void>[] = [];
-
-  if (coverImageUrl != "") {
-    promises.push(drawImage(doc, coverImageUrl, 0));
-    doc
-      .fontSize(25)
-      .text(title.toUpperCase(), 120, 100)
-      .fontSize(22)
-      .text(instrument.toUpperCase(), 120, 125);
-  } else if (carnivalMode) {
-    promises.push(
-      drawImage(
-        doc,
-        `/assets/capa_carnaval_2026_${instrument.replace(/[ ]/g, "_")}.png`,
-        pageNumber,
-      ),
-    );
-
-    // doc
-    //   .font("Roboto-Medium")
-    //   .fontSize(14)
-    //   // .rect(142, 213, 220, 15)
-    //   // .fill("red")
-    //   .text(instrument.toUpperCase(), 142, 203, {
-    //     width: 220,
-    //     align: "center",
-    //   });
-
+  if (!opts.coverImageUrl && opts.carnivalMode) {
     doc.addPage();
     pageNumber++;
-  } else {
-    doc
-      .fontSize(25)
-      .text(title.toUpperCase(), 120, 100)
-      .fontSize(22)
-      .text(instrument.toUpperCase(), 120, 125);
   }
-
   pageNumber += addIndexPage(doc, opts);
 
   if (opts.antiAssedioPages) {
@@ -200,6 +167,59 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
     download(doc, createFileName(opts));
   }
 };
+
+function drawCoverPage(doc: PDFKit.PDFDocument, opts: CreateSongBookOptions) {
+  const { title, instrument, coverImageUrl, carnivalMode } = opts;
+  const promises: Promise<void>[] = [];
+
+  if (coverImageUrl != "") {
+    promises.push(drawImage(doc, coverImageUrl, 0));
+    doc
+      .fontSize(25)
+      .text(title.toUpperCase(), 120, 100)
+      .fontSize(22)
+      .text(instrument.toUpperCase(), 120, 125);
+  } else if (carnivalMode) {
+    promises.push(
+      drawImage(
+        doc,
+        `/assets/capa_carnaval_2026_${instrument.replace(/[ ]/g, "_")}.png`,
+        0,
+      ),
+    );
+  } else {
+    doc
+      .fontSize(25)
+      .text(title.toUpperCase(), 120, 100)
+      .fontSize(22)
+      .text(instrument.toUpperCase(), 120, 125);
+  }
+
+  return promises;
+}
+
+async function createSongbookCoverPdf(opts: CreateSongBookOptions): Promise<string> {
+  const doc = createDoc();
+  await loadFonts(doc);
+  const promises = drawCoverPage(doc, opts);
+  await Promise.all(promises);
+  return new Promise<string>((resolve, reject) => {
+    const stream = doc.pipe(window.blobStream());
+    stream.on("finish", () => resolve(stream.toBlobURL("application/pdf")));
+    stream.on("error", reject);
+    doc.end();
+  });
+}
+
+export async function createSongbookCoverPreview(opts: CreateSongBookOptions): Promise<string> {
+  const pdfUrl = await createSongbookCoverPdf(opts);
+  try {
+    const { pdfFirstPageImage } = await import("./lib/pdfPreview");
+    return await pdfFirstPageImage(pdfUrl);
+  } finally {
+    URL.revokeObjectURL(pdfUrl);
+  }
+}
 
 const sectionTitleOutlines = new Map<string, PDFKit.PDFOutline>();
 
