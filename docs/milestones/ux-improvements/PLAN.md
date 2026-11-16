@@ -18,3 +18,13 @@ UI work requires wireframe iteration and approval before implementation.
 - [006 — Preview songbook covers in a save/cancel modal](../../tasks/006-songbook-cover-modal/TASK.md) — in-progress; approved mockup implemented, validation passed, human acceptance pending.
 
 Sequence and dependencies: [three workstreams](../../tasks/WORKSTREAMS.md).
+
+## After workstreams A/B/C
+
+Execute sequentially after all three workstreams are completed and integrated:
+
+- [011 — Merge PR #432 and establish home/auth design-system foundations](../../tasks/011-design-system-foundations/TASK.md) — open.
+- [012 — Rename application routes to pt-BR](../../tasks/012-pt-br-routes/TASK.md) — open; after 011.
+
+Both require wireframe iteration and implementation-plan approval. See
+[execution order](../../tasks/WORKSTREAMS.md).

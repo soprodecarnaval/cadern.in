@@ -35,6 +35,19 @@ implement its route changes after 004. Finish isolated UI changes before broad
 schema, authorization and packaged-app changes. Coordinate B/C edits to songbook
 views rather than implementing conflicting changes concurrently.
 
+## After all three workstreams
+
+Begin only after A/B/C tasks 003–010 are completed and integrated together.
+These are sequential follow-ups, not a fourth parallel stream.
+
+| Order | Task | Milestone | Difficulty | Dependencies |
+|---|---|---|---|---|
+| 1 | [011 — Merge #432 and establish design system](011-design-system-foundations/TASK.md) | UX improvements | Large | All A/B/C integrated |
+| 2 | [012 — Rename routes to pt-BR](012-pt-br-routes/TASK.md) | UX improvements | Large | All A/B/C integrated; 011 |
+
+011 establishes the visual foundations before the broader URL compatibility work
+in 012. Do not rename routes during A/B/C based on this later task.
+
 ## Consolidated completed work
 
 [002 — Search deduplication](002-search-deduplication/TASK.md) remains the single
