@@ -825,6 +825,107 @@ export async function softDeleteComment(
   });
 }
 
+// -- Songbook-scoped review comments (009) --
+//
+// A thread belongs to the songbook, not the score: two songbooks pinning the
+// same score never share one. Keyed by the pinned `(scoreId, revisionId)`
+// pair rather than `songbookRevisions` (those are immutable per-save
+// snapshots), so a thread survives unrelated songbook edits and only resets
+// when the entry itself is re-pinned to a different score or revision.
+
+export function songbookScoreThreadId(
+  scoreId: string,
+  revisionId: string,
+): string {
+  return `${scoreId}_${revisionId}`;
+}
+
+function songbookCommentsRef(
+  songbookId: string,
+  scoreId: string,
+  revisionId: string,
+) {
+  return collection(
+    db,
+    "songbooks",
+    songbookId,
+    "scoreThreads",
+    songbookScoreThreadId(scoreId, revisionId),
+    "comments",
+  );
+}
+
+/** Oldest first. Members of the songbook's project only. */
+export async function getSongbookComments(
+  songbookId: string,
+  scoreId: string,
+  revisionId: string,
+): Promise<WithId<ReviewCommentDoc>[]> {
+  const snap = await getDocs(
+    songbookCommentsRef(songbookId, scoreId, revisionId),
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...zReviewCommentDoc.parse(d.data()) }))
+    .sort(
+      (a, b) =>
+        (a.createdAt?.toMillis() ?? Infinity) -
+        (b.createdAt?.toMillis() ?? Infinity),
+    );
+}
+
+/** A new thread (`parentId: null`, optional anchor) or a reply. */
+export async function addSongbookComment(
+  songbookId: string,
+  scoreId: string,
+  revisionId: string,
+  input: {
+    authorId: string;
+    authorName: string;
+    body: string;
+    parentId: string | null;
+    anchor: CommentAnchor | null;
+  },
+): Promise<string> {
+  const ref = await addDoc(songbookCommentsRef(songbookId, scoreId, revisionId), {
+    ...zReviewCommentData.parse(input),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    deletedAt: null,
+  });
+  return ref.id;
+}
+
+export async function editSongbookComment(
+  songbookId: string,
+  scoreId: string,
+  revisionId: string,
+  commentId: string,
+  body: string,
+): Promise<void> {
+  await updateDoc(
+    doc(songbookCommentsRef(songbookId, scoreId, revisionId), commentId),
+    {
+      body: zReviewCommentData.shape.body.parse(body),
+      updatedAt: serverTimestamp(),
+    },
+  );
+}
+
+export async function softDeleteSongbookComment(
+  songbookId: string,
+  scoreId: string,
+  revisionId: string,
+  commentId: string,
+): Promise<void> {
+  await updateDoc(
+    doc(songbookCommentsRef(songbookId, scoreId, revisionId), commentId),
+    {
+      deletedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+  );
+}
+
 /**
  * Replaces a songbook entry's score with its fork, keeping the entry's place
  * and number. Server-side: editors may only change pins, and rules cannot check

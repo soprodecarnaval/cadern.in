@@ -19,7 +19,7 @@ import {
 } from "react-router-dom";
 
 import type { WithId } from "../lib/db";
-import { projectPath } from "../lib/songbook";
+import { projectPath, songbookScorePath } from "../lib/songbook";
 import {
   canDeleteSongbook,
   canEditSongbook,
@@ -361,6 +361,7 @@ export function SongbookManagePageView({
           )}
           <SongbookContents
             projectId={songbook.projectId}
+            songbookSlug={songbook.slug}
             items={items}
             showNewerVersions={isReviewer(role)}
             onRepin={canRepin ? (id) => void handleRepin([id]) : undefined}
@@ -464,6 +465,7 @@ function DeleteSongbookSection({
 
 function SongbookContents({
   projectId,
+  songbookSlug,
   items,
   showNewerVersions,
   onRepin,
@@ -471,6 +473,7 @@ function SongbookContents({
   onSwap,
 }: {
   projectId: string;
+  songbookSlug: string;
   items: NumberedSongbookItemViewModel[];
   // Members see which scores have a newer version than the one pinned; the
   // public sees the songbook as published.
@@ -504,7 +507,13 @@ function SongbookContents({
                   {item.deleted ? (
                     <s>{item.score.title}</s>
                   ) : (
-                    <Link to={`/score/${encodeURIComponent(item.score.id)}`}>
+                    <Link
+                      to={songbookScorePath(
+                        projectId,
+                        songbookSlug,
+                        item.score.id,
+                      )}
+                    >
                       {item.score.title}
                     </Link>
                   )}

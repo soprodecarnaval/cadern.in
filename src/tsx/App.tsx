@@ -18,6 +18,7 @@ import { PublicProjectPage } from "./PublicProjectPage";
 import { ScorePage } from "./ScorePage";
 import { SongbookManagePage } from "./SongbookManagePage";
 import { SongbookPage } from "./SongbookPage";
+import { SongbookScorePage } from "./SongbookScorePage";
 
 import { HomePage } from "./HomePage";
 import { LandingPage } from "./LandingPage";
@@ -93,6 +94,10 @@ function App() {
             <Route
               path="/project/:slug/songbook/:songbookSlug/manage"
               element={<SongbookManagePage />}
+            />
+            <Route
+              path="/project/:slug/songbook/:songbookSlug/manage/score/:scoreId"
+              element={<SongbookScorePage />}
             />
           </>
         )}

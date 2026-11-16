@@ -1233,7 +1233,7 @@ UI work requires wireframe iteration and approval before implementation.
 - [004 — Consolidate songbooks on the project page](../../tasks/004-project-songbook-section/TASK.md) — completed; approved mockup implemented, validation passed, user accepted.
 - [007 — Invite project members by email](../../tasks/007-email-project-invitations/TASK.md) — open.
 - [008 — Separate public and member songbook routes](../../tasks/008-public-member-songbook-routes/TASK.md) — completed.
-- [009 — Scope score review pages and comments to songbooks](../../tasks/009-songbook-scoped-review/TASK.md) — open; wireframes and schema/authorization decisions approved, implementation not started.
+- [009 — Scope score review pages and comments to songbooks](../../tasks/009-songbook-scoped-review/TASK.md) — completed; rules/functions tests written but unexecuted (no Java 21 for the emulator in this environment).
 - [010 — Launch exporter uploads from project and songbook contexts](../../tasks/010-contextual-exporter-uploads/TASK.md) — open; re-pin/staleness contract decided, implementation not started.
 
 Sequence and dependencies: [three workstreams](../../tasks/WORKSTREAMS.md).
