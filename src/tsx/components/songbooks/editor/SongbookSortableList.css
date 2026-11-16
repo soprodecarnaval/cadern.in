@@ -1,0 +1,122 @@
+@import "../../../../styles/tokens.css";
+
+.songbook-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* The drag tip takes a card's slot: a card's height (44px handle, 0.25rem
+   padding, 1px border) with the list's gap below. The gap above is the
+   controls' own 0.5rem bottom margin, as above the search results. */
+.songbook-tip {
+  display: flex;
+  align-items: center;
+  box-sizing: content-box;
+  min-height: 44px;
+  padding: 0.25rem 0;
+  border: 1px solid transparent;
+  margin: 0 0 0.5rem;
+}
+
+.songbook-card-entry {
+  border-radius: 0.5rem;
+}
+
+.songbook-handle-cell,
+.songbook-drag-handle {
+  flex: 0 0 auto;
+}
+
+.songbook-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: 0;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--ds-ink);
+  font-size: 1.25rem;
+  cursor: grab;
+  touch-action: none;
+}
+
+.songbook-drag-handle:active {
+  cursor: grabbing;
+}
+
+.songbook-drag-handle:hover {
+  background: var(--ds-yellow);
+}
+
+.songbook-drag-handle:focus-visible {
+  outline: 2px solid var(--ds-ink);
+  outline-offset: -3px;
+}
+
+.songbook-section-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--ds-yellow);
+  color: var(--ds-ink);
+  border-radius: 0.5rem;
+  font-weight: var(--ds-weight-heading);
+}
+
+.songbook-section-title {
+  flex: 1 1 auto;
+}
+
+.songbook-empty-section {
+  color: var(--ds-text-secondary);
+  font-size: 0.85rem;
+  padding: 0.25rem 0.75rem 0.5rem 2.75rem;
+}
+
+.songbook-empty-list {
+  border: 1px dashed #ced4da;
+  border-radius: 0.5rem;
+  text-align: center;
+}
+
+/* Drag state visuals apply to the entry's rendered box (a .score-card or a
+   .songbook-section-row), not the plain layout wrapper div around it. */
+.songbook-row-dragging > * {
+  opacity: 0.4;
+}
+
+.songbook-insert-before > :first-child {
+  box-shadow: inset 0 3px var(--ds-ink);
+}
+
+.songbook-insert-after > :first-child {
+  box-shadow: inset 0 -3px var(--ds-ink);
+}
+
+.songbook-drag-preview {
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--ds-ink);
+  border-radius: 0.375rem;
+  background: var(--ds-paper);
+  color: var(--ds-ink);
+  box-shadow: 0 6px 20px #0003;
+  max-width: min(420px, 85vw);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.songbook-row-carried > :first-child {
+  background-color: var(--ds-yellow);
+  box-shadow: inset 3px 0 var(--ds-ink);
+}
+
+.songbook-row-carried:not(.songbook-row-dragging) > * {
+  opacity: 0.55;
+}

@@ -1,0 +1,24 @@
+.ds-reference {
+  max-width: 1120px;
+  margin: auto;
+  padding: clamp(20px, 5vw, 64px);
+  color: #000;
+  background: #fff;
+  font: var(--ds-weight-body) var(--ds-text)/1.5 var(--ds-font);
+}
+.ds-reference header { margin-bottom: 48px; }
+.ds-reference h1 { font-size: clamp(28px, 4vw, 44px); font-weight: 700; }
+.ds-reference h2 { font-size: 24px; font-weight: 700; line-height: 30px; margin-bottom: 24px; }
+.ds-reference h3 { font-size: 24px; font-weight: 700; }
+.ds-reference section { margin-bottom: 40px; }
+.ds-reference-kicker, .ds-reference-caption { font-size: 16px; }
+.ds-reference-heading { font-size: 24px; font-weight: 700; line-height: 30px; }
+.ds-reference-medium { font-weight: 500; }
+.ds-reference-swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; }
+.ds-reference-swatch { height: 80px; border: 1px solid #aaa; border-radius: 8px; margin-bottom: 8px; }
+.ds-reference-row { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
+.ds-reference-fields, .ds-reference-compositions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 24px; }
+.ds-reference-card { border: 3px solid #000; border-radius: 6px; padding: 24px; }
+.ds-reference-card a, .ds-reference-card button { color: #000; font: inherit; text-decoration: underline; background: none; border: none; padding: 0; text-align: left; }
+.ds-reference :is(button, a, input):focus-visible { outline: 3px solid #000; outline-offset: 3px; }
+.ds-reference .invalid-feedback { color: var(--ds-invalid); }

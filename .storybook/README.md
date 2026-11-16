@@ -9,9 +9,11 @@ Firebase credentials, emulators, or audio initialization. Production components
 retain their connected wrappers; stories import the corresponding `*View` and
 inject fixture data and callbacks through props. PaginationBar is already pure.
 
-Add stories beside components in `src/tsx/*.stories.tsx`, using typed CSF metadata
-and a stable `Components/Name` title. Shared sample data lives in
-`src/tsx/storyFixtures.ts`. Do not import connected wrappers into stories.
+Add stories beside components in `src/tsx/**/*.stories.tsx`, using typed CSF metadata
+and a title under one of three flat sections (`Atoms/Name`, `Components/Name`,
+`Screens/Name`). Do not add intermediate folders to story titles. Shared sample
+data lives in `.storybook/fixtures/components.ts`. Do not import connected
+wrappers into stories.
 
 Auth stories use play functions to reach registration/error/reset states on
 navigation. ResetPending intentionally leaves its fixture promise pending.
@@ -37,7 +39,7 @@ Connected screens inject typed operation props and UI composition. Their views
 retain form, loading, and interaction state. Collection/search and card renderers
 are passed through the builder tree; real connected wrappers still supply those
 props in production. Shared screen data and local renderers live in
-`src/tsx/screenFixtures.tsx`. The fixture Timestamp/User values support the
+`.storybook/fixtures/screens.tsx`. The fixture Timestamp/User values support the
 methods used by production views. Operations simulate outcomes without persisting
 backend data. MIDI/audio and PDF generation are simulated.
 
@@ -47,7 +49,7 @@ URL for routes outside that story. Dialog stories support close/reopen. Use play
 functions with visibility waits to reach modal/tab/error states after transitions.
 
 The Electron export app is excluded. The songbook reader has its own stories
-(`Components/SongbookReader`, fixtures in `storyFixtures.ts`); they open a score
+(`Components/SongbookReader`, fixtures in `.storybook/fixtures/components.ts`); they open a score
 with `parameters.route` (`/?musica=<number>`). Songbook page stories start at
 `?detalhes`, and their injected reader fixture stands in for the reader there.
 
@@ -64,3 +66,12 @@ The same command works against an HTTP-served `storybook-static/` build. It
 checks every indexed story and waits for render/play completion, capturing browser
 errors. It blocks and fails external HTTP requests, detects AudioContext creation,
 and verifies stories leave the homepage builder's saved storage untouched.
+
+## UI ownership
+
+Production UI is organized under `src/tsx/atoms`, `components`, and `screens`.
+Keep component-specific stories and styles alongside their owner, and place the
+story in the matching flat section (`Atoms`, `Components`, `Screens`). Shared
+fixture modules live in `.storybook/fixtures`; the atom reference gallery and its
+stylesheet live in `src/tsx/atoms`. The story glob includes only colocated
+`src/tsx` stories.

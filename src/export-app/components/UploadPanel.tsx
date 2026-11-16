@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import type { ExportResult } from "../../../scripts/lib/exportScore";
+import { Button } from "../../tsx/atoms/Button";
 import { exportAndUpload, type ExportUploadProgress } from "../exportAndUpload";
 import {
   createSongbookRevision,
@@ -190,7 +191,9 @@ export function UploadPanel({
   if (contextState.kind === "invalid") {
     return (
       <section className="upload-panel">
-        <p className="error">{contextState.reason}</p>
+        <div className="alert alert-danger" role="alert">
+          {contextState.reason}
+        </div>
       </section>
     );
   }
@@ -253,9 +256,13 @@ export function UploadPanel({
         <div className="export-result" role="status">
           <strong>Enviado para o cadern.in</strong>
           <span>{status.scoreId}</span>
-          <button type="button" onClick={() => void window.api.openFolder(status.directory)}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void window.api.openFolder(status.directory)}
+          >
             Abrir pasta
-          </button>
+          </Button>
           {!status.localStamped && (
             <p className="upload-notice">
               Não foi possível atualizar o arquivo original. Feche-o no MuseScore;
@@ -277,16 +284,17 @@ export function UploadPanel({
         </div>
       )}
 
-      {status.kind === "error" && <p className="error">{status.message}</p>}
+      {status.kind === "error" && (
+        <div className="alert alert-danger" role="alert">{status.message}</div>
+      )}
 
-      <button
-        type="button"
-        className="btn-primary"
+      <Button
         disabled={disabled || busy}
+        aria-busy={busy}
         onClick={() => void upload()}
       >
         Exportar para o cadern.in
-      </button>
+      </Button>
     </section>
   );
 }
