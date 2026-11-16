@@ -14,7 +14,6 @@ import { CreateProjectPage } from "./CreateProjectPage";
 import { MeusProjetosPage } from "./MeusProjetosPage";
 import { NotFoundPage } from "./NotFoundPage";
 import { ProjectSettingsPage } from "./ProjectSettingsPage";
-import { ProjectSongbooksPage } from "./ProjectSongbooksPage";
 import { PublicProjectPage } from "./PublicProjectPage";
 import { ScorePage } from "./ScorePage";
 import { SongbookPage } from "./SongbookPage";
@@ -85,10 +84,6 @@ function App() {
             <Route
               path="/projects/:slug/settings"
               element={<ProjectSettingsPage />}
-            />
-            <Route
-              path="/projects/:slug/songbooks"
-              element={<ProjectSongbooksPage />}
             />
             <Route
               path="/projects/:slug/songbooks/:songbookSlug"
