@@ -20,5 +20,5 @@
 .ds-reference-fields, .ds-reference-compositions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 24px; }
 .ds-reference-card { border: 3px solid #000; border-radius: 6px; padding: 24px; }
 .ds-reference-card a, .ds-reference-card button { color: #000; font: inherit; text-decoration: underline; background: none; border: none; padding: 0; text-align: left; }
-.ds-reference :is(button, a, input):focus-visible { outline: 3px solid #000; outline-offset: 3px; }
+.ds-reference :is(button, a):focus-visible { outline: 3px solid #000; outline-offset: 3px; }
 .ds-reference .invalid-feedback { color: var(--ds-invalid); }

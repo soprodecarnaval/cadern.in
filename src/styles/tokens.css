@@ -25,4 +25,7 @@
   --ds-radius-field: 12px;
   --ds-radius-modal: 14px;
   --ds-radius-surface: 10px;
+  /* Raised state: home-page cards on hover, fields on focus. */
+  --ds-lift: -3px;
+  --ds-shadow-raised: 4px 4px 0 var(--ds-ink);
 }

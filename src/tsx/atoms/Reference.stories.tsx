@@ -60,6 +60,7 @@ function ReferencePage() {
         </section>
         <section aria-labelledby="fields-title">
           <h2 id="fields-title">Campos e feedback</h2>
+          <p>Clique ou use Tab para foco: o campo sobe 3 px com sombra preta de 4 px, mantendo o fundo branco e o contorno preto.</p>
           <div className="ds-reference-fields">
             <div>
               <label className="form-label" htmlFor="ds-email">Email</label>
