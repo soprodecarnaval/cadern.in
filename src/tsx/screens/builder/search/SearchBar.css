@@ -1,0 +1,28 @@
+/* Search icon inside the field, spaced as in the home page's search box:
+   16px from the border, 25px icon, 12px before the text. */
+.search-field {
+  position: relative;
+  flex: 1;
+}
+
+.search-field-icon {
+  position: absolute;
+  /* Above the field, which a focus transform would otherwise draw on top. */
+  z-index: 1;
+  left: calc(var(--ds-border, 3px) + 16px);
+  top: 50%;
+  width: 25px;
+  height: 25px;
+  transform: translateY(-50%);
+  transition: transform 0.15s;
+  pointer-events: none;
+}
+
+/* Rises with the field when it's focused. */
+.search-field:focus-within .search-field-icon {
+  transform: translateY(calc(-50% + var(--ds-lift, 0px)));
+}
+
+.search-field .ds-field {
+  padding-left: calc(16px + 25px + 12px);
+}
