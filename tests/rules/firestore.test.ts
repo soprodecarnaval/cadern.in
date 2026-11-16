@@ -19,7 +19,7 @@ import {
   serverTimestamp,
   type Firestore,
 } from "firebase/firestore";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   ADMIN,
   EDITOR,
@@ -835,6 +835,45 @@ describe("songbook-scoped review comments", () => {
         "metadataOverride.title": "x",
       }),
     );
+  });
+
+  it("isolates threads per songbook, even for the same score and revision", async () => {
+    await seedSongbookThread();
+    // A second songbook of the same project pinning the same score at the
+    // same revision: same thread id, a different thread. Threads aren't
+    // validated against a current pin (009) — access stays gated purely by
+    // songbook membership, like songbookRevisions — so isolation rests on
+    // the path itself: the two never alias each other.
+    const SB2 = `${PROJECT}~outro-caderninho`;
+    const sb2ThreadRef = (db: Firestore, id = "c1") =>
+      doc(db, "songbooks", SB2, "scoreThreads", `${SCORE}_1`, "comments", id);
+    await seed(async (db) => {
+      await setDoc(doc(db, "songbooks", SB2), {
+        title: "Outro caderninho", projectId: PROJECT, slug: "outro-caderninho",
+        currentRevisionId: "r1", isPublished: false, deletedAt: null,
+      });
+      await setDoc(doc(db, "songbooks", SB2, "songbookRevisions", "r1"), {
+        entries: [{ type: "score", scoreId: SCORE, order: 0, index: 1 }],
+        pins: { [SCORE]: "1" },
+        covers: {},
+        revisionNumber: 1,
+        prevRevisionId: null,
+        createdBy: OWNER,
+        note: "",
+      });
+    });
+    await assertSucceeds(
+      setDoc(threadRef(as(REVIEWER)), comment(REVIEWER, { body: "Do caderninho" })),
+    );
+    await assertSucceeds(
+      setDoc(sb2ThreadRef(as(REVIEWER)), comment(REVIEWER, { body: "Do outro" })),
+    );
+    // Same thread and comment ids under two songbooks stay two docs:
+    // writing one never reaches the other.
+    expect((await getDoc(threadRef(as(REVIEWER)))).data()?.body)
+      .toBe("Do caderninho");
+    expect((await getDoc(sb2ThreadRef(as(REVIEWER)))).data()?.body)
+      .toBe("Do outro");
   });
 
   it("allows replies to roots only, without an anchor", async () => {

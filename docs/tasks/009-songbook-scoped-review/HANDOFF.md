@@ -1,8 +1,9 @@
 # C/009 → C/010
 
-Status: implemented, typechecked/linted; human review pending. Rules and
-Cloud Functions tests written but unexecuted (Firestore emulator needs Java
-21, only Java 17 available in this environment — see TASK.md Checks).
+Status: implemented, typechecked/linted; human review pending. All suites
+green, re-verified on the merged tree under Java 21 (Homebrew `openjdk@21`):
+rules 110/110, functions 20/20 (comment-copy test removed with the fork-swap
+revert), migrations 26/26 — see TASK.md Checks.
 Branch: `workstream/c-routes-review-uploads`. PR base: `main`.
 
 ## Contract
@@ -40,9 +41,9 @@ Branch: `workstream/c-routes-review-uploads`. PR base: `main`.
 
 ## Validation
 
-See TASK.md "Checks" — full detail on what ran (tsc, eslint, vitest 277/277)
-and what's written-but-unexecuted (rules tests, functions tests) and why
-(no Java 21 in this environment for the Firestore emulator).
+See TASK.md "Checks" — full detail on what ran (tsc, eslint, vitest) and
+the emulator suites re-run under Java 21 (Homebrew `openjdk@21`): rules
+110/110, functions 20/20, migrations 26/26.
 
 ## Coordination
 

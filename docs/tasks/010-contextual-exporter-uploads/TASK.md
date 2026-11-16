@@ -145,9 +145,10 @@ Difficulty: large. Dependencies: 008, 009. Execution order: [workstreams](../WOR
   app (macOS `CFBundleURLTypes`, Windows registry, Linux `.desktop` MimeType)
   — needs real installers built per-OS and a GUI to click a link against a
   running/not-running app; electron-builder itself wasn't run. Live
-  Firestore/auth interaction for `validateExportContext` in the real app
-  (covered by unit tests against mocked services, not an emulator — no
-  Java 21 available here, same gap noted in 009's TASK.md).
+  Firestore/auth interaction for `validateExportContext` — covered by unit
+  tests against mocked services; the Firestore emulator suites (rules,
+  functions incl. the export deep-link rules, migrations) do run green
+  under Java 21 on the merged tree (see 009's TASK.md Checks).
 
 ## Validation
 
