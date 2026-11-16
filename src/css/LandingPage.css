@@ -621,17 +621,17 @@
 
 /* Articles */
 
+/* Two columns at most, one on phones. A lone card stays in the first
+   column instead of stretching across the row. */
 .landing-articles {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 34px;
 }
 
-/* A lone card keeps the width it has beside a second one, instead of
-   stretching across the row. Phones show one column anyway. */
 @media (min-width: 628px) {
-  .landing-article:only-child {
-    max-width: calc((100% - 34px) / 2);
+  .landing-articles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
