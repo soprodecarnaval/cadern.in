@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { Button } from "../../tsx/atoms/Button";
+import { Input } from "../../tsx/atoms/Input";
 import {
   parseExportDeepLink,
   type ExportDeepLinkContext,
@@ -35,7 +37,7 @@ export function NoContext({
         app já sabendo para onde enviar.
       </p>
       <label htmlFor="export-link">O link não abriu o app? Cole-o aqui</label>
-      <input
+      <Input
         id="export-link"
         type="text"
         value={link}
@@ -54,16 +56,20 @@ export function NoContext({
         nova versão” e escolha “Copiar endereço do link”.
       </small>
       {error && (
-        <p id="export-link-error" className="error" role="alert">
+        <div
+          id="export-link-error"
+          className="alert alert-danger"
+          role="alert"
+        >
           {error}
-        </p>
+        </div>
       )}
-      <button type="submit" disabled={!link.trim()}>
+      <Button type="submit" disabled={!link.trim()}>
         Continuar
-      </button>
-      <button type="button" className="btn-link" onClick={onLogout}>
+      </Button>
+      <Button variant="text" onClick={onLogout}>
         Usar outra conta
-      </button>
+      </Button>
     </form>
   );
 }

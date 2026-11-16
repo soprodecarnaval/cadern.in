@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { GoogleLinkRequiredError, useAuth } from "../../auth";
+import { Button } from "../../tsx/atoms/Button";
+import { Input } from "../../tsx/atoms/Input";
 import { describeAuthError } from "../../lib/authMessages";
 
 // Signals the user closed the OAuth popup without finishing; distinct from a
@@ -87,7 +89,7 @@ export function LoginForm() {
         <p>{linkRequest.message}</p>
         <label>
           <span>Senha</span>
-          <input
+          <Input
             type="password"
             value={linkPassword}
             autoFocus
@@ -95,12 +97,11 @@ export function LoginForm() {
             onChange={(e) => setLinkPassword(e.target.value)}
           />
         </label>
-        <button type="submit" disabled={linkSubmitting || !linkPassword}>
+        <Button type="submit" disabled={linkSubmitting || !linkPassword}>
           {linkSubmitting ? "Conectando…" : "Conectar"}
-        </button>
-        <button
-          type="button"
-          className="btn-link"
+        </Button>
+        <Button
+          variant="text"
           onClick={() => {
             setLinkRequest(null);
             setLinkPassword("");
@@ -108,8 +109,8 @@ export function LoginForm() {
           }}
         >
           Cancelar
-        </button>
-        {linkError && <p className="error">{linkError}</p>}
+        </Button>
+        {linkError && <div className="alert alert-danger" role="alert">{linkError}</div>}
       </form>
     );
   }
@@ -119,7 +120,7 @@ export function LoginForm() {
       <h2>Entrar no cadern.in</h2>
       <label>
         <span>E-mail</span>
-        <input
+        <Input
           type="email"
           value={email}
           autoFocus
@@ -129,24 +130,24 @@ export function LoginForm() {
       </label>
       <label>
         <span>Senha</span>
-        <input
+        <Input
           type="password"
           value={password}
           required
           onChange={(e) => setPassword(e.target.value)}
         />
       </label>
-      <button type="submit" disabled={submitting || !email || !password}>
+      <Button type="submit" disabled={submitting || !email || !password}>
         {submitting ? "Entrando…" : "Entrar"}
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        variant="secondary"
         onClick={() => void submitGoogle()}
         disabled={googleSubmitting}
       >
         {googleSubmitting ? "Entrando…" : "Entrar com Google"}
-      </button>
-      {error && <p className="error">{error}</p>}
+      </Button>
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
       <small>
         Ainda não tem conta? Crie uma em cadern.in — é a mesma conta do site.
       </small>
