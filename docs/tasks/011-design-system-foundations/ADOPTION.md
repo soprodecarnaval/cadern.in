@@ -24,7 +24,7 @@ reconcile detailed component inventory before closing task 011.
 - `Input`: native input props/ref; label via `htmlFor` or accessible name; caller sets `aria-invalid`, `aria-describedby` and feedback. Preserves controlled/uncontrolled usage.
 - `Modal`: React Bootstrap Modal props with branded surface; `.Header`, `.Title`, `.Body`, `.Footer` reuse Bootstrap primitives. Retains focus trap, Escape and restoration behavior.
 - Navigation links remain anchors/router links, using shared tokens/classes as appropriate. Do not turn navigation into button callbacks.
-- `DesignTokens.css`: shared `--ds-*` palette, type, spacing, border, radius and focus values. Existing `brand-modal` and landing aliases bridge older components during adoption.
+- `src/styles/tokens.css`: shared `--ds-*` palette, type, spacing, border, radius and focus values. Existing `brand-modal` and landing aliases bridge older components during adoption.
 
 Batch 1 wireframe: `Design System/Reference → Project Batch` (`design-system-reference--project-batch`). Illustrative navigation, list, create, project and settings forms; no writes. Await user review before migrating those production screens.
 
@@ -43,3 +43,17 @@ Production builder/dialog components await approval. Existing screen stories
 retain detailed operation/role/error-state coverage for subsequent migration.
 
 User approved builder/dialog previews. Batch 2 is authorized for implementation. Shared components use unprefixed names: `Button`, `Input`, `Modal`, `Link`, `Page`; third-party imports use aliases when needed.
+
+## Folder and stylesheet ownership
+
+User approved `src/tsx/atoms`, `components` and `screens`. Atom exports are split
+into Button/Input/Link/Modal/Page files with adjacent styles. Shared domain UI
+lives in components; screen-only views/dialogs/forms live under their screen.
+Existing component names and story IDs are retained. App.tsx remains the app
+composition/router entry. Exporter-specific UI retains src/export-app for now.
+
+Global styles and tokens live in src/styles. Navigation and profile styles were
+split from the old aggregate stylesheets; feature CSS follows its owning UI.
+Shared Storybook fixtures and cross-screen reference stories live in .storybook.
+Source imports, CSS asset URLs, main entry and recursive story discovery were
+updated together. No screen behavior or route names are changed by this move.

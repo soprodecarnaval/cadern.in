@@ -1,0 +1,108 @@
+@import "../../styles/tokens.css";
+@import "./Button.css";
+@import "./Input.css";
+
+/* The homepage's look for Bootstrap modals: add `className="brand-modal"` to
+   a <Modal>. Type follows the design: Bold titles, Medium buttons and tabs,
+   Light 18px for everything else. `.modal.brand-modal` outranks Bootstrap's
+   own `.modal` settings, which can load after this file. */
+
+.modal.brand-modal {
+  --brand-yellow: var(--ds-yellow);
+  --brand-ink: var(--ds-ink);
+  --brand-paper: var(--ds-paper);
+
+  --bs-modal-bg: var(--brand-paper);
+  --bs-modal-color: var(--ds-ink);
+  --bs-modal-border-color: var(--ds-ink);
+  --bs-modal-border-width: var(--ds-border);
+  --bs-modal-border-radius: var(--ds-radius-modal);
+  --bs-modal-inner-border-radius: 11px;
+  --bs-modal-padding: 20px 28px 28px;
+  /* 16px top: with the line's room above the capitals, it looks the same as
+     the space from the baseline down to the divider. */
+  --bs-modal-header-padding: 16px 28px 14px;
+  /* A divider under the title, as in the homepage's open tool dropdowns. */
+  --bs-modal-header-border-color: var(--ds-ink);
+  --bs-modal-header-border-width: 2px;
+  --bs-modal-footer-border-width: 0;
+  --bs-modal-box-shadow: none;
+  font-family: var(--ds-font);
+  font-size: var(--ds-text);
+  font-weight: var(--ds-weight-body);
+}
+
+.brand-modal a,
+.brand-modal a:hover {
+  color: inherit;
+}
+
+/* Title: Bold 24px. */
+
+.brand-modal .modal-title {
+  font-size: var(--ds-heading);
+  font-weight: var(--ds-weight-heading);
+  line-height: 30px;
+}
+
+/* Same 28px from the edges as the content above. Set directly: Bootstrap
+   derives it from --bs-modal-padding, which doesn't work with 3 values. */
+
+.brand-modal .modal-footer {
+  padding: 0 28px 28px;
+}
+
+.brand-modal .modal-footer > * {
+  margin: 0;
+}
+
+.brand-modal .btn-close {
+  opacity: 1;
+}
+
+.brand-modal .btn-close:focus {
+  box-shadow: none;
+}
+
+/* Tabs: plain text, centred, the active one highlighted in yellow. */
+
+.brand-modal .nav-tabs {
+  --bs-nav-tabs-border-width: 0;
+  --bs-nav-link-padding-x: 10px;
+  --bs-nav-link-padding-y: 2px;
+  --bs-nav-link-color: var(--ds-ink);
+  --bs-nav-link-hover-color: var(--ds-ink);
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px !important;
+}
+
+.brand-modal .nav-tabs .nav-link {
+  border-radius: 6px;
+  font-size: var(--ds-text);
+  font-weight: var(--ds-weight-action);
+}
+
+.brand-modal .nav-tabs .nav-link:hover {
+  text-decoration: underline;
+}
+
+.brand-modal .nav-tabs .nav-link.active {
+  color: var(--ds-ink);
+  background: var(--ds-yellow);
+}
+
+.brand-modal .nav-tabs .nav-link.active:hover {
+  text-decoration: none;
+}
+
+.brand-modal .alert {
+  border: none;
+  border-radius: var(--ds-radius-surface);
+  font-size: var(--ds-caption);
+}
+
+.brand-modal .btn-close:focus-visible {
+  outline: var(--ds-border) solid var(--ds-ink);
+  outline-offset: 3px;
+}

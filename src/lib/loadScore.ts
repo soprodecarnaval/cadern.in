@@ -8,7 +8,7 @@ import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { isReviewer } from "./roles";
 import { resolveScoreMetadata, uploadedScoreMetadata } from "./scoreMetadata";
 import type { ScoreData, ScoreMetadata } from "../../types/docs";
-import type { ScoreDisplayPart } from "../tsx/ScoreDisplay";
+import type { ScoreDisplayPart } from "../tsx/components/scores/detail/ScoreDisplay";
 
 export interface LoadedScore extends ScoreMetadata {
   scoreId: string;

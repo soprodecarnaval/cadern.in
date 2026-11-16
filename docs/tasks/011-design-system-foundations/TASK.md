@@ -86,3 +86,18 @@ that interference. Project migration remains uncommitted pending user review.
 Next visual gate: builder/dialog batch in Storybook; see ADOPTION.md.
 
 User approved both builder/dialog previews and requested committing the project batch. Per user preference, shared component exports and consumers now use `Button`, `Input`, `Modal`, `Link` and `Page` without a Design prefix. Batch 2 implementation is authorized; it has not yet been applied to production.
+
+## UI folder organization
+
+User approved splitting the base UI into tsx/atoms, reusable domain UI into tsx/components, and screen-owned UI into tsx/screens. Stylesheets are colocated with their owner; tokens/global CSS live in src/styles. Shared Storybook fixtures/references live under .storybook. This structural pass preserves existing names, story IDs and behavior; builder/dialog production adoption remains the next authorized batch.
+
+Folder-organization validation: Storybook TypeScript, targeted atom/reference
+ESLint, website build, exporter build, Storybook build and whitespace checks pass.
+All 180 prior story IDs remain indexed. All 35 atom/profile CSS rules were
+compared against the original aggregate stylesheet and preserved. Fourteen
+focused desktop/mobile render/style checks pass, including reference controls,
+project/nav and profile styles. Final full Storybook suite: 167/180 pass; the 13
+failures are the existing seven auth Firebase-initialization and six scoped-score
+render/audio-isolation failures. Reference stories outside src needed automatic
+JSX runtime in Storybook Vite config; corrected and rechecked. No staging or
+commit performed for this structural pass.

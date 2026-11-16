@@ -1,0 +1,47 @@
+@import "../../styles/tokens.css";
+
+/* Fields: black-bordered like the search bar, with no focus glow. */
+
+.brand-modal .form-label {
+  margin-bottom: 6px;
+}
+
+:is(.brand-modal .form-control, .ds-field) {
+  height: 48px;
+  border: var(--ds-border) solid var(--ds-ink);
+  border-radius: var(--ds-radius-field);
+  color: var(--ds-ink);
+  font-size: var(--ds-text);
+  font-weight: var(--ds-weight-body);
+}
+
+:is(.brand-modal .form-control, .ds-field)::placeholder {
+  color: var(--ds-placeholder);
+}
+
+:is(.brand-modal .form-control, .ds-field):disabled {
+  border-color: #999;
+  background: var(--ds-surface-disabled);
+  color: var(--ds-text-secondary);
+}
+
+:is(.brand-modal .form-control, .ds-field):focus {
+  border-color: var(--ds-ink);
+  box-shadow: none;
+}
+
+.ds-field { font-family: var(--ds-font); }
+
+:is(.brand-modal .form-control, .ds-field).is-invalid,
+:is(.brand-modal .form-control, .ds-field)[aria-invalid="true"] {
+  border-color: var(--ds-invalid);
+}
+
+:is(.brand-modal .form-control, .ds-field):focus-visible {
+  outline: var(--ds-border) solid var(--ds-ink);
+  outline-offset: 3px;
+}
+
+.ds-field.ds-select { height: auto; min-height: 48px; }
+
+.ds-field.ds-select.form-select-sm { min-height: 36px; font-size: var(--ds-caption); }

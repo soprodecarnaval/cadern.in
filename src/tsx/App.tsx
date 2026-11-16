@@ -1,27 +1,27 @@
 import { useEffect, useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
-import { AppNavigation } from "./AppNavigation";
-import { AuthModal } from "./AuthModal";
-import { ProfileModal } from "./ProfileModal";
-import type { ProfileTab } from "./ProfileModalView";
+import { AppNavigation } from "./components/navigation/AppNavigation";
+import { AuthModal } from "./screens/auth/AuthModal";
+import { ProfileModal } from "./screens/account/ProfileModal";
+import type { ProfileTab } from "./screens/account/ProfileModalView";
 
 import "bootstrap/dist/css/bootstrap.css";
 import { useAuth } from "../auth";
-import "../css/App.css";
+import "../styles/app.css";
 import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { getPendingUserProjectInvitations } from "../lib/db";
-import { CreateProjectPage } from "./CreateProjectPage";
-import { MeusProjetosPage } from "./MeusProjetosPage";
-import { NotFoundPage } from "./NotFoundPage";
-import { ProjectSettingsPage } from "./ProjectSettingsPage";
-import { PublicProjectPage } from "./PublicProjectPage";
-import { ScorePage } from "./ScorePage";
-import { SongbookManagePage } from "./SongbookManagePage";
-import { SongbookPage } from "./SongbookPage";
-import { SongbookScorePage } from "./SongbookScorePage";
+import { CreateProjectPage } from "./screens/projects/create/CreateProjectPage";
+import { MeusProjetosPage } from "./screens/projects/list/MeusProjetosPage";
+import { NotFoundPage } from "./screens/not-found/NotFoundPage";
+import { ProjectSettingsPage } from "./screens/projects/settings/ProjectSettingsPage";
+import { PublicProjectPage } from "./screens/projects/detail/PublicProjectPage";
+import { ScorePage } from "./screens/scores/ScorePage";
+import { SongbookManagePage } from "./screens/songbooks/manage/SongbookManagePage";
+import { SongbookPage } from "./screens/songbooks/public/SongbookPage";
+import { SongbookScorePage } from "./screens/songbooks/review/SongbookScorePage";
 
-import { HomePage } from "./HomePage";
-import { LandingPage } from "./LandingPage";
+import { HomePage } from "./screens/builder/HomePage";
+import { LandingPage } from "./screens/landing/LandingPage";
 
 function App() {
   const [showUserModal, setShowUserModal] = useState(false);

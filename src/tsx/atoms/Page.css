@@ -1,0 +1,30 @@
+@import "../../styles/tokens.css";
+
+.ds-page {
+  font-family: var(--ds-font);
+  font-size: var(--ds-text);
+  font-weight: var(--ds-weight-body);
+  color: var(--ds-ink);
+  padding-bottom: var(--ds-space-8);
+}
+.ds-page :is(h1, h2, h3, h4, h5, .card-title) {
+  font-weight: var(--ds-weight-heading);
+  overflow-wrap: anywhere;
+}
+.ds-page h2 {
+  font-size: var(--ds-heading);
+  line-height: 30px;
+  background: linear-gradient(transparent 2px, var(--ds-yellow) 2px 20px, transparent 20px);
+}
+.ds-page .card {
+  border: var(--ds-border) solid var(--ds-ink);
+  border-radius: 6px;
+}
+.ds-page :is(a, button, select):focus-visible {
+  outline: var(--ds-border) solid var(--ds-ink);
+  outline-offset: 3px;
+}
+.ds-page :is(.d-flex, .form-inline) { flex-wrap: wrap; }
+.ds-page .alert { border-radius: var(--ds-radius-surface); }
+.ds-page .form-label { margin-bottom: var(--ds-space-2); }
+.ds-page .form-control { max-width: 100%; }
