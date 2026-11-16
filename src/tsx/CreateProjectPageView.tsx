@@ -1,5 +1,6 @@
+import { Button, Page, Input } from "./DesignSystem";
 import { useState } from "react";
-import { Alert, Button, Container, Form, Spinner } from "react-bootstrap";
+import { Alert, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 
 import { displayNameOf } from "../lib/displayName";
@@ -55,20 +56,20 @@ export function CreateProjectPageView({
 
   if (!currentUser) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="warning">Faça login para criar um projeto.</Alert>
-      </Container>
+      </Page>
     );
   }
 
   return (
-    <Container className="mt-4" style={{ maxWidth: 480 }}>
+    <Page className="mt-4" style={{ maxWidth: 480 }}>
       <h2 className="mb-4">Novo projeto</h2>
 
       <Form onSubmit={(e) => void handleSubmit(e)}>
-        <Form.Group className="mb-3">
+        <Form.Group className="mb-3" controlId="project-title">
           <Form.Label>Nome</Form.Label>
-          <Form.Control
+          <Form.Control as={Input}
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -88,6 +89,6 @@ export function CreateProjectPageView({
           {pending ? <Spinner animation="border" size="sm" /> : "Criar projeto"}
         </Button>
       </Form>
-    </Container>
+    </Page>
   );
 }

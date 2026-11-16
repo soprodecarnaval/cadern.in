@@ -1,0 +1,50 @@
+@import "./DesignTokens.css";
+
+.ds-page {
+  font-family: var(--ds-font);
+  font-size: var(--ds-text);
+  font-weight: var(--ds-weight-body);
+  color: var(--ds-ink);
+  padding-bottom: var(--ds-space-8);
+}
+.ds-page :is(h1, h2, h3, h4, h5, .card-title) {
+  font-weight: var(--ds-weight-heading);
+  overflow-wrap: anywhere;
+}
+.ds-page h2 {
+  font-size: var(--ds-heading);
+  line-height: 30px;
+  background: linear-gradient(transparent 2px, var(--ds-yellow) 2px 20px, transparent 20px);
+}
+.ds-page .card {
+  border: var(--ds-border) solid var(--ds-ink);
+  border-radius: 6px;
+}
+.ds-page :is(a, button, select):focus-visible {
+  outline: var(--ds-border) solid var(--ds-ink);
+  outline-offset: 3px;
+}
+.ds-page :is(.d-flex, .form-inline) { flex-wrap: wrap; }
+.ds-page .alert { border-radius: var(--ds-radius-surface); }
+.ds-page .form-label { margin-bottom: var(--ds-space-2); }
+.ds-page .form-control { max-width: 100%; }
+.ds-navigation.navbar {
+  --bs-navbar-color: var(--ds-ink);
+  --bs-navbar-hover-color: var(--ds-ink);
+  --bs-navbar-brand-color: var(--ds-ink);
+  --bs-navbar-brand-hover-color: var(--ds-ink);
+  background: var(--ds-paper);
+  color: var(--ds-ink);
+  font: var(--ds-weight-body) var(--ds-text)/1.5 var(--ds-font);
+  border-bottom: var(--ds-border) solid var(--ds-ink);
+  padding: var(--ds-space-4) 0;
+}
+.ds-navigation .container { flex-wrap: wrap; gap: var(--ds-space-4); }
+.ds-navigation .banner-container { flex-wrap: wrap; }
+.ds-navigation .banner {
+  background: var(--ds-yellow);
+  color: var(--ds-ink);
+  border-radius: var(--ds-radius-button);
+  font-weight: var(--ds-weight-action);
+}
+.ds-navigation :is(a, button):focus-visible { outline: var(--ds-border) solid var(--ds-ink); outline-offset: 3px; }

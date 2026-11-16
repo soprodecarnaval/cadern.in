@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Tab, Tabs } from "react-bootstrap";
 import type { User } from "firebase/auth";
 import { GoogleLinkRequiredError } from "../auth";
-import { DesignButton, DesignField, DesignModal as Modal } from "./DesignSystem";
+import { Button, Input, Modal } from "./DesignSystem";
 import { describeAuthError } from "../lib/authMessages";
 
 export interface AuthModalViewProps {
@@ -224,7 +224,7 @@ export function AuthModalView({
           <p>{linkRequest.message}</p>
           <form onSubmit={(val) => void handleLinkSubmit(val)}>
             <div className="mb-3">
-              <DesignField
+              <Input
                 placeholder="Senha"
                 aria-label="Senha"
                 type="password"
@@ -235,13 +235,13 @@ export function AuthModalView({
               />
             </div>
             <div className="d-flex align-items-center gap-3">
-              <DesignButton
+              <Button
                 type="submit"
                 disabled={linkPending}
               >
                 Conectar
-              </DesignButton>
-              <DesignButton
+              </Button>
+              <Button
                 type="button"
                 variant="text"
                 className="p-0"
@@ -252,7 +252,7 @@ export function AuthModalView({
                 }}
               >
                 Cancelar
-              </DesignButton>
+              </Button>
             </div>
           </form>
           {linkError && (
@@ -278,14 +278,14 @@ export function AuthModalView({
             volte aqui.
           </p>
           <div className="d-flex align-items-center gap-3">
-            <DesignButton
+            <Button
               type="button"
               onClick={() => void handleRefreshVerification()}
               disabled={refreshPending}
             >
               Já verifiquei
-            </DesignButton>
-            <DesignButton
+            </Button>
+            <Button
               type="button"
               variant="text"
               className="p-0"
@@ -295,16 +295,16 @@ export function AuthModalView({
               {resendCountdown > 0
                 ? `Reenviar email (${resendCountdown}s)`
                 : "Reenviar email"}
-            </DesignButton>
+            </Button>
           </div>
-          <DesignButton
+          <Button
             type="button"
             variant="text"
             className="p-0 mt-3"
             onClick={() => void logout()}
           >
             Usar outra conta
-          </DesignButton>
+          </Button>
           {resendSent && (
             <div className="alert alert-success mt-3" role="alert">
               Email reenviado!
@@ -337,7 +337,7 @@ export function AuthModalView({
           <Tab eventKey="login" title="Entrar">
             <form onSubmit={(val) => void handleLogin(val)}>
               <div className="mb-3">
-                <DesignField
+                <Input
                   placeholder="Email"
                   aria-label="Email"
                   type="email"
@@ -347,7 +347,7 @@ export function AuthModalView({
                 />
               </div>
               <div className="mb-3">
-                <DesignField
+                <Input
                   placeholder="Senha"
                   aria-label="Senha"
                   type="password"
@@ -357,10 +357,10 @@ export function AuthModalView({
                 />
               </div>
               <div className="d-flex align-items-center gap-3">
-                <DesignButton type="submit">
+                <Button type="submit">
                   Entrar
-                </DesignButton>
-                <DesignButton
+                </Button>
+                <Button
                   type="button"
                   variant="text"
                   className="p-0"
@@ -370,7 +370,7 @@ export function AuthModalView({
                   {resetCountdown > 0
                     ? `Esqueci a senha (${resetCountdown}s)`
                     : "Esqueci a senha"}
-                </DesignButton>
+                </Button>
               </div>
               {resetSent && (
                 <div className="alert alert-success mt-3" role="alert">
@@ -382,7 +382,7 @@ export function AuthModalView({
           <Tab eventKey="register" title="Criar conta">
             <form onSubmit={(val) => void handleRegister(val)}>
               <div className="mb-3">
-                <DesignField
+                <Input
                   placeholder="Nome"
                   aria-label="Nome"
                   type="text"
@@ -392,7 +392,7 @@ export function AuthModalView({
                 />
               </div>
               <div className="mb-3">
-                <DesignField
+                <Input
                   placeholder="Email"
                   aria-label="Email"
                   type="email"
@@ -402,7 +402,7 @@ export function AuthModalView({
                 />
               </div>
               <div className="mb-3">
-                <DesignField
+                <Input
                   placeholder="Senha"
                   aria-label="Senha"
                   type="password"
@@ -411,13 +411,13 @@ export function AuthModalView({
                   required
                 />
               </div>
-              <DesignButton type="submit">
+              <Button type="submit">
                 Criar conta
-              </DesignButton>
+              </Button>
             </form>
           </Tab>
         </Tabs>
-        <DesignButton
+        <Button
           type="button"
           variant="secondary"
           className="w-100 mt-2"
@@ -425,7 +425,7 @@ export function AuthModalView({
           disabled={googlePending}
         >
           Continuar com Google
-        </DesignButton>
+        </Button>
         {error && (
           <div className="alert alert-danger mt-2" role="alert">
             {error}

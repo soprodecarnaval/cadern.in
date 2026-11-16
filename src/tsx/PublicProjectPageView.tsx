@@ -1,13 +1,12 @@
+import { Button, Page, Link } from "./DesignSystem";
 import { useEffect, useState } from "react";
 import {
   Alert,
   Badge,
-  Button,
-  Container,
   Spinner,
   Table,
 } from "react-bootstrap";
-import { Link, useParams } from "react-router-dom";
+import { Link as RouterLink, useParams } from "react-router-dom";
 import type { WithId } from "../lib/db";
 import { isAdmin, isEditor, isReviewer } from "../lib/roles";
 import {
@@ -141,30 +140,30 @@ export function PublicProjectPageView({
 
   if (projectError) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="danger">
           Não foi possível carregar o projeto.{" "}
-          <Button variant="outline-danger" onClick={() => retryProject((n) => n + 1)}>
+          <Button variant="danger-secondary" onClick={() => retryProject((n) => n + 1)}>
             Tentar novamente
           </Button>
         </Alert>
-      </Container>
+      </Page>
     );
   }
 
   if (project === "loading") {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Spinner animation="border" />
-      </Container>
+      </Page>
     );
   }
 
   if (!project || project.deletedAt) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="danger">Projeto não encontrado.</Alert>
-      </Container>
+      </Page>
     );
   }
 
@@ -173,7 +172,7 @@ export function PublicProjectPageView({
   const canUpload = isEditor(myRole);
 
   return (
-    <Container className="mt-4">
+    <Page className="mt-4">
       <div className="d-flex justify-content-between align-items-start mb-1">
         <h2>{project.title}</h2>
         <div className="d-flex gap-2 align-items-center">
@@ -183,11 +182,9 @@ export function PublicProjectPageView({
             </Badge>
           )}
           {canManage && (
-            <Link to={projectSettingsPath(slug ?? "")}>
-              <Button size="sm" variant="outline-primary">
+            <Link to={projectSettingsPath(slug ?? "")} size="sm" variant="secondary">
                 Configurações
-              </Button>
-            </Link>
+              </Link>
           )}
         </div>
       </div>
@@ -198,7 +195,7 @@ export function PublicProjectPageView({
       <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
         <h5 className="mb-0">Caderninhos</h5>
         {canManage && currentUser && !creating && songbooks !== null && (
-          <Button variant="outline-primary" size="sm" onClick={() => setCreating(true)}>
+          <Button variant="secondary" size="sm" onClick={() => setCreating(true)}>
             + Novo caderninho
           </Button>
         )}
@@ -214,7 +211,7 @@ export function PublicProjectPageView({
       )}
       {songbooksError ? (
         <Alert variant="danger">Não foi possível carregar os caderninhos.{" "}
-          <Button variant="outline-danger" onClick={() => retrySongbooks((n) => n + 1)}>Tentar novamente</Button>
+          <Button variant="danger-secondary" onClick={() => retrySongbooks((n) => n + 1)}>Tentar novamente</Button>
         </Alert>
       ) : songbooks === null ? (
         <Spinner animation="border" />
@@ -230,7 +227,7 @@ export function PublicProjectPageView({
             {songbooks.map((sb) => (
               <tr key={sb.id}>
                 <td>
-                  <Link
+                  <RouterLink
                     to={
                       isMember
                         ? songbookPath(project.id, sb.slug)
@@ -238,7 +235,7 @@ export function PublicProjectPageView({
                     }
                   >
                     {sb.title}
-                  </Link>
+                  </RouterLink>
                 </td>
                 <td className="text-muted text-end">
                   {!sb.isPublished && "não publicado"}
@@ -252,20 +249,18 @@ export function PublicProjectPageView({
         <div className="d-flex justify-content-between align-items-center mb-2 gap-2">
           <h5 className="mb-0">Partituras</h5>
           {canUpload && (
-            <Button
-              size="sm"
-              variant="outline-primary"
-              as="a"
+            <a
+              className="btn btn-outline-secondary ds-button btn-sm"
               href={buildExportDeepLink({ projectId: project.id })}
             >
               Enviar partitura
-            </Button>
+            </a>
           )}
         </div>
       )}
       {!isMember ? null : scoresError ? (
         <Alert variant="danger">Não foi possível carregar as partituras.{" "}
-          <Button variant="outline-danger" onClick={() => retryScores((n) => n + 1)}>Tentar novamente</Button>
+          <Button variant="danger-secondary" onClick={() => retryScores((n) => n + 1)}>Tentar novamente</Button>
         </Alert>
       ) : scoresLoading ? (
         <Spinner animation="border" />
@@ -286,17 +281,15 @@ export function PublicProjectPageView({
                 <td>{resolveScoreMetadata(score).title}</td>
                 <td>{resolveScoreMetadata(score).composer}</td>
                 <td>
-                  <Link to={`/score/${encodeURIComponent(score.id)}`}>
-                    <Button size="sm" variant="outline-secondary">
+                  <Link to={`/score/${encodeURIComponent(score.id)}`} size="sm" variant="secondary">
                       Ver
-                    </Button>
-                  </Link>
+                    </Link>
                 </td>
               </tr>
             ))}
           </tbody>
         </Table>
       )}
-    </Container>
+    </Page>
   );
 }

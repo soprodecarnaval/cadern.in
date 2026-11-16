@@ -1,15 +1,13 @@
+import { Page, Link } from "./DesignSystem";
 import { useEffect, useState } from "react";
 import {
   Alert,
   Badge,
-  Button,
   Card,
   Col,
-  Container,
   Row,
   Spinner,
 } from "react-bootstrap";
-import { Link } from "react-router-dom";
 
 import type { WithId } from "../lib/db";
 import { isAdmin } from "../lib/roles";
@@ -81,17 +79,13 @@ function ProjectCard({
           )}
         </div>
         <div className="d-flex gap-2">
-          <Link to={projectPath(project.slug)}>
-            <Button size="sm" variant="outline-secondary">
+          <Link to={projectPath(project.slug)} size="sm" variant="secondary">
               Ver
-            </Button>
-          </Link>
-          {myRole !== "loading" && isAdmin(myRole) && (
-            <Link to={projectSettingsPath(project.slug)}>
-              <Button size="sm" variant="outline-primary">
-                Configurações
-              </Button>
             </Link>
+          {myRole !== "loading" && isAdmin(myRole) && (
+            <Link to={projectSettingsPath(project.slug)} size="sm" variant="secondary">
+                Configurações
+              </Link>
           )}
         </div>
       </Card.Body>
@@ -126,19 +120,17 @@ export function MeusProjetosPageView({
 
   if (!currentUser) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="warning">Faça login para ver seus projetos.</Alert>
-      </Container>
+      </Page>
     );
   }
 
   return (
-    <Container className="mt-4">
+    <Page className="mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Meus projetos</h2>
-        <Link to="/projects/new">
-          <Button variant="primary">Novo projeto</Button>
-        </Link>
+        <Link to="/projects/new" variant="primary">Novo projeto</Link>
       </div>
 
       {loading ? (
@@ -160,6 +152,6 @@ export function MeusProjetosPageView({
           ))}
         </Row>
       )}
-    </Container>
+    </Page>
   );
 }

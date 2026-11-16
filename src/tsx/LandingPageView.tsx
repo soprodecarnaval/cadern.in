@@ -1,4 +1,4 @@
-import { DesignButton } from "./DesignSystem";
+import { Button } from "./DesignSystem";
 import {
   useMemo,
   useRef,
@@ -141,9 +141,9 @@ export function LandingPageView({
                   E faça upload de novas partituras para seus projetos no
                   cadern.in. Disponível para Windows, Mac e Linux.
                 </p>
-                <DesignButton className="landing-cta" disabled>
+                <Button className="landing-cta" disabled>
                   Em breve
-                </DesignButton>
+                </Button>
               </Accordion.Body>
             </Accordion.Item>
             <Accordion.Item eventKey="plugin">

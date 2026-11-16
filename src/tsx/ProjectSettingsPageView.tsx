@@ -1,9 +1,8 @@
+import { Button, Page, Input } from "./DesignSystem";
 import { useEffect, useState } from "react";
 import {
   Alert,
   Badge,
-  Button,
-  Container,
   Form,
   Spinner,
   Table,
@@ -121,25 +120,25 @@ export function ProjectSettingsPageView({
 
   if (project === "loading" || myRole === "loading") {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Spinner animation="border" />
-      </Container>
+      </Page>
     );
   }
 
   if (!project || project.deletedAt || !currentUser) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="danger">Projeto não encontrado ou acesso negado.</Alert>
-      </Container>
+      </Page>
     );
   }
 
   if (!isAdmin(myRole)) {
     return (
-      <Container className="mt-4">
+      <Page className="mt-4">
         <Alert variant="danger">Sem permissão para acessar esta página.</Alert>
-      </Container>
+      </Page>
     );
   }
 
@@ -248,7 +247,7 @@ export function ProjectSettingsPageView({
   const pendingInvitations = invitations.filter((inv) => inv.accepted === null);
 
   return (
-    <Container className="mt-4" style={{ maxWidth: 680 }}>
+    <Page className="mt-4" style={{ maxWidth: 680 }}>
       <h2 className="mb-4">Configurações: {project.title}</h2>
 
       {/* Title */}
@@ -256,7 +255,8 @@ export function ProjectSettingsPageView({
         <h5>Nome do projeto</h5>
         <Form onSubmit={(e) => void handleSaveTitle(e)}>
           <Form.Group className="mb-2">
-            <Form.Control
+            <Form.Control as={Input}
+              aria-label="Nome do projeto"
               type="text"
               value={titleInput}
               onChange={(e) => setTitleInput(e.target.value)}
@@ -301,7 +301,7 @@ export function ProjectSettingsPageView({
                   </td>
                   <td>
                     {options.length > 1 ? (
-                      <Form.Select
+                      <Form.Select className="ds-field ds-select"
                         size="sm"
                         value={role}
                         onChange={(e) =>
@@ -329,7 +329,7 @@ export function ProjectSettingsPageView({
                       {canRemoveMember(myRole, isSelf) && (
                         <Button
                           size="sm"
-                          variant="outline-danger"
+                          variant="danger-secondary"
                           disabled={removingMember === uid}
                           onClick={() => void handleRemoveMember(uid)}
                         >
@@ -357,9 +357,9 @@ export function ProjectSettingsPageView({
             onSubmit={(e) => void handleInvite(e)}
             className="d-flex gap-2 align-items-end flex-wrap"
           >
-            <Form.Group>
+            <Form.Group controlId="project-invite-email">
               <Form.Label>E-mail</Form.Label>
-              <Form.Control
+              <Form.Control as={Input}
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
@@ -369,9 +369,9 @@ export function ProjectSettingsPageView({
                 style={{ width: 240 }}
               />
             </Form.Group>
-            <Form.Group>
+            <Form.Group controlId="project-invite-role">
               <Form.Label>Papel</Form.Label>
-              <Form.Select
+              <Form.Select className="ds-field ds-select"
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value as InvitableRole)}
                 style={{ width: "auto" }}
@@ -427,7 +427,7 @@ export function ProjectSettingsPageView({
                   <td>
                     <Button
                       size="sm"
-                      variant="outline-danger"
+                      variant="danger-secondary"
                       disabled={cancellingInvite === inv.toUserId}
                       onClick={() => void handleCancelInvitation(inv.toUserId)}
                     >
@@ -452,7 +452,7 @@ export function ProjectSettingsPageView({
           onDeleted={() => void navigate("/projects")}
         />
       )}
-    </Container>
+    </Page>
   );
 }
 
@@ -498,7 +498,8 @@ function DeleteProjectSection({
         onSubmit={(e) => void handleDelete(e)}
         className="d-flex gap-2 align-items-start flex-wrap"
       >
-        <Form.Control
+        <Form.Control as={Input}
+          aria-label="Confirme o nome do projeto"
           value={confirmation}
           onChange={(e) => setConfirmation(e.target.value)}
           placeholder={project.title}

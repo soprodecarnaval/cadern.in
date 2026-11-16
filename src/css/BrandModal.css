@@ -219,3 +219,14 @@
   outline: var(--ds-border) solid var(--ds-ink);
   outline-offset: 3px;
 }
+
+:is(.brand-modal .btn-sm, .ds-button.btn-sm) {
+  padding: var(--ds-space-1) var(--ds-space-3);
+  font-size: var(--ds-caption);
+}
+:is(.brand-modal .btn-lg, .ds-button.btn-lg) {
+  padding: var(--ds-space-3) var(--ds-space-8);
+  font-size: var(--ds-heading);
+}
+.ds-field.ds-select { height: auto; min-height: 48px; }
+.ds-field.ds-select.form-select-sm { min-height: 36px; font-size: var(--ds-caption); }

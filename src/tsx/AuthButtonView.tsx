@@ -1,4 +1,4 @@
-import { Button } from "react-bootstrap";
+import { Button } from "./DesignSystem";
 
 interface AuthButtonViewProps {
   currentUser: import("firebase/auth").User | null;
@@ -15,7 +15,8 @@ export function AuthButtonView({
     return (
       <Button
         type="button"
-        className="btn btn-link p-0 d-flex align-items-center gap-2 text-light text-decoration-none"
+        variant="text"
+        className="p-0 d-flex align-items-center gap-2 text-decoration-none"
         onClick={(_e) => onOpenUserModal()}
         style={{ position: "relative" }}
       >
@@ -37,12 +38,12 @@ export function AuthButtonView({
                 width: 28,
                 height: 28,
                 borderRadius: "50%",
-                background: "#888",
+                background: "var(--ds-yellow)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 13,
-                color: "#fff",
+                color: "var(--ds-ink)",
               }}
             >
               {(currentUser.displayName?.[0] ?? "?").toUpperCase()}
@@ -76,7 +77,7 @@ export function AuthButtonView({
   }
   return (
     <Button
-      variant="outline-light"
+      variant="secondary"
       size="sm"
       onClick={(_e) => onOpenUserModal()}
     >

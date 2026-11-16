@@ -1,6 +1,7 @@
 import { Container, Nav, Navbar } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import "../css/App.css";
+import "../css/DesignPage.css";
 import { AuthButtonView } from "./AuthButtonView";
 export function AppNavigation({
   currentUser,
@@ -16,9 +17,7 @@ export function AppNavigation({
   return (
     <Navbar
       expand="lg"
-      className="bg-body-tertiary"
-      bg="dark"
-      data-bs-theme="dark"
+      className="ds-navigation"
     >
       <Container>
         <Navbar.Brand as={Link} to="/" className="nav-bar-title fs-3">

@@ -23,7 +23,7 @@ Sequence and dependencies: [three workstreams](../../tasks/WORKSTREAMS.md).
 
 Execute sequentially after all three workstreams are completed and integrated:
 
-- [011 — Merge PR #432 and establish home/auth design-system foundations](../../tasks/011-design-system-foundations/TASK.md) — open.
+- [011 — Design system and app-wide adoption](../../tasks/011-design-system-foundations/TASK.md) — in-progress.
 - [012 — Rename application routes to pt-BR](../../tasks/012-pt-br-routes/TASK.md) — open; after 011.
 
 Both require wireframe iteration and implementation-plan approval. See

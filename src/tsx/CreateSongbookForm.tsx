@@ -1,5 +1,6 @@
+import { Button, Input } from "./DesignSystem";
 import { useState } from "react";
-import { Alert, Button, Form, Spinner } from "react-bootstrap";
+import { Alert, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { slugify } from "../lib/slugify";
 import { songbookPath } from "../lib/songbook";
@@ -63,7 +64,7 @@ export function CreateSongbookForm({
     >
       <Form.Group controlId="new-songbook-title">
         <Form.Label>Título do novo caderninho</Form.Label>
-        <Form.Control
+        <Form.Control as={Input}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Ex.: Carnaval 2027"
@@ -82,7 +83,7 @@ export function CreateSongbookForm({
             <><Spinner animation="border" size="sm" /> Criando…</>
           ) : "Criar"}
         </Button>
-        <Button variant="outline-secondary" onClick={onCancel} disabled={pending}>
+        <Button variant="secondary" onClick={onCancel} disabled={pending}>
           Cancelar
         </Button>
       </div>

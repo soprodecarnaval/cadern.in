@@ -69,3 +69,20 @@ Reference validation passed: Storybook typecheck, targeted ESLint, static Storyb
 - App build (dummy Firebase build values; no backend calls), Storybook build/typecheck and targeted ESLint pass. Focused Chromium checks pass at 1280/390px, plus all auth and landing stories. Auth-focused checks stub Firebase initialization in the browser only; callbacks remain fixture operations.
 - Full existing story suite: 162/177 passed. Remaining failures include auth Firebase initialization without credentials, scoped-score audio isolation, a transient Vite outdated-request error and the reference transition assertion (fixed and rechecked). These broader harness limitations remain; do not report the full suite as passing.
 - Adoption inventory and proposed batches: [ADOPTION.md](ADOPTION.md). Next review: Storybook `design-system-reference--project-batch`; production project migration awaits approval.
+
+## Project batch
+
+User approved project treatment and requested commit/continuation. Shared
+foundations/home-auth batch committed as `af996213`. Migrated navigation,
+auth entry control, project list/create/public/settings, new-songbook form and
+not-found page. Added shared page/link support and size/destructive variants;
+kept native link/deep-link navigation and Bootstrap field context.
+
+Validation: 43/43 relevant static Storybook render/play checks pass; mobile
+navigation/create/public/settings checked; app and Storybook builds, story
+TypeScript, targeted ESLint and whitespace checks pass. Development-server
+checks suffered reload interference from other worktrees; static checks avoid
+that interference. Project migration remains uncommitted pending user review.
+Next visual gate: builder/dialog batch in Storybook; see ADOPTION.md.
+
+User approved both builder/dialog previews and requested committing the project batch. Per user preference, shared component exports and consumers now use `Button`, `Input`, `Modal`, `Link` and `Page` without a Design prefix. Batch 2 implementation is authorized; it has not yet been applied to production.
