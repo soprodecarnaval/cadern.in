@@ -29,6 +29,7 @@ before implementation. No implementation is authorized by these task plans.
 | 1 | [008 — Public/member routes](008-public-member-songbook-routes/TASK.md) | Collaborative Flow | Medium–large | 004 from B |
 | 2 | [009 — Songbook-scoped review](009-songbook-scoped-review/TASK.md) | Collaborative Flow | Large | 008 |
 | 3 | [010 — Contextual exporter uploads](010-contextual-exporter-uploads/TASK.md) | Collaborative Flow; exporter integration | Large | 008, 009 |
+| 4 | [011 — Exporter deep-link fallback](011-export-deep-link-fallback/TASK.md) | Collaborative Flow; exporter integration | Small–medium | 010 |
 
 Start A/003 and B/004 first. C can iterate on wireframes while waiting for 004;
 implement its route changes after 004. Finish isolated UI changes before broad
