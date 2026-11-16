@@ -136,8 +136,8 @@
       rule — there is still no unscoped upload — but the authenticated area
       gains an escape hatch: the same link, copied on the website and pasted
       by hand, resolves the same destination a protocol launch would.
-      The link itself becomes one opaque token:
-      <code style="font-family:var(--mono)">cadernin-export://</code> + base64 of the JSON payload.
+      The existing link format stays unchanged:
+      <code style="font-family:var(--mono)">cadernin-export://upload?projectId=…&amp;…</code>.
     </p>
   </header>
 
@@ -211,7 +211,7 @@
               <span class="rc-hint">⌥ right-click over «Enviar partitura»</span>
             </div>
             <div>
-              <div class="link-chip">href = cadernin-export://eyJwcm9qZWN0SWQiOiJzdXJkby1lLWNpYSIsInNjb3JlSWQiOiJtaW5laXJpbmhvIiwiZXhwZWN0ZWRTY29yZVJldmlzaW9uSWQiOiJzY3ItbWluZWlyaW5oby00LTIiLCJzb25nYm9va0lkIjoic2ItY2FybmF2YWwtMjAyNiIsImV4cGVjdGVkU29uZ2Jvb2tSZXZpc2lvbklkIjoic2JyLTctMiJ9</div>
+              <div class="link-chip">href = cadernin-export://upload?projectId=surdo-e-cia&amp;scoreId=mineirinho&amp;expectedScoreRevisionId=scr-4-2&amp;songbookId=sb-carnaval-2026&amp;expectedSongbookRevisionId=sbr-7-2</div>
               <div class="link-decode">↳ decodes to {"projectId":"surdo-e-cia","scoreId":"mineirinho","expectedScoreRevisionId":"scr-mineirinho-4-2","songbookId":"sb-carnaval-2026","expectedSongbookRevisionId":"sbr-7-2"}</div>
             </div>
           </div>
@@ -295,7 +295,7 @@
         <p class="caption">
           <strong>Invalid paste.</strong> Two failures, both failing closed: wrong
           protocol / plain text, and a well-formed <code>cadernin-export://</code> whose
-          payload doesn't decode to valid JSON with a <code>projectId</code>. No
+          query string is missing a <code>projectId</code>. No
           destination is ever guessed from a bad paste.
         </p>
       </div>
@@ -321,7 +321,7 @@
               <h2>Nenhum destino selecionado</h2>
               <div class="field" style="margin-top:-4px">
                 <label for="paste3">O link não abriu o app? Cole-o aqui</label>
-                <span class="input" id="paste3">cadernin-export://eyJwcm9qZWN0SWQiOiJzdXJkby1lLWNpYSIsInNjb3JlSWQ<span class="ellip">…</span>fMiJ9</span>
+                <span class="input" id="paste3">cadernin-export://upload?projectId=surdo-e-cia&amp;scoreId=mineirinho&amp;expectedScoreRevisionId=scr-4-2&amp;songbookId=sb-carnaval-2026&amp;expectedSongbookRevisionId=sbr-7-2<span class="ellip">…</span></span>
               </div>
               <div class="actions">
                 <span class="btn">Continuar</span>
@@ -364,16 +364,11 @@
     <h2>Notes — format and trust</h2>
     <div class="notes">
       <div class="note">
-        <h3>Why URL-safe base64, not standard</h3>
-        <p>
-          The token sits in a URL's authority slot, so the alphabet matters:
-        </p>
-        <div class="vh">
-          <b>/</b><span>would end the URL's authority and start a path — the token splits in two</span>
-          <b>+</b><span>percent-encodes oddly in URLs and can degrade to a space in some copy paths</span>
-          <b>=</b><span>padding is legal here but brittle — chat and email copy sometimes trim it</span>
-          <b>- _</b><span>URL-safe alphabet (RFC 4648 §5, unpadded): survives <code>new URL()</code>, copy-paste, and <code>app.setAsDefaultProtocolClient</code> on every OS unscathed</span>
-        </div>
+        <h3>Keep the existing URL format</h3>
+        <p><code>cadernin-export://upload?projectId=…&amp;…</code> carries the
+          project and optional score/songbook revision context as query parameters.
+          Both protocol launches and pasted links use the existing parser.</p>
+      </div>
       </div>
       <div class="note">
         <h3>A pasted link is protocol-launch input</h3>

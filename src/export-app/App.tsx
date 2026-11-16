@@ -15,14 +15,15 @@ import {
   type MetadataValues,
 } from "./components/MetadataForm";
 import { PartsTable } from "./components/PartsTable";
+import { NoContext } from "./components/NoContext";
 
 /**
  * The exporter has no destination picker of its own (010): every launch
- * must come from a cadernin-export:// link, cold (process argv) or warm
- * (second-instance / macOS open-url). Held above the login gate so a
+ * must come from a cadernin-export:// link, via protocol launch or paste.
+ * Held above the login gate so a
  * cold-launch link survives signing in.
  */
-function useExportContext(): ExportDeepLinkContext | null {
+function useExportContext() {
   const [context, setContext] = useState<ExportDeepLinkContext | null>(null);
   useEffect(() => {
     void window.api.getExportContext().then((pending) => {
@@ -32,7 +33,7 @@ function useExportContext(): ExportDeepLinkContext | null {
     });
     return window.api.onExportContext(setContext);
   }, []);
-  return context;
+  return [context, setContext] as const;
 }
 
 /** Library messages are English by policy; the UI is pt-BR. */
@@ -52,7 +53,7 @@ function describeFailure(failure: ExportFailure): string {
 export function App() {
   const { currentUser, pendingUser, logout, resendVerificationEmail } =
     useAuth();
-  const context = useExportContext();
+  const [context, setContext] = useExportContext();
 
   // Login gates the whole app: uploading is the point of it, and a session
   // established up front is one less interruption mid-export. An unverified
@@ -83,7 +84,10 @@ export function App() {
     return (
       <main className="app app--login">
         <h1>cadern.in — Exportador</h1>
-        <NoContext onLogout={() => void logout()} />
+        <NoContext
+          onContext={setContext}
+          onLogout={() => void logout()}
+        />
       </main>
     );
   }
@@ -94,27 +98,6 @@ export function App() {
       user={currentUser}
       context={context}
     />
-  );
-}
-
-/**
- * No deep link, no destination — not even an option to proceed (010): opens
- * from a project page or a songbook-scoped score page on the website, never
- * from inside the exporter itself.
- */
-function NoContext({ onLogout }: { onLogout: () => void }) {
-  return (
-    <div className="login-form">
-      <h2>Nenhum destino selecionado</h2>
-      <p>
-        Abra o Exportador a partir da página de um projeto ou de uma
-        partitura em um caderninho no site do cadern.in — o botão “Enviar
-        partitura” abre este app já sabendo para onde enviar.
-      </p>
-      <button type="button" className="btn-link" onClick={onLogout}>
-        Usar outra conta
-      </button>
-    </div>
   );
 }
 
