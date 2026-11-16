@@ -18,6 +18,7 @@ import type { ProfileTab } from "../account/ProfileModalView";
 import arrowNext from "../../../assets/brand/arrow-next.svg";
 import arrowPrev from "../../../assets/brand/arrow-prev.svg";
 import chevronRight from "../../../assets/brand/chevron-right.svg";
+import flagBeloHorizonte from "../../../assets/brand/flag-belo-horizonte.svg";
 import instagram from "../../../assets/brand/instagram.svg";
 import logoWhite from "../../../assets/brand/logo-white.svg";
 import logo from "../../../assets/brand/logo.svg";
@@ -541,10 +542,20 @@ function LandingFooter({
       <div className="landing-footer-inner">
         <div className="landing-footer-brand">
           <Logo inverted />
-          <a href={STATIC.instagram} className="landing-footer-social">
-            <img src={instagram} alt="" />
-            /soprodecarnaval
-          </a>
+          <div className="landing-footer-row">
+            <a href={STATIC.instagram} className="landing-footer-social">
+              <img src={instagram} alt="" />
+              /soprodecarnaval
+            </a>
+            <p className="landing-footer-made-in">
+              <img src={flagBeloHorizonte} alt="Bandeira de Belo Horizonte" />
+              <span>
+                Feito
+                <br />
+                em BH
+              </span>
+            </p>
+          </div>
         </div>
         <nav className="landing-footer-links" aria-label="Rodapé">
           <ul>

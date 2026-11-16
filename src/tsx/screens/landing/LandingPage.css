@@ -76,7 +76,8 @@
   font-weight: 300;
 }
 
-.landing-header-nav a:hover {
+/* Sobre, Contribua, Ajuda only: not the account menu's links. */
+.landing-header-nav > a:hover {
   text-decoration: underline;
 }
 
@@ -696,6 +697,36 @@
 .landing-footer-social img {
   width: 30px;
   height: 30px;
+}
+
+/* Instagram, then the flag and "Feito em BH." beside it. */
+.landing-footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 44px;
+}
+
+.landing-footer-made-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px; /* as between the Instagram icon and handle */
+  margin: 0;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+/* "Feito" over "em BH": two lines about as tall as the flag. */
+.landing-footer-made-in span {
+  position: relative;
+  top: 2px;
+  line-height: 1.1;
+}
+
+/* The flag's own 10:7 proportions. */
+.landing-footer-made-in img {
+  width: 45px;
+  height: 31.5px;
 }
 
 .landing-footer-links {
