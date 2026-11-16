@@ -10,7 +10,7 @@ import type { CommentAnchor, ReviewCommentDoc } from "../../../../types/docs";
 import { commentThreads } from "../../../lib/comments";
 import type { LoadedScore } from "../../../lib/loadScore";
 import { canDeleteScore, canEditScoreMetadata, isReviewer } from "../../../lib/roles";
-import { projectPath } from "../../../lib/songbook";
+import { projectPath } from "../../../lib/routes";
 import { useMemberRoleValue } from "../../../lib/useMemberRoleValue";
 
 import type { ScorePin } from "../../components/scores/detail/ScoreDisplay";

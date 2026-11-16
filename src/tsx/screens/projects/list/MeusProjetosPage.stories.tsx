@@ -5,7 +5,7 @@ import { pending, services, user } from "../../../../../.storybook/fixtures/scre
 const meta = {
   title: "Screens/MeusProjetosPage",
   component: MeusProjetosPageView,
-  parameters: { route: "/projects", routePath: "/projects" },
+  parameters: { route: "/projetos", routePath: "/projetos" },
   args: { services, currentUser: user },
 } satisfies Meta<typeof MeusProjetosPageView>;
 export default meta;

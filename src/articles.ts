@@ -1,3 +1,5 @@
+import { articlePath as articleRoute, articlesPath } from "./lib/routes";
+
 /**
  * A piece of an article's body, in reading order. Text may use **bold** and
  * [links](https://…); nothing else is parsed.
@@ -172,7 +174,7 @@ export type ArticleCard = {
 };
 
 /** The list of every article. */
-export const ARTICLES_PATH = "/artigos";
+export const ARTICLES_PATH = articlesPath();
 
 const dateFormat = new Intl.DateTimeFormat("pt-BR", {
   day: "numeric",
@@ -187,7 +189,7 @@ export function formatArticleDate(isoDate: string): string {
 }
 
 export function articlePath(article: Article): string {
-  return `${ARTICLES_PATH}/${article.slug}`;
+  return articleRoute(article.slug);
 }
 
 // Placeholders until the articles are written: their pages don't exist yet.

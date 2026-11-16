@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Alert, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { slugify } from "../../../../lib/slugify";
-import { songbookPath } from "../../../../lib/songbook";
+import { songbookPath } from "../../../../lib/routes";
 
 type CreateSongbookServices = Pick<
   typeof import("../../../../lib/db"),

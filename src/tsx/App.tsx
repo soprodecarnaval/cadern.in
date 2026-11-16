@@ -10,6 +10,7 @@ import { useAuth } from "../auth";
 import "../styles/app.css";
 import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { getPendingUserProjectInvitations } from "../lib/db";
+import { ROUTE_PATTERNS } from "../lib/routes";
 import { CreateProjectPage } from "./screens/projects/create/CreateProjectPage";
 import { MeusProjetosPage } from "./screens/projects/list/MeusProjetosPage";
 import { NotFoundPage } from "./screens/not-found/NotFoundPage";
@@ -37,9 +38,9 @@ function App() {
   // The landing and article pages draw their own header and footer.
   const { pathname } = useLocation();
   const isLanding =
-    pathname === "/" ||
-    pathname === "/artigos" ||
-    pathname.startsWith("/artigos/");
+    pathname === ROUTE_PATTERNS.home ||
+    pathname === ROUTE_PATTERNS.articles ||
+    pathname.startsWith(`${ROUTE_PATTERNS.articles}/`);
 
   useEffect(() => {
     if (!FEATURE_FLAG_COLLAB_FLOW || !currentUser) {
@@ -70,7 +71,7 @@ function App() {
 
       <Routes>
         <Route
-          path="/"
+          path={ROUTE_PATTERNS.home}
           element={
             <LandingPage
               inboxCount={inboxCount}
@@ -79,42 +80,42 @@ function App() {
           }
         />
         <Route
-          path="/montar"
+          path={ROUTE_PATTERNS.builder}
           element={<HomePage onRequestLogin={() => openUserModal()} />}
         />
         <Route
-          path="/artigos"
+          path={ROUTE_PATTERNS.articles}
           element={
             <ArticlesPage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
           }
         />
         <Route
-          path="/artigos/:slug"
+          path={ROUTE_PATTERNS.article}
           element={
             <ArticlePage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
           }
         />
-        <Route path="/score/:scoreId" element={<ScorePage />} />
-        <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
+        <Route path={ROUTE_PATTERNS.score} element={<ScorePage />} />
+        <Route path={ROUTE_PATTERNS.scoreRevision} element={<ScorePage />} />
         {FEATURE_FLAG_COLLAB_FLOW && (
           <>
-            <Route path="/projects" element={<MeusProjetosPage />} />
-            <Route path="/projects/new" element={<CreateProjectPage />} />
-            <Route path="/project/:slug" element={<PublicProjectPage />} />
+            <Route path={ROUTE_PATTERNS.projects} element={<MeusProjetosPage />} />
+            <Route path={ROUTE_PATTERNS.newProject} element={<CreateProjectPage />} />
+            <Route path={ROUTE_PATTERNS.project} element={<PublicProjectPage />} />
             <Route
-              path="/project/:slug/settings"
+              path={ROUTE_PATTERNS.projectSettings}
               element={<ProjectSettingsPage />}
             />
             <Route
-              path="/project/:slug/songbook/:songbookSlug"
+              path={ROUTE_PATTERNS.publicSongbook}
               element={<SongbookPage />}
             />
             <Route
-              path="/project/:slug/songbook/:songbookSlug/manage"
+              path={ROUTE_PATTERNS.songbook}
               element={<SongbookManagePage />}
             />
             <Route
-              path="/project/:slug/songbook/:songbookSlug/manage/score/:scoreId"
+              path={ROUTE_PATTERNS.songbookScore}
               element={<SongbookScorePage />}
             />
           </>

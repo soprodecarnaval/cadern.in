@@ -6,7 +6,7 @@ import { fail, pending, services, user } from "../../../../../.storybook/fixture
 const meta = {
   title: "Screens/CreateProjectPage",
   component: CreateProjectPageView,
-  parameters: { route: "/projects/new", routePath: "/projects/new" },
+  parameters: { route: "/projetos/novo", routePath: "/projetos/novo" },
   args: {
     services: { ...services, getProjectBySlug: () => Promise.resolve(null) },
     currentUser: user,

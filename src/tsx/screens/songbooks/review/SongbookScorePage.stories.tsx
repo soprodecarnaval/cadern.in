@@ -21,8 +21,8 @@ const meta = {
   title: "Screens/SongbookScorePage",
   component: SongbookScorePageView,
   parameters: {
-    route: "/project/bloco-exemplo/songbook/carnaval/manage/score/fixture-score",
-    routePath: "/project/:slug/songbook/:songbookSlug/manage/score/:scoreId",
+    route: "/projetos/bloco-exemplo/cadernos/carnaval/gerenciar/partituras/fixture-score",
+    routePath: "/projetos/:slug/cadernos/:songbookSlug/gerenciar/partituras/:scoreId",
   },
   args: {
     services,
