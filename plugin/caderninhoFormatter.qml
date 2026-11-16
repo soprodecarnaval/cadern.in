@@ -5,6 +5,7 @@ import QtQuick.Controls 2.15
 import MuseScore 3.0
 import "translations.js" as I18n
 import "musescoreInstruments.js" as MsInstruments
+import "tubaNotation.js" as TubaNotation
 
 MuseScore {
     id: caderninhoFormatter
@@ -132,16 +133,17 @@ MuseScore {
                     color: textColor
                     text: t("setStyle")
                 }
+                ToolTip.visible: hovered
+                ToolTip.text: t("tubaNotationTooltip")
+                ToolTip.delay: 400
                 Layout.fillWidth: true
                 Layout.margins: 1
                 onClicked: {
-                    curScore.startCmd();
                     if (optAll.checked) {
                         forAllParts(setStyle);
                     } else {
                         setStyle(curScore);
                     }
-                    curScore.endCmd();
                 }
             }
 
@@ -312,6 +314,23 @@ MuseScore {
             }
         }
 
+        CheckBox {
+            id: debugModeCheckbox
+            checked: debugMode
+            onCheckedChanged: {
+                debugMode = checked;
+                if (!checked)
+                    logText = "";
+            }
+
+            Text {
+                text: t("debugMode")
+                color: textColor
+                anchors.left: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
         Text {
             text: "v" + version
             color: textColor
@@ -341,7 +360,8 @@ MuseScore {
 
     function log(msg) {
         if (verbose) {
-            logText += msg + "\n";
+            if (debugMode)
+                logText += msg + "\n";
             console.log(msg);
         }
     }
@@ -362,23 +382,33 @@ MuseScore {
     function setStyle(score) {
         var style = score.style;
         score.startCmd();
-        // A4 landscape
-        style.setValue("pageWidth", 11.6902);
-        style.setValue("pageHeight", 6.69291);
-        style.setValue("pagePrintableWidth", 11.2965);
-        style.setValue("staffLowerBorder", 4);
-        // Margin - 5mm and 0 in bottom
-        style.setValue("pageTwosided", true);
-        style.setValue("pageOddLeftMargin", 0.19685039370078738);
-        style.setValue("pageOddTopMargin", 0.19685039370078738);
-        style.setValue("pageOddBottomMargin", 0);
-        style.setValue("pageEvenLeftMargin", 0.19685039370078738);
-        style.setValue("pageEvenTopMargin", 0.19685039370078738);
-        style.setValue("midClefKeyRightMargin", 1);
-        style.setValue("clefKeyRightMargin", 0.8);
-        style.setValue("pageEvenBottomMargin", 0);
-        style.setValue("enableIndentationOnFirstSystem", 0);
-        score.endCmd();
+        try {
+            // A4 landscape
+            style.setValue("pageWidth", 11.6902);
+            style.setValue("pageHeight", 6.69291);
+            style.setValue("pagePrintableWidth", 11.2965);
+            style.setValue("staffLowerBorder", 4);
+            // Margin - 5mm and 0 in bottom
+            style.setValue("pageTwosided", true);
+            style.setValue("pageOddLeftMargin", 0.19685039370078738);
+            style.setValue("pageOddTopMargin", 0.19685039370078738);
+            style.setValue("pageOddBottomMargin", 0);
+            style.setValue("pageEvenLeftMargin", 0.19685039370078738);
+            style.setValue("pageEvenTopMargin", 0.19685039370078738);
+            style.setValue("midClefKeyRightMargin", 1);
+            style.setValue("clefKeyRightMargin", 0.8);
+            style.setValue("pageEvenBottomMargin", 0);
+            style.setValue("enableIndentationOnFirstSystem", 0);
+            TubaNotation.apply(score, {
+                ClefType: typeof ClefType !== "undefined" ? ClefType : null,
+                Element: Element,
+                fraction: fraction,
+                newElement: newElement,
+                log: log
+            });
+        } finally {
+            score.endCmd();
+        }
     }
 
     function setFingeringFontSize(score, value) {
@@ -534,7 +564,7 @@ MuseScore {
         var maxPitch = 26;
         cursor.rewind(0);
         while (cursor.segment) {
-            if (cursor.element.notes && cursor.element.notes.length > 0) {
+            if (cursor.element && cursor.element.notes && cursor.element.notes.length > 0) {
                 var pitch = cursor.element.notes[0].pitch;
                 minPitch = pitch < minPitch ? pitch : minPitch;
                 maxPitch = pitch > maxPitch ? pitch : maxPitch;
@@ -545,7 +575,8 @@ MuseScore {
     }
 
     function getNotePitchOffset(cursor, pitch, minPitch, maxPitch) {
-        return minOffset + (cursor.element.notes.length - 1) * multiNoteOffset + (pitch - minPitch) / (maxPitch - minPitch) * pitchOffsetScale;
+        var rangeOffset = maxPitch > minPitch ? (pitch - minPitch) / (maxPitch - minPitch) * pitchOffsetScale : 0;
+        return minOffset + (cursor.element.notes.length - 1) * multiNoteOffset + rangeOffset;
     }
 
     function griffStaff(score, staffIdx, griffFn) {
