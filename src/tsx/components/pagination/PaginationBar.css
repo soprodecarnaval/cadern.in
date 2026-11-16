@@ -30,5 +30,46 @@ input[type=number] {
   --bs-pagination-active-bg: var(--ds-yellow);
   --bs-pagination-active-border-color: var(--ds-ink);
   align-items: stretch;
+  gap: 2px;
+  /* The arrow images' corners: 10 of their 50 units, drawn at 41px. */
+  --page-radius: calc(41px * 10 / 50);
 }
-.paginationInfo .ds-field { height: auto; min-width: 48px; padding: var(--ds-space-1); }
+
+/* Bootstrap overlaps neighbouring borders by 1px; with the gap they stand apart. */
+.paginationInfo .page-item:not(:first-child) .page-link {
+  margin-left: 0;
+}
+
+/* Every box gets the arrows' rounded corners, not just the ends. */
+.paginationInfo .page-item {
+  display: flex;
+}
+
+/* Each box fills the row, so all match the page field's height. */
+.paginationInfo .page-item .page-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--page-radius);
+}
+.paginationInfo .ds-field { height: auto; min-width: 48px; padding: var(--ds-space-1); border-radius: var(--page-radius); }
+
+/* Prev/Next use the landing carousel's arrow buttons, which draw their own
+   white box, border and corners; at the bar's height (41px) square. */
+.paginationInfo .page-arrow .page-link {
+  width: 41px;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.paginationInfo .page-arrow img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.paginationInfo .page-arrow.disabled img {
+  opacity: 0.35;
+}

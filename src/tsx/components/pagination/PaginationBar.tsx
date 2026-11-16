@@ -1,6 +1,8 @@
 import { Input } from "../../atoms/Input";
 import { Pagination, Form } from "react-bootstrap";
 
+import arrowNext from "../../../assets/brand/arrow-next.svg";
+import arrowPrev from "../../../assets/brand/arrow-prev.svg";
 import "./PaginationBar.css";
 
 interface PaginationBarProps {
@@ -13,9 +15,12 @@ const PaginationBar = ({ onChange, currentPage, maxNumberPages } : PaginationBar
   <>
     <Pagination className="paginationInfo">
     <Pagination.Prev
+      className="page-arrow"
       onClick={() => onChange(currentPage - 1)}
       disabled={currentPage === 1}
-    />
+    >
+      <img src={arrowPrev} alt="" />
+    </Pagination.Prev>
 
     <Form.Control as={Input}
       value={currentPage}
@@ -29,9 +34,12 @@ const PaginationBar = ({ onChange, currentPage, maxNumberPages } : PaginationBar
     </Pagination.Item>
 
     <Pagination.Next
+      className="page-arrow"
       onClick={() => onChange(currentPage + 1)}
       disabled={currentPage === maxNumberPages}
-    />
+    >
+      <img src={arrowNext} alt="" />
+    </Pagination.Next>
     </Pagination>
   </>
 )
