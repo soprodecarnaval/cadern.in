@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 535 62">
+  <defs>
+    <g id="loop">
+      <circle cx="10" cy="51.99" r="10" fill="#fff"/>
+      <path d="M10,57.62c-3.31,0-6-2.69-6-6V6C4,2.69,6.69,0,10,0s6,2.69,6,6v45.62c0,3.31-2.69,6-6,6Z" fill="#fcee21"/>
+    </g>
+  </defs>
+  <use href="#loop" x="20"/>
+  <use href="#loop" x="51"/>
+  <use href="#loop" x="82"/>
+  <use href="#loop" x="113"/>
+  <use href="#loop" x="144"/>
+  <use href="#loop" x="175"/>
+  <use href="#loop" x="206"/>
+  <use href="#loop" x="237"/>
+  <use href="#loop" x="268"/>
+  <use href="#loop" x="299"/>
+  <use href="#loop" x="330"/>
+  <use href="#loop" x="361"/>
+  <use href="#loop" x="392"/>
+  <use href="#loop" x="423"/>
+  <use href="#loop" x="454"/>
+  <use href="#loop" x="485"/>
+</svg>
