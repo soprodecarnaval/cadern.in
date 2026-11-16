@@ -322,16 +322,16 @@
   flex-direction: column;
 }
 
-/* One loop of the designed spiral strip, repeated across the cover. */
+/* A fixed set of whole loops scales with the notebook. The viewport may
+   naturally crop a loop while the carousel is scrolled. */
 .landing-caderno-spiral {
-  height: 62px;
-  margin: 0 15px -31px;
+  width: 100%;
+  aspect-ratio: 535 / 62;
+  flex-shrink: 0;
+  margin-bottom: calc(-100% * 31 / 535);
   position: relative;
   z-index: 1;
-  /* `space` draws only whole loops and spreads the leftover width evenly
-     between them, so a loop is never cut off at either end. */
-  background: url("../assets/brand/spiral-loop.svg") left top / auto 100%
-    space no-repeat;
+  background: url("../assets/brand/spiral-strip.svg") center / 100% 100% no-repeat;
 }
 
 .landing-caderno-cover {
