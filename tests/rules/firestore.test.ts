@@ -113,6 +113,22 @@ describe("projects", () => {
     );
   });
 
+  it("denies reserved project IDs", async () => {
+    for (const projectId of ["projetos", "partituras", "2026"]) {
+      const db = as(OUTSIDER);
+      const batch = writeBatch(db);
+      batch.set(doc(db, "projects", projectId), {
+        ...newProject(OUTSIDER),
+        slug: projectId,
+      });
+      batch.set(
+        doc(db, "projects", projectId, "members", OUTSIDER),
+        ownerDoc(OUTSIDER),
+      );
+      await assertFails(batch.commit());
+    }
+  });
+
   it("denies claiming ownership of an existing project", async () => {
     await seedProject(testEnv());
     await assertFails(
@@ -644,6 +660,13 @@ describe("songbooks", () => {
   it("denies an id that doesn't match project and slug", async () => {
     await seedProject(testEnv());
     await assertFails(createBatch(as(ADMIN), `${PROJECT}~outro`).commit());
+  });
+
+  it("denies a reserved songbook slug", async () => {
+    await seedProject(testEnv());
+    await assertFails(
+      createBatch(as(ADMIN), `${PROJECT}~config`, "config").commit(),
+    );
   });
 
   it("denies creating a published songbook", async () => {

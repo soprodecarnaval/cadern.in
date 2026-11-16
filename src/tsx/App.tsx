@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Route, Routes, useLocation } from "react-router-dom";
+import { useEffect, useState, type ReactNode } from "react";
+import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { AppNavigation } from "./components/navigation/AppNavigation";
 import { AuthModal } from "./screens/auth/AuthModal";
 import { ProfileModal } from "./screens/account/ProfileModal";
@@ -10,7 +10,7 @@ import { useAuth } from "../auth";
 import "../styles/app.css";
 import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { getPendingUserProjectInvitations } from "../lib/db";
-import { ROUTE_PATTERNS } from "../lib/routes";
+import { ROUTE_PATTERNS, isReservedProjectSlug, isYearOnlySlug } from "../lib/routes";
 import { CreateProjectPage } from "./screens/projects/create/CreateProjectPage";
 import { MeusProjetosPage } from "./screens/projects/list/MeusProjetosPage";
 import { NotFoundPage } from "./screens/not-found/NotFoundPage";
@@ -25,6 +25,47 @@ import { ArticlePage } from "./screens/articles/ArticlePage";
 import { ArticlesPage } from "./screens/articles/ArticlesPage";
 import { HomePage } from "./screens/builder/HomePage";
 import { LandingPage } from "./screens/landing/LandingPage";
+
+/** Year-only URLs belonged to the old static songbook pages. Project slugs
+    cannot use them. Until each static page is removed, the static file wins;
+    otherwise send the year to the home page. */
+function ProjectRoute({ children }: { children: ReactNode }) {
+  const { slug } = useParams<{ slug: string }>();
+  const { search, hash } = useLocation();
+
+  if (isYearOnlySlug(slug)) {
+    return (
+      <Navigate
+        replace
+        to={{ pathname: ROUTE_PATTERNS.home, search, hash }}
+      />
+    );
+  }
+
+  if (isReservedProjectSlug(slug)) {
+    return <NotFoundPage />;
+  }
+
+  return <>{children}</>;
+}
+
+/** Catches project routes when the collab flag is off, and year-only paths
+    that have no static page left. */
+function FallbackRoute() {
+  const { pathname, search, hash } = useLocation();
+  const segments = pathname.split("/").filter(Boolean);
+
+  if (segments.length === 1 && isYearOnlySlug(segments[0])) {
+    return (
+      <Navigate
+        replace
+        to={{ pathname: ROUTE_PATTERNS.home, search, hash }}
+      />
+    );
+  }
+
+  return <NotFoundPage />;
+}
 
 function App() {
   const [showUserModal, setShowUserModal] = useState(false);
@@ -101,26 +142,49 @@ function App() {
           <>
             <Route path={ROUTE_PATTERNS.projects} element={<MeusProjetosPage />} />
             <Route path={ROUTE_PATTERNS.newProject} element={<CreateProjectPage />} />
-            <Route path={ROUTE_PATTERNS.project} element={<PublicProjectPage />} />
+            <Route
+              path={ROUTE_PATTERNS.project}
+              element={
+                <ProjectRoute>
+                  <PublicProjectPage />
+                </ProjectRoute>
+              }
+            />
             <Route
               path={ROUTE_PATTERNS.projectSettings}
-              element={<ProjectSettingsPage />}
+              element={
+                <ProjectRoute>
+                  <ProjectSettingsPage />
+                </ProjectRoute>
+              }
             />
             <Route
               path={ROUTE_PATTERNS.publicSongbook}
-              element={<SongbookPage />}
+              element={
+                <ProjectRoute>
+                  <SongbookPage />
+                </ProjectRoute>
+              }
             />
             <Route
               path={ROUTE_PATTERNS.songbook}
-              element={<SongbookManagePage />}
+              element={
+                <ProjectRoute>
+                  <SongbookManagePage />
+                </ProjectRoute>
+              }
             />
             <Route
               path={ROUTE_PATTERNS.songbookScore}
-              element={<SongbookScorePage />}
+              element={
+                <ProjectRoute>
+                  <SongbookScorePage />
+                </ProjectRoute>
+              }
             />
           </>
         )}
-        <Route path="*" element={<NotFoundPage />} />
+        <Route path="*" element={<FallbackRoute />} />
       </Routes>
 
       {currentUser ? (

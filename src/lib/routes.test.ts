@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   ROUTE_PATTERNS,
   articlePath,
+  isReservedProjectSlug,
+  isReservedSongbookSlug,
+  isYearOnlySlug,
   newProjectPath,
   projectPath,
   projectSettingsPath,
@@ -13,16 +16,16 @@ import {
 } from "./routes";
 
 describe("route patterns", () => {
-  it("uses the canonical pt-BR paths", () => {
+  it("uses the canonical GitHub-style paths", () => {
     expect(ROUTE_PATTERNS).toMatchObject({
       projects: "/projetos",
       newProject: "/projetos/novo",
-      project: "/projetos/:slug",
-      projectSettings: "/projetos/:slug/configuracoes",
-      publicSongbook: "/projetos/:slug/cadernos/:songbookSlug",
-      songbook: "/projetos/:slug/cadernos/:songbookSlug/gerenciar",
+      project: "/:slug",
+      projectSettings: "/:slug/config",
+      publicSongbook: "/:slug/:songbookSlug",
+      songbook: "/:slug/:songbookSlug/gerenciar",
       songbookScore:
-        "/projetos/:slug/cadernos/:songbookSlug/gerenciar/partituras/:scoreId",
+        "/:slug/:songbookSlug/gerenciar/partituras/:scoreId",
       score: "/partituras/:scoreId",
       scoreRevision: "/partituras/:scoreId/versoes/:revisionId",
     });
@@ -32,21 +35,21 @@ describe("route patterns", () => {
 describe("route builders", () => {
   it("builds project routes", () => {
     expect(newProjectPath()).toBe("/projetos/novo");
-    expect(projectPath("bloco-exemplo")).toBe("/projetos/bloco-exemplo");
+    expect(projectPath("bloco-exemplo")).toBe("/bloco-exemplo");
     expect(projectSettingsPath("bloco-exemplo")).toBe(
-      "/projetos/bloco-exemplo/configuracoes",
+      "/bloco-exemplo/config",
     );
   });
 
   it("builds songbook routes", () => {
     expect(publicSongbookPath("bloco-exemplo", "carnaval")).toBe(
-      "/projetos/bloco-exemplo/cadernos/carnaval",
+      "/bloco-exemplo/carnaval",
     );
     expect(songbookPath("bloco-exemplo", "carnaval")).toBe(
-      "/projetos/bloco-exemplo/cadernos/carnaval/gerenciar",
+      "/bloco-exemplo/carnaval/gerenciar",
     );
     expect(songbookScorePath("bloco-exemplo", "carnaval", "score-1")).toBe(
-      "/projetos/bloco-exemplo/cadernos/carnaval/gerenciar/partituras/score-1",
+      "/bloco-exemplo/carnaval/gerenciar/partituras/score-1",
     );
   });
 
@@ -61,10 +64,40 @@ describe("route builders", () => {
   });
 
   it("encodes identifiers without changing slashes in the path", () => {
-    expect(projectPath("bloco exemplo")).toBe("/projetos/bloco%20exemplo");
+    expect(projectPath("bloco exemplo")).toBe("/bloco%20exemplo");
     expect(scorePath("score/1")).toBe("/partituras/score%2F1");
     expect(publicSongbookPath("bloco", "carnaval 2026")).toBe(
-      "/projetos/bloco/cadernos/carnaval%202026",
+      "/bloco/carnaval%202026",
     );
+  });
+});
+
+describe("reserved slugs", () => {
+  it("reserves static, app and legacy top-level names", () => {
+    for (const slug of [
+      "projetos",
+      "partituras",
+      "artigos",
+      "montar",
+      "plugin",
+      "assets",
+      "projects",
+      "project",
+      "score",
+    ]) {
+      expect(isReservedProjectSlug(slug)).toBe(true);
+    }
+    expect(isReservedProjectSlug("bloco-exemplo")).toBe(false);
+  });
+
+  it("reserves every year-only project slug", () => {
+    expect(isYearOnlySlug("2026")).toBe(true);
+    expect(isReservedProjectSlug("2026")).toBe(true);
+    expect(isReservedProjectSlug("20260")).toBe(false);
+  });
+
+  it("reserves config as a songbook slug", () => {
+    expect(isReservedSongbookSlug("config")).toBe(true);
+    expect(isReservedSongbookSlug("carnaval")).toBe(false);
   });
 });

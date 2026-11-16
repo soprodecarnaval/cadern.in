@@ -7,7 +7,11 @@ import { useNavigate } from "react-router-dom";
 
 import { displayNameOf } from "../../../../lib/displayName";
 import { slugify } from "../../../../lib/slugify";
-import { projectPath, projectSettingsPath } from "../../../../lib/routes";
+import {
+  isReservedProjectSlug,
+  projectPath,
+  projectSettingsPath,
+} from "../../../../lib/routes";
 
 export type CreateProjectPageServices = Pick<
   typeof import("../../../../lib/db"),
@@ -36,6 +40,10 @@ export function CreateProjectPageView({
     }
 
     setError("");
+    if (isReservedProjectSlug(slug)) {
+      setError("Esse nome de URL é reservado. Escolha outro nome.");
+      return;
+    }
     setPending(true);
     try {
       const existing = await services.getProjectBySlug(slug);

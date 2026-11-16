@@ -11,13 +11,56 @@ export const ROUTE_PATTERNS = {
   scoreRevision: "/partituras/:scoreId/versoes/:revisionId",
   projects: "/projetos",
   newProject: "/projetos/novo",
-  project: "/projetos/:slug",
-  projectSettings: "/projetos/:slug/configuracoes",
-  publicSongbook: "/projetos/:slug/cadernos/:songbookSlug",
-  songbook: "/projetos/:slug/cadernos/:songbookSlug/gerenciar",
-  songbookScore:
-    "/projetos/:slug/cadernos/:songbookSlug/gerenciar/partituras/:scoreId",
+  project: "/:slug",
+  projectSettings: "/:slug/config",
+  publicSongbook: "/:slug/:songbookSlug",
+  songbook: "/:slug/:songbookSlug/gerenciar",
+  songbookScore: "/:slug/:songbookSlug/gerenciar/partituras/:scoreId",
 } as const;
+
+// Top-level names that must never become project slugs. Static files/directories
+// and application routes both win over the dynamic /:slug route, so a project
+// with one of these names would be unreachable.
+const RESERVED_PROJECT_SLUGS = new Set([
+  "projetos",
+  "partituras",
+  "artigos",
+  "montar",
+  "plugin",
+  "assets",
+  "index.html",
+  "vite.svg",
+  "soundfont-player.min.js",
+  "favicon.ico",
+  "robots.txt",
+  "sitemap.xml",
+  // Removed English routes stay unreachable instead of becoming projects.
+  "projects",
+  "project",
+  "score",
+  "songbook",
+  "manage",
+  "settings",
+]);
+
+// Project routes occupy the second segment, so a songbook cannot use a name
+// that is also a project-level route.
+const RESERVED_SONGBOOK_SLUGS = new Set(["config"]);
+
+export const YEAR_ONLY_SLUG = /^\d{4}$/;
+
+export function isYearOnlySlug(slug: string | undefined): boolean {
+  return slug !== undefined && YEAR_ONLY_SLUG.test(slug);
+}
+
+export function isReservedProjectSlug(slug: string | undefined): boolean {
+  return slug !== undefined &&
+    (isYearOnlySlug(slug) || RESERVED_PROJECT_SLUGS.has(slug));
+}
+
+export function isReservedSongbookSlug(slug: string | undefined): boolean {
+  return slug !== undefined && RESERVED_SONGBOOK_SLUGS.has(slug);
+}
 
 export const articlesPath = () => ROUTE_PATTERNS.articles;
 
@@ -29,14 +72,14 @@ export const projectsPath = () => ROUTE_PATTERNS.projects;
 export const newProjectPath = () => ROUTE_PATTERNS.newProject;
 
 export const projectPath = (projectSlug: string) =>
-  `${ROUTE_PATTERNS.projects}/${encodeURIComponent(projectSlug)}`;
+  `/${encodeURIComponent(projectSlug)}`;
 
 export const projectSettingsPath = (projectSlug: string) =>
-  `${projectPath(projectSlug)}/configuracoes`;
+  `${projectPath(projectSlug)}/config`;
 
 /** Short, shareable URL of a songbook. */
 export const publicSongbookPath = (projectSlug: string, songbookSlug: string) =>
-  `${projectPath(projectSlug)}/cadernos/${encodeURIComponent(songbookSlug)}`;
+  `${projectPath(projectSlug)}/${encodeURIComponent(songbookSlug)}`;
 
 /** Member workspace: edit, re-pin, publish, history, delete. */
 export const songbookPath = (projectSlug: string, songbookSlug: string) =>

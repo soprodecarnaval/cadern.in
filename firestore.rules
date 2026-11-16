@@ -49,6 +49,17 @@ service cloud.firestore {
       return alive(projectId) && memberRole(projectId) == 'owner';
     }
 
+    // /:slug is a project URL at the top level. Static files, app routes and
+    // year-only legacy pages would shadow these names.
+    function isReservedProjectId(projectId) {
+      return projectId.matches('^[0-9]{4}$') || projectId in [
+        'projetos', 'partituras', 'artigos', 'montar', 'plugin', 'assets',
+        'index.html', 'vite.svg', 'soundfont-player.min.js', 'favicon.ico',
+        'robots.txt', 'sitemap.xml', 'projects', 'project', 'score',
+        'songbook', 'manage', 'settings'
+      ];
+    }
+
     match /users/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if request.auth != null && request.auth.uid == uid;
@@ -59,6 +70,7 @@ service cloud.firestore {
       // The creator's owner member doc is written in the same batch (see
       // `members` below).
       allow create: if request.auth != null &&
+        !isReservedProjectId(projectId) &&
         request.resource.data.memberIds == [request.auth.uid] &&
         request.resource.data.deletedAt == null &&
         !('members' in request.resource.data);
@@ -309,6 +321,7 @@ service cloud.firestore {
       allow create: if request.auth != null &&
         isAdmin(request.resource.data.projectId) &&
         songbookId == request.resource.data.projectId + '~' + request.resource.data.slug &&
+        request.resource.data.slug != 'config' &&
         request.resource.data.isPublished == false &&
         request.resource.data.deletedAt == null &&
         existsAfter(songbookRevisionPath(songbookId, request.resource.data.currentRevisionId));

@@ -65,7 +65,7 @@ to reimplement. Preserve its completed status and implementation history.
 - 007: unregistered-email invitations? Baseline is existing accounts.
 - 008: resolved — `/manage` suffix approved; canonical prefix for the whole
   project namespace is singular (`/project/:slug`), no legacy redirects.
-  Superseded by task 012 canonical pt-BR routes (no aliases).
+  Superseded by task 012 GitHub-style top-level routes (no aliases).
 - 009: resolved — no migration needed (collab-flow never deployed); threads
   keyed `songbooks/{id}/scoreThreads/{scoreId}_{revisionId}`.
 - 010: resolved — fork-vs-version already automatic (unchanged); re-pin is
