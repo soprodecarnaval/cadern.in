@@ -10,7 +10,7 @@ repository has no `staging` branch).
 ## Contract
 
 - `/projects/:slug` owns the songbook list and empty-songbook creation flow.
-- `/projects/:slug/songbooks` is a replacement redirect to `/projects/:slug`.
+- `/projects/:slug/songbooks` has no route/redirect; old list URLs reach the existing not-found screen.
 - Existing member `/projects/:slug/songbooks/:songbookSlug` and public
   `/songbooks/:slug/:songbookSlug` paths unchanged. Canonical/member split belongs to C/008.
 - Member links use `songbookPath`; non-member links use `publicSongbookPath`.
@@ -26,17 +26,17 @@ repository has no `staging` branch).
   role or user changes to discard prior UI state.
 - `PublicProjectPageView.tsx`: consolidated list/creation, loading/error/retry states.
 - `CreateSongbookForm.tsx`: extracted creation workflow with explicit cancel.
-- `ProjectSongbooksPage.tsx`: redirect adapter; App route registration unchanged.
+- `ProjectSongbooksPage.tsx` removed; obsolete list route removed from `App.tsx`.
 - Removed `ProjectSongbooksPageView.tsx` and standalone stories.
 - `PublicProjectPage.stories.tsx`: role/query/link checks, creation, cancellation,
-  duplicate/invalid titles, failures, pending state and list redirect.
+  duplicate/invalid titles, failures and pending state.
 - `SongbookPageView.tsx`: only the two navigation edits above. Integrate 004 before
   C's broader view edits. Future B/005 and B/006 also touch songbook views;
   coordinate their commits before concurrent edits.
 
 ## Validation
 
-20 focused Storybook stories; additional browser back/delete and 390px layout
+19 remaining focused Storybook stories; additional browser back/delete and 390px layout
 checks; Storybook TypeScript; targeted ESLint; demo-config app build; diff check.
 Browser services mocked: no backend integration or production/staging writes.
 
@@ -57,3 +57,9 @@ targeted ESLint and demo build passed. No new reads or dependencies.
 005 implementation commit: `2483e1af019bd0f5b8292c277c39d19e2c346cfb`.
 PR: https://github.com/soprodecarnaval/cadern.in/pull/436, stacked on #433
 with `main` base per chat override. User accepted (`yes pls`). 006 remains open.
+
+## PR correction — 2026-11-16
+
+Approved feedback removes the legacy list redirect entirely. Integrate the latest
+004 branch including this correction; the original implementation hash above
+alone still includes the redirect. Carry the correction through #436/#438.
