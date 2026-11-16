@@ -1,0 +1,22 @@
+@import "../../styles/tokens.css";
+
+.ds-list {
+  --bs-list-group-color: var(--ds-ink);
+  --bs-list-group-bg: var(--ds-paper);
+  --bs-list-group-border-color: var(--ds-ink);
+  --bs-list-group-border-width: var(--ds-border);
+  --bs-list-group-border-radius: var(--ds-radius-surface);
+  --bs-list-group-action-color: var(--ds-ink);
+  --bs-list-group-action-hover-color: var(--ds-ink);
+  --bs-list-group-action-hover-bg: var(--ds-yellow);
+  --bs-list-group-action-active-color: var(--ds-ink);
+  --bs-list-group-action-active-bg: var(--ds-yellow);
+  --bs-list-group-active-color: var(--ds-ink);
+  --bs-list-group-active-bg: var(--ds-yellow);
+  --bs-list-group-active-border-color: var(--ds-ink);
+  font-family: var(--ds-font);
+}
+.ds-list .list-group-item:focus-visible {
+  outline: var(--ds-border) solid var(--ds-ink);
+  outline-offset: -3px;
+}

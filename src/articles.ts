@@ -199,9 +199,6 @@ const placeholderCards: ArticleCard[] = [
       "Um passo a passo da busca de partituras até o PDF pronto para imprimir e levar para a rua.",
     href: "/artigos/como-montar-o-caderninho",
     kicker: "Guias",
-    imageUrl: "/assets/articles/cadernos-impressos-1234.webp",
-    imageSrcSet:
-      "/assets/articles/cadernos-impressos-360.webp 360w, /assets/articles/cadernos-impressos-670.webp 670w, /assets/articles/cadernos-impressos-1234.webp 1234w",
   },
   {
     title: "Formatando partituras com a extensão para Musescore",
@@ -209,10 +206,6 @@ const placeholderCards: ArticleCard[] = [
       "Como deixar suas partituras no padrão do cadern.in antes de enviá-las para o acervo.",
     href: "/artigos/extensao-musescore",
     kicker: "Guias",
-    // The source photo is 933px wide; the variants stop there on purpose.
-    imageUrl: "/assets/articles/trombone-na-rua-933.webp",
-    imageSrcSet:
-      "/assets/articles/trombone-na-rua-360.webp 360w, /assets/articles/trombone-na-rua-670.webp 670w, /assets/articles/trombone-na-rua-933.webp 933w",
   },
 ];
 

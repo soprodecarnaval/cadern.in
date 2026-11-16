@@ -1,0 +1,129 @@
+@import "../../../../styles/tokens.css";
+
+.score-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.score-card {
+  border: var(--ds-border) solid var(--ds-ink);
+  border-radius: var(--ds-radius-button);
+  background: var(--ds-paper);
+  overflow: hidden;
+}
+
+.score-card-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.score-card-row:hover {
+  cursor: pointer;
+  background: var(--ds-yellow);
+}
+
+.score-card-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--ds-text-secondary);
+}
+
+.score-card-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.score-card-title {
+  font-weight: var(--ds-weight-heading);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-card-meta {
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-card-meta-version {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
+.score-card-links {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ds-ink);
+}
+
+.score-card-actions,
+.score-card-trailing {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-card-details {
+  padding: 0 0.75rem 0.75rem 2.75rem;
+  border-top: 1px solid #f1f3f5;
+}
+
+.score-card-subline {
+  padding-top: 0.5rem;
+}
+
+.score-card-parts {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.score-card-versions {
+  margin-top: 0.5rem;
+}
+
+/* Small discrete "+" add button, shared by every "add to songbook" row. */
+.score-add-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 2px solid var(--ds-ink);
+  background: transparent;
+  color: var(--ds-ink);
+  font-size: 0.8rem;
+  padding: 0;
+}
+
+.score-add-button:hover:not(:disabled) {
+  background: var(--ds-ink);
+  color: var(--ds-yellow);
+}
+
+.score-add-button:disabled {
+  border-color: var(--ds-muted);
+  color: var(--ds-text-secondary);
+  cursor: default;
+}
+
+.cursor:hover {
+  cursor: pointer;
+}
+
+.score-card { font-family: var(--ds-font); color: var(--ds-ink); }
+.score-add-button { background: var(--ds-yellow); }
+.score-card :is(button, a):focus-visible { outline: var(--ds-border) solid var(--ds-ink); outline-offset: 2px; }

@@ -7,6 +7,8 @@ import type { User } from "firebase/auth";
 import { useAuth } from "../auth";
 import { describeAuthError } from "../lib/authMessages";
 import type { ExportDeepLinkContext } from "../../types/exportDeepLink";
+import { Button } from "../tsx/atoms/Button";
+import { Page } from "../tsx/atoms/Page";
 import { LoginForm } from "./components/LoginForm";
 import { UploadPanel } from "./components/UploadPanel";
 import { FileDrop } from "./components/FileDrop";
@@ -60,35 +62,35 @@ export function App() {
   // user is not considered logged in, same as the website.
   if (pendingUser) {
     return (
-      <main className="app app--login">
+      <Page className="app app--login">
         <h1>cadern.in — Exportador</h1>
         <PendingVerification
           email={pendingUser.email}
           onResend={() => resendVerificationEmail()}
           onLogout={() => void logout()}
         />
-      </main>
+      </Page>
     );
   }
 
   if (!currentUser) {
     return (
-      <main className="app app--login">
+      <Page className="app app--login">
         <h1>cadern.in — Exportador</h1>
         <LoginForm />
-      </main>
+      </Page>
     );
   }
 
   if (!context) {
     return (
-      <main className="app app--login">
+      <Page className="app app--login">
         <h1>cadern.in — Exportador</h1>
         <NoContext
           onContext={setContext}
           onLogout={() => void logout()}
         />
-      </main>
+      </Page>
     );
   }
 
@@ -130,14 +132,12 @@ function PendingVerification({
         Enviamos um link de confirmação para <strong>{email}</strong>. Clique
         no link, depois reabra o app.
       </p>
-      <button type="button" onClick={() => void resend()}>
-        Reenviar e-mail
-      </button>
-      <button type="button" className="btn-link" onClick={onLogout}>
+      <Button onClick={() => void resend()}>Reenviar e-mail</Button>
+      <Button variant="text" onClick={onLogout}>
         Usar outra conta
-      </button>
-      {sent && <p className="muted">Email reenviado!</p>}
-      {error && <p className="error">{error}</p>}
+      </Button>
+      {sent && <div className="alert alert-success" role="status">Email reenviado!</div>}
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
     </div>
   );
 }
@@ -252,14 +252,14 @@ function ExportApp({
   };
 
   return (
-    <main className="app">
+    <Page className="app">
       <header className="session">
         <h1>cadern.in — Exportador</h1>
         <span className="session-user">
           {user.email}
-          <button type="button" className="link" disabled={exporting} onClick={onLogout}>
+          <Button variant="text" size="sm" disabled={exporting} onClick={onLogout}>
             Sair
-          </button>
+          </Button>
         </span>
       </header>
 
@@ -272,9 +272,9 @@ function ExportApp({
         ) : (
           <span className="danger">não encontrado</span>
         )}
-        <button className="btn-link" disabled={exporting} onClick={() => void locate()}>
+        <Button variant="secondary" size="sm" disabled={exporting} onClick={() => void locate()}>
           Localizar…
-        </button>
+        </Button>
       </section>
 
       <FileDrop
@@ -284,25 +284,26 @@ function ExportApp({
 
       {!resolvingMscore && !mscorePath && (
         <p className="muted">
-          Localize o MuseScore 4 para selecionar uma partitura. {" "}
-          <button
-            type="button"
-            className="btn-link"
+          Localize o MuseScore 4 para selecionar uma partitura.{" "}
+          <Button
+            variant="text"
+            size="sm"
             onClick={() => void window.api.openMuseScoreDownload()}
           >
             Baixar MuseScore Studio
-          </button>
+          </Button>
         </p>
       )}
       {loading && <p className="muted">Lendo partitura…</p>}
-      {error && <p className="error">{error}</p>}
+      {error && <div className="alert alert-danger" role="alert">{error}</div>}
 
       {metadata && (
         <fieldset className="score-editor" disabled={exporting}>
           <header className="score-head">
             <strong>{msczPath.split(/[\\/]/).pop()}</strong>
-            <button
-              className="btn-link"
+            <Button
+              variant="text"
+              size="sm"
               onClick={() => {
                 setMsczPath("");
                 setParts([]);
@@ -312,7 +313,7 @@ function ExportApp({
               }}
             >
               Trocar
-            </button>
+            </Button>
           </header>
           {parts.length > 0 && (
             <PartsTable
@@ -339,6 +340,6 @@ function ExportApp({
           />
         </fieldset>
       )}
-    </main>
+    </Page>
   );
 }

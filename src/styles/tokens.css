@@ -1,0 +1,28 @@
+:root {
+  --ds-yellow: #fcee21;
+  --ds-ink: #000;
+  --ds-paper: #fff;
+  --ds-muted: #b3b3b3;
+  --ds-surface-disabled: #f2f2f2;
+  --ds-text-secondary: #555;
+  --ds-placeholder: #6c6c6c;
+  --ds-invalid: #b02a37;
+  --ds-font: "Inter", system-ui, sans-serif;
+  --ds-text: 18px;
+  --ds-caption: 16px;
+  --ds-heading: 24px;
+  --ds-weight-body: 300;
+  --ds-weight-action: 500;
+  --ds-weight-heading: 700;
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-6: 24px;
+  --ds-space-8: 32px;
+  --ds-border: 3px;
+  --ds-radius-button: 8px;
+  --ds-radius-field: 12px;
+  --ds-radius-modal: 14px;
+  --ds-radius-surface: 10px;
+}

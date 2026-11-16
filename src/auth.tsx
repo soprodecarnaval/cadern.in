@@ -20,35 +20,11 @@ import {
   signOut,
   updatePassword as firebaseUpdatePassword,
   updateProfile,
-  type AuthCredential,
   type User,
 } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, storage } from "./firebase";
-
-// Thrown by signInWithGoogle when the email already has a password account.
-// Firebase requires proving ownership of the existing account before linking
-// a new provider to it, so the UI must prompt for that password and call
-// `link`; there's no way to link without it.
-export class GoogleLinkRequiredError extends Error {
-  constructor(
-    public readonly email: string,
-    private readonly pendingCredential: AuthCredential,
-  ) {
-    super(
-      `Já existe uma conta com o email ${email}. Digite a senha dela para conectar o Google.`,
-    );
-  }
-
-  async link(password: string) {
-    const { user } = await signInWithEmailAndPassword(
-      auth,
-      this.email,
-      password,
-    );
-    await linkWithCredential(user, this.pendingCredential);
-  }
-}
+import { GoogleLinkRequiredError } from "./lib/googleLinkRequiredError";
 
 interface AuthContextValue {
   currentUser: User | null;
@@ -147,7 +123,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const pendingCredential = GoogleAuthProvider.credentialFromError(err);
         const email = err.customData?.email as string | undefined;
         if (pendingCredential && email) {
-          throw new GoogleLinkRequiredError(email, pendingCredential);
+          throw new GoogleLinkRequiredError(email, async (password) => {
+            const { user } = await signInWithEmailAndPassword(
+              auth,
+              email,
+              password,
+            );
+            await linkWithCredential(user, pendingCredential);
+          });
         }
       }
       throw err;

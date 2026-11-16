@@ -1,0 +1,34 @@
+@import "../../../styles/tokens.css";
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.page {
+  width: 4.5vh !important;
+}
+
+/* Current page field and total pages: numbers centered in their boxes. */
+.page,
+.page .page-link {
+  text-align: center;
+}
+
+.paginationInfo {
+  --bs-pagination-color: var(--ds-ink);
+  --bs-pagination-border-color: var(--ds-ink);
+  --bs-pagination-hover-color: var(--ds-ink);
+  --bs-pagination-hover-bg: var(--ds-yellow);
+  --bs-pagination-active-color: var(--ds-ink);
+  --bs-pagination-active-bg: var(--ds-yellow);
+  --bs-pagination-active-border-color: var(--ds-ink);
+  align-items: stretch;
+}
+.paginationInfo .ds-field { height: auto; min-width: 48px; padding: var(--ds-space-1); }
