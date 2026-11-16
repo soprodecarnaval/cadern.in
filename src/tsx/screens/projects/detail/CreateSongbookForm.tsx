@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Alert, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { slugify } from "../../../../lib/slugify";
-import { songbookPath } from "../../../../lib/songbook";
+import { isReservedSongbookSlug, songbookPath } from "../../../../lib/routes";
 
 type CreateSongbookServices = Pick<
   typeof import("../../../../lib/db"),
@@ -35,6 +35,10 @@ export function CreateSongbookForm({
     }
     if (!/[a-z0-9]/.test(slug)) {
       setError("Informe um título com letras ou números.");
+      return;
+    }
+    if (isReservedSongbookSlug(slug)) {
+      setError("Esse nome de URL é reservado. Escolha outro título.");
       return;
     }
     setPending(true);

@@ -15,7 +15,7 @@ import {
 } from "react-router-dom";
 
 import type { WithId } from "../../../../lib/db";
-import { projectPath, songbookScorePath } from "../../../../lib/songbook";
+import { projectPath, publicSongbookPath, scorePath, songbookScorePath } from "../../../../lib/routes";
 import {
   canDeleteSongbook,
   canEditSongbook,
@@ -29,7 +29,6 @@ import {
   fromSongbookRevision,
   hasNewerVersion,
   isSongbookSection,
-  publicSongbookPath,
   repinnedContent,
   songbookScore,
   songbookScoreVersionLabel,
@@ -522,7 +521,7 @@ function SongbookContents({
                   {!item.deleted && forks.has(item.score.id) && (
                     <>
                       <Link
-                        to={`/score/${encodeURIComponent(forks.get(item.score.id)!)}`}
+                        to={scorePath(forks.get(item.score.id)!)}
                       >
                         <Badge bg="info" text="dark">
                           derivação disponível
@@ -544,7 +543,7 @@ function SongbookContents({
                   )}
                   {showNewerVersions && hasNewerVersion(item) && (
                     <>
-                      <Link to={`/score/${encodeURIComponent(item.score.id)}`}>
+                      <Link to={scorePath(item.score.id)}>
                         <Badge bg="warning" text="dark">
                           nova versão
                         </Badge>

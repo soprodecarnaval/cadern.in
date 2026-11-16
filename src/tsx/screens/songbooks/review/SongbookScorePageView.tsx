@@ -8,7 +8,7 @@ import type { WithId } from "../../../../lib/db";
 import { commentThreads } from "../../../../lib/comments";
 import { isEditor } from "../../../../lib/roles";
 import { resolveScoreMetadata } from "../../../../lib/scoreMetadata";
-import { publicSongbookPath, songbookPath } from "../../../../lib/songbook";
+import { publicSongbookPath, songbookPath } from "../../../../lib/routes";
 import { buildExportDeepLink } from "../../../../../types/exportDeepLink";
 
 import type { ScoreDisplayPart, ScorePin } from "../../../components/scores/detail/ScoreDisplay";

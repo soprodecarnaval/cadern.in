@@ -7,8 +7,8 @@ const meta = {
   title: "Screens/ProjectSettingsPage",
   component: ProjectSettingsPageView,
   parameters: {
-    route: "/project/bloco-exemplo/settings",
-    routePath: "/project/:slug/settings",
+    route: "/bloco-exemplo/config",
+    routePath: "/:slug/config",
   },
   args: { services, currentUser: user, myRole: "owner" },
 } satisfies Meta<typeof ProjectSettingsPageView>;

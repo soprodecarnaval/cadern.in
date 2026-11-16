@@ -1,5 +1,6 @@
 import { Container, Nav, Navbar } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import { projectsPath } from "../../../lib/routes";
 import "../../../styles/app.css";
 import "./AppNavigation.css";
 import { AuthButtonView } from "./AuthButtonView";
@@ -39,7 +40,7 @@ export function AppNavigation({
         {collabEnabled && (
           <Nav className="ms-auto d-flex align-items-center gap-2">
             {currentUser && (
-              <Nav.Link as={Link} to="/projects">
+              <Nav.Link as={Link} to={projectsPath()}>
                 Meus projetos
               </Nav.Link>
             )}

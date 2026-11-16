@@ -16,8 +16,8 @@ const meta = {
   title: "Screens/PublicProjectPage",
   component: PublicProjectPageView,
   parameters: {
-    route: "/project/bloco-exemplo",
-    routePath: "/project/:slug",
+    route: "/bloco-exemplo",
+    routePath: "/:slug",
   },
   args: { services: projectServices, role: "owner", currentUser: user },
 } satisfies Meta<typeof PublicProjectPageView>;
@@ -30,14 +30,14 @@ export const Owner: Story = {
     await expect(await canvas.findByRole("button", { name: "+ Novo caderninho" })).toBeVisible();
     await expect(await canvas.findByText("Ensaios 2027")).toBeVisible();
     await expect(projectServices.getProjectSongbooks).toHaveBeenCalledWith("bloco-exemplo", { publishedOnly: false });
-    await expect(canvas.getByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/project/bloco-exemplo/songbook/carnaval/manage");
+    await expect(canvas.getByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/bloco-exemplo/carnaval/gerenciar");
   },
 };
 export const Public: Story = {
   args: { role: undefined, currentUser: null },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/project/bloco-exemplo/songbook/carnaval");
+    await expect(await canvas.findByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/bloco-exemplo/carnaval");
     await expect(projectServices.getProjectSongbooks).toHaveBeenCalledWith("bloco-exemplo", { publishedOnly: true });
     await expect(canvas.queryByText("Ensaios 2027")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Partituras")).not.toBeInTheDocument();
@@ -102,7 +102,7 @@ export const CreateSuccess: Story = {
     await userEvent.click(await canvas.findByRole("button", { name: "+ Novo caderninho" }));
     await userEvent.type(canvas.getByLabelText("Título do novo caderninho"), "Novo repertório");
     await userEvent.click(canvas.getByRole("button", { name: "Criar" }));
-    await expect(await canvas.findByText("/project/bloco-exemplo/songbook/novo-repertorio/manage")).toBeVisible();
+    await expect(await canvas.findByText("/bloco-exemplo/novo-repertorio/gerenciar")).toBeVisible();
   },
 };
 export const CreateFailure: Story = {

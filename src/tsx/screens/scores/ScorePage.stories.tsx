@@ -13,8 +13,8 @@ const meta = {
   title: "Screens/ScorePage",
   component: ScorePageView,
   parameters: {
-    route: "/score/fixture-score",
-    routePath: "/score/:scoreId/:revisionId?",
+    route: "/partituras/fixture-score",
+    routePath: "/partituras/:scoreId/*",
   },
   args: {
     services,

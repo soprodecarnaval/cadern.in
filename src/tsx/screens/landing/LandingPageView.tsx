@@ -14,7 +14,7 @@ import { ARTICLES_PATH, type ArticleCard } from "../../../articles";
 import type { WithId } from "../../../lib/db";
 import type { CollectionContextValue } from "../../../useCollectionContext";
 import { initialsOf } from "../../../lib/displayName";
-import { publicSongbookPath } from "../../../lib/songbook";
+import { publicSongbookPath, projectsPath, scorePath } from "../../../lib/routes";
 import { ArticleCards } from "../articles/ArticleCards";
 import type { ProfileTab } from "../account/ProfileModalView";
 
@@ -200,7 +200,7 @@ export function LandingPageView({
             {collabEnabled &&
               (currentUser ? (
                 <ActionCard
-                  to="/projects"
+                  to={projectsPath()}
                   title="Colaborar em um projeto"
                   text="Colabore com outros musicistas na criação e revisão de novas partituras ou cadernos."
                 />
@@ -325,7 +325,7 @@ function AccountMenu({
         <Dropdown.Item as="button" onClick={() => onOpenUserModal("inbox")}>
           Convites{inboxCount > 0 && ` (${inboxCount})`}
         </Dropdown.Item>
-        <Dropdown.Item as={Link} to="/projects">
+        <Dropdown.Item as={Link} to={projectsPath()}>
           Meus Projetos
         </Dropdown.Item>
         <Dropdown.Item as={Link} to={PLANNED.favoritos}>
@@ -375,7 +375,7 @@ function LandingSearch({ collection }: { collection: CollectionContextValue }) {
             <ul>
               {results.map((score) => (
                 <li key={score.id}>
-                  <Link to={`/score/${encodeURIComponent(score.id)}`}>
+                  <Link to={scorePath(score.id)}>
                     <strong>{score.title}</strong>
                     <span>
                       {[score.composer, score.projectTitle]
@@ -555,7 +555,7 @@ export function LandingFooter({
                 </li>
                 <li>
                   {currentUser ? (
-                    <Link to="/projects">Meus projetos</Link>
+                    <Link to={projectsPath()}>Meus projetos</Link>
                   ) : (
                     <button type="button" onClick={() => onOpenUserModal()}>
                       Meus projetos
