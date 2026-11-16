@@ -1,6 +1,7 @@
 @import "../../styles/tokens.css";
 
-/* Fields: black-bordered like the search bar, with no focus glow. */
+/* Fields: black-bordered like the search bar. On focus they rise with a hard
+   shadow instead of Bootstrap's glow or an outline ring. */
 
 .brand-modal .form-label {
   margin-bottom: 6px;
@@ -13,6 +14,7 @@
   color: var(--ds-ink);
   font-size: var(--ds-text);
   font-weight: var(--ds-weight-body);
+  transition: transform 0.15s;
 }
 
 :is(.brand-modal .form-control, .ds-field)::placeholder {
@@ -25,9 +27,13 @@
   color: var(--ds-text-secondary);
 }
 
+/* Focus lifts the field with a hard black shadow, like a home-page action
+   card on hover, but keeps its white fill and black border. */
 :is(.brand-modal .form-control, .ds-field):focus {
+  transform: translateY(var(--ds-lift));
   border-color: var(--ds-ink);
-  box-shadow: none;
+  background: var(--ds-paper);
+  box-shadow: var(--ds-shadow-raised);
 }
 
 .ds-field { font-family: var(--ds-font); }
@@ -38,8 +44,7 @@
 }
 
 :is(.brand-modal .form-control, .ds-field):focus-visible {
-  outline: var(--ds-border) solid var(--ds-ink);
-  outline-offset: 3px;
+  outline: none;
 }
 
 .ds-field.ds-select { height: auto; min-height: 48px; }

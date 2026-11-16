@@ -36,6 +36,22 @@
   font-weight: inherit;
 }
 
+/* LandingChrome: the header and footer around a page with its own styling,
+   footer kept at the bottom of short pages. */
+.landing-chrome {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.landing-chrome-body {
+  flex: 1;
+}
+
+.landing.landing-chrome-bar {
+  min-height: 0;
+}
+
 .landing-main {
   width: 100%;
   max-width: 1440px;

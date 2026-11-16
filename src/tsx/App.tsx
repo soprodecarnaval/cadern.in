@@ -23,6 +23,7 @@ import { SongbookScorePage } from "./screens/songbooks/review/SongbookScorePage"
 import { ArticlePage } from "./screens/articles/ArticlePage";
 import { ArticlesPage } from "./screens/articles/ArticlesPage";
 import { HomePage } from "./screens/builder/HomePage";
+import { LandingChrome } from "./screens/landing/LandingChrome";
 import { LandingPage } from "./screens/landing/LandingPage";
 
 function App() {
@@ -34,10 +35,11 @@ function App() {
   };
   const [inboxCount, setInboxCount] = useState(0);
   const { currentUser, pendingUser } = useAuth();
-  // The landing and article pages draw their own header and footer.
+  // The landing, article and Montar pages draw the landing header and footer.
   const { pathname } = useLocation();
   const isLanding =
     pathname === "/" ||
+    pathname === "/montar" ||
     pathname === "/artigos" ||
     pathname.startsWith("/artigos/");
 
@@ -80,7 +82,14 @@ function App() {
         />
         <Route
           path="/montar"
-          element={<HomePage onRequestLogin={() => openUserModal()} />}
+          element={
+            <LandingChrome
+              inboxCount={inboxCount}
+              onOpenUserModal={openUserModal}
+            >
+              <HomePage onRequestLogin={() => openUserModal()} />
+            </LandingChrome>
+          }
         />
         <Route
           path="/artigos"
