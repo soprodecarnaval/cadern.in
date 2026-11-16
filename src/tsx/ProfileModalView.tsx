@@ -1,3 +1,4 @@
+import { describeAuthError } from "../lib/authMessages";
 import { useEffect, useRef, useState } from "react";
 import { Button, Modal, Spinner, Tab, Tabs } from "react-bootstrap";
 
@@ -167,7 +168,7 @@ export function ProfileModalView({
       setConfirmPassword("");
     } catch (err: unknown) {
       setPasswordError(
-        err instanceof Error ? err.message : "Erro ao alterar senha",
+        describeAuthError(err),
       );
     } finally {
       setPasswordPending(false);
