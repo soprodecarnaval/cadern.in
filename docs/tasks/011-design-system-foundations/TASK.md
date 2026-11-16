@@ -59,3 +59,13 @@ None blocking. Scope approved: Storybook reference page, shared foundations, hom
 - Production screens/styles remain unchanged in this iteration.
 
 Reference validation passed: Storybook typecheck, targeted ESLint, static Storybook build and whitespace check. Chromium checked story render/play, field edit/clear, modal open/cancel and no horizontal overflow at 1280px and 390px. Static build preceded the final interaction-selector correction; the final source passed typecheck and live-browser checks. Existing Node engine and Storybook bundling warnings remain. Review URL: http://127.0.0.1:6006/?path=/story/design-system-reference--overview.
+
+## Shared foundations and first adoption
+
+- User approved reference and requested commit/continuation; reference/plans committed as `89481c16`.
+- Added shared `--ds-*` tokens and native-prop/ref button/field primitives plus Bootstrap-backed modal primitive.
+- Auth uses the primitives; landing adopts shared tokens and CTA styling. Existing branded dialogs share the token/control rules. Approved focus/invalid treatments are retained.
+- Reference controls now exercise the actual primitives outside a modal, while its interactive modal exercises the shared surface. Modal interaction assertions wait for transition visibility.
+- App build (dummy Firebase build values; no backend calls), Storybook build/typecheck and targeted ESLint pass. Focused Chromium checks pass at 1280/390px, plus all auth and landing stories. Auth-focused checks stub Firebase initialization in the browser only; callbacks remain fixture operations.
+- Full existing story suite: 162/177 passed. Remaining failures include auth Firebase initialization without credentials, scoped-score audio isolation, a transient Vite outdated-request error and the reference transition assertion (fixed and rechecked). These broader harness limitations remain; do not report the full suite as passing.
+- Adoption inventory and proposed batches: [ADOPTION.md](ADOPTION.md). Next review: Storybook `design-system-reference--project-batch`; production project migration awaits approval.

@@ -1,3 +1,4 @@
+import { DesignButton } from "./DesignSystem";
 import {
   useMemo,
   useRef,
@@ -140,9 +141,9 @@ export function LandingPageView({
                   E faça upload de novas partituras para seus projetos no
                   cadern.in. Disponível para Windows, Mac e Linux.
                 </p>
-                <button type="button" className="landing-cta" disabled>
+                <DesignButton className="landing-cta" disabled>
                   Em breve
-                </button>
+                </DesignButton>
               </Accordion.Body>
             </Accordion.Item>
             <Accordion.Item eventKey="plugin">
@@ -154,7 +155,7 @@ export function LandingPageView({
                   Formate suas partituras no padrão dos caderninhos direto no
                   Musescore, antes de enviá-las para o acervo.
                 </p>
-                <a className="landing-cta" href={STATIC.plugin}>
+                <a className="btn btn-primary ds-button landing-cta" href={STATIC.plugin}>
                   Baixar
                 </a>
               </Accordion.Body>

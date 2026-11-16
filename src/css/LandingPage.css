@@ -1,10 +1,12 @@
+@import "./DesignTokens.css";
+
 /* Type, from the design: Bold for titles; Medium for "Entrar", the tool
    headings and buttons; Light 18px for everything else. */
 .landing {
-  --landing-yellow: #fcee21;
-  --landing-ink: #000;
-  --landing-paper: #fff;
-  --landing-muted: #b3b3b3;
+  --landing-yellow: var(--ds-yellow);
+  --landing-ink: var(--ds-ink);
+  --landing-paper: var(--ds-paper);
+  --landing-muted: var(--ds-muted);
   --landing-radius: 10px;
   /* 46.5px at 1440px wide, as in the design. */
   --landing-gutter: clamp(16px, 3.23vw, 46.5px);
@@ -12,7 +14,7 @@
   background: var(--landing-paper);
   color: var(--landing-ink);
   color-scheme: light;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: var(--ds-font);
   font-optical-sizing: auto;
   font-weight: 300;
   min-height: 100vh;
@@ -104,7 +106,7 @@
   height: 20px;
   border-radius: 10px;
   background: #dc3545;
-  color: #fff;
+  color: var(--ds-paper);
   font-size: 0.75rem;
   line-height: 20px;
 }
@@ -768,4 +770,9 @@
     grid-template-columns: 1fr 1fr;
     gap: 24px;
   }
+}
+
+.landing :is(a, button, input):focus-visible {
+  outline: var(--ds-border) solid var(--ds-ink);
+  outline-offset: 3px;
 }

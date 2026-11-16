@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Modal } from "react-bootstrap";
+import { DesignButton, DesignField, DesignModal as Modal } from "./DesignSystem";
 import { expect, userEvent, within, waitFor } from "@storybook/test";
 import "../css/BrandModal.css";
 import "../css/DesignSystemSpecimen.css";
@@ -40,21 +40,21 @@ function ReferencePage() {
         <p className="ds-reference-caption">Texto auxiliar · 16 px</p>
         <p>Espaçamento: 4, 8, 12, 16, 24, 32 px. Contorno: 3 px. Raios: 8 px em botões, 12 px em campos, 14 px em modais.</p>
       </section>
-      <div className="modal brand-modal ds-reference-controls">
+      <div className="ds-reference-controls">
         <section aria-labelledby="buttons-title">
           <h2 id="buttons-title">Botões</h2>
           <p>Use o mouse para hover e Tab para foco. Ação primária amarela; secundária com contorno; ação textual sublinhada.</p>
           <div className="ds-reference-row">
-            <button className="btn btn-primary" onClick={() => setShow(true)}>Abrir exemplo</button>
-            <button className="btn btn-outline-secondary" onClick={() => setEmail("")}>Limpar campo</button>
-            <button className="btn btn-link" onClick={() => setShow(true)}>Ver detalhes</button>
+            <DesignButton onClick={() => setShow(true)}>Abrir exemplo</DesignButton>
+            <DesignButton variant="secondary" onClick={() => setEmail("")}>Limpar campo</DesignButton>
+            <DesignButton variant="text" onClick={() => setShow(true)}>Ver detalhes</DesignButton>
           </div>
           <div className="ds-reference-row">
-            <button className="btn btn-primary" disabled>Indisponível</button>
-            <button className="btn btn-outline-secondary" disabled>Indisponível</button>
-            <button className="btn btn-primary" disabled aria-busy="true">
+            <DesignButton disabled>Indisponível</DesignButton>
+            <DesignButton variant="secondary" disabled>Indisponível</DesignButton>
+            <DesignButton disabled aria-busy="true">
               <span className="spinner-border spinner-border-sm me-2" aria-hidden="true" />Salvando…
-            </button>
+            </DesignButton>
           </div>
         </section>
         <section aria-labelledby="fields-title">
@@ -62,16 +62,16 @@ function ReferencePage() {
           <div className="ds-reference-fields">
             <div>
               <label className="form-label" htmlFor="ds-email">Email</label>
-              <input id="ds-email" className="form-control" type="email" placeholder="voce@exemplo.com" value={email} onChange={(event) => setEmail(event.target.value)} />
+              <DesignField id="ds-email"  type="email" placeholder="voce@exemplo.com" value={email} onChange={(event) => setEmail(event.target.value)} />
             </div>
             <div>
               <label className="form-label" htmlFor="ds-invalid">Email inválido</label>
-              <input id="ds-invalid" className="form-control is-invalid" type="email" defaultValue="email-incompleto" aria-invalid="true" aria-describedby="ds-error" />
+              <DesignField id="ds-invalid" className="is-invalid" type="email" defaultValue="email-incompleto" aria-invalid="true" aria-describedby="ds-error" />
               <div id="ds-error" className="invalid-feedback">Confira o endereço de email.</div>
             </div>
             <div>
               <label className="form-label" htmlFor="ds-disabled">Desabilitado</label>
-              <input id="ds-disabled" className="form-control" value="Aguardando envio" disabled readOnly />
+              <DesignField id="ds-disabled" value="Aguardando envio" disabled readOnly />
             </div>
           </div>
           <div className="alert alert-danger mt-3">Email ou senha inválidos. Confira os dados e tente novamente.</div>
@@ -89,21 +89,21 @@ function ReferencePage() {
           <article className="ds-reference-card">
             <h3>Conta</h3>
             <p>Campos, ações e feedback em uma superfície com título e fechamento.</p>
-            <button onClick={() => setShow(true)}>Abrir modal de referência →</button>
+            <DesignButton variant="text" onClick={() => setShow(true)}>Abrir modal de referência →</DesignButton>
           </article>
         </div>
-        <p className="ds-reference-caption mt-3">Referência para revisão. Os componentes e estilos de produção ainda não foram migrados.</p>
+        <p className="ds-reference-caption mt-3">Referência para revisão. Primitivos compartilhados com a home e a autenticação. Migração das demais telas em revisão.</p>
       </section>
-      <Modal show={show} onHide={() => setShow(false)} className="brand-modal">
+      <Modal show={show} onHide={() => setShow(false)}>
         <Modal.Header closeButton><Modal.Title>Conta</Modal.Title></Modal.Header>
         <Modal.Body>
           <p>Exemplo de superfície, tipografia, campos e ações.</p>
           <label htmlFor="ds-modal-name" className="form-label">Nome</label>
-          <input id="ds-modal-name" className="form-control" placeholder="Como você quer ser chamado?" />
+          <DesignField id="ds-modal-name" placeholder="Como você quer ser chamado?" />
         </Modal.Body>
         <Modal.Footer className="gap-3">
-          <button className="btn btn-link" onClick={() => setShow(false)}>Cancelar</button>
-          <button className="btn btn-primary" onClick={() => setShow(false)}>Salvar</button>
+          <DesignButton variant="text" onClick={() => setShow(false)}>Cancelar</DesignButton>
+          <DesignButton onClick={() => setShow(false)}>Salvar</DesignButton>
         </Modal.Footer>
       </Modal>
     </main>
@@ -127,8 +127,60 @@ export const Overview: Story = {
     await expect(email).toHaveValue("");
     await userEvent.click(canvas.getByRole("button", { name: "Abrir exemplo" }));
     const dialog = await within(document.body).findByRole("dialog");
-    await expect(dialog).toBeVisible();
+    await waitFor(() => expect(dialog).toBeVisible());
     await userEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
     await waitFor(() => expect(within(document.body).queryByRole("dialog")).not.toBeInTheDocument());
   },
 };
+
+
+function ProjectBatchReference() {
+  const [screen, setScreen] = useState("Projeto");
+  const [name, setName] = useState("Bloco Exemplo");
+  return (
+    <main className="ds-reference ds-project-preview">
+      <header>
+        <p className="ds-reference-kicker">Proposta · lote 1 · navegação e projetos</p>
+        <h1>Seus projetos no cadern.in</h1>
+        <p>Mesmas ações e organização; tipografia, campos e botões compartilhados com a home e a conta.</p>
+        <nav aria-label="Telas em revisão" className="ds-reference-row">
+          {["Projetos", "Novo projeto", "Projeto", "Configurações"].map((label) => (
+            <DesignButton key={label} variant={screen === label ? "primary" : "secondary"} aria-pressed={screen === label} onClick={() => setScreen(label)}>{label}</DesignButton>
+          ))}
+        </nav>
+      </header>
+      {screen === "Projetos" && <section>
+        <h2>Meus projetos</h2>
+        <article className="ds-reference-card">
+          <h3>Bloco Exemplo</h3><p>Seu papel: proprietário</p>
+          <DesignButton variant="text" onClick={() => setScreen("Projeto")}>Abrir projeto</DesignButton>
+        </article>
+      </section>}
+      {screen === "Novo projeto" && <section>
+        <h2>Criar projeto</h2>
+        <label className="form-label" htmlFor="project-new-name">Nome do projeto</label>
+        <DesignField id="project-new-name" placeholder="Nome do projeto" />
+        <p className="ds-reference-caption mt-2">O endereço é gerado a partir do nome.</p>
+        <DesignButton onClick={() => setScreen("Projeto")}>Criar projeto</DesignButton>
+      </section>}
+      {screen === "Projeto" && <>
+        <section><h2>Bloco Exemplo</h2><p>Partituras e cadernos do projeto.</p><DesignButton variant="secondary" onClick={() => setScreen("Configurações")}>Configurações</DesignButton></section>
+        <section><h2>Caderninhos</h2><div className="ds-reference-card"><h3>Carnaval 2026</h3><p>Publicado · 12 partituras</p><DesignButton variant="text">Abrir caderninho</DesignButton></div><DesignButton className="mt-3">+ Novo caderninho</DesignButton></section>
+        <section><h2>Partituras</h2><div className="ds-reference-card"><h3>Abre Alas</h3><p>Chiquinha Gonzaga · versão 2</p><DesignButton variant="secondary">Enviar partitura</DesignButton></div></section>
+      </>}
+      {screen === "Configurações" && <section>
+        <h2>Configurações do projeto</h2>
+        <label className="form-label" htmlFor="project-name">Nome</label>
+        <DesignField id="project-name" value={name} onChange={(event) => setName(event.target.value)} />
+        <DesignButton className="my-3">Salvar</DesignButton>
+        <h3>Convidar participante</h3>
+        <label className="form-label" htmlFor="invite-email">Email</label>
+        <DesignField id="invite-email" type="email" placeholder="voce@exemplo.com" />
+        <DesignButton className="mt-3">Convidar</DesignButton>
+      </section>}
+      <p className="ds-reference-caption">Wireframe de revisão com dados fictícios. Ações de salvar, convidar e enviar são ilustrativas; não alteram dados. Permissões e estados de cada tela serão preservados na migração.</p>
+    </main>
+  );
+}
+
+export const ProjectBatch: Story = { render: () => <ProjectBatchReference /> };

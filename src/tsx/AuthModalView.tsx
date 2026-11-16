@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Modal, Tab, Tabs } from "react-bootstrap";
+import { Tab, Tabs } from "react-bootstrap";
 import type { User } from "firebase/auth";
 import { GoogleLinkRequiredError } from "../auth";
-import "../css/BrandModal.css";
+import { DesignButton, DesignField, DesignModal as Modal } from "./DesignSystem";
 import { describeAuthError } from "../lib/authMessages";
 
 export interface AuthModalViewProps {
@@ -216,7 +216,7 @@ export function AuthModalView({
 
   if (linkRequest) {
     return (
-      <Modal show={show} onHide={onHide} className="brand-modal">
+      <Modal show={show} onHide={onHide}>
         <Modal.Header closeButton>
           <Modal.Title>Conectar conta Google</Modal.Title>
         </Modal.Header>
@@ -224,11 +224,10 @@ export function AuthModalView({
           <p>{linkRequest.message}</p>
           <form onSubmit={(val) => void handleLinkSubmit(val)}>
             <div className="mb-3">
-              <input
+              <DesignField
                 placeholder="Senha"
                 aria-label="Senha"
                 type="password"
-                className="form-control"
                 value={linkPassword}
                 onChange={(e) => setLinkPassword(e.target.value)}
                 autoFocus
@@ -236,16 +235,16 @@ export function AuthModalView({
               />
             </div>
             <div className="d-flex align-items-center gap-3">
-              <button
+              <DesignButton
                 type="submit"
-                className="btn btn-primary"
                 disabled={linkPending}
               >
                 Conectar
-              </button>
-              <button
+              </DesignButton>
+              <DesignButton
                 type="button"
-                className="btn btn-link p-0"
+                variant="text"
+                className="p-0"
                 onClick={() => {
                   setLinkRequest(null);
                   setLinkPassword("");
@@ -253,7 +252,7 @@ export function AuthModalView({
                 }}
               >
                 Cancelar
-              </button>
+              </DesignButton>
             </div>
           </form>
           {linkError && (
@@ -268,7 +267,7 @@ export function AuthModalView({
 
   if (pendingUser) {
     return (
-      <Modal show={show} onHide={onHide} className="brand-modal">
+      <Modal show={show} onHide={onHide}>
         <Modal.Header closeButton>
           <Modal.Title>Verifique seu email</Modal.Title>
         </Modal.Header>
@@ -279,32 +278,33 @@ export function AuthModalView({
             volte aqui.
           </p>
           <div className="d-flex align-items-center gap-3">
-            <button
+            <DesignButton
               type="button"
-              className="btn btn-primary"
               onClick={() => void handleRefreshVerification()}
               disabled={refreshPending}
             >
               Já verifiquei
-            </button>
-            <button
+            </DesignButton>
+            <DesignButton
               type="button"
-              className="btn btn-link p-0"
+              variant="text"
+              className="p-0"
               onClick={() => void handleResendVerification()}
               disabled={resendPending || resendCountdown > 0}
             >
               {resendCountdown > 0
                 ? `Reenviar email (${resendCountdown}s)`
                 : "Reenviar email"}
-            </button>
+            </DesignButton>
           </div>
-          <button
+          <DesignButton
             type="button"
-            className="btn btn-link p-0 mt-3"
+            variant="text"
+            className="p-0 mt-3"
             onClick={() => void logout()}
           >
             Usar outra conta
-          </button>
+          </DesignButton>
           {resendSent && (
             <div className="alert alert-success mt-3" role="alert">
               Email reenviado!
@@ -321,7 +321,7 @@ export function AuthModalView({
   }
 
   return (
-    <Modal show={show} onHide={handleHide} className="brand-modal">
+    <Modal show={show} onHide={handleHide}>
       <Modal.Header closeButton>
         <Modal.Title>Conta</Modal.Title>
       </Modal.Header>
@@ -337,41 +337,40 @@ export function AuthModalView({
           <Tab eventKey="login" title="Entrar">
             <form onSubmit={(val) => void handleLogin(val)}>
               <div className="mb-3">
-                <input
+                <DesignField
                   placeholder="Email"
                   aria-label="Email"
                   type="email"
-                  className="form-control"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
               <div className="mb-3">
-                <input
+                <DesignField
                   placeholder="Senha"
                   aria-label="Senha"
                   type="password"
-                  className="form-control"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
               <div className="d-flex align-items-center gap-3">
-                <button type="submit" className="btn btn-primary">
+                <DesignButton type="submit">
                   Entrar
-                </button>
-                <button
+                </DesignButton>
+                <DesignButton
                   type="button"
-                  className="btn btn-link p-0"
+                  variant="text"
+                  className="p-0"
                   onClick={() => void handleResetPassword()}
                   disabled={resetPending || resetCountdown > 0}
                 >
                   {resetCountdown > 0
                     ? `Esqueci a senha (${resetCountdown}s)`
                     : "Esqueci a senha"}
-                </button>
+                </DesignButton>
               </div>
               {resetSent && (
                 <div className="alert alert-success mt-3" role="alert">
@@ -383,52 +382,50 @@ export function AuthModalView({
           <Tab eventKey="register" title="Criar conta">
             <form onSubmit={(val) => void handleRegister(val)}>
               <div className="mb-3">
-                <input
+                <DesignField
                   placeholder="Nome"
                   aria-label="Nome"
                   type="text"
-                  className="form-control"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   required
                 />
               </div>
               <div className="mb-3">
-                <input
+                <DesignField
                   placeholder="Email"
                   aria-label="Email"
                   type="email"
-                  className="form-control"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
               <div className="mb-3">
-                <input
+                <DesignField
                   placeholder="Senha"
                   aria-label="Senha"
                   type="password"
-                  className="form-control"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
-              <button type="submit" className="btn btn-primary">
+              <DesignButton type="submit">
                 Criar conta
-              </button>
+              </DesignButton>
             </form>
           </Tab>
         </Tabs>
-        <button
+        <DesignButton
           type="button"
-          className="btn btn-outline-secondary w-100 mt-2"
+          variant="secondary"
+          className="w-100 mt-2"
           onClick={() => void handleGoogleSignIn()}
           disabled={googlePending}
         >
           Continuar com Google
-        </button>
+        </DesignButton>
         {error && (
           <div className="alert alert-danger mt-2" role="alert">
             {error}

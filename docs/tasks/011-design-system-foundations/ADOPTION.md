@@ -1,0 +1,29 @@
+# Adoption checklist
+
+Reference approved by user; shared foundations and home/auth adoption authorized.
+Further batches require affected screen/wireframe review per TASK.md step 6.
+
+| Batch | Surfaces | State |
+|---|---|---|
+| Foundations | Tokens, buttons, fields, modal; Storybook reference | Implemented; focused checks pass |
+| Home/auth | Landing page, login/register/reset/verification/Google-link dialogs | Implemented; focused checks pass |
+| 1 — navigation/projects | AppNavigation, AuthButton, project list/create/public/settings, CreateSongbookForm, NotFoundPage | Awaiting screen review |
+| 2 — builder/dialogs | HomePage, search/results/cards, SongBookTable/sortable rows, save, PDF selection, metadata/score edit, detail and profile dialogs | Awaiting screen review |
+| 3 — songbook/review | Public/member songbook pages, scoped score page, generation/cover modal, score page/revisions/lineage, comments, reader/part controls | Awaiting screen review |
+| 4 — exporter | App shell, LoginForm, file/parts/metadata/upload/progress, contextual launch states | Awaiting screen review; validate actual Electron UI |
+
+Batch review uses existing screen stories with proposed design-system treatment,
+including mobile/desktop, empty/loading/error and permission states. Preserve
+layout and behavior. Generated PDFs/static documents are excluded. No UI
+exceptions approved. These groups cover route screens and their shared views;
+reconcile detailed component inventory before closing task 011.
+
+## Shared API
+
+- `DesignButton`: native button props/ref; `variant="primary" | "secondary" | "text"`; default `type="button"`, use `type="submit"` for form actions. Native `disabled` and `aria-busy` remain available; loading copy/spinner belongs to caller.
+- `DesignField`: native input props/ref; label via `htmlFor` or accessible name; caller sets `aria-invalid`, `aria-describedby` and feedback. Preserves controlled/uncontrolled usage.
+- `DesignModal`: React Bootstrap Modal props with branded surface; `.Header`, `.Title`, `.Body`, `.Footer` reuse Bootstrap primitives. Retains focus trap, Escape and restoration behavior.
+- Navigation links remain anchors/router links, using shared tokens/classes as appropriate. Do not turn navigation into button callbacks.
+- `DesignTokens.css`: shared `--ds-*` palette, type, spacing, border, radius and focus values. Existing `brand-modal` and landing aliases bridge older components during adoption.
+
+Batch 1 wireframe: `Design System/Reference → Project Batch` (`design-system-reference--project-batch`). Illustrative navigation, list, create, project and settings forms; no writes. Await user review before migrating those production screens.
