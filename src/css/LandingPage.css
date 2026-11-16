@@ -627,6 +627,14 @@
   gap: 34px;
 }
 
+/* A lone card keeps the width it has beside a second one, instead of
+   stretching across the row. Phones show one column anyway. */
+@media (min-width: 628px) {
+  .landing-article:only-child {
+    max-width: calc((100% - 34px) / 2);
+  }
+}
+
 .landing-article-image {
   aspect-ratio: 655 / 356;
   border-radius: var(--landing-radius);
