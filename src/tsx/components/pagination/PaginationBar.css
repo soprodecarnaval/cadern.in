@@ -58,7 +58,7 @@ input[type=number] {
   justify-content: center;
   border-radius: var(--page-radius);
 }
-.paginationInfo .ds-field { height: var(--page-size); min-width: 56px; padding: 0 var(--ds-space-1); border-radius: var(--page-radius); }
+.paginationInfo .ds-field { height: var(--page-size); min-width: 56px; padding: 0 var(--ds-space-1); border-radius: var(--page-radius); border-width: 1px; }
 
 /* The page field and the total. */
 .paginationInfo .page {

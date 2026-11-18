@@ -50,8 +50,6 @@
 .songbook-tool-icon {
   width: 1em;
   height: 1em;
-  /* The heavier icons' outline reaches past the drawing's edges. */
-  overflow: visible;
 }
 
 /* The sort tool's menu: the toolbar's black border, the chosen sort ticked. */
@@ -60,8 +58,7 @@
 }
 
 /* Beside the results' page counter ("Filtrar", "Ordenar por"): at its height
-   (45px, as the toolbar), with a 1px border and the icons at their drawn
-   weight. */
+   (45px, as the toolbar), with a 1px border. */
 .songbook-tool.is-small {
   width: 45px;
   height: 45px;
@@ -216,16 +213,6 @@ form.songbook-tools-sub {
   transform: scaleY(-1);
 }
 
-/* Heavier icons: each shape traced with a 1px line of its own color, the
-   same on every icon whatever its drawing size. */
-.songbook-toolbar svg path,
-.songbook-tool svg path {
-  stroke: currentColor;
-  stroke-width: 1px;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-
 /* Undo and redo's shortcuts, quiet at the right of their rows. */
 .songbook-tools-item-keys {
   padding: 0;
@@ -294,11 +281,6 @@ form.songbook-tools-sub {
   background: none;
 }
 
-/* In the Menu list the icons keep their drawn weight, no outline. */
-.songbook-tools-menu svg path {
-  stroke: none;
-}
-
 /* "Salvar" beside the save icon, where the column is wide enough for the
    whole toolbar with it (about 480px); otherwise the icon alone. */
 .songbook-save-label {
@@ -308,7 +290,7 @@ form.songbook-tools-sub {
 @container montar-generate (min-width: 490px) {
   .songbook-tool.songbook-save {
     width: auto;
-    gap: 0.375rem;
+    gap: calc(0.375rem + 2px);
     padding: 0 0.75rem;
     font-family: var(--ds-font);
     /* As "Limpar tudo" and the other text buttons. */
@@ -324,8 +306,4 @@ form.songbook-tools-sub {
 /* "Menu" at the toolbar's left end, apart from the other tools. */
 .songbook-tools-dropdown {
   margin-right: auto;
-}
-
-.songbook-tool.is-small svg path {
-  stroke: none;
 }
