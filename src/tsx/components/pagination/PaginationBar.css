@@ -73,3 +73,8 @@ input[type=number] {
 .paginationInfo .page-arrow.disabled img {
   opacity: 0.35;
 }
+
+/* The total pages: black stroke like the page field beside it. */
+.paginationInfo .page.disabled .page-link {
+  border: var(--ds-border) solid var(--ds-ink);
+}
