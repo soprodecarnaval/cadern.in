@@ -7,7 +7,8 @@
 }
 
 .score-card {
-  border: var(--ds-border) solid var(--ds-ink);
+  /* Lighter than --ds-border (3px). */
+  border: 1px solid var(--ds-ink);
   border-radius: var(--ds-radius-button);
   background: var(--ds-paper);
   overflow: hidden;
