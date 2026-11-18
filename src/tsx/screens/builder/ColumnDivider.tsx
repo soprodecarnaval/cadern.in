@@ -72,15 +72,21 @@ export function ColumnDivider({
 
 // The chevrons from the divider design (design/Asset 14.svg), each drawn
 // across the full width of the line's strip so the line runs through its
-// middle; the white fill hides the line inside the chevron.
+// middle; the white fill hides the line inside the chevron. `cover` extends
+// that fill 2.5 units past the open ends, so when the chevron slides onto the
+// line on hover none of the line shows between its ends. It also overlaps
+// the chevron's fill by 1 unit: edges that only meet leave a hairline seam
+// mid-slide, where the line would show through.
 const CHEVRONS = {
   right: {
     viewBox: "0 106.57 31.33 53",
     d: "M7.17,108.07l21.01,21.01c2.2,2.2,2.2,5.78,0,7.98l-21.01,21.01",
+    cover: { x: 4.67, y: 108.07, width: 3.5, height: 50 },
   },
   left: {
     viewBox: "0 160.34 31.33 53",
     d: "M24.16,211.84l-21.01-21.01c-2.2-2.2-2.2-5.78,0-7.98l21.01-21.01",
+    cover: { x: 23.16, y: 161.84, width: 3.5, height: 50 },
   },
 };
 
@@ -97,12 +103,13 @@ function DividerButton({
   return (
     <button
       type="button"
-      className="column-divider-button"
+      className={`column-divider-button is-${points}`}
       aria-label={label}
       title={label}
       onClick={onClick}
     >
       <svg viewBox={chevron.viewBox} aria-hidden="true">
+        <rect {...chevron.cover} stroke="none" />
         <path d={chevron.d} />
       </svg>
     </button>

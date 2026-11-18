@@ -115,8 +115,30 @@
   vector-effect: non-scaling-stroke;
 }
 
-.column-divider-button:hover svg {
-  fill: var(--ds-yellow, #fcee21);
+/* On hover or keyboard focus the chevron slides the way it points (the
+   direction the columns will move) until its open ends meet the line, and
+   slides back after. The ends sit 8.5 units off the line in the design,
+   drawn at 90%. */
+.column-divider-button.is-right {
+  --slide: calc(8.5px * 0.9);
+}
+
+.column-divider-button.is-left {
+  --slide: calc(-8.5px * 0.9);
+}
+
+.column-divider-button svg {
+  transition: transform 0.2s ease-out;
+}
+
+.column-divider-button:is(:hover, :focus-visible) svg {
+  transform: translateX(var(--slide));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .column-divider-button svg {
+    transition: none;
+  }
 }
 
 .column-divider-button:focus-visible {
