@@ -68,6 +68,20 @@
   flex: 1 1 auto;
 }
 
+.songbook-section-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+}
+
+.songbook-section-count {
+  font-weight: var(--ds-weight-body);
+}
+
+/* Songs inside a collapsed section. */
+.songbook-row-hidden {
+  display: none;
+}
+
 .songbook-empty-section {
   color: var(--ds-text-secondary);
   font-size: 0.85rem;

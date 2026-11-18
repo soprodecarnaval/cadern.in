@@ -64,7 +64,7 @@ function SongbookScoreCard({ Card,
 }
 
 export function SortableSongbookRow({ Card, songbookProjectId, entry, index, sorting, insertion, emptySection, onDelete,
-  onSelect, onUpdate, onPrepareDrag, carried, disableDrop, scoreCount }: {
+  onSelect, onUpdate, onPrepareDrag, carried, disableDrop, scoreCount, collapsed, hidden, onToggleCollapsed }: {
   Card: import("react").ComponentType<import("../../scores/card/ScoreCardView").ScoreCardProps>;
 
   entry: SongbookEditorItem;
@@ -78,6 +78,11 @@ export function SortableSongbookRow({ Card, songbookProjectId, entry, index, sor
   carried: boolean;
   disableDrop: boolean;
   scoreCount: number;
+  /** A section whose songs are hidden. */
+  collapsed: boolean;
+  /** A song inside a collapsed section: not shown, and not a drop target. */
+  hidden: boolean;
+  onToggleCollapsed: () => void;
   onSelect: (score: ScoreViewModel, checked: boolean) => void;
   onUpdate: (update: ScoreEditUpdate) => void;
 }) {
@@ -89,7 +94,7 @@ export function SortableSongbookRow({ Card, songbookProjectId, entry, index, sor
       group: "songbook",
       score: entry.item.type === "score" ? entry.item.score : undefined,
     },
-    disabled: { droppable: disableDrop },
+    disabled: { droppable: disableDrop || hidden },
     plugins: (defaults) => defaults.filter((plugin) => plugin !== OptimisticSortingPlugin),
   });
   const { item } = entry;
@@ -110,10 +115,12 @@ export function SortableSongbookRow({ Card, songbookProjectId, entry, index, sor
         isDragSource ? "songbook-row-dragging" : "",
         carried ? "songbook-row-carried" : "",
         insertion ? `songbook-insert-${insertion}` : "",
+        hidden ? "songbook-row-hidden" : "",
       ].join(" ")}>
       {section ? (
         <>
-          <SongBookSectionRow title={item.title} dragHandle={handle} handleDelete={onDelete} />
+          <SongBookSectionRow title={item.title} dragHandle={handle} handleDelete={onDelete}
+            scoreCount={scoreCount} collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} />
           {emptySection && <div className="songbook-empty-section">
             Solte uma música após este título.
           </div>}
