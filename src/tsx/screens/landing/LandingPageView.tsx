@@ -21,7 +21,7 @@ import type { ProfileTab } from "../account/ProfileModalView";
 import arrowNext from "../../../assets/brand/arrow-next.svg";
 import arrowPrev from "../../../assets/brand/arrow-prev.svg";
 import chevronRight from "../../../assets/brand/chevron-right.svg";
-import flagBeloHorizonte from "../../../assets/brand/flag-belo-horizonte.svg";
+import sunBeloHorizonte from "../../../assets/brand/sun-belo-horizonte.svg";
 import instagram from "../../../assets/brand/instagram.svg";
 import logoWhite from "../../../assets/brand/logo-white.svg";
 import logo from "../../../assets/brand/logo.svg";
@@ -529,7 +529,7 @@ export function LandingFooter({
               /soprodecarnaval
             </a>
             <p className="landing-footer-made-in">
-              <img src={flagBeloHorizonte} alt="Bandeira de Belo Horizonte" />
+              <img src={sunBeloHorizonte} alt="" />
               <span>
                 Feito
                 <br />
