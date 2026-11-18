@@ -14,7 +14,12 @@ import { ARTICLES_PATH, type ArticleCard } from "../../../articles";
 import type { WithId } from "../../../lib/db";
 import type { CollectionContextValue } from "../../../useCollectionContext";
 import { initialsOf } from "../../../lib/displayName";
-import { publicSongbookPath, projectsPath, scorePath } from "../../../lib/routes";
+import {
+  contributePath,
+  publicSongbookPath,
+  projectsPath,
+  scorePath,
+} from "../../../lib/routes";
 import { ArticleCards } from "../articles/ArticleCards";
 import type { ProfileTab } from "../account/ProfileModalView";
 
@@ -42,7 +47,6 @@ export type LandingSongbooks =
 // "not found" page until they're built.
 const PLANNED = {
   sobre: "/sobre",
-  contribua: "/contribua",
   ajuda: "/ajuda",
   biblioteca: "/biblioteca",
   carnaval: "/2027",
@@ -212,7 +216,7 @@ export function LandingPageView({
                 />
               ))}
             <ActionCard
-              to={PLANNED.contribua}
+              to={contributePath()}
               title="Contribuir"
               text="Ajude o projeto cadern.in a colocar os blocos na rua!"
             />
@@ -263,7 +267,7 @@ export function LandingHeader({
       <Logo />
       <nav className="landing-header-nav" aria-label="Principal">
         <Link to={PLANNED.sobre}>Sobre</Link>
-        <Link to={PLANNED.contribua}>Contribua</Link>
+        <Link to={contributePath()}>Contribua</Link>
         <Link to={PLANNED.ajuda}>Ajuda</Link>
         {collabEnabled && (
           // Fixed height, so logging in doesn't move the page down.
@@ -583,7 +587,7 @@ export function LandingFooter({
           </ul>
           <ul>
             <li><Link to={PLANNED.sobre}>Sobre</Link></li>
-            <li><Link to={PLANNED.contribua}>Contribua</Link></li>
+            <li><Link to={contributePath()}>Contribua</Link></li>
             <li><Link to={PLANNED.ajuda}>Ajuda</Link></li>
             <li><Link to={ARTICLES_PATH}>Artigos</Link></li>
           </ul>

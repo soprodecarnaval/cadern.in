@@ -6,6 +6,7 @@ export const ROUTE_PATTERNS = {
   home: "/",
   builder: "/montar",
   articles: "/artigos",
+  contribute: "/contribua",
   article: "/artigos/:slug",
   score: "/partituras/:scoreId",
   scoreRevision: "/partituras/:scoreId/versoes/:revisionId",
@@ -25,6 +26,7 @@ const RESERVED_PROJECT_SLUGS = new Set([
   "projetos",
   "partituras",
   "artigos",
+  "contribua",
   "montar",
   "plugin",
   "assets",
@@ -63,6 +65,8 @@ export function isReservedSongbookSlug(slug: string | undefined): boolean {
 }
 
 export const articlesPath = () => ROUTE_PATTERNS.articles;
+
+export const contributePath = () => ROUTE_PATTERNS.contribute;
 
 export const articlePath = (slug: string) =>
   `${ROUTE_PATTERNS.articles}/${encodeURIComponent(slug)}`;
