@@ -8,10 +8,20 @@ export function highlightRanges(text: string, ranges?: HighlightRanges): ReactNo
   if (!ranges || ranges.length === 0) {
     return text;
   }
-  const sorted = [...ranges].sort((a, b) => a[0] - b[0]);
+  // Ranges that touch or overlap become one mark, so a word isn't drawn as
+  // several separate highlights.
+  const merged: [number, number][] = [];
+  [...ranges].sort((a, b) => a[0] - b[0]).forEach(([start, end]) => {
+    const last = merged[merged.length - 1];
+    if (last && start <= last[1] + 1) {
+      last[1] = Math.max(last[1], end);
+    } else {
+      merged.push([start, end]);
+    }
+  });
   const parts: ReactNode[] = [];
   let cursor = 0;
-  sorted.forEach(([start, end], i) => {
+  merged.forEach(([start, end], i) => {
     if (start > cursor) {
       parts.push(text.slice(cursor, start));
     }
@@ -45,4 +55,15 @@ export function substringRange(text: string, needle: string): HighlightRanges {
   // which is safe here since Portuguese diacritic stripping is 1:1 per char.
   const idx = normalize(text).indexOf(normalize(trimmed));
   return idx === -1 ? [] : [[idx, idx + trimmed.length - 1]];
+}
+
+/** Where each word of `query` appears in `text`, case/diacritic-insensitive.
+ *  Search syntax around a word (quotes, ^, =, ', $) is ignored, and words
+ *  negated with ! are skipped. */
+export function queryRanges(text: string, query: string): HighlightRanges {
+  return query
+    .split(/\s+/)
+    .filter((word) => word && !word.startsWith("!"))
+    .map((word) => word.replace(/^[="'^]+|[$"]+$/g, ""))
+    .flatMap((word) => substringRange(text, word));
 }

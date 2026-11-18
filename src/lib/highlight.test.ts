@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isValidElement } from "react";
-import { highlightRanges, substringRange } from "./highlight";
+import { highlightRanges, queryRanges, substringRange } from "./highlight";
 
 function textOf(node: ReturnType<typeof highlightRanges>): string {
   if (typeof node === "string") { return node; }
@@ -49,5 +49,22 @@ describe("substringRange", () => {
     expect(substringRange("Olha pro Céu", "")).toEqual([]);
     expect(substringRange("Olha pro Céu", "   ")).toEqual([]);
     expect(substringRange("Olha pro Céu", "xyz")).toEqual([]);
+  });
+});
+
+describe("queryRanges", () => {
+  it("marks each typed word where it appears, not scattered letters", () => {
+    expect(queryRanges("abre alas", "abre")).toEqual([[0, 3]]);
+    expect(queryRanges("abre alas", "alas abre")).toEqual([[5, 8], [0, 3]]);
+  });
+
+  it("ignores search syntax and negated words", () => {
+    expect(queryRanges("abre alas", "^abre !alas")).toEqual([[0, 3]]);
+    expect(queryRanges("abre alas", "'alas$")).toEqual([[5, 8]]);
+  });
+
+  it("merges touching ranges into one mark", () => {
+    const node = highlightRanges("alas", [[0, 0], [1, 2]]);
+    expect(Array.isArray(node) && node.filter(isValidElement)).toHaveLength(1);
   });
 });

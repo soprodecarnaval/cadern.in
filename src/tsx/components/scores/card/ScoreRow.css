@@ -128,5 +128,7 @@
 }
 
 .score-card { font-family: var(--ds-font); color: var(--ds-ink); }
+/* Search matches: no Bootstrap padding, which opened gaps inside words. */
+.score-card mark { padding: 0; background: var(--ds-yellow); color: inherit; }
 .score-add-button { background: var(--ds-yellow); }
 .score-card :is(button, a):focus-visible { outline: var(--ds-border) solid var(--ds-ink); outline-offset: 2px; }

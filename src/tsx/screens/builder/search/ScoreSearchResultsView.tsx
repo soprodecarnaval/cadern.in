@@ -23,7 +23,7 @@ const ScoreSearchResultsView = ({
   collection: import("../../../../useCollectionContext").CollectionContextValue;
   Card: import("react").ComponentType<import("../../../components/scores/card/ScoreCardView").ScoreCardProps>;
 }) => {
-  const { status, getMatches } = collection;
+  const { status } = collection;
 
   if (status === "loading") {
     return <Spinner animation="border" className="mt-4" />;
@@ -44,7 +44,6 @@ const ScoreSearchResultsView = ({
       <ScoreSearchResultTable
         key={searchQuery}
         Card={Card}
-        getMatches={getMatches}
         scores={results}
         searchQuery={searchQuery}
         handleSelect={onSelectSong}
