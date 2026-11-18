@@ -48,11 +48,20 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
   rows: SongbookItemViewModel[];
   songbookProjectId?: string;
   onReorder: (rows: SongbookItemViewModel[]) => void;
+  /** The rows with one section renamed. */
+  onRename: (rows: SongbookItemViewModel[]) => void;
   onDelete: (index: number) => void;
   onSelect: (score: ScoreViewModel, checked: boolean) => void;
   onUpdate: (index: number, update: ScoreEditUpdate) => void;
-}>(function SongbookSortableList({ Card, songbookProjectId, rows, onReorder, onDelete, onSelect, onUpdate }, ref) {
-  const entries = useSongbookEditorItems(rows);
+}>(function SongbookSortableList({ Card, songbookProjectId, rows, onReorder, onRename, onDelete, onSelect, onUpdate }, ref) {
+  const { entries, keepSectionId } = useSongbookEditorItems(rows);
+  const renameSection = (index: number, title: string) => {
+    const section = rows[index];
+    if (section.type !== "section") { return; }
+    const renamed = { ...section, title };
+    keepSectionId(section, renamed);
+    onRename(rows.map((row, i) => (i === index ? renamed : row)));
+  };
   const container = useRef<HTMLDivElement>(null);
   const [preparingId, setPreparingId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -281,6 +290,7 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
             collapsed={collapsed.has(entry.id)}
             hidden={hiddenAt(index)}
             onToggleCollapsed={() => toggleCollapsed(entry.id)}
+            onRename={(title) => renameSection(index, title)}
             onPrepareDrag={(keyboard) => prepareDrag(entry.id, keyboard)}
             onDelete={() => onDelete(index)} onSelect={onSelect}
             onUpdate={(update) => onUpdate(index, update)} />

@@ -135,6 +135,7 @@ const SongBookTableView = forwardRef<
           songbookProjectId={songbookProjectId}
           ref={ref}
           rows={rows}
+          onRename={setRows}
           onReorder={(reordered) => {
             setRows(reordered);
             setSortValue("");
