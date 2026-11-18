@@ -97,22 +97,11 @@
   text-decoration: underline;
 }
 
-.landing-login {
-  position: relative;
-  border: 2px solid var(--landing-ink);
-  border-radius: 8px;
-  background: none;
-  padding: 2px 20px;
-  font-weight: 500;
+/* The design system's secondary button (atoms/Button.css), with the
+   header's own narrower side padding. */
+.landing .landing-login.ds-button {
+  padding-inline: 20px;
   white-space: nowrap;
-  max-width: 200px;
-  overflow: visible;
-  text-overflow: ellipsis;
-  font-size: 18px;
-}
-
-.landing-login:hover {
-  background: var(--landing-yellow);
 }
 
 .landing-login-badge {

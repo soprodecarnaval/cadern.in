@@ -276,13 +276,13 @@ export function LandingHeader({
                 onSignOut={onSignOut}
               />
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 className="landing-login"
                 onClick={() => onOpenUserModal()}
               >
                 Entrar
-              </button>
+              </Button>
             )}
           </div>
         )}
