@@ -14,8 +14,9 @@ import { isAdmin, isEditor, isReviewer } from "../../../../lib/roles";
 import {
   projectSettingsPath,
   publicSongbookPath,
+  scorePath,
   songbookPath,
-} from "../../../../lib/songbook";
+} from "../../../../lib/routes";
 import { buildExportDeepLink } from "../../../../../types/exportDeepLink";
 
 import type {
@@ -283,7 +284,7 @@ export function PublicProjectPageView({
                 <td>{resolveScoreMetadata(score).title}</td>
                 <td>{resolveScoreMetadata(score).composer}</td>
                 <td>
-                  <Link to={`/score/${encodeURIComponent(score.id)}`} size="sm" variant="secondary">
+                  <Link to={scorePath(score.id)} size="sm" variant="secondary">
                       Ver
                     </Link>
                 </td>

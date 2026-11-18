@@ -9,7 +9,7 @@ import { Link, useNavigate } from "react-router-dom";
 import type { WithId } from "../../../../lib/db";
 import { isAdmin } from "../../../../lib/roles";
 
-import { songbookPath } from "../../../../lib/songbook";
+import { newProjectPath, songbookPath } from "../../../../lib/routes";
 
 import type { ProjectDoc } from "../../../../../types/docs";
 import type { SongbookItemViewModel } from "../../../../../types/viewModels";
@@ -92,7 +92,7 @@ export function SaveSongbookModalView({
             <Spinner animation="border" size="sm" />
           ) : projects.length === 0 ? (
             <p className="mb-0">
-              <Link to="/projects/new" onClick={onHide}>
+              <Link to={newProjectPath()} onClick={onHide}>
                 Criar um novo projeto
               </Link>
               .

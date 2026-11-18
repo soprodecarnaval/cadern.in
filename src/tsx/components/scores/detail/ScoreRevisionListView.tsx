@@ -2,6 +2,7 @@ import { List } from "../../../atoms/List";
 import { useEffect, useState } from "react";
 import { Badge, Spinner } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import { scoreRevisionPath } from "../../../../lib/routes";
 import type { ScoreRevisionDoc } from "../../../../../types/docs";
 import type { WithId } from "../../../../lib/db";
 
@@ -79,7 +80,7 @@ export function ScoreRevisionListView({
           key={rev.id}
           action
           as={Link}
-          to={`/score/${encodeURIComponent(scoreId)}/${encodeURIComponent(rev.id)}`}
+          to={scoreRevisionPath(scoreId, rev.id)}
           active={rev.id === currentRevisionId}
           aria-current={rev.id === currentRevisionId ? "page" : undefined}
           className="d-flex justify-content-between align-items-center"

@@ -12,7 +12,7 @@ import {
 
 import type { WithId } from "../../../../lib/db";
 import { isAdmin } from "../../../../lib/roles";
-import { projectPath, projectSettingsPath } from "../../../../lib/songbook";
+import { newProjectPath, projectPath, projectSettingsPath } from "../../../../lib/routes";
 
 import type { ProjectDoc, UserProjectRole } from "../../../../../types/docs";
 
@@ -131,7 +131,7 @@ export function MeusProjetosPageView({
     <Page className="mt-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Meus projetos</h2>
-        <Link to="/projects/new" variant="primary">Novo projeto</Link>
+        <Link to={newProjectPath()} variant="primary">Novo projeto</Link>
       </div>
 
       {loading ? (

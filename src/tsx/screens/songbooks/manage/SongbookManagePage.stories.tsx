@@ -15,8 +15,8 @@ const meta = {
   title: "Screens/SongbookManagePage",
   component: SongbookManagePageView,
   parameters: {
-    route: "/project/bloco-exemplo/songbook/carnaval/manage?detalhes",
-    routePath: "/project/:slug/songbook/:songbookSlug/manage",
+    route: "/bloco-exemplo/carnaval/gerenciar?detalhes",
+    routePath: "/:slug/:songbookSlug/gerenciar",
   },
   args: {
     services: { ...services, generateSongbookPdfs: generate },

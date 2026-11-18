@@ -3,6 +3,7 @@ import { Button } from "../../../atoms/Button";
 import { useEffect, useState } from "react";
 import { Alert, Badge, Spinner } from "react-bootstrap";
 import { Link } from "../../../atoms/Link";
+import { scoreRevisionPath } from "../../../../lib/routes";
 import type { LoadedScore } from "../../../../lib/loadScore";
 
 /**
@@ -106,7 +107,7 @@ export function ScoreDetailModalView({
         {score && (
           <Link
             variant="secondary"
-            to={`/score/${encodeURIComponent(score.scoreId)}/${encodeURIComponent(score.revisionId)}`}
+            to={scoreRevisionPath(score.scoreId, score.revisionId)}
           >
             Abrir página completa
           </Link>

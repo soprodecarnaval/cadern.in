@@ -10,6 +10,7 @@ import {
   Table,
 } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
+import { projectPath, projectsPath } from "../../../../lib/routes";
 
 import type { WithId } from "../../../../lib/db";
 import { displayNameOf } from "../../../../lib/displayName";
@@ -265,7 +266,7 @@ export function ProjectSettingsPageView({
               required
             />
             <Form.Text className="text-muted">
-              Slug: <code>/project/{project.slug}</code> (imutável)
+              Slug: <code>{projectPath(project.slug)}</code> (imutável)
             </Form.Text>
           </Form.Group>
           <Button type="submit" size="sm" disabled={titlePending}>
@@ -451,7 +452,7 @@ export function ProjectSettingsPageView({
         <DeleteProjectSection
           services={services}
           project={project}
-          onDeleted={() => void navigate("/projects")}
+          onDeleted={() => void navigate(projectsPath())}
         />
       )}
     </Page>

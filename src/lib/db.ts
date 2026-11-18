@@ -21,6 +21,7 @@ import {
 import { FirebaseError } from "firebase/app";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
+import { isReservedProjectSlug, isReservedSongbookSlug } from "./routes";
 import { newRevisionId, revisionSlug } from "./revisionId";
 import {
   zScoreDoc,
@@ -326,6 +327,9 @@ export async function createProject(
   owner: { uid: string; displayName: string },
 ): Promise<void> {
   const { title } = zProjectCreateData.parse(data);
+  if (isReservedProjectSlug(slug)) {
+    throw new Error("Esse nome de URL é reservado.");
+  }
   const batch = writeBatch(db);
   batch.set(projectRef(slug), {
     ...zProjectData.parse({ title, slug, memberIds: [owner.uid] }),
@@ -652,6 +656,9 @@ export async function createSongbook(input: {
   content: SongbookRevisionContent;
   createdBy: string;
 }): Promise<string> {
+  if (isReservedSongbookSlug(input.slug)) {
+    throw new Error("Esse nome de URL é reservado.");
+  }
   const id = songbookId(input.projectId, input.slug);
   const revisionId = newSongbookRevisionId(input.title);
   const batch = writeBatch(db);
