@@ -71,44 +71,44 @@ export function AboutPageView({
               nulla pariatur. Excepteur sint occaecat cupidatat non proident,
               sunt in culpa qui officia deserunt mollit anim id est laborum.
             </p>
-
-            <section className="about-contact" aria-labelledby="fale-conosco">
-              <h2 id="fale-conosco" className="landing-section-title">
-                Fale conosco
-              </h2>
-              <form className="about-form" onSubmit={sendMessage}>
-                <label className="about-field">
-                  <span className="visually-hidden">Nome</span>
-                  <Input name="firstName" autoComplete="given-name" placeholder="Nome" />
-                </label>
-                <label className="about-field">
-                  <span className="visually-hidden">Sobrenome</span>
-                  <Input name="lastName" autoComplete="family-name" placeholder="Sobrenome" />
-                </label>
-                <label className="about-field about-field-wide">
-                  <span className="visually-hidden">E-mail</span>
-                  <Input
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="E-mail"
-                  />
-                </label>
-                <label className="about-field about-field-wide">
-                  <span className="visually-hidden">Mensagem</span>
-                  <TextArea
-                    name="message"
-                    rows={6}
-                    required
-                    placeholder="Mensagem"
-                  />
-                </label>
-                <Button type="submit" className="about-field-wide about-submit">
-                  Enviar
-                </Button>
-              </form>
-            </section>
           </div>
+
+          <section className="about-contact" aria-labelledby="fale-conosco">
+            <h2 id="fale-conosco" className="landing-section-title">
+              Fale conosco
+            </h2>
+            <form className="about-form" onSubmit={sendMessage}>
+              <label className="about-field">
+                <span className="visually-hidden">Nome</span>
+                <Input name="firstName" autoComplete="given-name" placeholder="Nome" />
+              </label>
+              <label className="about-field">
+                <span className="visually-hidden">Sobrenome</span>
+                <Input name="lastName" autoComplete="family-name" placeholder="Sobrenome" />
+              </label>
+              <label className="about-field about-field-wide">
+                <span className="visually-hidden">E-mail</span>
+                <Input
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="E-mail"
+                />
+              </label>
+              <label className="about-field about-field-wide">
+                <span className="visually-hidden">Mensagem</span>
+                <TextArea
+                  name="message"
+                  rows={6}
+                  required
+                  placeholder="Mensagem"
+                />
+              </label>
+              <Button type="submit" className="about-field-wide about-submit">
+                Enviar
+              </Button>
+            </form>
+          </section>
 
           <img
             src={caderninhos}
