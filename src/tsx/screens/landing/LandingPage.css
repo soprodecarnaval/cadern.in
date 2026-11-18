@@ -87,6 +87,7 @@
 .landing-header-nav {
   display: flex;
   align-items: center;
+  margin-left: auto;
   gap: clamp(16px, 2.5vw, 36px);
   font-size: 18px;
   font-weight: 300;
@@ -834,6 +835,21 @@
       "links"
       "social";
     justify-content: start;
+  }
+}
+
+/* Header on two lines: the logo, then the links at the left and the login
+   or account menu at the right. 566px is where the signed-out header stops
+   fitting on one line; signed in it switches here too, so signing in doesn't
+   change the header's height. */
+@media (max-width: 566px) {
+  .landing-header-nav {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .landing-auth {
+    margin-left: auto;
   }
 }
 
