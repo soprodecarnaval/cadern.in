@@ -4,10 +4,14 @@ import { SortColumn, SortDirection } from "../../../utils/sort";
 
 interface SortProps {
   onSortBy: (column: SortColumn, direction: SortDirection) => void;
+  /** The chosen option, for a parent that resets it ("" is "Ordenar por"). */
+  value?: string;
+  onValueChange?: (value: string) => void;
 }
 
-const Sort = ({ onSortBy }: SortProps) => {
+const Sort = ({ onSortBy, value, onValueChange }: SortProps) => {
   const handleOnClick: ChangeEventHandler<HTMLSelectElement> = (event) => {
+    onValueChange?.(event.target.value);
     const [column, direction] = event.target.value.split("-") as [
       SortColumn,
       SortDirection
@@ -16,8 +20,8 @@ const Sort = ({ onSortBy }: SortProps) => {
   };
 
   return (
-    <Select onChange={handleOnClick} className="mb-2">
-      <option>Ordenar por</option>
+    <Select value={value} onChange={handleOnClick} className="mb-2">
+      <option value="">Ordenar por</option>
       <option value="carnivalStyle">Estilo (carnaval)</option>
       <option value="title-asc">Título (A-Z)</option>
       <option value="title-desc">Título (Z-A)</option>

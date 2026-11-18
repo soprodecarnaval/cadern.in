@@ -50,6 +50,9 @@ const SongBookTableView = forwardRef<
     ref,
   ) => {
     const [newSection, setNewSection] = useState<string>("");
+    // The sort last applied; cleared when an item is moved by hand, since the
+    // list is then no longer in that order.
+    const [sortValue, setSortValue] = useState("");
 
     const onInputNewSection = (e: ChangeEvent<HTMLInputElement>) =>
       setNewSection(e.target.value);
@@ -91,6 +94,8 @@ const SongBookTableView = forwardRef<
         <Row>
           <Col xs={12} sm="auto">
             <Sort
+              value={sortValue}
+              onValueChange={setSortValue}
               onSortBy={(col, dir) =>
                 setRows(sortSongsWithinSections(rows, col, dir))
               }
@@ -130,7 +135,10 @@ const SongBookTableView = forwardRef<
           songbookProjectId={songbookProjectId}
           ref={ref}
           rows={rows}
-          onReorder={setRows}
+          onReorder={(reordered) => {
+            setRows(reordered);
+            setSortValue("");
+          }}
           onDelete={(index) => setRows(deleteRow(rows, index))}
           onSelect={handleSelect}
           onUpdate={handleUpdateScore}
