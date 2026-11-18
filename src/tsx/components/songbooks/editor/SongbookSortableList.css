@@ -48,10 +48,6 @@
   cursor: grabbing;
 }
 
-.songbook-drag-handle:hover {
-  background: var(--ds-yellow);
-}
-
 .songbook-drag-handle:focus-visible {
   outline: 2px solid var(--ds-ink);
   outline-offset: -3px;

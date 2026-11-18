@@ -22,7 +22,6 @@
 
 .score-card-row:hover {
   cursor: pointer;
-  background: var(--ds-yellow);
 }
 
 .score-card-toggle {
