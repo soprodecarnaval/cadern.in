@@ -1,0 +1,80 @@
+/* Sobre: text and a contact form on the left, an image on the right. On
+   narrow screens the image moves above the text. */
+.about {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  gap: 48px clamp(48px, 10vw, 140px);
+  align-items: start;
+  max-width: 1280px;
+  margin: 18px auto 0;
+}
+
+.about-text {
+  max-width: 640px;
+}
+
+.about-text p {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+/* The article pages' title size. */
+.about-text .about-headline {
+  font-size: clamp(2rem, 4.4vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  margin: 0 0 20px;
+  text-wrap: balance;
+}
+
+.about-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 949 / 1265;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.about-contact {
+  margin-top: 56px;
+}
+
+.about-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 24px;
+}
+
+.about-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.about-field-wide {
+  grid-column: 1 / -1;
+}
+
+.about-submit {
+  width: 100%;
+  margin-top: 4px;
+}
+
+@media (max-width: 767px) {
+  .about {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .about-image {
+    order: -1;
+    aspect-ratio: 4 / 3;
+  }
+
+  .about-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

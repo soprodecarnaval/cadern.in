@@ -15,6 +15,7 @@ import type { WithId } from "../../../lib/db";
 import type { CollectionContextValue } from "../../../useCollectionContext";
 import { initialsOf } from "../../../lib/displayName";
 import {
+  aboutPath,
   contributePath,
   publicSongbookPath,
   projectsPath,
@@ -46,7 +47,6 @@ export type LandingSongbooks =
 // Pages the design links to that don't exist yet. They fall through to the
 // "not found" page until they're built.
 const PLANNED = {
-  sobre: "/sobre",
   ajuda: "/ajuda",
   biblioteca: "/biblioteca",
   carnaval: "/2027",
@@ -266,7 +266,7 @@ export function LandingHeader({
     <header className="landing-header">
       <Logo />
       <nav className="landing-header-nav" aria-label="Principal">
-        <Link to={PLANNED.sobre}>Sobre</Link>
+        <Link to={aboutPath()}>Sobre</Link>
         <Link to={contributePath()}>Contribua</Link>
         <Link to={PLANNED.ajuda}>Ajuda</Link>
         {collabEnabled && (
@@ -586,7 +586,7 @@ export function LandingFooter({
             </li>
           </ul>
           <ul>
-            <li><Link to={PLANNED.sobre}>Sobre</Link></li>
+            <li><Link to={aboutPath()}>Sobre</Link></li>
             <li><Link to={contributePath()}>Contribua</Link></li>
             <li><Link to={PLANNED.ajuda}>Ajuda</Link></li>
             <li><Link to={ARTICLES_PATH}>Artigos</Link></li>
