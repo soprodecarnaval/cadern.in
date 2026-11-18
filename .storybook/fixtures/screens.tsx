@@ -20,7 +20,6 @@ import {
   songbookSection,
 } from "../../src/lib/songbook";
 import { toScoreViewModel } from "../../src/lib/viewModels";
-import { PDFGeneratorView } from "../../src/tsx/screens/builder/dialogs/PdfGeneratorView";
 import { ReviewCommentsPanelView } from "../../src/tsx/components/review/ReviewCommentsPanelView";
 import { SaveSongbookModalView } from "../../src/tsx/screens/builder/dialogs/SaveSongbookModalView";
 import { ScoreCardView, type ScoreCardProps } from "../../src/tsx/components/scores/card/ScoreCardView";
@@ -320,7 +319,6 @@ export function ScreenCard(props: ScoreCardProps) {
   return (
     <ScoreCardView
       {...props}
-      lineage={null}
       onShowDetail={noop}
     />
   );
@@ -362,11 +360,6 @@ function SaveModal(
 ) {
   return <SaveSongbookModalView {...props} services={services} />;
 }
-function Pdf(
-  props: ComponentProps<typeof import("../../src/tsx/screens/builder/dialogs/PdfGenerator").PDFGenerator>,
-) {
-  return <PDFGeneratorView {...props} generateSongbookPdfs={generate} />;
-}
 function Generation(
   props: ComponentProps<
     typeof import("../../src/tsx/components/songbooks/generation/SongbookGenerationPanel").SongbookGenerationPanel
@@ -391,7 +384,6 @@ export const scoreComponents = {
 };
 export const homeComponents = {
   Card: ScreenCard,
-  PDFGenerator: Pdf,
   SaveSongbookModal: SaveModal,
 };
 export const songbookComponents = {

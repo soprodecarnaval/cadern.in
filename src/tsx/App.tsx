@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
-import { AppNavigation } from "./components/navigation/AppNavigation";
 import { AuthModal } from "./screens/auth/AuthModal";
 import { ProfileModal } from "./screens/account/ProfileModal";
 import type { ProfileTab } from "./screens/account/ProfileModalView";
@@ -77,11 +76,11 @@ function App() {
   };
   const [inboxCount, setInboxCount] = useState(0);
   const { currentUser, pendingUser } = useAuth();
-  // The landing, article and Montar pages draw the landing header and footer.
+  // Every page has the landing header and footer. The landing and article
+  // pages draw their own; the rest get them from LandingChrome.
   const { pathname } = useLocation();
-  const isLanding =
+  const drawsOwnChrome =
     pathname === ROUTE_PATTERNS.home ||
-    pathname === ROUTE_PATTERNS.builder ||
     pathname === ROUTE_PATTERNS.articles ||
     pathname.startsWith(`${ROUTE_PATTERNS.articles}/`);
 
@@ -101,17 +100,7 @@ function App() {
     }
   }, [pendingUser]);
 
-  return (
-    <>
-      {!isLanding && (
-        <AppNavigation
-          currentUser={currentUser}
-          collabEnabled={FEATURE_FLAG_COLLAB_FLOW}
-          inboxCount={inboxCount}
-          onOpenUserModal={() => openUserModal()}
-        />
-      )}
-
+  const routes = (
       <Routes>
         <Route
           path={ROUTE_PATTERNS.home}
@@ -124,14 +113,7 @@ function App() {
         />
         <Route
           path={ROUTE_PATTERNS.builder}
-          element={
-            <LandingChrome
-              inboxCount={inboxCount}
-              onOpenUserModal={openUserModal}
-            >
-              <HomePage onRequestLogin={() => openUserModal()} />
-            </LandingChrome>
-          }
+          element={<HomePage onRequestLogin={() => openUserModal()} />}
         />
         <Route
           path={ROUTE_PATTERNS.articles}
@@ -195,6 +177,17 @@ function App() {
         )}
         <Route path="*" element={<FallbackRoute />} />
       </Routes>
+  );
+
+  return (
+    <>
+      {drawsOwnChrome ? (
+        routes
+      ) : (
+        <LandingChrome inboxCount={inboxCount} onOpenUserModal={openUserModal}>
+          {routes}
+        </LandingChrome>
+      )}
 
       {currentUser ? (
         <ProfileModal

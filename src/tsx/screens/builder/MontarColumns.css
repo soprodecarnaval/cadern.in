@@ -1,0 +1,189 @@
+/* Montar's two columns (Resultados | Caderninho) as a grid, so the headers
+   stay aligned and the divider runs beside both lists. Cells keep
+   Bootstrap's 12px column padding; with the 48px divider column the space
+   between the columns' content is 72px. */
+.montar-columns {
+  --divider-width: 48px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--divider-width) minmax(0, 1fr);
+  grid-template-areas:
+    "search divider generate"
+    "results divider songbook";
+  /* Out by the cells' padding, so their content meets the page's edges. */
+  margin-inline: -12px;
+}
+
+.montar-cell {
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.montar-search {
+  grid-area: search;
+}
+
+
+/* Holds the Caderninho toolbar (with "Salvar caderninho"), at the right as
+   "Gerar caderninhos" was. */
+.montar-generate {
+  grid-area: generate;
+  /* Its width decides whether "Salvar" shows (SongbookToolbar.css). */
+  container: montar-generate / inline-size;
+  /* Level with the search box, which sits 24px down (mt-4). */
+  padding-top: 1.5rem;
+}
+
+.montar-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.montar-results {
+  grid-area: results;
+  margin-top: 1.5rem;
+}
+
+.montar-songbook {
+  grid-area: songbook;
+  margin-top: 1.5rem;
+}
+
+.montar-columns.is-left-collapsed {
+  grid-template-columns: 0 var(--divider-width) minmax(0, 1fr);
+}
+
+.montar-columns.is-right-collapsed {
+  grid-template-columns: minmax(0, 1fr) var(--divider-width) 0;
+}
+
+.montar-columns.is-left-collapsed :is(.montar-search, .montar-results),
+.montar-columns.is-right-collapsed :is(.montar-generate, .montar-songbook) {
+  display: none;
+}
+
+/* The divider (design/Asset 14.svg): a 3px line with round ends from the top
+   of the search box down, and the chevrons that collapse each side. */
+.column-divider {
+  grid-area: divider;
+  position: relative;
+  /* The chevrons centered in the space between the search box and the
+     first cards: the line starts with the search row (24px above the box,
+     48px box), and the hint and "Resultados" title take the 114px below it;
+     (114px - 95px of chevrons) / 2 + 72px. */
+  padding-top: 81.5px;
+  /* Above the cells, so the chevrons stay clickable where they overlap. */
+  z-index: 2;
+}
+
+.column-divider::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 1.5px);
+  width: 3px;
+  border-radius: 1.5px;
+  background: var(--ds-ink, #000);
+}
+
+.column-divider-controls {
+  /* Follows the page down long lists. */
+  position: sticky;
+  top: 16px;
+  /* Centered on the line; wider than the 24px column, so not margin: auto. */
+  margin-left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  display: flex;
+  flex-direction: column;
+}
+
+.column-divider-button {
+  display: block;
+  /* The design's chevrons at 90%. */
+  width: calc(31.33px * 0.9);
+  height: calc(53px * 0.9);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.column-divider-button svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: var(--ds-paper, #fff);
+  stroke: var(--ds-ink, #000);
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Keeps the 3px stroke when the chevron is drawn smaller than the design. */
+.column-divider-button path {
+  vector-effect: non-scaling-stroke;
+}
+
+/* On hover or keyboard focus the chevron slides the way it points (the
+   direction the columns will move) until its open ends meet the line, and
+   slides back after. The ends sit 8.5 units off the line in the design,
+   drawn at 90%. */
+.column-divider-button.is-right {
+  --slide: calc(8.5px * 0.9);
+}
+
+.column-divider-button.is-left {
+  --slide: calc(-8.5px * 0.9);
+}
+
+.column-divider-button svg {
+  transition: transform 0.2s ease-out;
+}
+
+.column-divider-button:is(:hover, :focus-visible) svg {
+  transform: translateX(var(--slide));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .column-divider-button svg {
+    transition: none;
+  }
+}
+
+.column-divider-button:focus-visible {
+  outline: 2px solid var(--ds-ink, #000);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Phones: one column in the old order, everything shown, no divider. */
+@media (max-width: 575.98px) {
+  .montar-columns,
+  .montar-columns.is-left-collapsed,
+  .montar-columns.is-right-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "search" "generate" "results" "songbook";
+  }
+
+  .montar-columns.is-left-collapsed :is(.montar-search, .montar-results),
+  .montar-columns.is-right-collapsed :is(.montar-generate, .montar-songbook) {
+    display: block;
+  }
+
+  .column-divider {
+    display: none;
+  }
+}
+
+/* "Resultados" and "Caderninho": as the home page's section titles
+   (.landing-section-title). */
+.montar-columns h3.results {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 30px;
+}

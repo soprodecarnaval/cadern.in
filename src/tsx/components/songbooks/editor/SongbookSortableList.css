@@ -19,6 +19,12 @@
   margin: 0 0 0.5rem;
 }
 
+/* Below the songs, once there are some: the same slot, with the same 0.5rem
+   gap above it as under the controls. */
+.songbook-tip.is-below {
+  margin: 0.5rem 0 0;
+}
+
 .songbook-card-entry {
   border-radius: 0.5rem;
 }
@@ -48,10 +54,6 @@
   cursor: grabbing;
 }
 
-.songbook-drag-handle:hover {
-  background: var(--ds-yellow);
-}
-
 .songbook-drag-handle:focus-visible {
   outline: 2px solid var(--ds-ink);
   outline-offset: -3px;
@@ -61,7 +63,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  /* As tall as a song card: its row's 0.25rem padding plus its 1px border. */
+  padding: calc(0.25rem + 1px) 0.75rem;
   background: var(--ds-yellow);
   color: var(--ds-ink);
   border-radius: 0.5rem;
@@ -70,6 +73,41 @@
 
 .songbook-section-title {
   flex: 1 1 auto;
+}
+
+/* While renaming: the title as a field, the same size as the text. */
+.songbook-section-title-input {
+  min-width: 0;
+  padding: 0 0.375rem;
+  margin-left: -0.375rem;
+  border: 1px solid var(--ds-ink);
+  border-radius: 0.25rem;
+  background: var(--ds-paper);
+  color: var(--ds-ink);
+  font: inherit;
+  /* Its own border marks it; no browser focus ring around it. */
+  outline: none;
+}
+
+.songbook-section-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.songbook-section-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+}
+
+.songbook-section-count {
+  font-weight: var(--ds-weight-body);
+}
+
+/* Songs inside a collapsed section. */
+.songbook-row-hidden {
+  display: none;
 }
 
 .songbook-empty-section {

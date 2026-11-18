@@ -48,6 +48,14 @@
   flex: 1;
 }
 
+/* The page's content lines up with the header's: the same 1440px width and
+   side gutter. Pages that set their own narrower width (forms) keep it. */
+.landing-chrome-body > .container:not([style*="max-width"]) {
+  --landing-gutter: clamp(16px, 3.23vw, 46.5px);
+  max-width: 1440px;
+  padding-inline: var(--landing-gutter);
+}
+
 .landing.landing-chrome-bar {
   min-height: 0;
 }

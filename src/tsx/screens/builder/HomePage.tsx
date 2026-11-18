@@ -3,10 +3,9 @@ import { FEATURE_FLAG_COLLAB_FLOW as collabEnabled } from "../../../featureFlags
 import * as storage from "../../../lib/builderStorage";
 import { useCollectionContext } from "../../../useCollectionContext";
 import { HomePageView } from "./HomePageView";
-import { PDFGenerator } from "./dialogs/PdfGenerator";
 import { SaveSongbookModal } from "./dialogs/SaveSongbookModal";
 import { ScoreCard as Card } from "../../components/scores/card/ScoreCard";
-const components = { Card, PDFGenerator, SaveSongbookModal };
+const components = { Card, SaveSongbookModal };
 export function HomePage(props: { onRequestLogin: () => void }) {
   const { currentUser } = useAuth();
   const collection = useCollectionContext();
