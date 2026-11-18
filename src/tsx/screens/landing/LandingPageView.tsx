@@ -17,6 +17,7 @@ import { initialsOf } from "../../../lib/displayName";
 import {
   aboutPath,
   contributePath,
+  helpPath,
   publicSongbookPath,
   projectsPath,
   scorePath,
@@ -47,7 +48,6 @@ export type LandingSongbooks =
 // Pages the design links to that don't exist yet. They fall through to the
 // "not found" page until they're built.
 const PLANNED = {
-  ajuda: "/ajuda",
   biblioteca: "/biblioteca",
   carnaval: "/2027",
   favoritos: "/favoritos",
@@ -268,7 +268,7 @@ export function LandingHeader({
       <nav className="landing-header-nav" aria-label="Principal">
         <Link to={aboutPath()}>Sobre</Link>
         <Link to={contributePath()}>Contribua</Link>
-        <Link to={PLANNED.ajuda}>Ajuda</Link>
+        <Link to={helpPath()}>Ajuda</Link>
         {collabEnabled && (
           // Fixed height, so logging in doesn't move the page down.
           <div className="landing-auth">
@@ -588,7 +588,7 @@ export function LandingFooter({
           <ul>
             <li><Link to={aboutPath()}>Sobre</Link></li>
             <li><Link to={contributePath()}>Contribua</Link></li>
-            <li><Link to={PLANNED.ajuda}>Ajuda</Link></li>
+            <li><Link to={helpPath()}>Ajuda</Link></li>
             <li><Link to={ARTICLES_PATH}>Artigos</Link></li>
           </ul>
         </nav>

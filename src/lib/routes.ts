@@ -8,6 +8,7 @@ export const ROUTE_PATTERNS = {
   articles: "/artigos",
   contribute: "/contribua",
   about: "/sobre",
+  help: "/ajuda",
   article: "/artigos/:slug",
   score: "/partituras/:scoreId",
   scoreRevision: "/partituras/:scoreId/versoes/:revisionId",
@@ -29,6 +30,7 @@ const RESERVED_PROJECT_SLUGS = new Set([
   "artigos",
   "contribua",
   "sobre",
+  "ajuda",
   "montar",
   "plugin",
   "assets",
@@ -71,6 +73,8 @@ export const articlesPath = () => ROUTE_PATTERNS.articles;
 export const contributePath = () => ROUTE_PATTERNS.contribute;
 
 export const aboutPath = () => ROUTE_PATTERNS.about;
+
+export const helpPath = () => ROUTE_PATTERNS.help;
 
 export const articlePath = (slug: string) =>
   `${ROUTE_PATTERNS.articles}/${encodeURIComponent(slug)}`;
