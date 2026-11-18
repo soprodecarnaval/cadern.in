@@ -2,10 +2,12 @@ import type { User } from "firebase/auth";
 import { useMemo, useState, type ReactNode } from "react";
 
 import type { ArticleCard } from "../../../articles";
+import { matchesEveryWord } from "../../../utils/searchText";
 import { ArticleCards } from "./ArticleCards";
 import { LandingFooter, LandingHeader } from "../landing/LandingPageView";
 
 import search from "../../../assets/brand/search.svg";
+
 import type { ProfileTab } from "../account/ProfileModalView";
 
 import "../landing/LandingPage.css";
@@ -50,16 +52,14 @@ export function ArticlesPageView({
   );
 
   const shown = useMemo(() => {
-    const words = normalize(query).split(/\s+/).filter(Boolean);
-    const matching = articles.filter((article) => {
-      if (section && article.kicker !== section) {
-        return false;
-      }
-      const text = normalize(
-        [article.title, article.summary, article.kicker].join(" "),
-      );
-      return words.every((word) => text.includes(word));
-    });
+    const matching = articles.filter(
+      (article) =>
+        (!section || article.kicker === section) &&
+        matchesEveryWord(
+          query,
+          [article.title, article.summary, article.kicker].join(" "),
+        ),
+    );
     return matching.sort((a, b) => compare(a, b, order));
   }, [articles, query, section, order]);
 
@@ -88,10 +88,10 @@ export function ArticlesPageView({
         </div>
         {/* The home page's section title, as this page's heading. */}
         <h1 className="landing-section-title articles-title">Artigos</h1>
-        <div className="articles-controls">
+        <div className="landing-controls">
           {sections.length > 0 && (
             <div
-              className="articles-filters"
+              className="landing-filters"
               role="group"
               aria-label="Filtrar por seção"
             >
@@ -112,7 +112,7 @@ export function ArticlesPageView({
               ))}
             </div>
           )}
-          <label className="articles-order">
+          <label className="landing-order">
             <span>Ordenar por</span>
             <select
               value={order}
@@ -157,7 +157,7 @@ function FilterButton({
   return (
     <button
       type="button"
-      className={active ? "articles-filter is-active" : "articles-filter"}
+      className={active ? "landing-filter is-active" : "landing-filter"}
       aria-pressed={active}
       onClick={onClick}
     >
@@ -180,10 +180,3 @@ function compare(a: ArticleCard, b: ArticleCard, order: Order): number {
     : a.date.localeCompare(b.date);
 }
 
-/** Lowercase, without accents: "Código" matches "codigo". */
-function normalize(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase();
-}

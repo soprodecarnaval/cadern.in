@@ -310,5 +310,10 @@
 .reader-section { background: var(--ds-yellow); color: var(--ds-ink); }
 .reader :is(a, button, input, select):focus-visible { outline: var(--ds-border) solid var(--ds-ink); outline-offset: -3px; }
 .reader a { color: var(--ds-ink); }
-.reader .input-group-text { border: var(--ds-border) solid var(--ds-ink); background: var(--ds-paper); }
+/* As on the home page: a magnifier and a borderless field in a thick black
+   rounded frame. */
+.reader-search { display: flex; align-items: center; gap: 12px; margin: 0; padding: 8px 16px; border: var(--ds-border) solid var(--ds-ink); border-radius: 16px; background: var(--ds-paper); }
+.reader-search-icon { width: 25px; height: 25px; flex: none; }
+.reader-search input { flex: 1; min-width: 0; border: none; background: none; color: var(--ds-ink); font-family: var(--ds-font); font-size: 1.1rem; }
+.reader .reader-search input:focus-visible { outline: none; }
 .reader-index-head .d-flex { flex-wrap: wrap; }

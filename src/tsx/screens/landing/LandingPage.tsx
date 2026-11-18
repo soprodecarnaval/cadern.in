@@ -1,18 +1,17 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../../auth";
 import { FEATURE_FLAG_COLLAB_FLOW as collabEnabled } from "../../../featureFlags";
-import { getPublishedSongbooks, getSongbookRevision } from "../../../lib/db";
-import { representativeCoverUrl } from "../../../lib/songbookCovers";
+import { getPublishedSongbooks } from "../../../lib/db";
+import { withCovers } from "../../../lib/songbookCovers";
 import { useCollectionContext } from "../../../useCollectionContext";
 // Only articles with pages: the placeholders would lead to "not found".
 import { publishedArticleCards as articles } from "../../../articles";
-import {
-  LandingPageView,
-  type LandingSongbook,
-  type LandingSongbooks,
-} from "./LandingPageView";
+import { LandingPageView, type LandingSongbooks } from "./LandingPageView";
 import type { ProfileTab } from "../account/ProfileModalView";
 
+
+// The carousel shows a few; the biblioteca lists them all.
+const CAROUSEL_SIZE = 12;
 
 export function LandingPage(props: {
   inboxCount: number;
@@ -26,16 +25,16 @@ export function LandingPage(props: {
 
   useEffect(() => {
     let cancelled = false;
-    getPublishedSongbooks()
+    getPublishedSongbooks(CAROUSEL_SIZE)
       .then(async (items) => {
         if (cancelled) {
           return;
         }
         // Show the songbooks now; their covers fill in once loaded.
         setSongbooks({ status: "ready", items });
-        const withCovers = await Promise.all(items.map(withCover));
+        const covered = await Promise.all(items.map(withCovers));
         if (!cancelled) {
-          setSongbooks({ status: "ready", items: withCovers });
+          setSongbooks({ status: "ready", items: covered });
         }
       })
       .catch((err: unknown) => {
@@ -60,17 +59,3 @@ export function LandingPage(props: {
   );
 }
 
-/** Adds the current revision's cover, if any. Without one, it stays as is. */
-async function withCover(songbook: LandingSongbook): Promise<LandingSongbook> {
-  try {
-    const revision = await getSongbookRevision(
-      songbook.id,
-      songbook.currentRevisionId,
-    );
-    const coverUrl = revision && representativeCoverUrl(revision.covers);
-    return coverUrl ? { ...songbook, coverUrl } : songbook;
-  } catch (err) {
-    console.error(`Failed to load the cover of ${songbook.id}`, err);
-    return songbook;
-  }
-}
