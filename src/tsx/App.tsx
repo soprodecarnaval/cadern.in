@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
-import { AppNavigation } from "./components/navigation/AppNavigation";
 import { AuthModal } from "./screens/auth/AuthModal";
 import { ProfileModal } from "./screens/account/ProfileModal";
 import type { ProfileTab } from "./screens/account/ProfileModalView";
@@ -35,11 +34,11 @@ function App() {
   };
   const [inboxCount, setInboxCount] = useState(0);
   const { currentUser, pendingUser } = useAuth();
-  // The landing, article and Montar pages draw the landing header and footer.
+  // Every page has the landing header and footer. The landing and article
+  // pages draw their own; the rest get them from LandingChrome.
   const { pathname } = useLocation();
-  const isLanding =
+  const drawsOwnChrome =
     pathname === "/" ||
-    pathname === "/montar" ||
     pathname === "/artigos" ||
     pathname.startsWith("/artigos/");
 
@@ -59,77 +58,77 @@ function App() {
     }
   }, [pendingUser]);
 
+  const routes = (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <LandingPage
+            inboxCount={inboxCount}
+            onOpenUserModal={openUserModal}
+          />
+        }
+      />
+      <Route
+        path="/montar"
+        element={<HomePage onRequestLogin={() => openUserModal()} />}
+      />
+      <Route
+        path="/artigos"
+        element={
+          <ArticlesPage
+            inboxCount={inboxCount}
+            onOpenUserModal={openUserModal}
+          />
+        }
+      />
+      <Route
+        path="/artigos/:slug"
+        element={
+          <ArticlePage
+            inboxCount={inboxCount}
+            onOpenUserModal={openUserModal}
+          />
+        }
+      />
+      <Route path="/score/:scoreId" element={<ScorePage />} />
+      <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
+      {FEATURE_FLAG_COLLAB_FLOW && (
+        <>
+          <Route path="/projects" element={<MeusProjetosPage />} />
+          <Route path="/projects/new" element={<CreateProjectPage />} />
+          <Route path="/project/:slug" element={<PublicProjectPage />} />
+          <Route
+            path="/project/:slug/settings"
+            element={<ProjectSettingsPage />}
+          />
+          <Route
+            path="/project/:slug/songbook/:songbookSlug"
+            element={<SongbookPage />}
+          />
+          <Route
+            path="/project/:slug/songbook/:songbookSlug/manage"
+            element={<SongbookManagePage />}
+          />
+          <Route
+            path="/project/:slug/songbook/:songbookSlug/manage/score/:scoreId"
+            element={<SongbookScorePage />}
+          />
+        </>
+      )}
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+
   return (
     <>
-      {!isLanding && (
-        <AppNavigation
-          currentUser={currentUser}
-          collabEnabled={FEATURE_FLAG_COLLAB_FLOW}
-          inboxCount={inboxCount}
-          onOpenUserModal={() => openUserModal()}
-        />
+      {drawsOwnChrome ? (
+        routes
+      ) : (
+        <LandingChrome inboxCount={inboxCount} onOpenUserModal={openUserModal}>
+          {routes}
+        </LandingChrome>
       )}
-
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <LandingPage
-              inboxCount={inboxCount}
-              onOpenUserModal={openUserModal}
-            />
-          }
-        />
-        <Route
-          path="/montar"
-          element={
-            <LandingChrome
-              inboxCount={inboxCount}
-              onOpenUserModal={openUserModal}
-            >
-              <HomePage onRequestLogin={() => openUserModal()} />
-            </LandingChrome>
-          }
-        />
-        <Route
-          path="/artigos"
-          element={
-            <ArticlesPage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
-          }
-        />
-        <Route
-          path="/artigos/:slug"
-          element={
-            <ArticlePage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
-          }
-        />
-        <Route path="/score/:scoreId" element={<ScorePage />} />
-        <Route path="/score/:scoreId/:revisionId" element={<ScorePage />} />
-        {FEATURE_FLAG_COLLAB_FLOW && (
-          <>
-            <Route path="/projects" element={<MeusProjetosPage />} />
-            <Route path="/projects/new" element={<CreateProjectPage />} />
-            <Route path="/project/:slug" element={<PublicProjectPage />} />
-            <Route
-              path="/project/:slug/settings"
-              element={<ProjectSettingsPage />}
-            />
-            <Route
-              path="/project/:slug/songbook/:songbookSlug"
-              element={<SongbookPage />}
-            />
-            <Route
-              path="/project/:slug/songbook/:songbookSlug/manage"
-              element={<SongbookManagePage />}
-            />
-            <Route
-              path="/project/:slug/songbook/:songbookSlug/manage/score/:scoreId"
-              element={<SongbookScorePage />}
-            />
-          </>
-        )}
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
 
       {currentUser ? (
         <ProfileModal
