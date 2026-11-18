@@ -21,7 +21,7 @@ import type { ProfileTab } from "../account/ProfileModalView";
 import arrowNext from "../../../assets/brand/arrow-next.svg";
 import arrowPrev from "../../../assets/brand/arrow-prev.svg";
 import chevronRight from "../../../assets/brand/chevron-right.svg";
-import flagBeloHorizonte from "../../../assets/brand/flag-belo-horizonte.svg";
+import sunBeloHorizonte from "../../../assets/brand/sun-belo-horizonte.svg";
 import instagram from "../../../assets/brand/instagram.svg";
 import logoWhite from "../../../assets/brand/logo-white.svg";
 import logo from "../../../assets/brand/logo.svg";
@@ -276,13 +276,13 @@ export function LandingHeader({
                 onSignOut={onSignOut}
               />
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 className="landing-login"
                 onClick={() => onOpenUserModal()}
               >
                 Entrar
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -521,23 +521,7 @@ export function LandingFooter({
   return (
     <footer className="landing-footer">
       <div className="landing-footer-inner">
-        <div className="landing-footer-brand">
-          <Logo inverted />
-          <div className="landing-footer-row">
-            <a href={STATIC.instagram} className="landing-footer-social">
-              <img src={instagram} alt="" />
-              /soprodecarnaval
-            </a>
-            <p className="landing-footer-made-in">
-              <img src={flagBeloHorizonte} alt="Bandeira de Belo Horizonte" />
-              <span>
-                Feito
-                <br />
-                em BH
-              </span>
-            </p>
-          </div>
-        </div>
+        <Logo inverted />
         <nav className="landing-footer-links" aria-label="Rodapé">
           <ul>
             <li><Link to={PLANNED.biblioteca}>Biblioteca</Link></li>
@@ -588,6 +572,20 @@ export function LandingFooter({
             <li><Link to={ARTICLES_PATH}>Artigos</Link></li>
           </ul>
         </nav>
+        <div className="landing-footer-row">
+          <a href={STATIC.instagram} className="landing-footer-social">
+            <img src={instagram} alt="" />
+            /soprodecarnaval
+          </a>
+          <p className="landing-footer-made-in">
+            <img src={sunBeloHorizonte} alt="" />
+            <span>
+              Feito
+              <br />
+              em BH
+            </span>
+          </p>
+        </div>
       </div>
     </footer>
   );
