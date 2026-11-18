@@ -1,0 +1,42 @@
+@import "../../../styles/tokens.css";
+
+/* Icon buttons in boxes of their own, as tall as "Salvar caderninho" beside
+   them and spaced as it is from them. */
+.songbook-toolbar {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.songbook-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Square, as tall as the yellow "Salvar caderninho": a line of text, its
+     8px padding and its 1px borders. */
+  width: calc(var(--ds-text) * 1.5 + 16px + 2px);
+  padding: 0;
+  border: var(--ds-border) solid var(--ds-ink);
+  border-radius: var(--ds-radius-button);
+  background: var(--ds-paper);
+  color: var(--ds-ink);
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+/* Black border kept over the global button:hover blue. */
+.songbook-tool:hover:not(:disabled) {
+  border-color: var(--ds-ink);
+  background: var(--ds-yellow);
+}
+
+.songbook-tool:disabled {
+  border-color: #999;
+  color: #999;
+  cursor: default;
+}
+
+.songbook-tool:focus-visible {
+  outline: var(--ds-border) solid var(--ds-ink);
+  outline-offset: 2px;
+}

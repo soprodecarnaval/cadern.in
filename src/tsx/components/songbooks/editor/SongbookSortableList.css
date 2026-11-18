@@ -19,6 +19,12 @@
   margin: 0 0 0.5rem;
 }
 
+/* Below the songs, once there are some: the same slot, with the same 0.5rem
+   gap above it as under the controls. */
+.songbook-tip.is-below {
+  margin: 0.5rem 0 0;
+}
+
 .songbook-card-entry {
   border-radius: 0.5rem;
 }

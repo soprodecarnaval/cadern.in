@@ -18,6 +18,7 @@ import {
 } from "../../../../utils/songBookRows";
 import {
   SongbookSortableList,
+  type SectionsCollapsed,
   type SongbookSortableListHandle,
 } from "./SongbookSortableList";
 import { Sort } from "../../scores/Sort";
@@ -28,6 +29,9 @@ export interface SongBookTableProps {
   setItems: (rows: SongbookItemViewModel[]) => void;
   handleSelect: (song: ScoreViewModel, checked: boolean) => void;
   handleClear: () => void;
+  /** Off where "Criar seções por estilo" lives in a toolbar instead. */
+  showSectionsByStyle?: boolean;
+  onSectionsCollapsedChange?: (state: SectionsCollapsed) => void;
 }
 
 const SongBookTableView = forwardRef<
@@ -46,6 +50,8 @@ const SongBookTableView = forwardRef<
       setItems: setRows,
       handleSelect,
       handleClear,
+      showSectionsByStyle = true,
+      onSectionsCollapsedChange,
     },
     ref,
   ) => {
@@ -119,8 +125,8 @@ const SongBookTableView = forwardRef<
                 <Button
                   onClick={createNewSection}
                   className="px-0"
-                  // Square: as wide as Bootstrap's input/button height.
-                  style={{ width: "calc(1.5em + 0.75rem + 2px)" }}
+                  // Square, as tall as the field beside it (.ds-field, 48px).
+                  style={{ width: "48px", height: "48px", padding: 0, fontSize: "28px", lineHeight: 1 }}
                   aria-label="Adicionar seção"
                   title="Adicionar seção"
                 >
@@ -143,21 +149,20 @@ const SongBookTableView = forwardRef<
           onDelete={(index) => setRows(deleteRow(rows, index))}
           onSelect={handleSelect}
           onUpdate={handleUpdateScore}
+          onSectionsCollapsedChange={onSectionsCollapsedChange}
         />
-        <Row className="mt-4">
-          <Col>
-            <p>
-              {rows.filter(isSongbookSection).length} seções e{" "}
-              {rows.filter((r) => !isSongbookSection(r)).length} músicas
-            </p>
-          </Col>
-        </Row>
-        <div className="d-flex justify-content-between gap-2">
-          <Button onClick={() => setRows(generateSectionsByStyle(rows))}>
-            Criar seções por estilo
-          </Button>
+        <div className="d-flex justify-content-between align-items-center gap-2 mt-4">
+          <p className="m-0">
+            {rows.filter(isSongbookSection).length} seções e{" "}
+            {rows.filter((r) => !isSongbookSection(r)).length} músicas
+          </p>
           <Button onClick={handleClear}>Limpar tudo</Button>
         </div>
+        {showSectionsByStyle && (
+          <Button className="mt-3" onClick={() => setRows(generateSectionsByStyle(rows))}>
+            Criar seções por estilo
+          </Button>
+        )}
       </>
     );
   },

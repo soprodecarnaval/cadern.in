@@ -22,12 +22,20 @@
   grid-area: search;
 }
 
-/* Holds "Salvar caderninho", at the right as "Gerar caderninhos" was. */
+/* Holds the Caderninho toolbar and "Salvar caderninho", at the right as
+   "Gerar caderninhos" was. */
 .montar-generate {
   grid-area: generate;
-  text-align: right;
   /* Level with the search box, which sits 24px down (mt-4). */
   padding-top: 1.5rem;
+}
+
+.montar-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .montar-results {

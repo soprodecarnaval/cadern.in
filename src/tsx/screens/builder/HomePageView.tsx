@@ -5,12 +5,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScoreSearchResultsView } from "./search/ScoreSearchResultsView";
 import { SearchBarView } from "./search/SearchBarView";
 import { ColumnDivider, type CollapsedSide } from "./ColumnDivider";
+import { SongbookToolbar } from "./SongbookToolbar";
 import "./MontarColumns.css";
 import { SongbookDragProvider } from "../../components/songbooks/editor/SongbookDragProvider";
-import type { SongbookSortableListHandle } from "../../components/songbooks/editor/SongbookSortableList";
+import type {
+  SectionsCollapsed,
+  SongbookSortableListHandle,
+} from "../../components/songbooks/editor/SongbookSortableList";
 import { SongBookTableView } from "../../components/songbooks/editor/SongBookTableView";
 
 import { sortByColumn, SortColumn, SortDirection } from "../../../utils/sort";
+import { generateSectionsByStyle } from "../../../utils/songBookRows";
+import { useUndoableState } from "../../../lib/useUndoableState";
 
 import type {
   ScoreViewModel,
@@ -53,7 +59,10 @@ export function HomePageView({
     },
     [],
   );
-  const [items, setItems] = useState<SongbookItemViewModel[]>([]);
+  // The Caderninho's rows, with undo/redo through the toolbar.
+  const history = useUndoableState<SongbookItemViewModel[]>([]);
+  const { value: items, set: setItems, reset: resetItems } = history;
+  const [sectionsCollapsed, setSectionsCollapsed] = useState<SectionsCollapsed>("none");
   const { status, allScores } = collection;
   const [restored, setRestored] = useState(false);
   const [showSave, setShowSave] = useState(false);
@@ -69,10 +78,10 @@ export function HomePageView({
   // loaded, then stored on every change.
   useEffect(() => {
     if (status === "ready" && !restored) {
-      setItems(storage.restoreBuilderItems(allScores));
+      resetItems(storage.restoreBuilderItems(allScores));
       setRestored(true);
     }
-  }, [status, restored, allScores, storage]);
+  }, [status, restored, allScores, storage, resetItems]);
 
   useEffect(() => {
     if (restored) {
@@ -154,15 +163,27 @@ export function HomePageView({
               />
             </div>
             <div className="montar-cell montar-generate">
-              {collabEnabled && (
-                <Button
-                  variant="secondary"
-                  disabled={items.length === 0}
-                  onClick={handleSave}
-                >
-                  Salvar caderninho
-                </Button>
-              )}
+              <div className="montar-actions">
+                <SongbookToolbar
+                  canUndo={history.canUndo}
+                  canRedo={history.canRedo}
+                  onUndo={history.undo}
+                  onRedo={history.redo}
+                  canMakeSections={items.some((item) => !isSongbookSection(item))}
+                  onMakeSections={() => setItems(generateSectionsByStyle(items))}
+                  sectionsCollapsed={sectionsCollapsed}
+                  onSetAllCollapsed={(collapse) =>
+                    songbookRef.current?.setAllSectionsCollapsed(collapse)}
+                />
+                {collabEnabled && (
+                  <Button
+                    disabled={items.length === 0}
+                    onClick={handleSave}
+                  >
+                    Salvar caderninho
+                  </Button>
+                )}
+              </div>
             </div>
             <ColumnDivider
               collapsed={collapsed}
@@ -197,6 +218,8 @@ export function HomePageView({
                 setItems={setItems}
                 handleSelect={handleSelectSong}
                 handleClear={clearSelected}
+                showSectionsByStyle={false}
+                onSectionsCollapsedChange={setSectionsCollapsed}
               />
             </div>
           </div>

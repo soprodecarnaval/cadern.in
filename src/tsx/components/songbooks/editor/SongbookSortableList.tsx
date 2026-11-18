@@ -25,6 +25,8 @@ export interface SongbookSortableListHandle {
   handleDragEnd: (event: DragEndEvent) => void;
   /** Where an incoming (not-yet-in-list) score should land, given the drop target. */
   resolveIncomingDrop: (operation: DragEndEvent["operation"]) => number;
+  /** Collapses every section that has songs, or expands them all. */
+  setAllSectionsCollapsed: (collapse: boolean) => void;
   label: (id: string | number | undefined) => string;
   instructions: Record<string, string>;
   announcements: {
@@ -33,6 +35,8 @@ export interface SongbookSortableListHandle {
     dragend: (event: DragEndEvent) => string;
   };
 }
+
+export type SectionsCollapsed = "none" | "all" | "some";
 
 function EmptySongbookDropzone() {
   const { ref } = useDroppable({ id: SONGBOOK_APPEND_ID, data: { group: "songbook" } });
@@ -53,7 +57,10 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
   onDelete: (index: number) => void;
   onSelect: (score: ScoreViewModel, checked: boolean) => void;
   onUpdate: (index: number, update: ScoreEditUpdate) => void;
-}>(function SongbookSortableList({ Card, songbookProjectId, rows, onReorder, onRename, onDelete, onSelect, onUpdate }, ref) {
+  /** Told whether every section with songs is collapsed ("none" when no
+   * section has songs), for a collapse/expand-all control. */
+  onSectionsCollapsedChange?: (state: SectionsCollapsed) => void;
+}>(function SongbookSortableList({ Card, songbookProjectId, rows, onReorder, onRename, onDelete, onSelect, onUpdate, onSectionsCollapsedChange }, ref) {
   const { entries, keepSectionId } = useSongbookEditorItems(rows);
   const renameSection = (index: number, title: string) => {
     const section = rows[index];
@@ -87,6 +94,18 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
     let current = -1;
     return rows.map((row, index) => (row.type === "section" ? (current = index) : current));
   }, [rows]);
+  /** Ids of the sections that have songs: the ones that can collapse. */
+  const collapsibleIds = useMemo(() => entries
+    .filter((entry, index) => entry.item.type === "section" && rows[index + 1] !== undefined &&
+      rows[index + 1].type !== "section")
+    .map((entry) => entry.id), [entries, rows]);
+  const sectionsCollapsed: SectionsCollapsed = collapsibleIds.length === 0 ? "none"
+    : collapsibleIds.every((id) => collapsed.has(id)) ? "all" : "some";
+  useEffect(() => {
+    onSectionsCollapsedChange?.(sectionsCollapsed);
+  }, [sectionsCollapsed, onSectionsCollapsedChange]);
+  const setAllSectionsCollapsed = (collapse: boolean) =>
+    setCollapsed(collapse ? new Set(collapsibleIds) : new Set());
   const hiddenAt = (index: number) => rows[index].type !== "section" && sectionOf[index] >= 0 &&
     collapsed.has(entries[sectionOf[index]].id);
   const draggedIndex = entries.findIndex((entry) => entry.id === (activeId ?? preparingId));
@@ -268,14 +287,20 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
 
   useImperativeHandle(ref, () => ({
     handleDragStart, handleDragMove, handleDragOver, handleDragEnd,
-    resolveIncomingDrop, label, instructions, announcements,
+    resolveIncomingDrop, setAllSectionsCollapsed, label, instructions, announcements,
   }));
+
+  // Above the list, in a card's slot, until there are songs; then below them.
+  const hasSongs = rows.some((row) => row.type !== "section");
+  const tip = (
+    <p className={`songbook-tip text-muted small lh-sm${hasSongs ? " is-below" : ""}`}>
+      Arraste a música ou seção para alterar a ordem. No teclado, use Espaço, setas e Esc.
+    </p>
+  );
 
   return (
     <>
-      <p className="songbook-tip text-muted small lh-sm">
-        Arraste a música ou seção para alterar a ordem. No teclado, use Espaço, setas e Esc.
-      </p>
+      {!hasSongs && tip}
       <div ref={container} className="songbook-card-list" role="list"
         aria-label="Músicas e seções do caderninho">
         {entries.map((entry, index) => (
@@ -297,6 +322,7 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
         ))}
         {entries.length === 0 && <EmptySongbookDropzone />}
       </div>
+      {hasSongs && tip}
     </>
   );
 });
