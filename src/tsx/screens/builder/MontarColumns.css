@@ -7,8 +7,10 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--divider-width) minmax(0, 1fr);
   grid-template-areas:
-    "search . generate"
+    "search divider generate"
     "results divider songbook";
+  /* Out by the cells' padding, so their content meets the page's edges. */
+  margin-inline: -12px;
 }
 
 .montar-cell {
@@ -20,8 +22,12 @@
   grid-area: search;
 }
 
+/* Holds "Salvar caderninho", at the right as "Gerar caderninhos" was. */
 .montar-generate {
   grid-area: generate;
+  text-align: right;
+  /* Level with the search box, which sits 24px down (mt-4). */
+  padding-top: 1.5rem;
 }
 
 .montar-results {
@@ -47,12 +53,14 @@
   display: none;
 }
 
-/* The divider: a line down the middle of its column, with its buttons. */
+/* The divider (design/Asset 14.svg): a 3px line with round ends from the top
+   of the search box down, and the chevrons that collapse each side. */
 .column-divider {
   grid-area: divider;
   position: relative;
-  margin-top: 1.5rem;
-  /* Above the cells, so the buttons stay clickable where they overlap. */
+  /* Where the design puts the chevrons: 106.5px down the line. */
+  padding-top: 106.5px;
+  /* Above the cells, so the chevrons stay clickable where they overlap. */
   z-index: 2;
 }
 
@@ -61,9 +69,10 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: calc(50% - 0.5px);
-  width: 1px;
-  background: var(--ds-muted, #b3b3b3);
+  left: calc(50% - 1.5px);
+  width: 3px;
+  border-radius: 1.5px;
+  background: var(--ds-ink, #000);
 }
 
 .column-divider-controls {
@@ -76,32 +85,44 @@
   width: max-content;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
 .column-divider-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
+  display: block;
+  /* The design's chevrons at 90%. */
+  width: calc(31.33px * 0.9);
+  height: calc(53px * 0.9);
   padding: 0;
-  border: 2px solid var(--ds-ink, #000);
-  border-radius: 50%;
-  background: var(--ds-paper, #fff);
-  color: var(--ds-ink, #000);
-  font-size: 14px;
-  line-height: 1;
+  border: none;
+  background: none;
   cursor: pointer;
 }
 
-.column-divider-button:hover {
-  background: var(--ds-yellow, #fcee21);
+.column-divider-button svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: var(--ds-paper, #fff);
+  stroke: var(--ds-ink, #000);
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Keeps the 3px stroke when the chevron is drawn smaller than the design. */
+.column-divider-button path {
+  vector-effect: non-scaling-stroke;
+}
+
+.column-divider-button:hover svg {
+  fill: var(--ds-yellow, #fcee21);
 }
 
 .column-divider-button:focus-visible {
   outline: 2px solid var(--ds-ink, #000);
   outline-offset: 2px;
+  border-radius: 6px;
 }
 
 /* Phones: one column in the old order, everything shown, no divider. */

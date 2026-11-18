@@ -15,11 +15,9 @@ import { sortByColumn, SortColumn, SortDirection } from "../../../utils/sort";
 import type {
   ScoreViewModel,
   SongbookItemViewModel,
-  SongbookViewModel,
 } from "../../../../types/viewModels";
 import {
   isSongbookSection,
-  numberSongbookItems,
   songbookScore,
 } from "../../../lib/songbook";
 
@@ -43,7 +41,6 @@ export function HomePageView({
     Card: import("react").ComponentType<
       import("../../components/scores/card/ScoreCardView").ScoreCardProps
     >;
-    PDFGenerator: typeof import("./dialogs/PdfGenerator").PDFGenerator;
     SaveSongbookModal: typeof import("./dialogs/SaveSongbookModal").SaveSongbookModal;
   };
 }) {
@@ -134,8 +131,6 @@ export function HomePageView({
     setSort({ column, direction });
   };
 
-  const songBook: SongbookViewModel = { items: numberSongbookItems(items) };
-
   return (
     <>
       <Page>
@@ -159,7 +154,15 @@ export function HomePageView({
               />
             </div>
             <div className="montar-cell montar-generate">
-              <components.PDFGenerator songBook={songBook} />
+              {collabEnabled && (
+                <Button
+                  variant="secondary"
+                  disabled={items.length === 0}
+                  onClick={handleSave}
+                >
+                  Salvar caderninho
+                </Button>
+              )}
             </div>
             <ColumnDivider
               collapsed={collapsed}
@@ -178,18 +181,7 @@ export function HomePageView({
               />
             </div>
             <div className="montar-cell montar-songbook">
-              <div className="d-flex justify-content-between align-items-baseline">
-                <h3 className="results">Caderninho</h3>
-                {collabEnabled && (
-                  <Button
-                    variant="secondary"
-                    disabled={items.length === 0}
-                    onClick={handleSave}
-                  >
-                    Salvar caderninho
-                  </Button>
-                )}
-              </div>
+              <h3 className="results">Caderninho</h3>
               {currentUser && showSave && (
                 <components.SaveSongbookModal
                   show

@@ -1,5 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
-import { BsChevronLeft, BsChevronRight } from "react-icons/bs";
+import { useEffect, useRef } from "react";
 
 /** Which Montar column is hidden, if any. */
 export type CollapsedSide = "left" | "right" | null;
@@ -41,49 +40,60 @@ export function ColumnDivider({
         {collapsed === null && (
           <>
             <DividerButton
-              label={`Recolher ${leftLabel}`}
-              onClick={() => change("left")}
-            >
-              <BsChevronLeft />
-            </DividerButton>
-            <DividerButton
               label={`Recolher ${rightLabel}`}
+              points="right"
               onClick={() => change("right")}
-            >
-              <BsChevronRight />
-            </DividerButton>
+            />
+            <DividerButton
+              label={`Recolher ${leftLabel}`}
+              points="left"
+              onClick={() => change("left")}
+            />
           </>
         )}
         {collapsed === "left" && (
           <DividerButton
             label={`Mostrar ${leftLabel}`}
+            points="right"
             onClick={() => change(null)}
-          >
-            <BsChevronRight />
-          </DividerButton>
+          />
         )}
         {collapsed === "right" && (
           <DividerButton
             label={`Mostrar ${rightLabel}`}
+            points="left"
             onClick={() => change(null)}
-          >
-            <BsChevronLeft />
-          </DividerButton>
+          />
         )}
       </div>
     </div>
   );
 }
 
+// The chevrons from the divider design (design/Asset 14.svg), each drawn
+// across the full width of the line's strip so the line runs through its
+// middle; the white fill hides the line inside the chevron.
+const CHEVRONS = {
+  right: {
+    viewBox: "0 106.57 31.33 53",
+    d: "M7.17,108.07l21.01,21.01c2.2,2.2,2.2,5.78,0,7.98l-21.01,21.01",
+  },
+  left: {
+    viewBox: "0 160.34 31.33 53",
+    d: "M24.16,211.84l-21.01-21.01c-2.2-2.2-2.2-5.78,0-7.98l21.01-21.01",
+  },
+};
+
 function DividerButton({
   label,
+  points,
   onClick,
-  children,
 }: {
   label: string;
+  points: "left" | "right";
   onClick: () => void;
-  children: ReactNode;
 }) {
+  const chevron = CHEVRONS[points];
   return (
     <button
       type="button"
@@ -92,7 +102,9 @@ function DividerButton({
       title={label}
       onClick={onClick}
     >
-      <span aria-hidden="true">{children}</span>
+      <svg viewBox={chevron.viewBox} aria-hidden="true">
+        <path d={chevron.d} />
+      </svg>
     </button>
   );
 }
