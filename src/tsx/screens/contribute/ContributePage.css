@@ -1,0 +1,72 @@
+/* Contribua: the article page's reading column with the 2026 caderninho's
+   contribution text, PIX QR code and credits. */
+.contribute-pix-section,
+.contribute-credits {
+  max-width: var(--article-measure);
+  margin: 48px auto 0;
+}
+
+.contribute-text {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* The QR code with its key centered below it. */
+.contribute-pix {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.contribute-pix-qr {
+  width: 218px;
+  height: auto;
+  padding: 12px;
+  border: 3px solid var(--landing-ink);
+  border-radius: 8px;
+  background: #fff;
+  box-sizing: content-box;
+}
+
+.contribute-pix-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 1.125rem;
+}
+
+.contribute-pix-key strong {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.contribute-pix-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.contribute-credits {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding-top: 24px;
+  border-top: 3px solid var(--landing-ink);
+}
+
+/* The logo is white, drawn for the 2026 page's black band. */
+.contribute-logo {
+  width: 200px;
+  height: auto;
+  padding: 16px 24px;
+  border-radius: 8px;
+  background: var(--landing-ink);
+  box-sizing: content-box;
+}
