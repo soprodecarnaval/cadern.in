@@ -79,6 +79,7 @@ describe("reserved slugs", () => {
       "partituras",
       "artigos",
       "montar",
+      "biblioteca",
       "plugin",
       "assets",
       "projects",
