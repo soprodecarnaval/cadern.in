@@ -1,8 +1,8 @@
 import { Input } from "../../atoms/Input";
 import { Pagination, Form } from "react-bootstrap";
 
-import arrowNext from "../../../assets/brand/arrow-next.svg";
-import arrowPrev from "../../../assets/brand/arrow-prev.svg";
+import arrowNext from "../../../assets/brand/chevron-next.svg";
+import arrowPrev from "../../../assets/brand/chevron-prev.svg";
 import "./PaginationBar.css";
 
 interface PaginationBarProps {
