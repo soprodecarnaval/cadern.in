@@ -48,11 +48,11 @@
   gap: 20px 24px;
 }
 
+/* Each field's name is its placeholder; the label stays for screen
+   readers. */
 .about-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-weight: 500;
 }
 
 .about-field-wide {

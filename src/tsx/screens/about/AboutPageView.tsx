@@ -78,29 +78,29 @@ export function AboutPageView({
               </h2>
               <form className="about-form" onSubmit={sendMessage}>
                 <label className="about-field">
-                  <span>Nome</span>
-                  <Input name="firstName" autoComplete="given-name" placeholder="Maria" />
+                  <span className="visually-hidden">Nome</span>
+                  <Input name="firstName" autoComplete="given-name" placeholder="Nome" />
                 </label>
                 <label className="about-field">
-                  <span>Sobrenome</span>
-                  <Input name="lastName" autoComplete="family-name" placeholder="da Silva" />
+                  <span className="visually-hidden">Sobrenome</span>
+                  <Input name="lastName" autoComplete="family-name" placeholder="Sobrenome" />
                 </label>
                 <label className="about-field about-field-wide">
-                  <span>E-mail</span>
+                  <span className="visually-hidden">E-mail</span>
                   <Input
                     name="email"
                     type="email"
                     autoComplete="email"
-                    placeholder="seu@email.com"
+                    placeholder="E-mail"
                   />
                 </label>
                 <label className="about-field about-field-wide">
-                  <span>Mensagem</span>
+                  <span className="visually-hidden">Mensagem</span>
                   <TextArea
                     name="message"
                     rows={6}
                     required
-                    placeholder="Escreva sua pergunta ou mensagem"
+                    placeholder="Mensagem"
                   />
                 </label>
                 <Button type="submit" className="about-field-wide about-submit">
