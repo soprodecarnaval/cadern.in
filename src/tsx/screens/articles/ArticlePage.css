@@ -74,6 +74,8 @@
   text-decoration-color: var(--landing-yellow) !important;
   text-decoration-thickness: 4px !important;
   text-underline-offset: 2px;
+  /* An unbroken line, also under descenders like p and q. */
+  text-decoration-skip-ink: none;
 }
 
 .article-body strong {
