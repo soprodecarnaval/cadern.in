@@ -13,6 +13,10 @@ interface ScoreSearchResultTableProps {
   scores: ScoreViewModel[];
   searchQuery: string;
   handleSelect: (score: ScoreViewModel, checked: boolean) => void;
+  /** Shown at the right end of the page counter's row. */
+  pagerEnd?: import("react").ReactNode;
+  /** Shown in place of the list when there are no scores. */
+  empty?: string;
 }
 
 /** Marks where the typed words appear, not the letters the fuzzy search
@@ -55,7 +59,7 @@ function AvailableScoreCard({ Card, score, searchQuery, handleSelect }: {
   );
 }
 
-const ScoreSearchResultTable = ({ Card, scores, searchQuery, handleSelect }: ScoreSearchResultTableProps) => {
+const ScoreSearchResultTable = ({ Card, scores, searchQuery, handleSelect, pagerEnd, empty }: ScoreSearchResultTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const maxNumberPages = Math.max(1, Math.ceil(scores.length / 10));
   const page = Math.min(currentPage, maxNumberPages);
@@ -75,9 +79,13 @@ const ScoreSearchResultTable = ({ Card, scores, searchQuery, handleSelect }: Sco
           <AvailableScoreCard Card={Card} key={song.id}
             handleSelect={handleSelect} score={song} searchQuery={searchQuery} />
         ))}
+        {scores.length === 0 && empty && <p className="text-muted m-0">{empty}</p>}
       </div>
-      <div className="mt-2">
+      {/* 15px down from the last card, as far as the Caderninho's tip text
+          sits below its songs. */}
+      <div className="d-flex align-items-center justify-content-between" style={{ marginTop: "15px" }}>
         <PaginationBar onChange={handlePageChange} currentPage={page} maxNumberPages={maxNumberPages} />
+        {pagerEnd}
       </div>
     </>
   );

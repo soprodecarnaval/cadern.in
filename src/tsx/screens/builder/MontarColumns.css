@@ -1,9 +1,9 @@
 /* Montar's two columns (Resultados | Caderninho) as a grid, so the headers
    stay aligned and the divider runs beside both lists. Cells keep
-   Bootstrap's 12px column padding; with the 24px divider column the space
-   between the columns' content is 48px. */
+   Bootstrap's 12px column padding; with the 48px divider column the space
+   between the columns' content is 72px. */
 .montar-columns {
-  --divider-width: 24px;
+  --divider-width: 48px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) var(--divider-width) minmax(0, 1fr);
   grid-template-areas:
@@ -22,10 +22,13 @@
   grid-area: search;
 }
 
-/* Holds the Caderninho toolbar and "Salvar caderninho", at the right as
+
+/* Holds the Caderninho toolbar (with "Salvar caderninho"), at the right as
    "Gerar caderninhos" was. */
 .montar-generate {
   grid-area: generate;
+  /* Its width decides whether "Salvar" shows (SongbookToolbar.css). */
+  container: montar-generate / inline-size;
   /* Level with the search box, which sits 24px down (mt-4). */
   padding-top: 1.5rem;
 }
@@ -66,8 +69,11 @@
 .column-divider {
   grid-area: divider;
   position: relative;
-  /* Where the design puts the chevrons: 106.5px down the line. */
-  padding-top: 106.5px;
+  /* The chevrons centered in the space between the search box and the
+     first cards: the line starts with the search row (24px above the box,
+     48px box), and the hint and "Resultados" title take the 114px below it;
+     (114px - 95px of chevrons) / 2 + 72px. */
+  padding-top: 81.5px;
   /* Above the cells, so the chevrons stay clickable where they overlap. */
   z-index: 2;
 }
@@ -172,4 +178,12 @@
   .column-divider {
     display: none;
   }
+}
+
+/* "Resultados" and "Caderninho": as the home page's section titles
+   (.landing-section-title). */
+.montar-columns h3.results {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 30px;
 }

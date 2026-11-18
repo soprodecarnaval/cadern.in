@@ -31,6 +31,12 @@ export interface SongBookTableProps {
   handleClear: () => void;
   /** Off where "Criar seções por estilo" lives in a toolbar instead. */
   showSectionsByStyle?: boolean;
+  /** Off where sorting lives in a toolbar instead; that toolbar then hears
+   * of songs moved by hand, which undo its sort. */
+  showSort?: boolean;
+  /** Off where adding a section lives in a toolbar instead. */
+  showAddSection?: boolean;
+  onManualReorder?: () => void;
   onSectionsCollapsedChange?: (state: SectionsCollapsed) => void;
 }
 
@@ -51,6 +57,9 @@ const SongBookTableView = forwardRef<
       handleSelect,
       handleClear,
       showSectionsByStyle = true,
+      showSort = true,
+      showAddSection = true,
+      onManualReorder,
       onSectionsCollapsedChange,
     },
     ref,
@@ -97,45 +106,51 @@ const SongBookTableView = forwardRef<
 
     return (
       <>
-        <Row>
-          <Col xs={12} sm="auto">
-            <Sort
-              value={sortValue}
-              onValueChange={setSortValue}
-              onSortBy={(col, dir) =>
-                setRows(sortSongsWithinSections(rows, col, dir))
-              }
-            />
-          </Col>
-          <Col>
-            <Form
-              className="d-flex justify-content-end gap-1 mb-2"
-              onSubmit={onSubmitNewSection}
-            >
-              <Col style={{ maxWidth: "200px" }}>
-                <Form.Control as={Input}
-                  type="text"
-                  onChange={onInputNewSection}
-                  value={newSection}
-                  aria-label="Adicionar seção"
-                  placeholder="Adicionar seção"
+        {(showSort || showAddSection) && (
+          <Row>
+            {showSort && (
+              <Col xs={12} sm="auto">
+                <Sort
+                  value={sortValue}
+                  onValueChange={setSortValue}
+                  onSortBy={(col, dir) =>
+                    setRows(sortSongsWithinSections(rows, col, dir))
+                  }
                 />
               </Col>
-              <Col xs="auto">
-                <Button
-                  onClick={createNewSection}
-                  className="px-0"
-                  // Square, as tall as the field beside it (.ds-field, 48px).
-                  style={{ width: "48px", height: "48px", padding: 0, fontSize: "28px", lineHeight: 1 }}
-                  aria-label="Adicionar seção"
-                  title="Adicionar seção"
+            )}
+            {showAddSection && (
+              <Col>
+                <Form
+                  className="d-flex justify-content-end gap-1 mb-2"
+                  onSubmit={onSubmitNewSection}
                 >
-                  +
-                </Button>
+                  <Col style={{ maxWidth: "200px" }}>
+                    <Form.Control as={Input}
+                      type="text"
+                      onChange={onInputNewSection}
+                      value={newSection}
+                      aria-label="Adicionar seção"
+                      placeholder="Adicionar seção"
+                    />
+                  </Col>
+                  <Col xs="auto">
+                    <Button
+                      onClick={createNewSection}
+                      className="px-0"
+                      // Square, as tall as the field beside it (.ds-field, 48px).
+                      style={{ width: "48px", height: "48px", padding: 0, fontSize: "28px", lineHeight: 1 }}
+                      aria-label="Adicionar seção"
+                      title="Adicionar seção"
+                    >
+                      +
+                    </Button>
+                  </Col>
+                </Form>
               </Col>
-            </Form>
-          </Col>
-        </Row>
+            )}
+          </Row>
+        )}
         <SongbookSortableList
           Card={Card}
           songbookProjectId={songbookProjectId}
@@ -145,6 +160,7 @@ const SongBookTableView = forwardRef<
           onReorder={(reordered) => {
             setRows(reordered);
             setSortValue("");
+            onManualReorder?.();
           }}
           onDelete={(index) => setRows(deleteRow(rows, index))}
           onSelect={handleSelect}

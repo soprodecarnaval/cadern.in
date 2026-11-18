@@ -1,11 +1,8 @@
 import { useEffect } from "react";
-import {
-  BsArrowClockwise,
-  BsArrowCounterclockwise,
-  BsArrowsCollapse,
-  BsArrowsExpand,
-  BsTags,
-} from "react-icons/bs";
+import { AddSectionMenuButton } from "./AddSectionMenuButton";
+import { ToolsMenu } from "./ToolsMenu";
+import { CollapseAllIcon, ExpandAllIcon, MakeSectionsIcon, SaveIcon, UndoIcon } from "./toolbarIcons";
+import { SortMenuButton } from "./SortMenuButton";
 import type { SectionsCollapsed } from "../../components/songbooks/editor/SongbookSortableList";
 import "./SongbookToolbar.css";
 
@@ -16,20 +13,33 @@ const isEditingText = (target: EventTarget | null) =>
 
 /** The Caderninho's tools, beside "Salvar caderninho". Undo and redo also
  *  answer to Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z (or Ctrl+Y). */
-export function SongbookToolbar({
-  canUndo, canRedo, onUndo, onRedo,
-  canMakeSections, onMakeSections,
-  sectionsCollapsed, onSetAllCollapsed,
-}: {
+export interface SongbookToolsProps {
   canUndo: boolean;
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
   canMakeSections: boolean;
   onMakeSections: () => void;
+  onAddSection: (title: string) => void;
+  /** The sort last applied ("" when none, or after songs were moved by hand). */
+  sortValue: string;
+  onSort: (value: string) => void;
   sectionsCollapsed: SectionsCollapsed;
   onSetAllCollapsed: (collapse: boolean) => void;
-}) {
+  canSave: boolean;
+  /** "Salvar caderninho"; left out where saving isn't offered. */
+  onSave?: () => void;
+}
+
+export function SongbookToolbar(props: SongbookToolsProps) {
+  const {
+    canUndo, canRedo, onUndo, onRedo,
+    canMakeSections, onMakeSections,
+    onAddSection,
+    sortValue, onSort,
+    sectionsCollapsed, onSetAllCollapsed,
+    canSave, onSave,
+  } = props;
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey || isEditingText(event.target)) { return; }
@@ -48,23 +58,34 @@ export function SongbookToolbar({
 
   return (
     <div className="songbook-toolbar" role="toolbar" aria-label="Ferramentas do caderninho">
+      <ToolsMenu {...props} />
       <button type="button" className="songbook-tool" onClick={onUndo} disabled={!canUndo}
         aria-label="Desfazer" title="Desfazer">
-        <BsArrowCounterclockwise aria-hidden="true" />
+        <UndoIcon />
       </button>
       <button type="button" className="songbook-tool" onClick={onRedo} disabled={!canRedo}
         aria-label="Refazer" title="Refazer">
-        <BsArrowClockwise aria-hidden="true" />
+        <UndoIcon mirrored />
       </button>
+      <SortMenuButton value={sortValue} onSort={onSort} disabled={!canMakeSections} />
+      <AddSectionMenuButton onAdd={onAddSection} />
       <button type="button" className="songbook-tool" onClick={onMakeSections} disabled={!canMakeSections}
         aria-label="Criar seções por estilo" title="Criar seções por estilo">
-        <BsTags aria-hidden="true" />
+        <MakeSectionsIcon />
       </button>
       <button type="button" className="songbook-tool" onClick={() => onSetAllCollapsed(!allCollapsed)}
         disabled={sectionsCollapsed === "none"}
         aria-label={collapseLabel} title={collapseLabel}>
-        {allCollapsed ? <BsArrowsExpand aria-hidden="true" /> : <BsArrowsCollapse aria-hidden="true" />}
+        {allCollapsed ? <ExpandAllIcon /> : <CollapseAllIcon />}
       </button>
+      {onSave && (
+        <button type="button" className="songbook-tool is-primary songbook-save" onClick={onSave}
+          disabled={!canSave} aria-label="Salvar caderninho" title="Salvar caderninho">
+          <SaveIcon />
+          {/* Beside the icon when the column has room for it. */}
+          <span className="songbook-save-label" aria-hidden="true">Salvar</span>
+        </button>
+      )}
     </div>
   );
 }
