@@ -319,7 +319,6 @@ export function ScreenCard(props: ScoreCardProps) {
   return (
     <ScoreCardView
       {...props}
-      lineage={null}
       onShowDetail={noop}
     />
   );

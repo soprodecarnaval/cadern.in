@@ -7,8 +7,10 @@
 }
 
 .score-card {
-  /* Lighter than --ds-border (3px). */
-  border: 1px solid var(--ds-ink);
+  /* Lighter than --ds-border (3px). Shared with the line above the details
+     of an expanded card. */
+  --score-card-border: 1px solid var(--ds-ink);
+  border: var(--score-card-border);
   border-radius: var(--ds-radius-button);
   background: var(--ds-paper);
   overflow: hidden;
@@ -75,7 +77,7 @@
 
 .score-card-details {
   padding: 0 0.75rem 0.75rem 2.75rem;
-  border-top: 1px solid #f1f3f5;
+  border-top: var(--score-card-border);
 }
 
 .score-card-subline {
@@ -87,6 +89,7 @@
   flex-direction: row;
   flex-wrap: wrap;
   gap: 0.25rem;
+  margin-top: 0.75rem;
 }
 
 .score-card-versions {
