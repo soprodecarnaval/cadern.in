@@ -521,23 +521,7 @@ export function LandingFooter({
   return (
     <footer className="landing-footer">
       <div className="landing-footer-inner">
-        <div className="landing-footer-brand">
-          <Logo inverted />
-          <div className="landing-footer-row">
-            <a href={STATIC.instagram} className="landing-footer-social">
-              <img src={instagram} alt="" />
-              /soprodecarnaval
-            </a>
-            <p className="landing-footer-made-in">
-              <img src={sunBeloHorizonte} alt="" />
-              <span>
-                Feito
-                <br />
-                em BH
-              </span>
-            </p>
-          </div>
-        </div>
+        <Logo inverted />
         <nav className="landing-footer-links" aria-label="Rodapé">
           <ul>
             <li><Link to={PLANNED.biblioteca}>Biblioteca</Link></li>
@@ -588,6 +572,20 @@ export function LandingFooter({
             <li><Link to={ARTICLES_PATH}>Artigos</Link></li>
           </ul>
         </nav>
+        <div className="landing-footer-row">
+          <a href={STATIC.instagram} className="landing-footer-social">
+            <img src={instagram} alt="" />
+            /soprodecarnaval
+          </a>
+          <p className="landing-footer-made-in">
+            <img src={sunBeloHorizonte} alt="" />
+            <span>
+              Feito
+              <br />
+              em BH
+            </span>
+          </p>
+        </div>
       </div>
     </footer>
   );
