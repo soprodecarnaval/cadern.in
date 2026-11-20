@@ -37,7 +37,8 @@
     "typecheck:storybook": "tsc -p .storybook/tsconfig.json",
     "test:storybook": "node scripts/storybook/checkStories.mjs",
     "browser-score:assets": "node scripts/browserScore/assets.mjs",
-    "browser-score:parts": "node scripts/browserScore/partPages.mjs"
+    "browser-score:parts": "node scripts/browserScore/partPages.mjs",
+    "browser-score:example": "npm run browser-score:assets && node scripts/browserScore/example.mjs"
   },
   "dependencies": {
     "@dnd-kit/dom": "^0.5.3",
