@@ -56,3 +56,7 @@ gha-creds-*.json
 
 # Storybook build output
 storybook-static/
+
+# browser-score engine assets (npm run browser-score:assets)
+public/browser-score
+test-results/browser-score
