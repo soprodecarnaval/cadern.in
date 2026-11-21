@@ -1,6 +1,6 @@
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import { describe, expect, it } from "vitest";
-import { cleanupMusicXmlText, type CleanupOptions } from "./cleanup";
+import { cleanupMusicXmlText, withoutMarkup, type CleanupOptions } from "./cleanup";
 
 const xml = {
   parse: (text: string) =>
@@ -100,7 +100,7 @@ describe("cleanupMusicXml", () => {
     expect(wordsOf(document)).toEqual([
       "Allegro",
       "dolce",
-      "To <sym>coda</sym>",
+      "To Coda",
       "D.S. al Coda",
       "Fine",
       "D.C.",
@@ -126,5 +126,14 @@ describe("cleanupMusicXml", () => {
   it("is idempotent", () => {
     const once = run().musicXml;
     expect(cleanupMusicXmlText(once, {}, xml).musicXml).toBe(once);
+  });
+
+  it("strips MuseScore's text markup from the words it keeps", () => {
+    expect(withoutMarkup('<font size="9.82"></font>D.S. al Coda')).toBe("D.S. al Coda");
+    expect(withoutMarkup('<font size="9.82"/>Para \nCoda')).toBe("Para \nCoda");
+    expect(withoutMarkup("To <sym>coda</sym>")).toBe("To Coda");
+    expect(withoutMarkup("<b>Allegro</b>")).toBe("Allegro");
+    const { document } = run();
+    expect(wordsOf(document)).toContain("To Coda");
   });
 });

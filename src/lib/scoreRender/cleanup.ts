@@ -75,6 +75,16 @@ const isStaffText = (direction: Element): boolean => {
   return !marks.some((mark) => JUMP_TEXT.test(text(mark)));
 };
 
+const SYMBOLS: Record<string, string> = { coda: "Coda", segno: "Segno" };
+
+/** Text without MuseScore rich-text tags; <sym>coda</sym> and <sym>segno</sym> become words. */
+export const withoutMarkup = (value: string): string =>
+  value
+    .replace(/<sym>\s*([a-zA-Z]+)\s*<\/sym>/g, (_whole, name: string) => SYMBOLS[name] ?? "")
+    .replace(/<\/?(?:font|b|i|u|s|sub|sup)\b[^>]*\/?>/g, "")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+
 /** Remove an element, and its parent too when nothing else is left in it. */
 const prune = (element: Element, stopAt: string) => {
   let node: Element | null = element;
@@ -131,6 +141,13 @@ export function cleanupMusicXml(
         result.staffText.push(text(direction));
         remove(direction);
       }
+    }
+    // MuseScore writes its rich-text markup into <words> ("<font size=\"9.82\"/>D.S.");
+    // the renderer would print it. Always cleaned, after staff text was recognized.
+    for (const words of descendants(part, "words")) {
+      const value = words.textContent ?? "";
+      const plain = withoutMarkup(value);
+      if (plain !== value) {words.textContent = plain;}
     }
     report.parts.push(result);
   }

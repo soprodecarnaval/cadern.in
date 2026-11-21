@@ -90,9 +90,19 @@ type NativeScore = { destroy(): void; metadata(): Promise<Metadata>; generateExc
 type NativePart = { instrumentName: string; name: string; instrumentId?: string };
 type Metadata = { excerpts: { title: string; parts: NativePart[] }[]; parts: (NativePart & { isVisible: string })[] };
 
-/** A renderer SVG without its <style> elements of @font-face rules (the text keeps its font-family). */
-export function withoutEmbeddedFonts(svg: string): string {
-    return svg.replace(/<style\b[^>]*>(?:\s*@font-face\s*\{[^}]*\}\s*)+<\/style>/g, '');
+/**
+ * A renderer SVG without the embedded @font-face rules of the shared families (the text keeps its
+ * font-family). Other faces stay, such as the Leipzig subset Verovio embeds for chord-symbol glyphs.
+ */
+export function withoutEmbeddedFonts(svg: string, families: ReadonlySet<string>): string {
+    return svg.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style>)/g, (whole, open: string, css: string, close: string) => {
+        const kept = css.replace(/@font-face\s*\{[^}]*\}/g, rule => {
+            const family = /font-family:\s*(["']?)([^"';]+)\1/.exec(rule)?.[2]?.trim();
+            return family && families.has(family) ? '' : rule;
+        });
+        if (kept === css) {return whole;}
+        return kept.trim() ? open + kept + close : '';
+    });
 }
 
 /** Staves of each part of a partwise MusicXML score, by part id. */
@@ -536,11 +546,11 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                         .filter(([, value]) => typeof value === 'number' && Number.isFinite(value)));
                     const output = await (fitted
                         ? call('renderSheet', [built.musicXml, area, built.measureWeights, sheetLayout], signal)
-                        : call('renderMusicXml', [built.musicXml, built.geometry], signal)) as { pages?: unknown; staffSpaceMm?: unknown; systems?: unknown; contentHeightMm?: unknown; fingeringScale?: unknown };
+                        : call('renderMusicXml', [built.musicXml, built.geometry], signal)) as { pages?: unknown; staffSpaceMm?: unknown; systems?: unknown; contentHeightMm?: unknown; fingeringScale?: unknown; spacingTightened?: unknown };
                     if (!output || !Array.isArray(output.pages) || output.pages.some(page => typeof page !== 'string')) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'getPages', 'The renderer could not read the part MusicXML');}
                     let pages = output.pages as string[];
                     // Shared text fonts: drop the renderer's embedded @font-face rules; the pages keep naming the families.
-                    if (sharedTextFonts && !sheet) {pages = pages.map(withoutEmbeddedFonts);}
+                    if (sharedTextFonts && !sheet) {pages = pages.map(page => withoutEmbeddedFonts(page, textFontFamilies));}
                     let geometry: { widthMm: number; heightMm: number } = built.geometry;
                     const sheetWarnings: Warning[] = [];
                     if (fitted) {
@@ -566,6 +576,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                         ? { staffSpaceMm: output.staffSpaceMm, systems: output.systems, fillRatio: Math.round(output.contentHeightMm / area.heightMm * 1000) / 1000,
                             fingeringScale: typeof output.fingeringScale === 'number' ? output.fingeringScale : 0.9 } : undefined;
                     if (layoutResult && layout.fingeringScale === undefined && layoutResult.fingeringScale < 0.9) {warnings.push({ code: 'FINGERINGS_REDUCED', message: `The fingerings were reduced to ${Math.round(layoutResult.fingeringScale / 0.9 * 100)}% to fit one sheet.` });}
+                    if (output.spacingTightened === true) {warnings.push({ code: 'SHEET_SPACING_TIGHTENED', message: 'The part is dense: its horizontal spacing was tightened to fit one sheet.' });}
                     const entry = { revision, pages, warnings, geometry, layout: layoutResult };
                     rendered.set(part.id, entry);
                     return entry;

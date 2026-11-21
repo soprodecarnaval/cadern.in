@@ -10,16 +10,20 @@
 //   PART_PAGES_SIZE=B6|score|WxH[:t,r,b,l]   plain: paper in mm
 //   PART_PAGES_RESULTS=dir                   (default test-results/browser-score)
 //   PART_PAGES_CLEANUP=1                     clean-up (src/lib/scoreRender/cleanup) before drawing
+//   PART_PAGES_REFERENCE=dir                 sign-off (016): stored plugin-formatted SVGs, named
+//                                            <stem>_<PART>-<n>.svg as the old collection names them, shown
+//                                            side by side with staff size, systems, fingering match and clefs
 //   PART_PAGES_PROFILE=profile.json          a FormattingProfile (types/formattingProfile.ts): fitted
 //                                            pages in its box, its layout and clean-up per part
 //   CHROME=/path/to/chrome                   (default /usr/bin/google-chrome)
 import { chromium } from 'playwright-core';
 import { build } from 'esbuild';
 import { createServer } from 'node:http';
-import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rm, readdir, copyFile } from 'node:fs/promises';
 import { resolve, extname, basename } from 'node:path';
 import assert from 'node:assert/strict';
 
+const normalizePart = name => name.normalize('NFC').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '');
 const inputs = (process.env.PART_PAGES_INPUT || '').split(',').filter(Boolean).map(path => resolve(path));
 if (!inputs.length) throw Error('Set PART_PAGES_INPUT (comma-separated .mscz/.mscx files).');
 const style = process.env.PART_PAGES_PROFILE ? 'fitted' : process.env.PART_PAGES_STYLE || 'songbook';
@@ -32,7 +36,7 @@ const libraryOptions = { partPageStyle: style, ...(fitArea ? { fitArea } : {}), 
 const expectedSize = style === 'songbook' ? { widthMm: 176, heightMm: 125 } : style === 'fitted' ? fitArea : typeof partPageSize === 'object' ? partPageSize : null;
 const profile = process.env.PART_PAGES_PROFILE ? JSON.parse(await readFile(process.env.PART_PAGES_PROFILE, 'utf8')) : null;
 const cleanup = process.env.PART_PAGES_CLEANUP === '1' || !!profile;
-const bundle = (await build({ stdin: { contents: "export * from './src/lib/browserScore/index.ts'; export { cleanupMusicXmlText } from './src/lib/scoreRender/cleanup.ts'; export * from './src/lib/scoreRender/profile.ts'; export { caderninhoPartTransform } from './src/lib/scoreRender/partTransform.ts'; export { zFormattingProfile } from './types/formattingProfile.ts';", resolveDir: resolve('.'), loader: 'ts' }, bundle: true, format: 'esm', platform: 'browser', target: 'es2022', write: false })).outputFiles[0].contents;
+const bundle = (await build({ stdin: { contents: "export * from './src/lib/browserScore/index.ts'; export { cleanupMusicXmlText } from './src/lib/scoreRender/cleanup.ts'; export * from './src/lib/scoreRender/profile.ts'; export { caderninhoPartTransform } from './src/lib/scoreRender/partTransform.ts'; export * from './src/lib/scoreRender/review.ts'; export { zFormattingProfile } from './types/formattingProfile.ts';", resolveDir: resolve('.'), loader: 'ts' }, bundle: true, format: 'esm', platform: 'browser', target: 'es2022', write: false })).outputFiles[0].contents;
 const assets = resolve('public/browser-score');
 const results = resolve(process.env.PART_PAGES_RESULTS || 'test-results/browser-score');
 await rm(results, { recursive: true, force: true });
@@ -61,8 +65,22 @@ try {
         const page = await context.newPage();
         await page.goto(origin + '/');
         const bytes = [...await readFile(input)];
-        const outcome = await page.evaluate(async ({ bytes, name, libraryOptions, cleanup, profile: input }) => {
-            const { createScoreLibrary, cleanupMusicXmlText, zFormattingProfile, resolvePartFormatting, libraryOptionsFor, sheetLayoutFor, caderninhoPartTransform } = await import('/browser.js');
+        // Stored pages of each part, by normalized part name.
+        const stem = basename(input).replace(/\.(mscz|mscx)$/i, '');
+        const referenceDir = process.env.PART_PAGES_REFERENCE ? resolve(process.env.PART_PAGES_REFERENCE.replace('{stem}', stem)) : null;
+        const stored = {};
+        if (referenceDir) {
+            for (const entry of await readdir(referenceDir).catch(() => [])) {
+                const name = entry.normalize('NFC'), prefix = `${stem.normalize('NFC')}_`;
+                const match = name.startsWith(prefix) ? /^(.+)-(\d+)\.svg$/.exec(name.slice(prefix.length)) : null;
+                if (!match) continue;
+                (stored[normalizePart(match[1])] ??= []).push({ page: Number(match[2]), file: entry, svg: await readFile(resolve(referenceDir, entry), 'utf8') });
+            }
+        }
+        const outcome = await page.evaluate(async ({ bytes, name, libraryOptions, cleanup, profile: input, stored }) => {
+            const { createScoreLibrary, cleanupMusicXmlText, zFormattingProfile, resolvePartFormatting, libraryOptionsFor, sheetLayoutFor, caderninhoPartTransform, compareFingerings, clefsOf, storedPageLayout } = await import('/browser.js');
+            const normalizePart = name => name.normalize('NFC').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+            const signoff = new Map();
             const profile = input ? zFormattingProfile.parse(input) : null;
             if (profile) {Object.assign(libraryOptions, libraryOptionsFor(profile));}
             const cleaned = new Map();
@@ -73,6 +91,9 @@ try {
                 const result = caderninhoPartTransform(profile, r => { report = r; })(input);
                 cleaned.set(input.part.id, report.cleanup);
                 fingered.set(input.part.id, report.fingerings);
+                const before = new DOMParser().parseFromString(input.musicXml, 'application/xml');
+                const after = new DOMParser().parseFromString(result.musicXml, 'application/xml');
+                signoff.set(input.part.id, { fingerings: compareFingerings(before, after), clefsBefore: [...new Set(clefsOf(before))], clefsAfter: [...new Set(clefsOf(after))] });
                 return result;
             } : cleanup ? ({ musicXml, part }) => {
                 const result = cleanupMusicXmlText(musicXml, profile ? resolvePartFormatting(profile, part.name).cleanup : {});
@@ -100,7 +121,9 @@ try {
                     const id = exported.parts.find(p => p.catalogPart?.id === part.id)?.id;
                     const body = [...xml.querySelectorAll('score-partwise > part')].find(p => p.getAttribute('id') === id);
                     const notes = body ? [...body.querySelectorAll('note')] : [];
-                    parts.push({ ordinal: part.ordinal, name: part.name, instrumentIds: part.instrumentIds, cleanup: cleaned.get(part.id) ?? null, fingered: (fingered.get(part.id) ?? []).reduce((n, r) => n + r.fingered, 0), layout: pages[0]?.layout ?? null, musicXmlPart: id ?? null, ms: Math.round(performance.now() - t), pageCount,
+                    parts.push({ ordinal: part.ordinal, name: part.name, instrumentIds: part.instrumentIds, cleanup: cleaned.get(part.id) ?? null, fingered: (fingered.get(part.id) ?? []).reduce((n, r) => n + r.fingered, 0), layout: pages[0]?.layout ?? null,
+                        signoff: { ...signoff.get(part.id), stored: (stored[normalizePart(part.name)] ?? []).sort((a, b) => a.page - b.page).map(s => ({ file: s.file, layout: storedPageLayout(s.svg, 171.7) })) },
+                        musicXmlPart: id ?? null, ms: Math.round(performance.now() - t), pageCount,
                         pages: pages.map(p => ({ filename: p.filename, svg: p.svg, widthMm: p.widthMm, heightMm: p.heightMm })),
                         warnings: [...new Set(pages.flatMap(p => p.warnings.map(w => w.code)))],
                         rendered: { notes: count('g.note'), rests: count('g.rest, g.mRest, g.multiRest'), tempo: count('g.tempo'), rehearsal: count('g.reh'), repeatMarks: count('g.repeatMark'), dynamics: count('g.dynam'), fingerings: count('g.fing'), directions: count('g.dir') },
@@ -113,11 +136,12 @@ try {
                 await session.dispose();
                 return { partCount: catalog.parts.length, origin: catalog.parts[0]?.origin, topMarkings, parts };
             } finally { await library.dispose(); }
-        }, { bytes, name: basename(input), libraryOptions: { ...libraryOptions }, cleanup, profile });
+        }, { bytes, name: basename(input), libraryOptions: { ...libraryOptions }, cleanup, profile, stored });
         await page.close();
         const label = basename(input).replace(/\.(mscz|mscx)$/i, '');
         for (const part of outcome.parts) {
             for (const p of part.pages) { await writeFile(resolve(results, p.filename), p.svg); delete p.svg; }
+            for (const s of part.signoff?.stored ?? []) {await copyFile(resolve(referenceDir, s.file), resolve(results, `stored--${s.file}`));}
             const tag = `${label} part ${part.ordinal} ${part.name}`;
             assert(part.pageCount > 0, `${tag}: no pages`);
             assert(part.instrumentIds.length > 0, `${tag}: no instrument ids`);
@@ -139,10 +163,23 @@ try {
     await new Promise(done => server.close(done));
     await writeFile(resolve(results, 'report.json'), JSON.stringify(report, null, 2) + '\n');
 }
+// Sign-off line (016): staff size and systems against the stored page, fingering match, clefs.
+function signoffLine(part) {
+    const o = part.signoff;
+    if (!o) return '';
+    const stored = o.stored?.[0]?.layout;
+    const staff = part.layout && stored ? `staff ${part.layout.staffSpaceMm.toFixed(2)} mm vs stored ${stored.staffSpaceMm.toFixed(2)} mm (${Math.round((part.layout.staffSpaceMm / stored.staffSpaceMm - 1) * 100)}%), systems ${part.layout.systems} vs ${stored.systems}` : part.layout ? `staff ${part.layout.staffSpaceMm.toFixed(2)} mm, no stored page` : '';
+    const f = o.fingerings;
+    const fingerings = f && f.plugin ? `fingerings ${f.same}/${f.plugin} same as the plugin's${Object.keys(f.differences).length ? ` (${escape(Object.entries(f.differences).slice(0, 4).map(([d, n]) => `${d}×${n}`).join(', '))})` : ''}` : '';
+    const clefs = o.clefsAfter ? `clefs ${escape((o.clefsBefore ?? []).join(' '))} → ${escape(o.clefsAfter.join(' '))}` : '';
+    return `<p class="signoff">${[staff, fingerings, clefs].filter(Boolean).join(' · ')}</p>`;
+}
 const escape = value => String(value).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 await writeFile(resolve(results, 'review.html'), `<!doctype html><meta charset="utf-8"><title>Part pages review</title>
 <style>body{font:14px system-ui;margin:16px}.pages{display:flex;gap:16px;flex-wrap:wrap}figure{margin:0;flex:1;min-width:320px;max-width:640px}
 img{width:100%;border:1px solid #ccc;background:#fff}</style><h1>Part pages review</h1>` + report.files.map(file => `<h2>${escape(file.file)}</h2>` + file.parts.map(part =>
-    `<h3>${part.ordinal}. ${escape(part.name)}</h3><p>${part.pageCount} page(s); ${part.rendered.notes} notes and ${part.rendered.rests} rests (MusicXML: ${part.source.notes} and ${part.source.rests}); ${escape(part.warnings.join(', '))}</p><div class="pages">`
-    + part.pages.map(p => `<figure><img src="${escape(p.filename)}" alt="${escape(part.name)} page"><figcaption>${escape(p.filename)} · ${p.widthMm} × ${p.heightMm} mm</figcaption></figure>`).join('') + '</div>').join('')).join(''));
+    `<h3>${part.ordinal}. ${escape(part.name)}</h3><p>${part.pageCount} page(s); ${part.rendered.notes} notes and ${part.rendered.rests} rests (MusicXML: ${part.source.notes} and ${part.source.rests}); ${escape(part.warnings.join(', '))}</p>`
+    + signoffLine(part) + '<div class="pages">'
+    + (part.signoff?.stored ?? []).map(s => `<figure><img src="stored--${escape(s.file)}" alt="${escape(part.name)} stored page"><figcaption>Stored: ${escape(s.file)}</figcaption></figure>`).join('')
+    + part.pages.map(p => `<figure><img src="${escape(p.filename)}" alt="${escape(part.name)} page"><figcaption>Browser: ${escape(p.filename)} · ${p.widthMm} × ${p.heightMm} mm</figcaption></figure>`).join('') + '</div>').join('')).join(''));
 console.log('Review:', resolve(results, 'review.html'));

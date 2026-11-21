@@ -56,7 +56,11 @@ export function fontFaceCss(loaded: readonly { font: TextFont; bytes: Uint8Array
 
 /** Whether an SVG names one of the shared families without embedding it. */
 export const needsTextFonts = (svg: string, families: readonly string[]) =>
-  !/@font-face/.test(svg) && families.some((family) => svg.includes(`font-family="${family}`));
+  families.some(
+    (family) =>
+      svg.includes(`font-family="${family}`) &&
+      !new RegExp(`@font-face\\s*\\{[^}]*font-family:\\s*["']?${family}["']?\\s*;`).test(svg),
+  );
 
 /** The SVG with the shared fonts embedded again, right after the root element opens. */
 export function withTextFonts(svg: string, css: string): string {

@@ -80,6 +80,8 @@ const SHEET_UNITS = Array.from({ length: 23 }, (_, i) => 10.5 - i * 0.25);
 // Horizontal spacing calibrated on the 2026 caderninhos: at these values the staff size matches what
 // the caderninhoFormatter plugin chose in MuseScore (median within 2% on parts without fingerings).
 const SHEET_SPACING = { spacingLinear: 0.21, spacingNonLinear: 0.6, spacingSystem: 4 };
+// Tried, in order, when a part fits one page at no staff size with its own spacing.
+const TIGHTER_SPACING = [{ spacingLinear: 0.15, spacingNonLinear: 0.55 }, { spacingLinear: 0.1, spacingNonLinear: 0.5 }];
 
 /**
  * Draw one part as a songbook sheet: the music only, sized to fit `area` on a
@@ -158,14 +160,22 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
         return 'fits';
     };
     const fixedUnit = Number.isFinite(layout.unit) ? range(layout.unit, 4, 12, SHEET_UNITS[0]) : null;
+    // Dense parts that fit no staff size get tighter horizontal spacing (fewer, fuller systems)
+    // before smaller fingerings; the plugin's MuseScore spacing was tighter for such music.
+    const given = { spacingLinear: spacing.spacingLinear, spacingNonLinear: spacing.spacingNonLinear };
+    const spacings = [given, ...TIGHTER_SPACING.filter(tight => tight.spacingLinear < given.spacingLinear)];
     for (const scale of fingeringScales) {
         spacing.fingeringScale = scale;
-        for (const unit of fixedUnit ? [fixedUnit] : SHEET_UNITS) {
-            const outcome = fit(unit);
-            if (outcome?.error) return outcome;
-            if (outcome === 'fits') return result();
+        for (const variant of spacings) {
+            Object.assign(spacing, variant);
+            for (const unit of fixedUnit ? [fixedUnit] : SHEET_UNITS) {
+                const outcome = fit(unit);
+                if (outcome?.error) return outcome;
+                if (outcome === 'fits') return { ...result(), spacingTightened: variant !== given };
+            }
         }
     }
+    Object.assign(spacing, given);
     // Overflow: the best attempt, on more than one page.
     const unit = fixedUnit ?? SHEET_UNITS[SHEET_UNITS.length - 1];
     if (draw(unit, fixedSystems ? balancedStarts(widths, fixedSystems) : null) === null) return { error: 'load' };
