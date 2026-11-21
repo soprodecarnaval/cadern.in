@@ -1,4 +1,5 @@
 import { Button } from "../../../atoms/Button";
+import { useSvgUrl } from "../../../../lib/useSvgUrl";
 import { useState } from "react";
 import { Badge, Card, Placeholder } from "react-bootstrap";
 import { SiMidi } from "react-icons/si";
@@ -33,6 +34,7 @@ function SvgImage({
   pinsProps?: ScorePinsProps;
 }) {
   const [loaded, setLoaded] = useState(false);
+  const shown = useSvgUrl(url);
   const picking = pinsProps?.picking ?? false;
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -97,7 +99,7 @@ function SvgImage({
         </Placeholder>
       )}
       <img
-        src={url}
+        src={shown}
         alt=""
         onLoad={() => setLoaded(true)}
         style={{

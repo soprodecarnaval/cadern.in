@@ -43,6 +43,7 @@ describe("FormattingProfile", () => {
     });
     expect(libraryOptionsFor(DEFAULT_FORMATTING_PROFILE)).toEqual({
       partPageStyle: "fitted",
+      textFonts: "shared",
       fitArea: { widthMm: 171.7, heightMm: 98.2 },
     });
   });

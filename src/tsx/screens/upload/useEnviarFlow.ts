@@ -4,6 +4,7 @@
 // render for upload, revalidate and upload. Every engine call takes the
 // current AbortSignal; leaving the page disposes the engine.
 import type { User } from "firebase/auth";
+import { fontFaceCss, loadTextFonts, withTextFonts } from "../../../lib/sharedFonts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormattingProfile } from "../../../../types/formattingProfile";
 import { DEFAULT_FORMATTING_PROFILE } from "../../../../types/formattingProfile";
@@ -30,6 +31,10 @@ export type EnviarDeps = {
 
 
 const RERENDER_DELAY_MS = 400;
+
+let textFontCssCache: Promise<string> | null = null;
+/** The shared text fonts as @font-face CSS, loaded once; empty if they can't be loaded. */
+const textFontCss = () => (textFontCssCache ??= loadTextFonts().then(fontFaceCss).catch(() => ""));
 
 const message = (error: unknown) => {
   if (error && typeof error === "object" && "name" in error && (error as { name: string }).name === "AbortError") {return null;}
@@ -244,7 +249,9 @@ export function useEnviarFlow(deps: EnviarDeps) {
             const page = await open.renderPage(view, 1, { expectedRevision: revision, signal, background: "white" });
             if (signal.aborted || session.current !== open || superseded) {return;}
             rendered.current.set(ordinal, signature);
-            update((current) => ({ previews: { ...current.previews, [ordinal]: { ordinal, svg: page.svg, pages: pageCount, layout: page.layout ?? null, warnings: page.warnings, rendering: false } } }));
+            // Pages name their shared text fonts; a preview shown as an image needs them embedded (014).
+            const svg = page.portability === "shared-fonts" ? withTextFonts(page.svg, await textFontCss()) : page.svg;
+            update((current) => ({ previews: { ...current.previews, [ordinal]: { ordinal, svg, pages: pageCount, layout: page.layout ?? null, warnings: page.warnings, rendering: false } } }));
           } catch (error) {
             const text = message(error);
             if (text && !signal.aborted && !superseded) {update((current) => ({ previews: { ...current.previews, [ordinal]: { ...current.previews[ordinal], ordinal, rendering: false, error: text } } }));}

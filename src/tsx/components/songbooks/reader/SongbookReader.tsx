@@ -1,4 +1,5 @@
 import { Select } from "../../../atoms/Select";
+import { useSvgUrl } from "../../../../lib/useSvgUrl";
 import { Modal } from "../../../atoms/Modal";
 import { Input } from "../../../atoms/Input";
 import { Button } from "../../../atoms/Button";
@@ -609,15 +610,14 @@ export function SongbookReader({
     return (
       <div className={`reader-sheet fit-${fit}`}>
         {part.svg.map((url, i) => (
-          <img
+          <ReaderPage
             key={url}
-            src={url}
+            url={url}
             alt={
               i === 0
                 ? `Partitura de ${song.title}, ${part.name}`
                 : `${song.title}, página ${i + 1}`
             }
-            draggable={false}
           />
         ))}
       </div>
@@ -979,4 +979,9 @@ function SongIndex({
       )}
     </>
   );
+}
+
+/** One page of a part; library pages get their shared text fonts back (useSvgUrl). */
+function ReaderPage({ url, alt }: { url: string; alt: string }) {
+  return <img src={useSvgUrl(url)} alt={alt} draggable={false} />;
 }

@@ -1,4 +1,5 @@
 import SVGtoPDF from "svg-to-pdfkit";
+import { loadTextFonts, pdfFontName, textFontCallback } from "./lib/sharedFonts";
 import type { Instrument } from "../types/instrument";
 import type { ScoreViewModel, PartViewModel } from "../types/viewModels";
 import { Section } from "./lib/pdfGeneration";
@@ -226,6 +227,7 @@ const drawSvg = async (doc: PDFKit.PDFDocument, url: string, page: number): Prom
       width: width,
       height: height,
       preserveAspectRatio: `${width}x${height}`,
+      fontCallback: textFontCallback(sharedFonts.get(doc) ?? new Set()),
     });
   } catch (e) {
     console.error(e);
@@ -279,6 +281,9 @@ const createDoc = () => {
   });
 };
 
+// PDFKit names of the shared text fonts registered in each document (014).
+const sharedFonts = new WeakMap<PDFKit.PDFDocument, Set<string>>();
+
 const loadFonts = async (doc: PDFKit.PDFDocument) => {
   const fonts = ["Roboto-Medium", "Roboto-Bold"];
   for (const font of fonts) {
@@ -286,7 +291,21 @@ const loadFonts = async (doc: PDFKit.PDFDocument) => {
     const buffer = await resp.arrayBuffer();
     doc.registerFont(font, buffer);
   }
+  // Library-rendered pages name their text fonts instead of embedding them:
+  // register them once per document, so the text stays text in the PDF.
+  const names = new Set<string>();
+  try {
+    for (const { font, bytes } of await loadTextFonts("ttf")) {
+      const name = pdfFontName(font);
+      doc.registerFont(name, bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+      names.add(name);
+    }
+  } catch (e) {
+    console.error("Shared text fonts unavailable; library pages fall back to standard fonts", e);
+  }
+  sharedFonts.set(doc, names);
 };
+
 
 const addSongPage = async (
   doc: PDFKit.PDFDocument,

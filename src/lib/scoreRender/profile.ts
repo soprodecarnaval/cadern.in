@@ -47,9 +47,11 @@ export function resolvePartFormatting(
 /** Library options for a profile: fitted pages in the profile's box. */
 export function libraryOptionsFor(
   profile: FormattingProfile,
-): Pick<LibraryOptions, "partPageStyle" | "fitArea"> {
+): Pick<LibraryOptions, "partPageStyle" | "fitArea" | "textFonts"> {
   return {
     partPageStyle: "fitted",
+    // Stored pages name their text fonts; the reader and the songbook PDF load the shared files (014).
+    textFonts: "shared",
     fitArea: { ...(profile.fitArea ?? SONGBOOK_FIT_AREA) },
   };
 }

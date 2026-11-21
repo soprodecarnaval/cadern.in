@@ -70,6 +70,24 @@
             "value": "application/json"
           }
         ]
+      },
+      {
+        "source": "/browser-score/**/*.ttf",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "font/ttf"
+          }
+        ]
+      },
+      {
+        "source": "/browser-score/fonts/liberation-*.@(woff2|ttf)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
       }
     ]
   },

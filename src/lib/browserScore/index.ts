@@ -25,7 +25,7 @@ export function createSvgArchive(pages: readonly { filename: string; svg: string
 // Fail closed on SVG features that can depend on fonts, external resources,
 // active content, or browser-specific CSS. This checks the returned artifact,
 // not whether the native importer substituted a font or dropped content.
-async function validatePortableSvg(doc: Document): Promise<void> {
+async function validatePortableSvg(doc: Document, sharedFamilies: ReadonlySet<string> = new Set()): Promise<void> {
     const fail = () => { throw new ScoreError('UNSUPPORTED_CAPABILITY', 'renderPage', 'SVG contains unsupported or unresolved resources'); };
     const allowed = new Set(['svg', 'g', 'path', 'polyline', 'polygon', 'line', 'rect', 'circle', 'ellipse', 'defs', 'clipPath', 'mask', 'linearGradient', 'radialGradient', 'stop', 'use', 'image', 'title', 'desc', 'text', 'tspan', 'style']);
     const ids = new Set<string>(), references: string[] = [];
@@ -54,7 +54,9 @@ async function validatePortableSvg(doc: Document): Promise<void> {
     for (const text of Array.from(doc.querySelectorAll('text, tspan'))) {
         if (!text.textContent?.trim()) {continue;}
         const families = (fontOf(text) ?? '').split(',').map(name => name.trim().replace(/^["']|["']$/g, ''));
-        if (!embedded.has(families[0]) || families.slice(1).some(name => !generic.has(name) && !embedded.has(name))) {fail();}
+        // Text fonts must be embedded, or be the manifest's shared text fonts ('shared' textFonts).
+        const available = (name: string) => embedded.has(name) || sharedFamilies.has(name);
+        if (!available(families[0]) || families.slice(1).some(name => !generic.has(name) && !available(name))) {fail();}
     }
     for (const element of Array.from(doc.querySelectorAll('*'))) {
         if (element.namespaceURI !== 'http://www.w3.org/2000/svg' || !allowed.has(element.localName)) {fail();}
@@ -87,6 +89,11 @@ async function validatePortableSvg(doc: Document): Promise<void> {
 type NativeScore = { destroy(): void; metadata(): Promise<Metadata>; generateExcerpts(): Promise<void>; setExcerptId(id: number): Promise<void>; npages(): Promise<number>; saveSvg(page: number, background: boolean): Promise<string>; saveXml(): Promise<string>; saveMidi(expandRepeats: boolean, exportRPNs: boolean): Promise<Uint8Array> };
 type NativePart = { instrumentName: string; name: string; instrumentId?: string };
 type Metadata = { excerpts: { title: string; parts: NativePart[] }[]; parts: (NativePart & { isVisible: string })[] };
+
+/** A renderer SVG without its <style> elements of @font-face rules (the text keeps its font-family). */
+export function withoutEmbeddedFonts(svg: string): string {
+    return svg.replace(/<style\b[^>]*>(?:\s*@font-face\s*\{[^}]*\}\s*)+<\/style>/g, '');
+}
 
 /** Staves of each part of a partwise MusicXML score, by part id. */
 function staffCounts(xml: string): Map<string, number> {
@@ -142,7 +149,7 @@ export const LIBRARY_VERSION = 'browser-score-2';
 
 const SHEET_FONTS = { medium: 'fonts/roboto-latin-500-normal.woff2', bold: 'fonts/roboto-latin-700-normal.woff2' } as const;
 
-async function assets(options: LibraryOptions): Promise<{ base: URL; sheetFonts: SheetFonts; renderer: RendererInfo }> {
+async function assets(options: LibraryOptions): Promise<{ base: URL; sheetFonts: SheetFonts; renderer: RendererInfo; textFontFamilies: ReadonlySet<string> }> {
     const kept = new Map<string, Uint8Array>();
     const base = new URL(options.assets.manifestUrl);
     async function fetchBytes(url: URL) {
@@ -184,13 +191,18 @@ async function assets(options: LibraryOptions): Promise<{ base: URL; sheetFonts:
         || options.assets.workerUrl.href !== new URL('worker.js', base).href) {
         throw new ScoreError('ASSET_MISMATCH', 'create', 'Missing or mismatched engine entry');
     }
+    const textFonts = Array.isArray(manifest.textFonts) ? manifest.textFonts as { family?: unknown; path?: unknown }[] : [];
+    if (textFonts.some(font => typeof font.family !== 'string' || !/^[A-Za-z0-9 _-]+$/.test(font.family) || typeof font.path !== 'string' || !paths.has(font.path))) {
+        throw new ScoreError('ASSET_MISMATCH', 'create', 'Invalid text font entry');
+    }
     const manifestDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', manifestBytes)), byte => byte.toString(16).padStart(2, '0')).join('');
     const renderer: RendererInfo = Object.freeze({
         library: LIBRARY_VERSION, engine: String(manifest.engine), renderer: typeof manifest.renderer === 'string' ? manifest.renderer : 'unknown',
         manifestSha256: manifestDigest,
         fonts: Object.freeze((manifest.assets as { path: string; sha256: string }[]).filter(asset => asset.path.startsWith('fonts/')).map(asset => Object.freeze({ path: asset.path, sha256: asset.sha256 })))
     });
-    return { base, sheetFonts: { medium: kept.get(SHEET_FONTS.medium)!, bold: kept.get(SHEET_FONTS.bold)! }, renderer };
+    return { base, sheetFonts: { medium: kept.get(SHEET_FONTS.medium)!, bold: kept.get(SHEET_FONTS.bold)! }, renderer,
+        textFontFamilies: new Set(textFonts.map(font => font.family as string)) };
 }
 
 const validSize = (size: { widthMm: number; heightMm: number }) =>
@@ -201,6 +213,8 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
         throw new ScoreError('UNSUPPORTED_CAPABILITY', 'create', 'Unknown adapter or execution mode');
     }
     const partPageStyle = options.partPageStyle ?? 'songbook';
+    if (options.textFonts !== undefined && !['embedded', 'shared'].includes(options.textFonts)) {throw new ScoreError('INVALID_INPUT', 'create', 'textFonts must be "embedded" or "shared"');}
+    const sharedTextFonts = options.textFonts === 'shared';
     if (!['songbook', 'fitted', 'plain'].includes(partPageStyle)) {throw new ScoreError('INVALID_INPUT', 'create', 'partPageStyle must be "songbook", "fitted" or "plain"');}
     const partPageSize = options.partPageSize ?? 'B6';
     if (partPageSize !== 'B6' && partPageSize !== 'score') {
@@ -324,9 +338,12 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
     }
 
     let rendererInfo: RendererInfo | undefined;
+    let textFontFamilies: ReadonlySet<string> = new Set();
     try {
         const loaded = await assets(options);
         rendererInfo = loaded.renderer;
+        textFontFamilies = loaded.textFontFamilies;
+        if (sharedTextFonts && !textFontFamilies.size) {throw new ScoreError('ASSET_MISMATCH', 'create', 'The manifest lists no shared text fonts');}
         const base = assetBase = loaded.base;
         sheetFonts = loaded.sheetFonts;
         if (options.execution === 'worker') {
@@ -522,6 +539,8 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                         : call('renderMusicXml', [built.musicXml, built.geometry], signal)) as { pages?: unknown; staffSpaceMm?: unknown; systems?: unknown; contentHeightMm?: unknown; fingeringScale?: unknown };
                     if (!output || !Array.isArray(output.pages) || output.pages.some(page => typeof page !== 'string')) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'getPages', 'The renderer could not read the part MusicXML');}
                     let pages = output.pages as string[];
+                    // Shared text fonts: drop the renderer's embedded @font-face rules; the pages keep naming the families.
+                    if (sharedTextFonts && !sheet) {pages = pages.map(withoutEmbeddedFonts);}
                     let geometry: { widthMm: number; heightMm: number } = built.geometry;
                     const sheetWarnings: Warning[] = [];
                     if (fitted) {
@@ -600,7 +619,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                             const doc = new DOMParser().parseFromString(nativeSvg, 'image/svg+xml');
                             const root = doc.documentElement;
                             if (root.localName !== 'svg' || doc.querySelector('parsererror')) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'renderPage', 'Renderer returned invalid SVG');}
-                            await validatePortableSvg(doc);
+                            await validatePortableSvg(doc, drawn && sharedTextFonts && partPageStyle !== 'songbook' ? textFontFamilies : undefined);
                             if (drawn) {
                                 // Verovio with mmOutput: the viewBox is the page in millimetres, rounded to
                                 // its internal units; the physical size is the score's page size.
@@ -634,7 +653,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                             const pageWarnings = drawn ? drawn.warnings : [{ code: 'SOURCE_COMPLETENESS_UNVERIFIED', message: 'The engine cannot report every font substitution, missing glyph, or imported element loss.' }, { code: 'PART_FIDELITY_UNVERIFIED', message: 'Imported notation and layout fidelity are not established for this file.' }];
                             const target = part ? `part-${String(part.ordinal).padStart(3, '0')}-${stem(part.name, 'part')}` : 'score';
                             return { view: part ? { kind: 'part' as const, partId: part.id } : { kind: 'score' as const }, revision, pageNumber, pageCount, widthMm, heightMm, svg,
-                                filename: `${scoreStem}--${target}--page-${String(pageNumber).padStart(4, '0')}.svg`, portability: 'self-contained' as const,
+                                filename: `${scoreStem}--${target}--page-${String(pageNumber).padStart(4, '0')}.svg`, portability: drawn && sharedTextFonts && partPageStyle !== 'songbook' ? 'shared-fonts' as const : 'self-contained' as const,
                                 warnings: pageWarnings.map(warning => ({ ...warning })), ...(drawn?.layout ? { layout: { ...drawn.layout } } : {}) };
                         });
                     },

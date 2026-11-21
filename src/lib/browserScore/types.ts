@@ -48,7 +48,9 @@ export type MusicXmlExport = {
 };
 /** How a 'songbook' or 'fitted' part was laid out. `fillRatio` is the height the music needs over the box height. */
 export type SheetLayoutResult = { staffSpaceMm: number; systems: number; fillRatio: number; fingeringScale: number };
-export type SvgPage = { view: View; revision: Revision; pageNumber: number; pageCount: number; widthMm: number; heightMm: number; svg: string; filename: string; warnings: readonly Warning[]; portability: 'self-contained';
+export type SvgPage = { view: View; revision: Revision; pageNumber: number; pageCount: number; widthMm: number; heightMm: number; svg: string; filename: string; warnings: readonly Warning[];
+    /** 'shared-fonts': the text fonts are the manifest's textFonts files, not in the SVG. */
+    portability: 'self-contained' | 'shared-fonts';
     /** Present on 'songbook' and 'fitted' pages. */
     layout?: SheetLayoutResult };
 /**
@@ -81,6 +83,12 @@ export type LibraryOptions = Operation & {
      * - 'plain': renderer pages sized by `partPageSize`.
      */
     partPageStyle?: PartPageStyle;
+    /**
+     * Text fonts of 'fitted' and 'plain' part pages. 'embedded' (default): each SVG carries its fonts
+     * as data URIs. 'shared': the SVG only names the families; the fonts are the manifest's
+     * `textFonts` files, which hosts load once (the reader injects them, the songbook PDF registers them).
+     */
+    textFonts?: 'embedded' | 'shared';
     /**
      * Paper for 'plain' part pages: ISO B6 portrait, 125 × 176 mm (default), the score's own
      * page layout, or a custom size. A custom size without margins keeps the score's margins,
