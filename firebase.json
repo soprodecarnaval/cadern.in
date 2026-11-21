@@ -8,8 +8,68 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "source": "!/browser-score/**",
         "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/browser-score/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          }
+        ]
+      },
+      {
+        "source": "/browser-score/**/*.@(js|mjs)",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "text/javascript; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "source": "/browser-score/**/*.wasm",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/wasm"
+          }
+        ]
+      },
+      {
+        "source": "/browser-score/**/*.data",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/octet-stream"
+          }
+        ]
+      },
+      {
+        "source": "/browser-score/**/*.woff2",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "font/woff2"
+          }
+        ]
+      },
+      {
+        "source": "/browser-score/manifest.json",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
       }
     ]
   },

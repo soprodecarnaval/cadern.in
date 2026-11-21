@@ -114,7 +114,7 @@ describe("projects", () => {
   });
 
   it("denies reserved project IDs", async () => {
-    for (const projectId of ["projetos", "partituras", "2026"]) {
+    for (const projectId of ["projetos", "partituras", "browser-score", "2026"]) {
       const db = as(OUTSIDER);
       const batch = writeBatch(db);
       batch.set(doc(db, "projects", projectId), {

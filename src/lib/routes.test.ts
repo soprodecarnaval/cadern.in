@@ -81,6 +81,7 @@ describe("reserved slugs", () => {
       "montar",
       "plugin",
       "assets",
+      "browser-score",
       "projects",
       "project",
       "score",

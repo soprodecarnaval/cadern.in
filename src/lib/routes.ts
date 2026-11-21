@@ -28,6 +28,8 @@ const RESERVED_PROJECT_SLUGS = new Set([
   "montar",
   "plugin",
   "assets",
+  // Engine assets for in-browser rendering (scripts/browserScore/assets.mjs).
+  "browser-score",
   "index.html",
   "vite.svg",
   "soundfont-player.min.js",
