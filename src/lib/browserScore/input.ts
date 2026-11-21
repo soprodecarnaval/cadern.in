@@ -258,7 +258,7 @@ function inspectInput(bytes: Uint8Array, format: Format, overrides: Partial<Limi
     const tags = doc.museScore.Score?.metaTag;
     for (const tag of Array.isArray(tags) ? tags : [tags]) {
         const name = tag?.['@_name'], value = tag?.['#text'];
-        if (typeof name === 'string' && /^[A-Za-z]+$/.test(name) && (typeof value === 'string' || typeof value === 'number')) {metaTags[name] = String(value).trim();}
+        if (typeof name === 'string' && /^[A-Za-z][A-Za-z-]*$/.test(name) && (typeof value === 'string' || typeof value === 'number')) {metaTags[name] = String(value).trim();}
     }
     const warnings: Warning[] = [];
     // A conservative resource policy: never allow the native reader to resolve
