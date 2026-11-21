@@ -501,7 +501,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                             if (!header.number) {sheetWarnings.push({ code: 'SHEET_NUMBER_MISSING', message: 'No song number was given; the sheet shows none.' });}
                         }
                         if (pages.length > 1) {sheetWarnings.push({ code: 'SHEET_OVERFLOW', message: `The part does not fit one sheet at the smallest staff size and continues on ${pages.length} sheets.` });}
-                        else if (typeof output.staffSpaceMm === 'number' && output.staffSpaceMm < 1.7) {sheetWarnings.push({ code: 'SHEET_STAFF_REDUCED', message: `The staff was reduced to ${output.staffSpaceMm.toFixed(2)} mm per space to fit one sheet.` });}
+                        else if (typeof output.staffSpaceMm === 'number' && output.staffSpaceMm < 1.2) {sheetWarnings.push({ code: 'SHEET_STAFF_REDUCED', message: `The staff was reduced below the usual caderninho size, to ${output.staffSpaceMm.toFixed(2)} mm per space to fit one sheet.` });}
                     }
                     const warnings: Warning[] = [
                         { code: 'PART_RENDERED_FROM_MUSICXML', message: 'Drawn by Verovio 6.4.0 from the full-score MusicXML. Spacing, system breaks and engraving differ from MuseScore.' },

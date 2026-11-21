@@ -37,8 +37,8 @@ describe("FormattingProfile", () => {
       cleanup: { credits: true, fingerings: true, staffText: true },
     });
     expect(sheetLayoutFor(part)).toEqual({
-      spacingLinear: 0.15,
-      spacingNonLinear: 0.55,
+      spacingLinear: 0.21,
+      spacingNonLinear: 0.6,
       spacingSystem: 4,
     });
     expect(libraryOptionsFor(DEFAULT_FORMATTING_PROFILE)).toEqual({
@@ -62,7 +62,7 @@ describe("FormattingProfile", () => {
       staffSpaceMm: 1.6,
       systems: 3,
       spacingLinear: 0.2,
-      spacingNonLinear: 0.55,
+      spacingNonLinear: 0.6,
       spacingSystem: 6,
     });
     expect(tuba.fingering).toMatchObject({ notation: "valves", valveCount: 4 });

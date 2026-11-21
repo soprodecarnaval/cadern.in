@@ -74,10 +74,12 @@ function withBreaks(musicXml, starts) {
     return musicXml.replace(/<measure\b[^>]*>/g, tag => (++index, breaks.has(index) ? tag + '<print new-system="yes"/>' : tag));
 }
 
-// Staff sizes tried for a songbook sheet, largest first (half a staff space, tenths of a millimetre).
-const SHEET_UNITS = [10.5, 10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5.5, 5];
-// Songbook sheets keep about this many measures on a system, like the printed booklets.
-const MEASURES_PER_SYSTEM = 5;
+// Staff sizes tried for a songbook sheet, largest first (half a staff space, tenths of a millimetre),
+// in steps of 0.05 mm of staff space.
+const SHEET_UNITS = Array.from({ length: 23 }, (_, i) => 10.5 - i * 0.25);
+// Horizontal spacing calibrated on the 2026 caderninhos: at these values the staff size matches what
+// the caderninhoFormatter plugin chose in MuseScore (median within 2% on parts without fingerings).
+const SHEET_SPACING = { spacingLinear: 0.21, spacingNonLinear: 0.6, spacingSystem: 4 };
 
 /**
  * Draw one part as a songbook sheet: the music only, sized to fit `area` on a
@@ -96,9 +98,9 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
     const tk = await load();
     const measures = widths.length;
     const spacing = {
-        spacingLinear: range(layout.spacingLinear, 0, 1, 0.15),
-        spacingNonLinear: range(layout.spacingNonLinear, 0, 1, 0.55),
-        spacingSystem: range(layout.spacingSystem, 0, 12, 4)
+        spacingLinear: range(layout.spacingLinear, 0, 1, SHEET_SPACING.spacingLinear),
+        spacingNonLinear: range(layout.spacingNonLinear, 0, 1, SHEET_SPACING.spacingNonLinear),
+        spacingSystem: range(layout.spacingSystem, 0, 12, SHEET_SPACING.spacingSystem)
     };
     const options = (unit, starts, natural) => ({
         pageWidth: tenths(area.widthMm), pageHeight: tenths(area.heightMm),
@@ -144,11 +146,10 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
         if (count === null) return { error: 'load' };
         if (fixedSystems) return draw(unit, balancedStarts(widths, fixedSystems)) === 1 ? 'fits' : 'overflow';
         if (count !== 1) return 'overflow';
+        // As in MuseScore, the spacing decides how many systems there are; the largest staff that
+        // keeps them on one page wins. The measures are then balanced over those systems.
         const auto = systems(tk.renderToSVG(1, false));
-        // Spread the measures over more systems when the page has room, as the booklets do.
-        for (let target = Math.min(measures, Math.max(auto, Math.ceil(measures / MEASURES_PER_SYSTEM))); target >= auto; target--) {
-            if (draw(unit, balancedStarts(widths, target)) === 1) return 'fits';
-        }
+        if (draw(unit, balancedStarts(widths, auto)) === 1) return 'fits';
         draw(unit, null);
         return 'fits';
     };

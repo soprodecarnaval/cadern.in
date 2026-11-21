@@ -9,7 +9,7 @@ import type { LibraryOptions, SheetLayout } from "../browserScore/types";
 import { DEFAULT_CLEANUP, type CleanupOptions } from "./cleanup";
 
 /** Verovio spacing the library uses when the profile sets none. */
-export const DEFAULT_SPACING = { linear: 0.15, nonLinear: 0.55, system: 4 } as const;
+export const DEFAULT_SPACING = { linear: 0.21, nonLinear: 0.6, system: 4 } as const;
 
 export type ResolvedPartFormatting = {
   staffSize: "auto" | number;
