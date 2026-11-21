@@ -45,7 +45,17 @@ export type MusicXmlExport = {
     revision: Revision; filename: string; musicXml: string; parts: readonly MusicXmlPart[];
     partMapping: 'complete' | 'partial' | 'none'; warnings: readonly Warning[];
 };
-export type SvgPage = { view: View; revision: Revision; pageNumber: number; pageCount: number; widthMm: number; heightMm: number; svg: string; filename: string; warnings: readonly Warning[]; portability: 'self-contained' };
+/** How a 'songbook' or 'fitted' part was laid out. `fillRatio` is the height the music needs over the box height. */
+export type SheetLayoutResult = { staffSpaceMm: number; systems: number; fillRatio: number };
+export type SvgPage = { view: View; revision: Revision; pageNumber: number; pageCount: number; widthMm: number; heightMm: number; svg: string; filename: string; warnings: readonly Warning[]; portability: 'self-contained';
+    /** Present on 'songbook' and 'fitted' pages. */
+    layout?: SheetLayoutResult };
+/**
+ * Layout a host fixes for one 'songbook' or 'fitted' part instead of searching it: the staff space
+ * in mm (otherwise the largest that fits one page), the number of systems (otherwise balanced) and
+ * Verovio's spacing (`spacingLinear`, `spacingNonLinear`, `spacingSystem`).
+ */
+export type SheetLayout = { staffSpaceMm?: number; systems?: number; spacingLinear?: number; spacingNonLinear?: number; spacingSystem?: number };
 export const capabilities = [
     'import.mscx', 'import.mscz', 'parts.enumerate', 'parts.generateIfAbsent',
     'svg.page', 'export.musicxml', 'selection.note', 'edit.pitch', 'edit.rhythm', 'edit.pageLayout',
@@ -120,6 +130,8 @@ export type PartTransform = (input: { musicXml: string; part: Part; musicXmlPart
     { musicXml: string; warnings?: readonly Warning[] };
 export interface ScoreLibrary {
     open(input: { bytes: Uint8Array; format: Format; name: string },
-         options?: Operation & { compatibility?: 'strict' | 'allowUnverified'; songbook?: SongbookInfo; partTransform?: PartTransform }): Promise<ScoreSession>;
+         options?: Operation & { compatibility?: 'strict' | 'allowUnverified'; songbook?: SongbookInfo; partTransform?: PartTransform;
+                   /** Layout per part for 'songbook' and 'fitted' pages. Must be deterministic, like partTransform. */
+                   partLayout?: (part: Part) => SheetLayout | undefined }): Promise<ScoreSession>;
     dispose(): Promise<void>;
 }

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { inspect, defaultLimits } from './input';
 import { strToU8, zipSync } from 'fflate';
-import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport, type PartTransform } from './types';
+import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport, type PartTransform, type SheetLayout, type SheetLayoutResult } from './types';
 import { partMusicXml } from './parts';
 import { excerptInstruments, instrumentIdsOf } from './partInstruments';
 import { composeSheet, MUSIC_AREA, SHEET, type SheetFonts } from './sheet';
@@ -357,6 +357,8 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     throw new ScoreError('UNSUPPORTED_VERSION', 'open', 'No versions have completed fidelity validation');
                 }
                 const partTransform = operation.partTransform;
+                const partLayout = operation.partLayout;
+                if (partLayout !== undefined && typeof partLayout !== 'function') {throw new ScoreError('INVALID_INPUT', 'open', 'partLayout must be a function');}
                 if (partTransform !== undefined && typeof partTransform !== 'function') {throw new ScoreError('INVALID_INPUT', 'open', 'partTransform must be a function');}
                 const songbook: SongbookInfo = {};
                 if (operation.songbook !== undefined) {
@@ -455,7 +457,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     };
                 };
                 // Part pages are drawn by the MusicXML renderer, one part at a time.
-                const rendered = new Map<PartId, { revision: number; pages: string[]; warnings: Warning[]; geometry: { widthMm: number; heightMm: number } }>();
+                const rendered = new Map<PartId, { revision: number; pages: string[]; warnings: Warning[]; geometry: { widthMm: number; heightMm: number }; layout?: SheetLayoutResult }>();
                 const partPages = async (index: number, metadata: Metadata, signal?: AbortSignal) => {
                     const part = parts[index];
                     const cached = rendered.get(part.id);
@@ -476,9 +478,16 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     const sheet = partPageStyle === 'songbook';
                     const fitted = sheet || partPageStyle === 'fitted';
                     const area = sheet ? { widthMm: MUSIC_AREA.widthMm, heightMm: MUSIC_AREA.heightMm } : { widthMm: fitArea.widthMm, heightMm: fitArea.heightMm };
+                    let layout: SheetLayout = {};
+                    if (fitted && partLayout) {
+                        try { layout = partLayout({ ...part }) ?? {}; } catch { throw new ScoreError('INVALID_INPUT', 'getPages', 'The part layout failed'); }
+                    }
+                    const sheetLayout = Object.fromEntries(Object.entries({ unit: layout.staffSpaceMm === undefined ? undefined : layout.staffSpaceMm * 5,
+                        systems: layout.systems, spacingLinear: layout.spacingLinear, spacingNonLinear: layout.spacingNonLinear, spacingSystem: layout.spacingSystem })
+                        .filter(([, value]) => typeof value === 'number' && Number.isFinite(value)));
                     const output = await (fitted
-                        ? call('renderSheet', [built.musicXml, area, built.measureWeights], signal)
-                        : call('renderMusicXml', [built.musicXml, built.geometry], signal)) as { pages?: unknown; staffSpaceMm?: unknown };
+                        ? call('renderSheet', [built.musicXml, area, built.measureWeights, sheetLayout], signal)
+                        : call('renderMusicXml', [built.musicXml, built.geometry], signal)) as { pages?: unknown; staffSpaceMm?: unknown; systems?: unknown; contentHeightMm?: unknown };
                     if (!output || !Array.isArray(output.pages) || output.pages.some(page => typeof page !== 'string')) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'getPages', 'The renderer could not read the part MusicXML');}
                     let pages = output.pages as string[];
                     let geometry: { widthMm: number; heightMm: number } = built.geometry;
@@ -502,7 +511,9 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     warnings.push(...sheetWarnings);
                     warnings.push(...transformWarnings);
                     if (!fitted && !built.geometryFromScore) {warnings.push({ code: 'PAGE_SIZE_DEFAULTED', message: partPageSize === 'score' ? 'The score has no usable page layout; A4 pages were used.' : 'The score has no usable page layout; default margins and staff size were used.' });}
-                    const entry = { revision, pages, warnings, geometry };
+                    const layoutResult: SheetLayoutResult | undefined = fitted && typeof output.staffSpaceMm === 'number' && typeof output.systems === 'number' && typeof output.contentHeightMm === 'number'
+                        ? { staffSpaceMm: output.staffSpaceMm, systems: output.systems, fillRatio: Math.round(output.contentHeightMm / area.heightMm * 1000) / 1000 } : undefined;
+                    const entry = { revision, pages, warnings, geometry, layout: layoutResult };
                     rendered.set(part.id, entry);
                     return entry;
                 };
@@ -590,7 +601,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                             const target = part ? `part-${String(part.ordinal).padStart(3, '0')}-${stem(part.name, 'part')}` : 'score';
                             return { view: part ? { kind: 'part' as const, partId: part.id } : { kind: 'score' as const }, revision, pageNumber, pageCount, widthMm, heightMm, svg,
                                 filename: `${scoreStem}--${target}--page-${String(pageNumber).padStart(4, '0')}.svg`, portability: 'self-contained' as const,
-                                warnings: pageWarnings.map(warning => ({ ...warning })) };
+                                warnings: pageWarnings.map(warning => ({ ...warning })), ...(drawn?.layout ? { layout: { ...drawn.layout } } : {}) };
                         });
                     },
                     exportMusicXml(operation: Operation & { expectedRevision: number }) {

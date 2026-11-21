@@ -82,46 +82,84 @@ const MEASURES_PER_SYSTEM = 5;
 /**
  * Draw one part as a songbook sheet: the music only, sized to fit `area` on a
  * single page when possible, at the largest staff size, with systems balanced.
+ * `layout` fixes what the caller does not want searched: the staff size
+ * (`unit`), the number of systems, and Verovio's horizontal and system spacing.
+ * When the part does not fit one page, the best attempt (smallest staff, or the
+ * fixed one) is returned on more pages; music is never cut off.
  * @param {string} musicXml single-part MusicXML without <print> elements.
  * @param {{ widthMm: number, heightMm: number }} area
  * @param {number[]} widths relative content width of each measure, in order.
- * @returns {Promise<{ pages: string[], staffSpaceMm: number } | { error: 'load' }>}
+ * @param {{ unit?: number, systems?: number, spacingLinear?: number, spacingNonLinear?: number, spacingSystem?: number }} [layout]
+ * @returns {Promise<{ pages: string[], staffSpaceMm: number, systems: number, contentHeightMm: number } | { error: 'load' }>}
  */
-export async function renderSheet(musicXml, area, widths) {
+export async function renderSheet(musicXml, area, widths, layout = {}) {
     const tk = await load();
     const measures = widths.length;
+    const spacing = {
+        spacingLinear: range(layout.spacingLinear, 0, 1, 0.15),
+        spacingNonLinear: range(layout.spacingNonLinear, 0, 1, 0.55),
+        spacingSystem: range(layout.spacingSystem, 0, 12, 4)
+    };
+    const options = (unit, starts, natural) => ({
+        pageWidth: tenths(area.widthMm), pageHeight: tenths(area.heightMm),
+        // Room on the left for measure numbers at the start of a system.
+        pageMarginTop: 0, pageMarginRight: 0, pageMarginBottom: 0, pageMarginLeft: 15,
+        unit, scale: 100, adjustPageHeight: natural, justifyVertically: !natural, minLastJustification: 0,
+        breaks: starts ? 'line' : 'auto', header: 'none', footer: 'none',
+        ...spacing, fingeringScale: 0.9,
+        svgViewBox: true, mmOutput: true, fontTextLiberation: true, svgRemoveXlink: false, xmlIdSeed: 1
+    });
+    let current = null;
     const draw = (unit, starts) => {
         tk.resetOptions();
-        tk.setOptions({
-            pageWidth: tenths(area.widthMm), pageHeight: tenths(area.heightMm),
-            // Room on the left for measure numbers at the start of a system.
-            pageMarginTop: 0, pageMarginRight: 0, pageMarginBottom: 0, pageMarginLeft: 15,
-            unit, scale: 100, adjustPageHeight: false, justifyVertically: true, minLastJustification: 0,
-            breaks: starts ? 'encoded' : 'auto', header: 'none', footer: 'none',
-            spacingLinear: 0.15, spacingNonLinear: 0.55, spacingSystem: 4, fingeringScale: 0.9,
-            svgViewBox: true, mmOutput: true, fontTextLiberation: true, svgRemoveXlink: false, xmlIdSeed: 1
-        });
+        tk.setOptions(options(unit, starts, false));
         if (!tk.loadData(starts ? withBreaks(musicXml, starts) : musicXml)) return null;
+        current = { unit, starts };
         return tk.getPageCount();
     };
-    const result = unit => {
+    const result = () => {
         const pages = [];
         for (let n = 1; n <= tk.getPageCount(); n++) pages.push(withoutPlaceholders(tk.renderToSVG(n, false)));
-        return { pages, staffSpaceMm: unit / 5 };
+        const { unit, starts } = current;
+        const count = pages.reduce((sum, page) => sum + systems(page), 0);
+        // Height the music needs, for the fill ratio: the lowest horizontal line (staff or ledger
+        // line) with the systems packed at the top (no vertical justification), in the
+        // definition-scale units of the page.
+        let contentHeightMm = area.heightMm * pages.length;
+        if (pages.length === 1) {
+            tk.setOptions({ justifyVertically: false });
+            tk.loadData(starts ? withBreaks(musicXml, starts) : musicXml);
+            const packed = tk.renderToSVG(1, false);
+            const scale = /class="definition-scale"[^>]*viewBox="([^"]*)"/.exec(packed);
+            const unitsHigh = scale ? Number(scale[1].trim().split(/[\s,]+/)[3]) : NaN;
+            let lowest = 0;
+            for (const match of packed.matchAll(/<path d="M[\d.]+ ([\d.]+) L[\d.]+ \1"[^>]*stroke-width/g)) {lowest = Math.max(lowest, Number(match[1]));}
+            if (unitsHigh > 0 && lowest > 0) {contentHeightMm = lowest / unitsHigh * area.heightMm;}
+        }
+        return { pages, staffSpaceMm: unit / 5, systems: count, contentHeightMm };
     };
-    for (const unit of SHEET_UNITS) {
+    const fixedSystems = Number.isInteger(layout.systems) && layout.systems > 0 ? Math.min(layout.systems, measures) : null;
+    const fit = unit => {
         const count = draw(unit, null);
         if (count === null) return { error: 'load' };
-        if (count !== 1) continue;
+        if (fixedSystems) return draw(unit, balancedStarts(widths, fixedSystems)) === 1 ? 'fits' : 'overflow';
+        if (count !== 1) return 'overflow';
         const auto = systems(tk.renderToSVG(1, false));
         // Spread the measures over more systems when the page has room, as the booklets do.
         for (let target = Math.min(measures, Math.max(auto, Math.ceil(measures / MEASURES_PER_SYSTEM))); target >= auto; target--) {
-            if (draw(unit, balancedStarts(widths, target)) === 1) return result(unit);
+            if (draw(unit, balancedStarts(widths, target)) === 1) return 'fits';
         }
         draw(unit, null);
-        return result(unit);
+        return 'fits';
+    };
+    const fixedUnit = Number.isFinite(layout.unit) ? range(layout.unit, 4, 12, SHEET_UNITS[0]) : null;
+    for (const unit of fixedUnit ? [fixedUnit] : SHEET_UNITS) {
+        const outcome = fit(unit);
+        if (outcome?.error) return outcome;
+        if (outcome === 'fits') return result();
     }
-    const unit = SHEET_UNITS[SHEET_UNITS.length - 1];
-    if (draw(unit, null) === null) return { error: 'load' };
-    return result(unit);
+    // Overflow: the best attempt, on more than one page.
+    const unit = fixedUnit ?? SHEET_UNITS[SHEET_UNITS.length - 1];
+    if (draw(unit, fixedSystems ? balancedStarts(widths, fixedSystems) : null) === null) return { error: 'load' };
+    return result();
 }
