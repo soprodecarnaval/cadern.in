@@ -35,12 +35,16 @@
     "storybook": "storybook dev -p 6006 --disable-telemetry",
     "build-storybook": "storybook build --disable-telemetry",
     "typecheck:storybook": "tsc -p .storybook/tsconfig.json",
-    "test:storybook": "node scripts/storybook/checkStories.mjs"
+    "test:storybook": "node scripts/storybook/checkStories.mjs",
+    "browser-score:assets": "node scripts/browserScore/assets.mjs",
+    "browser-score:parts": "node scripts/browserScore/partPages.mjs",
+    "browser-score:example": "npm run browser-score:assets && node scripts/browserScore/example.mjs"
   },
   "dependencies": {
     "@dnd-kit/dom": "^0.5.3",
     "@dnd-kit/react": "^0.5.3",
     "@fontsource/inter": "^5.3.0",
+    "@fontsource/roboto": "5.2.10",
     "@types/node": "^20.4.1",
     "@xmldom/xmldom": "^0.9.12",
     "adm-zip": "^0.6.0",
@@ -48,6 +52,8 @@
     "bootstrap": "^5.3.0",
     "brfs": "^2.0.2",
     "browserify": "^17.0.0",
+    "fast-xml-parser": "5.3.6",
+    "fflate": "0.8.2",
     "firebase": "^12.10.0",
     "fuse.js": "^7.1.0",
     "googleapis": "^128.0.0",
@@ -62,6 +68,8 @@
     "react-router-dom": "^7.13.2",
     "soundfont-player": "^0.12.0",
     "svg-to-pdfkit": "^0.1.8",
+    "verovio": "6.4.0",
+    "webmscore": "1.2.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
