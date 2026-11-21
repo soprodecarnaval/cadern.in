@@ -29,9 +29,9 @@ const user = { uid: "uid" } as User;
 
 describe("upload context on the web route", () => {
   it("reads the context from the query and builds the path back", () => {
-    const context = uploadContextFromSearchParams("bloco", new URLSearchParams("scoreId=s&expectedScoreRevisionId=r2&songbookId=sb&other=x"));
+    const context = uploadContextFromSearchParams("bloco", new URLSearchParams("partitura=s&versao=r2&caderninho=sb&scoreId=x"));
     expect(context).toEqual({ projectId: "bloco", scoreId: "s", expectedScoreRevisionId: "r2", songbookId: "sb" });
-    expect(uploadPath(context)).toBe("/bloco/enviar?scoreId=s&expectedScoreRevisionId=r2&songbookId=sb");
+    expect(uploadPath(context)).toBe("/bloco/enviar?partitura=s&versao=r2&caderninho=sb");
     expect(uploadPath({ projectId: "bloco" })).toBe("/bloco/enviar");
   });
 });
@@ -100,6 +100,26 @@ describe("commitUpload", () => {
     expect(stale).toMatchObject({ ok: false });
     const moved = await commitUpload({ projectId: "p" }, parsed({ scoreId: "s", revisionId: "r2" }), { kind: "new", scoreId: "p-musica" }, user, { services: s, upload, lookups: lookups(s) });
     expect(moved).toMatchObject({ ok: false, reason: expect.stringContaining("destino") });
+    expect(upload).not.toHaveBeenCalled();
+    expect(s.createSongbookRevision).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing when canceled during destination validation", async () => {
+    const s = services();
+    const upload = vi.fn();
+    const controller = new AbortController();
+    s.getMemberRole.mockImplementationOnce(() => {
+      controller.abort();
+      return Promise.resolve("editor");
+    });
+
+    await expect(commitUpload(
+      { projectId: "p", scoreId: "s", expectedScoreRevisionId: "r2" },
+      parsed({ scoreId: "s", revisionId: "r2" }),
+      { kind: "version", scoreId: "s", title: "s" },
+      user,
+      { services: s, upload, lookups: lookups(s), signal: controller.signal },
+    )).rejects.toMatchObject({ name: "AbortError" });
     expect(upload).not.toHaveBeenCalled();
     expect(s.createSongbookRevision).not.toHaveBeenCalled();
   });

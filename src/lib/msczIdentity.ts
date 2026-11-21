@@ -9,6 +9,16 @@ import type { ScoreIdentity } from "../../types/metajson";
 export const SCORE_ID_TAG = "cadernin-score-id";
 export const REVISION_ID_TAG = "cadernin-revision-id";
 
+/** Store an uncompressed MuseScore document in the same archive format as an .mscz upload. */
+export function packageMscx(bytes: Uint8Array): Uint8Array {
+  return zipSync({
+    "META-INF/container.xml": strToU8(
+      '<?xml version="1.0" encoding="UTF-8"?><container><rootfiles><rootfile full-path="score.mscx"/></rootfiles></container>',
+    ),
+    "score.mscx": bytes,
+  });
+}
+
 // A .mscz is a zip. META-INF/container.xml lists the packaged files as
 // <rootfile full-path="..."/>, including the score, whose name follows the
 // document name. Saved parts are .mscx files under Excerpts/; only the .mscx

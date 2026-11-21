@@ -664,9 +664,11 @@ describe("songbooks", () => {
 
   it("denies a reserved songbook slug", async () => {
     await seedProject(testEnv());
-    await assertFails(
-      createBatch(as(ADMIN), `${PROJECT}~config`, "config").commit(),
-    );
+    for (const slug of ["config", "enviar"]) {
+      await assertFails(
+        createBatch(as(ADMIN), `${PROJECT}~${slug}`, slug).commit(),
+      );
+    }
   });
 
   it("denies creating a published songbook", async () => {

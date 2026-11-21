@@ -638,6 +638,10 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                                 warnings: pageWarnings.map(warning => ({ ...warning })), ...(drawn?.layout ? { layout: { ...drawn.layout } } : {}) };
                         });
                     },
+                    invalidate(view?: View) {
+                        if (view === undefined) { rendered.clear(); return; }
+                        if (view?.kind === 'part' && typeof view.partId === 'string') {rendered.delete(view.partId);}
+                    },
                     exportMidi(view: View, operation: Operation & { expectedRevision: number }) {
                         return run('exportMidi', operation?.signal, async (): Promise<MidiExport> => {
                             if (!operation || operation.expectedRevision !== revision) {throw new ScoreError('STALE_REVISION', 'exportMidi', 'Score revision changed');}

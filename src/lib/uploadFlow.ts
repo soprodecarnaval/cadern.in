@@ -15,32 +15,10 @@ import type { ParsedScore } from "./parseUploadedFiles";
 import { pinnedToRevision } from "./songbook";
 import type { UploadProgress } from "./uploadScore";
 import { resolveUploadTarget, type UploadTarget, type UploadTargetLookups } from "./uploadTarget";
-import { projectPath } from "./routes";
 
 export type { UploadContext } from "../../types/exportDeepLink";
 
-const CONTEXT_KEYS = ["scoreId", "expectedScoreRevisionId", "songbookId", "expectedSongbookRevisionId"] as const;
-
-/** The web route's context: the project from the path, the rest from the query (untrusted, like a deep link). */
-export function uploadContextFromSearchParams(projectId: string, params: URLSearchParams): UploadContext {
-  const context: UploadContext = { projectId };
-  for (const key of CONTEXT_KEYS) {
-    const value = params.get(key);
-    if (value) {context[key] = value;}
-  }
-  return context;
-}
-
-/** `/:slug/enviar?…` for a context. */
-export function uploadPath(context: UploadContext): string {
-  const params = new URLSearchParams();
-  for (const key of CONTEXT_KEYS) {
-    const value = context[key];
-    if (value) {params.set(key, value);}
-  }
-  const query = params.toString();
-  return `${projectPath(context.projectId)}/enviar${query ? `?${query}` : ""}`;
-}
+export { uploadContextFromSearchParams, uploadPath } from "./uploadPath";
 
 export type UploadFlowServices = ExportContextServices &
   Pick<typeof import("./db"), "getSongbookRevision" | "createSongbookRevision">;
@@ -134,6 +112,7 @@ export type CommitOptions = {
   stampMscz?: (file: File, identity: ScoreIdentity) => Promise<File>;
   onProgress?: (progress: UploadProgress) => void;
   lookups?: UploadTargetLookups;
+  signal?: AbortSignal;
 };
 
 export type CommitResult =
@@ -153,6 +132,7 @@ export async function commitUpload(
   options: CommitOptions,
 ): Promise<CommitResult> {
   const prepared = await prepareUpload(context, parsed, user.uid, options.services, options.lookups);
+  options.signal?.throwIfAborted();
   if (!prepared.ok) {return prepared;}
   if (prepared.target.kind !== expectedTarget.kind || prepared.target.scoreId !== expectedTarget.scoreId) {
     return {

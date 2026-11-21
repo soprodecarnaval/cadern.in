@@ -120,6 +120,11 @@ export interface ScoreSession {
      * saved, generated parts after prepareParts.
      */
     exportMidi(view: View, options: Operation & { expectedRevision: Revision }): Promise<MidiExport>;
+    /**
+     * Forget the drawn pages of one part (or of every part), so the next getPages/renderPage draws
+     * them again: for hosts whose partTransform or partLayout output changed.
+     */
+    invalidate(view?: View): void;
     /** Full-score MusicXML (partwise, uncompressed) with every instrument part. */
     exportMusicXml(options: Operation & { expectedRevision: Revision }): Promise<MusicXmlExport>;
     hitTest(...args: unknown[]): Promise<never>;

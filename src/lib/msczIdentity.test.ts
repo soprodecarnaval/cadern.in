@@ -6,6 +6,7 @@ import { inspect } from "./browserScore/input";
 import {
   REVISION_ID_TAG,
   SCORE_ID_TAG,
+  packageMscx,
   readMsczIdentityBytes,
   stampMsczIdentityBytes,
 } from "./msczIdentity";
@@ -28,6 +29,15 @@ describe("mscz identity on bytes", () => {
     expect(metaTags[SCORE_ID_TAG]).toBe(IDENTITY.scoreId);
     expect(metaTags[REVISION_ID_TAG]).toBe(IDENTITY.revisionId);
     expect(scoreParts).toHaveLength(19);
+  });
+
+  it("packages a raw MSCX as a stampable score archive", () => {
+    const xml = unzipSync(score)["all-instruments.mscx"];
+    const archive = packageMscx(xml);
+    expect(unzipSync(archive)["score.mscx"]).toEqual(xml);
+    const stamped = stampMsczIdentityBytes(archive, IDENTITY);
+    expect(readMsczIdentityBytes(stamped)).toEqual(IDENTITY);
+    expect(inspect(stamped, "mscz").scoreParts).toHaveLength(19);
   });
 
   it("keeps every other entry byte for byte and in order", () => {

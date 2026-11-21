@@ -8,7 +8,7 @@ import { METAJSON_VERSION, type Metajson } from "../../../types/metajson";
 import type { Warning as AppWarning } from "../../result";
 import type { Part, ScoreLibrary, SheetLayoutResult, Warning } from "../browserScore/types";
 import { pirataInstrument } from "../instruments";
-import { readMsczIdentityBytes } from "../msczIdentity";
+import { packageMscx, readMsczIdentityBytes } from "../msczIdentity";
 import { buildPartBasenames, safeFilename } from "../partFiles";
 import type { ParsedPart, ParsedScore } from "../parseUploadedFiles";
 import { caderninhoPartTransform, partInstrumentSettings, type PartTransformReport } from "./partTransform";
@@ -171,8 +171,9 @@ export async function renderForUpload(
 
       const scoreMidi = await session.exportMidi({ kind: "score" }, { expectedRevision: catalog.revision, signal });
       fileMap.set("midi", new File([scoreMidi.midi], `${title}.midi`, { type: "audio/midi" }));
-      fileMap.set("mscz", new File([bytes], `${title}.mscz`, { type: "application/octet-stream" }));
-      const source = fileName.toLowerCase().endsWith(".mscz") ? readMsczIdentityBytes(bytes) : null;
+      const archive = fileName.toLowerCase().endsWith(".mscx") ? packageMscx(bytes) : bytes;
+      fileMap.set("mscz", new File([archive], `${title}.mscz`, { type: "application/octet-stream" }));
+      const source = readMsczIdentityBytes(archive);
       const fields = metajsonFields(tags);
       const metajson: Metajson = {
         version: METAJSON_VERSION,
