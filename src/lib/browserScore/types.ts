@@ -137,7 +137,10 @@ export interface ScoreSession {
  */
 export type PartTransform = (input: { musicXml: string; part: Part; musicXmlPartIds: readonly string[] }) =>
     { musicXml: string; warnings?: readonly Warning[] };
+/** What draws the pages: this library's layout version, the engine and renderer, and the asset digests. */
+export type RendererInfo = { library: string; engine: string; renderer: string; manifestSha256: string; fonts: readonly { path: string; sha256: string }[] };
 export interface ScoreLibrary {
+    readonly renderer: RendererInfo;
     open(input: { bytes: Uint8Array; format: Format; name: string },
          options?: Operation & { compatibility?: 'strict' | 'allowUnverified'; songbook?: SongbookInfo; partTransform?: PartTransform;
                    /** Layout per part for 'songbook' and 'fitted' pages. Must be deterministic, like partTransform. */

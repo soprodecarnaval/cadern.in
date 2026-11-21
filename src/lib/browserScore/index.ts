@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { inspect, defaultLimits } from './input';
 import { strToU8, zipSync } from 'fflate';
-import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport, type MidiExport, type PartTransform, type SheetLayout, type SheetLayoutResult } from './types';
+import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport, type MidiExport, type RendererInfo, type PartTransform, type SheetLayout, type SheetLayoutResult } from './types';
 import { partMusicXml } from './parts';
 import { excerptInstruments, instrumentIdsOf } from './partInstruments';
 import { extractTracks, midiNoteCount, midiTrackCount } from './midi';
@@ -134,9 +134,15 @@ type Engine = {
 };
 let mainOwner = false;
 
+/**
+ * Version of this library's layout code. Bump it whenever the same input could render differently
+ * (renderer.js, parts.ts, sheet.ts or index.ts layout changes), so stored revisions record what drew them.
+ */
+export const LIBRARY_VERSION = 'browser-score-2';
+
 const SHEET_FONTS = { medium: 'fonts/roboto-latin-500-normal.woff2', bold: 'fonts/roboto-latin-700-normal.woff2' } as const;
 
-async function assets(options: LibraryOptions): Promise<{ base: URL; sheetFonts: SheetFonts }> {
+async function assets(options: LibraryOptions): Promise<{ base: URL; sheetFonts: SheetFonts; renderer: RendererInfo }> {
     const kept = new Map<string, Uint8Array>();
     const base = new URL(options.assets.manifestUrl);
     async function fetchBytes(url: URL) {
@@ -149,7 +155,8 @@ async function assets(options: LibraryOptions): Promise<{ base: URL; sheetFonts:
         }
         return new Uint8Array(await response.arrayBuffer());
     }
-    const manifest = JSON.parse(new TextDecoder().decode(await fetchBytes(base)));
+    const manifestBytes = await fetchBytes(base);
+    const manifest = JSON.parse(new TextDecoder().decode(manifestBytes));
     const required = ['worker.js', 'src/index.js', 'webmscore.mjs',
         'webmscore.lib.wasm', 'webmscore.lib.mem.wasm', 'webmscore.lib.data',
         'renderer.js', 'verovio/verovio-module.mjs', 'verovio/verovio.mjs', SHEET_FONTS.medium, SHEET_FONTS.bold];
@@ -177,7 +184,13 @@ async function assets(options: LibraryOptions): Promise<{ base: URL; sheetFonts:
         || options.assets.workerUrl.href !== new URL('worker.js', base).href) {
         throw new ScoreError('ASSET_MISMATCH', 'create', 'Missing or mismatched engine entry');
     }
-    return { base, sheetFonts: { medium: kept.get(SHEET_FONTS.medium)!, bold: kept.get(SHEET_FONTS.bold)! } };
+    const manifestDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', manifestBytes)), byte => byte.toString(16).padStart(2, '0')).join('');
+    const renderer: RendererInfo = Object.freeze({
+        library: LIBRARY_VERSION, engine: String(manifest.engine), renderer: typeof manifest.renderer === 'string' ? manifest.renderer : 'unknown',
+        manifestSha256: manifestDigest,
+        fonts: Object.freeze((manifest.assets as { path: string; sha256: string }[]).filter(asset => asset.path.startsWith('fonts/')).map(asset => Object.freeze({ path: asset.path, sha256: asset.sha256 })))
+    });
+    return { base, sheetFonts: { medium: kept.get(SHEET_FONTS.medium)!, bold: kept.get(SHEET_FONTS.bold)! }, renderer };
 }
 
 const validSize = (size: { widthMm: number; heightMm: number }) =>
@@ -310,8 +323,10 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
         return result;
     }
 
+    let rendererInfo: RendererInfo | undefined;
     try {
         const loaded = await assets(options);
+        rendererInfo = loaded.renderer;
         const base = assetBase = loaded.base;
         sheetFonts = loaded.sheetFonts;
         if (options.execution === 'worker') {
@@ -348,6 +363,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
     }
 
     return {
+        renderer: rendererInfo,
         async open(input, operation = {}) {
             if (disposed) {
                 throw new ScoreError('DISPOSED', 'open', 'Library disposed', true);
