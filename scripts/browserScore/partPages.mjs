@@ -9,6 +9,7 @@
 //   PART_PAGES_FIT=171.7x98.2                fitted: music box in mm
 //   PART_PAGES_SIZE=B6|score|WxH[:t,r,b,l]   plain: paper in mm
 //   PART_PAGES_RESULTS=dir                   (default test-results/browser-score)
+//   PART_PAGES_CLEANUP=1                     clean-up (src/lib/scoreRender/cleanup) before drawing
 //   CHROME=/path/to/chrome                   (default /usr/bin/google-chrome)
 import { chromium } from 'playwright-core';
 import { build } from 'esbuild';
@@ -27,7 +28,8 @@ const partPageSize = !sizeText || sizeText === 'B6' || sizeText === 'score' ? si
     ({ ...size(dims), ...(margins ? { marginsMm: margins.split(',').map(Number) } : {}) }))(sizeText.split(':'));
 const libraryOptions = { partPageStyle: style, ...(fitArea ? { fitArea } : {}), ...(partPageSize ? { partPageSize } : {}) };
 const expectedSize = style === 'songbook' ? { widthMm: 176, heightMm: 125 } : style === 'fitted' ? fitArea : typeof partPageSize === 'object' ? partPageSize : null;
-const bundle = (await build({ entryPoints: [resolve('src/lib/browserScore/index.ts')], bundle: true, format: 'esm', platform: 'browser', target: 'es2022', write: false })).outputFiles[0].contents;
+const cleanup = process.env.PART_PAGES_CLEANUP === '1';
+const bundle = (await build({ stdin: { contents: "export * from './src/lib/browserScore/index.ts'; export { cleanupMusicXmlText } from './src/lib/scoreRender/cleanup.ts';", resolveDir: resolve('.'), loader: 'ts' }, bundle: true, format: 'esm', platform: 'browser', target: 'es2022', write: false })).outputFiles[0].contents;
 const assets = resolve('public/browser-score');
 const results = resolve(process.env.PART_PAGES_RESULTS || 'test-results/browser-score');
 await rm(results, { recursive: true, force: true });
@@ -56,12 +58,18 @@ try {
         const page = await context.newPage();
         await page.goto(origin + '/');
         const bytes = [...await readFile(input)];
-        const outcome = await page.evaluate(async ({ bytes, name, libraryOptions }) => {
-            const { createScoreLibrary } = await import('/browser.js');
+        const outcome = await page.evaluate(async ({ bytes, name, libraryOptions, cleanup }) => {
+            const { createScoreLibrary, cleanupMusicXmlText } = await import('/browser.js');
+            const cleaned = new Map();
+            const partTransform = cleanup ? ({ musicXml, part }) => {
+                const result = cleanupMusicXmlText(musicXml);
+                cleaned.set(part.id, result.report);
+                return { musicXml: result.musicXml };
+            } : undefined;
             const library = await createScoreLibrary({ adapter: 'webmscore-1.2.1', execution: 'worker', ...libraryOptions,
                 assets: { manifestUrl: new URL('/browser-score/manifest.json', location.href), workerUrl: new URL('/browser-score/worker.js', location.href) } });
             try {
-                const session = await library.open({ bytes: new Uint8Array(bytes), format: name.endsWith('.mscx') ? 'mscx' : 'mscz', name }, { compatibility: 'allowUnverified' });
+                const session = await library.open({ bytes: new Uint8Array(bytes), format: name.endsWith('.mscx') ? 'mscx' : 'mscz', name }, { compatibility: 'allowUnverified', partTransform });
                 const catalog = await session.prepareParts({ policy: 'preserveExistingOrGenerateIfNone', expectedRevision: 0 });
                 const exported = await session.exportMusicXml({ expectedRevision: catalog.revision });
                 const xml = new DOMParser().parseFromString(exported.musicXml, 'application/xml');
@@ -79,17 +87,17 @@ try {
                     const id = exported.parts.find(p => p.catalogPart?.id === part.id)?.id;
                     const body = [...xml.querySelectorAll('score-partwise > part')].find(p => p.getAttribute('id') === id);
                     const notes = body ? [...body.querySelectorAll('note')] : [];
-                    parts.push({ ordinal: part.ordinal, name: part.name, instrumentIds: part.instrumentIds, musicXmlPart: id ?? null, ms: Math.round(performance.now() - t), pageCount,
+                    parts.push({ ordinal: part.ordinal, name: part.name, instrumentIds: part.instrumentIds, cleanup: cleaned.get(part.id) ?? null, musicXmlPart: id ?? null, ms: Math.round(performance.now() - t), pageCount,
                         pages: pages.map(p => ({ filename: p.filename, svg: p.svg, widthMm: p.widthMm, heightMm: p.heightMm })),
                         warnings: [...new Set(pages.flatMap(p => p.warnings.map(w => w.code)))],
-                        rendered: { notes: count('g.note'), rests: count('g.rest, g.mRest, g.multiRest'), tempo: count('g.tempo'), rehearsal: count('g.reh'), repeatMarks: count('g.repeatMark') },
+                        rendered: { notes: count('g.note'), rests: count('g.rest, g.mRest, g.multiRest'), tempo: count('g.tempo'), rehearsal: count('g.reh'), repeatMarks: count('g.repeatMark'), dynamics: count('g.dynam'), fingerings: count('g.fing'), directions: count('g.dir') },
                         source: { measures: body?.querySelectorAll(':scope > measure').length ?? 0, notes: notes.filter(n => n.querySelector('pitch')).length, rests: notes.filter(n => n.querySelector('rest')).length },
                         externalUrls: pages.some(p => /url\((?!data:)/.test(p.svg) || /href="(?!#|data:)/.test(p.svg)) });
                 }
                 await session.dispose();
                 return { partCount: catalog.parts.length, origin: catalog.parts[0]?.origin, topMarkings, parts };
             } finally { await library.dispose(); }
-        }, { bytes, name: basename(input), libraryOptions });
+        }, { bytes, name: basename(input), libraryOptions, cleanup });
         await page.close();
         const label = basename(input).replace(/\.(mscz|mscx)$/i, '');
         for (const part of outcome.parts) {
@@ -102,7 +110,8 @@ try {
             assert(!part.externalUrls, `${tag}: external resource`);
             if (expectedSize) assert(part.pages.every(p => Math.abs(p.widthMm - expectedSize.widthMm) < 0.01 && Math.abs(p.heightMm - expectedSize.heightMm) < 0.01), `${tag}: page size`);
             if (outcome.topMarkings) assert(part.rendered.tempo + part.rendered.rehearsal + part.rendered.repeatMarks > 0 || part.warnings.includes('SYSTEM_MARKINGS_COPIED') || part.ordinal === 1, `${tag}: system markings missing`);
-            console.log(`${tag} [${part.instrumentIds.join(', ')}]: ${part.pageCount} page(s) ${part.pages[0].widthMm} × ${part.pages[0].heightMm} mm, ${part.rendered.notes} notes, ${part.rendered.rests} rests, ${part.ms} ms`);
+            const removed = part.cleanup ? ` (removed ${part.cleanup.parts.reduce((n, p) => n + p.fingerings, 0)} fingerings, ${part.cleanup.parts.reduce((n, p) => n + p.staffText.length, 0)} staff texts)` : '';
+            console.log(`${tag} [${part.instrumentIds.join(', ')}]${removed}: ${part.pageCount} page(s) ${part.pages[0].widthMm} × ${part.pages[0].heightMm} mm, ${part.rendered.notes} notes, ${part.rendered.rests} rests, ${part.ms} ms`);
         }
         report.files.push({ file: basename(input), ...outcome });
     }

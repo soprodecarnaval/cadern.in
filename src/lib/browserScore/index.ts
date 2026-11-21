@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { inspect, defaultLimits } from './input';
 import { strToU8, zipSync } from 'fflate';
-import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport } from './types';
+import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport, type PartTransform } from './types';
 import { partMusicXml } from './parts';
 import { excerptInstruments, instrumentIdsOf } from './partInstruments';
 import { composeSheet, MUSIC_AREA, SHEET, type SheetFonts } from './sheet';
@@ -356,6 +356,8 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                 if (operation.compatibility !== 'allowUnverified') {
                     throw new ScoreError('UNSUPPORTED_VERSION', 'open', 'No versions have completed fidelity validation');
                 }
+                const partTransform = operation.partTransform;
+                if (partTransform !== undefined && typeof partTransform !== 'function') {throw new ScoreError('INVALID_INPUT', 'open', 'partTransform must be a function');}
                 const songbook: SongbookInfo = {};
                 if (operation.songbook !== undefined) {
                     if (!operation.songbook || typeof operation.songbook !== 'object') {throw new ScoreError('INVALID_INPUT', 'open', 'songbook must be an object');}
@@ -463,6 +465,14 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     if (!ids) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'getPages', 'Part could not be matched to the full-score MusicXML');}
                     let built: ReturnType<typeof partMusicXml>;
                     try { built = partMusicXml(score.xml, ids, partPageSize, partPageStyle); } catch { throw new ScoreError('UNSUPPORTED_CAPABILITY', 'getPages', 'Part MusicXML could not be built'); }
+                    const transformWarnings: Warning[] = [];
+                    if (partTransform) {
+                        let transformed: ReturnType<PartTransform>;
+                        try { transformed = partTransform({ musicXml: built.musicXml, part: { ...part }, musicXmlPartIds: [...ids] }); } catch { throw new ScoreError('INVALID_INPUT', 'getPages', 'The part transform failed'); }
+                        if (typeof transformed?.musicXml !== 'string' || !transformed.musicXml) {throw new ScoreError('INVALID_INPUT', 'getPages', 'The part transform returned no MusicXML');}
+                        built = { ...built, musicXml: transformed.musicXml };
+                        transformWarnings.push(...(transformed.warnings ?? []).map(warning => ({ code: String(warning.code), message: String(warning.message) })));
+                    }
                     const sheet = partPageStyle === 'songbook';
                     const fitted = sheet || partPageStyle === 'fitted';
                     const area = sheet ? { widthMm: MUSIC_AREA.widthMm, heightMm: MUSIC_AREA.heightMm } : { widthMm: fitArea.widthMm, heightMm: fitArea.heightMm };
@@ -490,6 +500,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     if (origin === 'existing') {warnings.push({ code: 'MUSICXML_FROM_FULL_SCORE', message: 'This saved part is drawn from the full score; part-only content and part layout are not included.' });}
                     if (built.copiedMarkings) {warnings.push({ code: 'SYSTEM_MARKINGS_COPIED', message: `${built.copiedMarkings} tempo, jump and rehearsal markings were copied from the top part of the score.` });}
                     warnings.push(...sheetWarnings);
+                    warnings.push(...transformWarnings);
                     if (!fitted && !built.geometryFromScore) {warnings.push({ code: 'PAGE_SIZE_DEFAULTED', message: partPageSize === 'score' ? 'The score has no usable page layout; A4 pages were used.' : 'The score has no usable page layout; default margins and staff size were used.' });}
                     const entry = { revision, pages, warnings, geometry };
                     rendered.set(part.id, entry);

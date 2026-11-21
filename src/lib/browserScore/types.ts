@@ -111,8 +111,15 @@ export interface ScoreSession {
     save(...args: unknown[]): Promise<never>;
     dispose(): Promise<void>;
 }
+/**
+ * A host transform of one part's MusicXML, run after the part is extracted from the full score and
+ * before it is drawn (clean-up, fingerings, notation changes). `musicXmlPartIds` are the full-score
+ * MusicXML part ids it contains. Must be deterministic: its output is cached per part and revision.
+ */
+export type PartTransform = (input: { musicXml: string; part: Part; musicXmlPartIds: readonly string[] }) =>
+    { musicXml: string; warnings?: readonly Warning[] };
 export interface ScoreLibrary {
     open(input: { bytes: Uint8Array; format: Format; name: string },
-         options?: Operation & { compatibility?: 'strict' | 'allowUnverified'; songbook?: SongbookInfo }): Promise<ScoreSession>;
+         options?: Operation & { compatibility?: 'strict' | 'allowUnverified'; songbook?: SongbookInfo; partTransform?: PartTransform }): Promise<ScoreSession>;
     dispose(): Promise<void>;
 }
