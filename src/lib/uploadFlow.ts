@@ -70,6 +70,10 @@ export async function prepareUpload(
         `ele será enviado como ${destination}.`;
     }
   }
+  if (context.mode === "reformat" && (checks.targetMismatch || target.kind !== "version")) {
+    // A reformat is a new version of the same score, never another score.
+    return { ok: false, reason: "Este arquivo não é mais uma versão desta partitura; a reformatação foi cancelada." };
+  }
   return { ok: true, target, checks };
 }
 
@@ -107,7 +111,11 @@ export type CommitOptions = {
     projectId: string,
     target: UploadTarget,
     user: User,
-    options: { onProgress?: (progress: UploadProgress) => void; stampMscz?: (file: File, identity: ScoreIdentity) => Promise<File> },
+    options: {
+      onProgress?: (progress: UploadProgress) => void;
+      stampMscz?: (file: File, identity: ScoreIdentity) => Promise<File>;
+      kind?: "upload" | "reformat";
+    },
   ) => Promise<ScoreIdentity>;
   stampMscz?: (file: File, identity: ScoreIdentity) => Promise<File>;
   onProgress?: (progress: UploadProgress) => void;
@@ -143,6 +151,7 @@ export async function commitUpload(
   const identity = await options.upload(parsed, context.projectId, prepared.target, user, {
     onProgress: options.onProgress,
     stampMscz: options.stampMscz,
+    ...(context.mode === "reformat" ? { kind: "reformat" as const } : {}),
   });
   const repin = await repinSongbook(context, identity, parsed.title, user.uid, options.services);
   return { ok: true, identity, target: prepared.target, repin };

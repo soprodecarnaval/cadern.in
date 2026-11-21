@@ -193,3 +193,24 @@ export const initialState = (): EnviarState => ({
   checks: null,
   result: null,
 });
+
+/** A part as a stored revision lists it (its .metajson). */
+export type StoredPart = { name: string; instrument: Instrument };
+
+/**
+ * The rows of a reformat: only the parts the revision had, at their stored
+ * instruments, with fingerings as the stored profile set them (a pirata
+ * instrument means fingerings on).
+ */
+export function rowsFromStored(rows: readonly PartRow[], stored: readonly StoredPart[], profile: FormattingProfile): PartRow[] {
+  if (!stored.length) {return [...rows];}
+  return rows.map((row) => {
+    const part = stored.find((candidate) => candidate.name === row.name);
+    if (!part) {return { ...row, include: false };}
+    const enabled = profile.parts?.[row.name]?.fingering?.enabled ?? profile.fingering?.enabled;
+    // Trumpet and trombone say it in the instrument; tuba and bombardino only in the profile.
+    const piratas = part.instrument === "trompete" || part.instrument === "trombone" || part.instrument.endsWith(" pirata");
+    const fingerings = row.fingeringsAvailable && (piratas ? part.instrument.endsWith(" pirata") : (enabled ?? row.fingerings));
+    return { ...row, instrument: pirataInstrument(part.instrument, fingerings), fingerings, include: true, guessed: false };
+  });
+}

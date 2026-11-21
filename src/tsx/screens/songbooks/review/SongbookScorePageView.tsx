@@ -261,6 +261,14 @@ export function SongbookScorePageView({
                 Enviar nova versão
               </a>
             )}
+            {FEATURE_FLAG_BROWSER_UPLOAD && (
+              <Link
+                className="btn btn-outline-secondary ds-button btn-sm"
+                to={uploadPath({ ...uploadContext, baseRevisionId: loaded.revisionId, mode: "reformat" })}
+              >
+                Reformatar
+              </Link>
+            )}
           </div>
         )}
       </div>

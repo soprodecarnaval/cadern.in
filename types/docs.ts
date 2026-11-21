@@ -138,6 +138,8 @@ export const zScoreRevisionData = z.object({
   slug: z.string().optional(),
   metadata: zScoreMetadata.optional(),
   origin: zScoreRevisionOrigin.optional(),
+  /** "reformat": the same .mscz as the revision before, formatted again in the browser (ticket 013). */
+  kind: z.enum(["upload", "reformat"]).optional(),
 });
 export const zScoreRevisionDoc = zScoreRevisionData.extend({
   uploadedAt: zTimestamp,

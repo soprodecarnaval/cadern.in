@@ -127,7 +127,7 @@ function FileStep({ state, onFile }: Pick<EnviarPageViewProps, "state" | "onFile
   );
 }
 
-function PartsStep({ state, onRows, onStep }: Pick<EnviarPageViewProps, "state" | "onRows" | "onStep">) {
+function PartsStep({ state, context, onRows, onStep }: Pick<EnviarPageViewProps, "state" | "context" | "onRows" | "onStep">) {
   const set = (ordinal: number, change: (row: PartRow) => PartRow) =>
     onRows(state.rows.map((row) => (row.ordinal === ordinal ? change(row) : row)));
   const included = state.rows.filter((row) => row.include && row.instrument).length;
@@ -196,7 +196,7 @@ function PartsStep({ state, onRows, onStep }: Pick<EnviarPageViewProps, "state" 
         </table>
       </div>
       <div className="enviar-actions">
-        <Button variant="secondary" onClick={() => onStep("arquivo")}>Trocar arquivo</Button>
+        {context.mode !== "reformat" && <Button variant="secondary" onClick={() => onStep("arquivo")}>Trocar arquivo</Button>}
         <Button disabled={!included} onClick={() => onStep("formatacao")}>
           Formatar {included} {included === 1 ? "parte" : "partes"}
         </Button>
@@ -437,7 +437,11 @@ function DoneStep({ state, context, onReset }: Pick<EnviarPageViewProps, "state"
   return (
     <section aria-labelledby="enviar-feito">
       <h2 id="enviar-feito" tabIndex={-1}>Partitura enviada</h2>
-      <p>{result.target.kind === "version" ? "A nova versão foi salva." : "A partitura foi salva."}</p>
+      <p>
+        {context.mode === "reformat"
+          ? "A partitura reformatada foi salva como uma nova versão."
+          : result.target.kind === "version" ? "A nova versão foi salva." : "A partitura foi salva."}
+      </p>
       {result.repin === "updated" && <p>O caderninho passou a usar esta versão.</p>}
       {result.repin === "skipped-stale" && (
         <div className="alert alert-warning">O caderninho mudou durante o envio e continua com a versão anterior. Atualize a versão fixada na página do caderninho.</div>
@@ -445,7 +449,7 @@ function DoneStep({ state, context, onReset }: Pick<EnviarPageViewProps, "state"
       <div className="enviar-actions">
         <a className="btn btn-primary ds-button" href={scorePath}>Ver a partitura</a>
         <a className="btn btn-outline-secondary ds-button" href={projectPath(context.projectId)}>Voltar ao projeto</a>
-        <Button variant="text" onClick={onReset}>Enviar outra</Button>
+        {context.mode !== "reformat" && <Button variant="text" onClick={onReset}>Enviar outra</Button>}
       </div>
     </section>
   );
@@ -464,9 +468,13 @@ export function EnviarPageView(props: EnviarPageViewProps) {
     main.current?.querySelector<HTMLElement>("h2[tabindex]")?.focus();
   }, [state.step]);
   const status = statusText(state);
+  const reformat = props.context.mode === "reformat";
   return (
     <Page className="enviar-page">
-      <h1>Enviar partitura</h1>
+      <h1>{reformat ? `Reformatar ${state.title || "partitura"}` : "Enviar partitura"}</h1>
+      {reformat && (
+        <p>A música fica como está; só a formatação muda. O resultado é salvo como uma nova versão da partitura.</p>
+      )}
       <Stepper step={state.step} />
       <p className="enviar-status" role="status" aria-live="polite">
         {status}
@@ -482,7 +490,7 @@ export function EnviarPageView(props: EnviarPageViewProps) {
       )}
       {!signedIn && <div className="alert alert-info">Entre na sua conta para enviar. Você pode formatar a partitura antes.</div>}
       <div ref={main}>
-        {state.step === "arquivo" && <FileStep {...props} />}
+        {state.step === "arquivo" && !reformat && <FileStep {...props} />}
         {state.step === "partes" && <PartsStep {...props} />}
         {state.step === "formatacao" && <FormatStep {...props} />}
         {state.step === "enviar" && <SendStep {...props} />}

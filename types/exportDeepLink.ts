@@ -28,6 +28,11 @@ export interface UploadContext {
   // (someone else edited the songbook meanwhile) aborts the upload — the
   // re-pin never happens against state the launcher never saw.
   expectedSongbookRevisionId?: string;
+  // Web send screen only: reformat a stored revision instead of sending a
+  // file (ticket 013). `baseRevisionId` is the revision whose .mscz and
+  // formatting are loaded; the expected revisions still gate the write.
+  mode?: "reformat";
+  baseRevisionId?: string;
 }
 
 /** The exporter's name for the upload context. */

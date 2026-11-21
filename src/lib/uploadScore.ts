@@ -25,9 +25,11 @@ export async function uploadScore(
     onProgress?: OnProgress;
     // Writes the score and version this upload creates into the .mscz.
     stampMscz?: (file: File, identity: ScoreIdentity) => Promise<File>;
+    // "reformat": the same .mscz formatted again (ticket 013).
+    kind?: "upload" | "reformat";
   } = {},
 ): Promise<ScoreIdentity> {
-  const { onProgress, stampMscz } = options;
+  const { onProgress, stampMscz, kind } = options;
   const scoreId = target.scoreId;
   const metadata = {
     title: parsed.title,
@@ -126,6 +128,7 @@ export async function uploadScore(
       midi: storageFiles.get("midi") ?? missing("midi"),
       parts: revisionParts,
       notes: "",
+      ...(kind === "reformat" ? { kind } : {}),
     });
   } catch (error) {
     // A score created above but never given a revision would list without

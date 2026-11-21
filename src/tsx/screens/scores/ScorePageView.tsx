@@ -9,7 +9,9 @@ import type { WithId } from "../../../lib/db";
 import type { CommentAnchor, ReviewCommentDoc } from "../../../../types/docs";
 import { commentThreads } from "../../../lib/comments";
 import type { LoadedScore } from "../../../lib/loadScore";
-import { canDeleteScore, canEditScoreMetadata, isReviewer } from "../../../lib/roles";
+import { canDeleteScore, canEditScoreMetadata, isEditor, isReviewer } from "../../../lib/roles";
+import { FEATURE_FLAG_BROWSER_UPLOAD } from "../../../featureFlags";
+import { uploadPath } from "../../../lib/uploadPath";
 import { projectPath } from "../../../lib/routes";
 import { useMemberRoleValue } from "../../../lib/useMemberRoleValue";
 
@@ -155,6 +157,20 @@ export function ScorePageView({
             >
               Editar metadados
             </Button>
+          )}
+          {FEATURE_FLAG_BROWSER_UPLOAD && role !== "loading" && isEditor(role) && (
+            <a
+              className="btn btn-outline-secondary ds-button btn-sm"
+              href={uploadPath({
+                projectId: score.projectId,
+                scoreId: score.scoreId,
+                expectedScoreRevisionId: score.latestRevisionId,
+                baseRevisionId: score.revisionId,
+                mode: "reformat",
+              })}
+            >
+              Reformatar
+            </a>
           )}
           <a className="btn btn-outline-secondary ds-button btn-sm" href={score.msczUrl}
             download={`${score.title}.mscz`}>

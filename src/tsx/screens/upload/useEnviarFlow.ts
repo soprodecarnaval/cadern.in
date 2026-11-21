@@ -14,7 +14,8 @@ import { caderninhoPartTransform } from "../../../lib/scoreRender/partTransform"
 import { libraryOptionsFor, resolvePartFormatting, sheetLayoutFor } from "../../../lib/scoreRender/profile";
 import { profileWithChoices, renderForUpload } from "../../../lib/scoreRender/renderForUpload";
 import { commitUpload, prepareUpload, type UploadContext, type UploadFlowServices } from "../../../lib/uploadFlow";
-import { MAX_SCORE_BYTES, choicesFrom, initialState, partRows, type EnviarState, type PartRow, type Step } from "./enviarState";
+import { MAX_SCORE_BYTES, choicesFrom, initialState, partRows, rowsFromStored, type EnviarState, type PartRow, type Step, type StoredPart } from "./enviarState";
+import { zMetajson } from "../../../../types/metajson";
 
 export { initialState, MAX_SCORE_BYTES, type EnviarState } from "./enviarState";
 export type { Preview, Status } from "./enviarState";
@@ -22,7 +23,7 @@ export type { Preview, Status } from "./enviarState";
 export type EnviarDeps = {
   context: UploadContext;
   user: User | null;
-  services: UploadFlowServices;
+  services: UploadFlowServices & Pick<typeof import("../../../lib/db"), "getScoreRevision">;
   loadLibrary: (options: ReturnType<typeof libraryOptionsFor> & { signal: AbortSignal }) => Promise<ScoreLibrary>;
   upload: Parameters<typeof commitUpload>[4]["upload"];
 };
@@ -104,27 +105,25 @@ export function useEnviarFlow(deps: EnviarDeps) {
     clearMidi();
   }, [clearMidi]);
 
-  const chooseFile = useCallback(async (file: File) => {
-    if (file.size > MAX_SCORE_BYTES) {
-      update({ status: { kind: "error", message: "O arquivo passa de 32 MB, o limite para abrir no navegador." } });
-      return;
-    }
-    if (!/\.(mscz|mscx)$/i.test(file.name)) {
-      update({ status: { kind: "error", message: "Envie um arquivo .mscz (ou .mscx) salvo no MuseScore." } });
-      return;
-    }
+  /** Opens score bytes in the engine and lists its parts; `stored` restores a reformatted revision's choices. */
+  const openBytes = useCallback(async (
+    read: (signal: AbortSignal) => Promise<Uint8Array>,
+    fileName: string,
+    stored?: { profile: FormattingProfile; parts: readonly StoredPart[]; title: string },
+  ) => {
     controller.current.abort();
     controller.current = new AbortController();
     const signal = controller.current.signal;
     clearMidi();
-    update({ fileName: file.name, midi: {}, status: { kind: "opening" } });
+    update({ fileName, midi: {}, status: { kind: "opening" } });
     await closeSession();
     try {
-      const fileBytes = new Uint8Array(await file.arrayBuffer());
+      const fileBytes = await read(signal);
       signal.throwIfAborted();
+      if (fileBytes.length > MAX_SCORE_BYTES) {throw new Error("O arquivo passa de 32 MB, o limite para abrir no navegador.");}
       bytes.current = fileBytes;
       if (!library.current) {
-        update({ fileName: file.name, status: { kind: "loading-engine" } });
+        update({ fileName, status: { kind: "loading-engine" } });
         const loaded = await depsRef.current.loadLibrary({ ...libraryOptionsFor(DEFAULT_FORMATTING_PROFILE), signal });
         if (signal.aborted) {
           await loaded.dispose();
@@ -132,14 +131,16 @@ export function useEnviarFlow(deps: EnviarDeps) {
         }
         library.current = loaded;
       }
-      update({ fileName: file.name, status: { kind: "opening" } });
-      const { session: open, catalog } = await openSession(file.name, signal);
+      update({ fileName, status: { kind: "opening" } });
+      const { session: open, catalog } = await openSession(fileName, signal);
       const tags = open.importInfo.metaTags;
+      const rows = partRows(catalog.parts);
       update({
         step: "partes",
         status: { kind: "idle" },
-        title: safeFilename(tags.workTitle?.trim() || file.name.replace(/\.(mscz|mscx)$/i, "")),
-        rows: partRows(catalog.parts),
+        title: stored?.title ?? safeFilename(tags.workTitle?.trim() || fileName.replace(/\.(mscz|mscx)$/i, "")),
+        rows: stored ? rowsFromStored(rows, stored.parts, stored.profile) : rows,
+        ...(stored ? { profile: stored.profile } : {}),
         previews: {},
         target: null,
         checks: null,
@@ -149,6 +150,49 @@ export function useEnviarFlow(deps: EnviarDeps) {
       if (!signal.aborted) {fail(error);}
     }
   }, [clearMidi, closeSession, fail, openSession, update]);
+
+  // Reformat (ticket 013): load the base revision's .mscz and the profile it was rendered with.
+  // Revisions from before the browser upload have no profile and open with the default one.
+  const reformatLoaded = useRef(false);
+  useEffect(() => {
+    const { context, services } = depsRef.current;
+    if (context.mode !== "reformat" || !context.scoreId || !context.baseRevisionId || reformatLoaded.current) {return;}
+    reformatLoaded.current = true;
+    void (async () => {
+      try {
+        update({ status: { kind: "opening" } });
+        const revision = await services.getScoreRevision(context.scoreId!, context.baseRevisionId!);
+        if (!revision?.mscz.url) {throw new Error("Não foi possível encontrar esta versão da partitura.");}
+        const metajson = revision.metajson.url
+          ? zMetajson.safeParse(await fetch(revision.metajson.url).then((response) => (response.ok ? response.json() : null)).catch(() => null))
+          : null;
+        const manifest = metajson?.success ? metajson.data : null;
+        const title = revision.metadata?.title ?? context.scoreId!;
+        await openBytes(
+          (signal) => fetch(revision.mscz.url, { signal }).then(async (response) => {
+            if (!response.ok) {throw new Error("Não foi possível baixar o arquivo desta versão.");}
+            return new Uint8Array(await response.arrayBuffer());
+          }),
+          `${safeFilename(title)}.mscz`,
+          { profile: manifest?.formatting ?? DEFAULT_FORMATTING_PROFILE, parts: manifest?.parts ?? [], title: safeFilename(title) },
+        );
+      } catch (error) {
+        fail(error);
+      }
+    })();
+  }, [fail, openBytes, update]);
+
+  const chooseFile = useCallback(async (file: File) => {
+    if (file.size > MAX_SCORE_BYTES) {
+      update({ status: { kind: "error", message: "O arquivo passa de 32 MB, o limite para abrir no navegador." } });
+      return;
+    }
+    if (!/\.(mscz|mscx)$/i.test(file.name)) {
+      update({ status: { kind: "error", message: "Envie um arquivo .mscz (ou .mscx) salvo no MuseScore." } });
+      return;
+    }
+    await openBytes(() => file.arrayBuffer().then((buffer) => new Uint8Array(buffer)), file.name);
+  }, [openBytes, update]);
 
   // Previews: re-render the included parts whose resolved settings changed, after a pause.
   const signatures = useMemo(() => {

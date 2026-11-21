@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { zFormattingProfile } from "../../../../types/formattingProfile";
-import { choicesFrom, formattingOf, hasOverride, partRows, withFingerings, withFormatting, withInstrument, withoutOverride } from "./enviarState";
+import { choicesFrom, formattingOf, hasOverride, partRows, rowsFromStored, withFingerings, withFormatting, withInstrument, withoutOverride } from "./enviarState";
 
 const part = (ordinal: number, name: string, id: string, soundId: string | null = null, longName = name) =>
   ({ ordinal, name, instruments: id || soundId ? [{ id, soundId, longName, shortName: "" }] : [] });
@@ -60,5 +60,33 @@ describe("formatting controls", () => {
     expect(score.cleanup).toEqual({ staffText: false });
     expect(zFormattingProfile.safeParse(score).success).toBe(true);
     expect(hasOverride(withoutOverride(tuba, "Tuba"), "Tuba")).toBe(false);
+  });
+});
+
+describe("rowsFromStored", () => {
+  const rows = partRows([
+    part(1, "Flauta", "flute"),
+    part(2, "Pete", "bb-trumpet"),
+    part(3, "Tuba", "bb-tuba"),
+    part(4, "Bone", "trombone"),
+  ]);
+
+  it("restores the stored parts, instruments and fingerings, leaving the others out", () => {
+    const profile = zFormattingProfile.parse({ profileVersion: 1, parts: { Tuba: { fingering: { enabled: false } } } });
+    const restored = rowsFromStored(rows, [
+      { name: "Pete", instrument: "trompete" },
+      { name: "Tuba", instrument: "tuba" },
+      { name: "Bone", instrument: "trombone pirata" },
+    ], profile);
+    expect(restored.map((row) => [row.name, row.include, row.instrument, row.fingerings])).toEqual([
+      ["Flauta", false, "flauta", false],
+      ["Pete", true, "trompete", false],
+      ["Tuba", true, "tuba", false],
+      ["Bone", true, "trombone pirata", true],
+    ]);
+  });
+
+  it("keeps the mapped rows for revisions without a parts list", () => {
+    expect(rowsFromStored(rows, [], zFormattingProfile.parse({ profileVersion: 1 }))).toEqual(rows);
   });
 });

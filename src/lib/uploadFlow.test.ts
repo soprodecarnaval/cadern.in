@@ -36,6 +36,31 @@ describe("upload context on the web route", () => {
   });
 });
 
+describe("reformat context", () => {
+  it("round-trips through the query, and needs the score and the base revision", () => {
+    const context = { projectId: "bloco", scoreId: "s", expectedScoreRevisionId: "r2", baseRevisionId: "r1", mode: "reformat" as const };
+    const path = uploadPath(context);
+    expect(path).toBe("/bloco/enviar?partitura=s&versao=r2&base=r1&modo=reformatar");
+    expect(uploadContextFromSearchParams("bloco", new URLSearchParams(path.split("?")[1]))).toEqual(context);
+    expect(uploadContextFromSearchParams("bloco", new URLSearchParams("partitura=s&modo=reformatar")).mode).toBeUndefined();
+  });
+
+  it("aborts a reformat whose file no longer belongs to the score", async () => {
+    const s = services();
+    const context = { projectId: "p", scoreId: "s", expectedScoreRevisionId: "r2", baseRevisionId: "r2", mode: "reformat" as const };
+    expect(await prepareUpload(context, parsed({ scoreId: "s", revisionId: "r2" }), "uid", s, lookups(s))).toMatchObject({ ok: true });
+    expect(await prepareUpload(context, parsed(), "uid", s, lookups(s))).toMatchObject({ ok: false, reason: expect.stringContaining("reformatação") });
+  });
+
+  it("labels the new revision as a reformat", async () => {
+    const s = services();
+    const upload = vi.fn().mockResolvedValue({ scoreId: "s", revisionId: "r3" });
+    const context = { projectId: "p", scoreId: "s", expectedScoreRevisionId: "r2", baseRevisionId: "r2", mode: "reformat" as const };
+    await commitUpload(context, parsed({ scoreId: "s", revisionId: "r2" }), { kind: "version", scoreId: "s", title: "s" }, user, { services: s, upload, lookups: lookups(s) });
+    expect(upload.mock.calls[0][4]).toMatchObject({ kind: "reformat" });
+  });
+});
+
 describe("prepareUpload", () => {
   it("resolves a new version of the launching score", async () => {
     const s = services();
