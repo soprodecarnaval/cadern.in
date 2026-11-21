@@ -19,7 +19,18 @@ export type Limits = { inputBytes: number; expandedBytes: number; archiveEntries
 export type Operation = { signal?: AbortSignal };
 export type PartId = string;
 export type Revision = number;
-export type Part = { id: PartId; name: string; ordinal: number; origin: 'existing' | 'generated'; instrumentNames: readonly string[]; staffCount: number | null };
+/**
+ * One instrument of a part, as the MSCX writes it: MuseScore's instrument id (`<Instrument id>`,
+ * e.g. `bb-tuba-treble`), the MusicXML sound id (`<instrumentId>`, e.g. `brass.tuba`) and the names.
+ */
+export type PartInstrument = { id: string; soundId: string | null; longName: string; shortName: string };
+export type Part = {
+    id: PartId; name: string; ordinal: number; origin: 'existing' | 'generated'; instrumentNames: readonly string[]; staffCount: number | null;
+    /** The part's instruments, read from the MSCX; empty when they could not be matched. */
+    instruments: readonly PartInstrument[];
+    /** `instruments[].id`, or the sound id when an instrument has no MuseScore id. */
+    instrumentIds: readonly string[];
+};
 export type PartCatalog = { revision: Revision; parts: readonly Part[]; coverage: 'complete' | 'incomplete' | 'unknown'; warnings: readonly Warning[] };
 export type View = { kind: 'score' } | { kind: 'part'; partId: PartId };
 export type PageSet = { revision: Revision; pageCount: number };

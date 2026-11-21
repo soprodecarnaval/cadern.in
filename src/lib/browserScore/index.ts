@@ -5,6 +5,7 @@ import { inspect, defaultLimits } from './input';
 import { strToU8, zipSync } from 'fflate';
 import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport } from './types';
 import { partMusicXml } from './parts';
+import { excerptInstruments, instrumentIdsOf } from './partInstruments';
 import { composeSheet, MUSIC_AREA, SHEET, type SheetFonts } from './sheet';
 export { inspect } from './input';
 export * from './types';
@@ -387,14 +388,18 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                 };
                 const catalog = (metadata: Metadata): PartCatalog => {
                     if (parts.length !== metadata.excerpts.length) {
-                        parts = metadata.excerpts.map((excerpt, index) => ({
-                            id: crypto.randomUUID(), name: info.savedPartNames[excerpt.title] || excerpt.title?.trim() || `Part ${index + 1}`,
-                            ordinal: index + 1, origin,
-                            instrumentNames: (excerpt.parts || []).map(part => part.instrumentName || part.name).filter(Boolean),
-                            staffCount: null
-                        }));
+                        parts = metadata.excerpts.map((excerpt, index) => {
+                            const instruments = excerptInstruments(excerpt, index, metadata.excerpts.length, info);
+                            return {
+                                id: crypto.randomUUID(), name: info.savedPartNames[excerpt.title] || excerpt.title?.trim() || `Part ${index + 1}`,
+                                ordinal: index + 1, origin,
+                                instrumentNames: (excerpt.parts || []).map(part => part.instrumentName || part.name).filter(Boolean),
+                                staffCount: null, instruments, instrumentIds: instrumentIdsOf(instruments)
+                            };
+                        });
                     }
-                    return { revision, parts: parts.map(part => ({ ...part, instrumentNames: [...part.instrumentNames] })),
+                    return { revision, parts: parts.map(part => ({ ...part, instrumentNames: [...part.instrumentNames],
+                        instruments: part.instruments.map(instrument => ({ ...instrument })), instrumentIds: [...part.instrumentIds] })),
                         coverage: 'unknown', warnings: [{ code: 'PART_COVERAGE_UNKNOWN', message: 'Excerpt coverage and staff counts cannot be established from engine metadata.' },
                             { code: 'PART_FIDELITY_UNVERIFIED', message: 'Part notation and layout fidelity have not been established for this file.' },
                             ...(metadata.parts.some(part => part.isVisible !== 'true') ? [{ code: 'PART_VISIBILITY_UNCERTAIN', message: 'Generated parts may include hidden instruments.' }] : [])] };

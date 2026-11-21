@@ -79,7 +79,7 @@ try {
                     const id = exported.parts.find(p => p.catalogPart?.id === part.id)?.id;
                     const body = [...xml.querySelectorAll('score-partwise > part')].find(p => p.getAttribute('id') === id);
                     const notes = body ? [...body.querySelectorAll('note')] : [];
-                    parts.push({ ordinal: part.ordinal, name: part.name, musicXmlPart: id ?? null, ms: Math.round(performance.now() - t), pageCount,
+                    parts.push({ ordinal: part.ordinal, name: part.name, instrumentIds: part.instrumentIds, musicXmlPart: id ?? null, ms: Math.round(performance.now() - t), pageCount,
                         pages: pages.map(p => ({ filename: p.filename, svg: p.svg, widthMm: p.widthMm, heightMm: p.heightMm })),
                         warnings: [...new Set(pages.flatMap(p => p.warnings.map(w => w.code)))],
                         rendered: { notes: count('g.note'), rests: count('g.rest, g.mRest, g.multiRest'), tempo: count('g.tempo'), rehearsal: count('g.reh'), repeatMarks: count('g.repeatMark') },
@@ -96,12 +96,13 @@ try {
             for (const p of part.pages) { await writeFile(resolve(results, p.filename), p.svg); delete p.svg; }
             const tag = `${label} part ${part.ordinal} ${part.name}`;
             assert(part.pageCount > 0, `${tag}: no pages`);
+            assert(part.instrumentIds.length > 0, `${tag}: no instrument ids`);
             assert.equal(part.rendered.notes, part.source.notes, `${tag}: notes`);
             assert.equal(part.rendered.rests, part.source.rests, `${tag}: rests`);
             assert(!part.externalUrls, `${tag}: external resource`);
             if (expectedSize) assert(part.pages.every(p => Math.abs(p.widthMm - expectedSize.widthMm) < 0.01 && Math.abs(p.heightMm - expectedSize.heightMm) < 0.01), `${tag}: page size`);
             if (outcome.topMarkings) assert(part.rendered.tempo + part.rendered.rehearsal + part.rendered.repeatMarks > 0 || part.warnings.includes('SYSTEM_MARKINGS_COPIED') || part.ordinal === 1, `${tag}: system markings missing`);
-            console.log(`${tag}: ${part.pageCount} page(s) ${part.pages[0].widthMm} × ${part.pages[0].heightMm} mm, ${part.rendered.notes} notes, ${part.rendered.rests} rests, ${part.ms} ms`);
+            console.log(`${tag} [${part.instrumentIds.join(', ')}]: ${part.pageCount} page(s) ${part.pages[0].widthMm} × ${part.pages[0].heightMm} mm, ${part.rendered.notes} notes, ${part.rendered.rests} rests, ${part.ms} ms`);
         }
         report.files.push({ file: basename(input), ...outcome });
     }
