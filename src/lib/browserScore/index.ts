@@ -483,11 +483,11 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                         try { layout = partLayout({ ...part }) ?? {}; } catch { throw new ScoreError('INVALID_INPUT', 'getPages', 'The part layout failed'); }
                     }
                     const sheetLayout = Object.fromEntries(Object.entries({ unit: layout.staffSpaceMm === undefined ? undefined : layout.staffSpaceMm * 5,
-                        systems: layout.systems, spacingLinear: layout.spacingLinear, spacingNonLinear: layout.spacingNonLinear, spacingSystem: layout.spacingSystem })
+                        systems: layout.systems, spacingLinear: layout.spacingLinear, spacingNonLinear: layout.spacingNonLinear, spacingSystem: layout.spacingSystem, fingeringScale: layout.fingeringScale })
                         .filter(([, value]) => typeof value === 'number' && Number.isFinite(value)));
                     const output = await (fitted
                         ? call('renderSheet', [built.musicXml, area, built.measureWeights, sheetLayout], signal)
-                        : call('renderMusicXml', [built.musicXml, built.geometry], signal)) as { pages?: unknown; staffSpaceMm?: unknown; systems?: unknown; contentHeightMm?: unknown };
+                        : call('renderMusicXml', [built.musicXml, built.geometry], signal)) as { pages?: unknown; staffSpaceMm?: unknown; systems?: unknown; contentHeightMm?: unknown; fingeringScale?: unknown };
                     if (!output || !Array.isArray(output.pages) || output.pages.some(page => typeof page !== 'string')) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'getPages', 'The renderer could not read the part MusicXML');}
                     let pages = output.pages as string[];
                     let geometry: { widthMm: number; heightMm: number } = built.geometry;
@@ -512,7 +512,9 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     warnings.push(...transformWarnings);
                     if (!fitted && !built.geometryFromScore) {warnings.push({ code: 'PAGE_SIZE_DEFAULTED', message: partPageSize === 'score' ? 'The score has no usable page layout; A4 pages were used.' : 'The score has no usable page layout; default margins and staff size were used.' });}
                     const layoutResult: SheetLayoutResult | undefined = fitted && typeof output.staffSpaceMm === 'number' && typeof output.systems === 'number' && typeof output.contentHeightMm === 'number'
-                        ? { staffSpaceMm: output.staffSpaceMm, systems: output.systems, fillRatio: Math.round(output.contentHeightMm / area.heightMm * 1000) / 1000 } : undefined;
+                        ? { staffSpaceMm: output.staffSpaceMm, systems: output.systems, fillRatio: Math.round(output.contentHeightMm / area.heightMm * 1000) / 1000,
+                            fingeringScale: typeof output.fingeringScale === 'number' ? output.fingeringScale : 0.9 } : undefined;
+                    if (layoutResult && layout.fingeringScale === undefined && layoutResult.fingeringScale < 0.9) {warnings.push({ code: 'FINGERINGS_REDUCED', message: `The fingerings were reduced to ${Math.round(layoutResult.fingeringScale / 0.9 * 100)}% to fit one sheet.` });}
                     const entry = { revision, pages, warnings, geometry, layout: layoutResult };
                     rendered.set(part.id, entry);
                     return entry;

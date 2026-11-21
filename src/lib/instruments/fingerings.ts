@@ -39,6 +39,25 @@ export const TUBA_VALVES = table(30, [
   "2", "1", // 61–62
 ]);
 
+/**
+ * griff_tuba_4v: a 4-valve tuba on the same C-indexed basis as TUBA_VALVES. The 4th valve lowers by
+ * a perfect fourth: "4" replaces 1-3 and "24" replaces 1-2-3, and 14, 124, 234, 134 and 1234 extend
+ * the range below the 3-valve table. Pending a brass player's review (ticket 008).
+ */
+export const TUBA_4V_VALVES: ValveTable = Object.freeze({
+  ...table(25, ["1234", "134", "234", "124", "14"]), // 25–29
+  ...TUBA_VALVES,
+  30: "24", 31: "4", 37: "24", 38: "4",
+});
+
+/** Lowest index of the 3-valve tuba table; 4-valve notes below it have no slide-style position. */
+export const TUBA_3V_LOWEST = 30;
+
+/** Each 3-valve combination's position: every step lowers the pitch a semitone. */
+export const VALVE_POSITIONS: Readonly<Record<string, number>> = Object.freeze({
+  "0": 1, "2": 2, "1": 3, "12": 4, "23": 5, "13": 6, "123": 7,
+});
+
 /** griff_euphonium: the tuba table an octave up. */
 export const EUPHONIUM_VALVES = table(42, [
   "123", "13", "23", "12", "1", "2", "0", // 42–48

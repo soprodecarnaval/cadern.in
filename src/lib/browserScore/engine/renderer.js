@@ -91,7 +91,7 @@ const SHEET_SPACING = { spacingLinear: 0.21, spacingNonLinear: 0.6, spacingSyste
  * @param {string} musicXml single-part MusicXML without <print> elements.
  * @param {{ widthMm: number, heightMm: number }} area
  * @param {number[]} widths relative content width of each measure, in order.
- * @param {{ unit?: number, systems?: number, spacingLinear?: number, spacingNonLinear?: number, spacingSystem?: number }} [layout]
+ * @param {{ unit?: number, systems?: number, spacingLinear?: number, spacingNonLinear?: number, spacingSystem?: number, fingeringScale?: number }} [layout]
  * @returns {Promise<{ pages: string[], staffSpaceMm: number, systems: number, contentHeightMm: number } | { error: 'load' }>}
  */
 export async function renderSheet(musicXml, area, widths, layout = {}) {
@@ -100,15 +100,19 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
     const spacing = {
         spacingLinear: range(layout.spacingLinear, 0, 1, SHEET_SPACING.spacingLinear),
         spacingNonLinear: range(layout.spacingNonLinear, 0, 1, SHEET_SPACING.spacingNonLinear),
-        spacingSystem: range(layout.spacingSystem, 0, 12, SHEET_SPACING.spacingSystem)
+        spacingSystem: range(layout.spacingSystem, 0, 12, SHEET_SPACING.spacingSystem),
+        fingeringScale: range(layout.fingeringScale, 0.3, 2, 0.9)
     };
+    // When nothing fits, smaller fingerings are tried, as the plugin shrinks the fingering font down
+    // to 7 pt; a fingering scale the caller fixed is kept.
+    const fingeringScales = Number.isFinite(layout.fingeringScale) ? [spacing.fingeringScale] : [0.9, 0.75, 0.6];
     const options = (unit, starts, natural) => ({
         pageWidth: tenths(area.widthMm), pageHeight: tenths(area.heightMm),
         // Room on the left for measure numbers at the start of a system.
         pageMarginTop: 0, pageMarginRight: 0, pageMarginBottom: 0, pageMarginLeft: 15,
         unit, scale: 100, adjustPageHeight: natural, justifyVertically: !natural, minLastJustification: 0,
         breaks: starts ? 'line' : 'auto', header: 'none', footer: 'none',
-        ...spacing, fingeringScale: 0.9,
+        ...spacing,
         svgViewBox: true, mmOutput: true, fontTextLiberation: true, svgRemoveXlink: false, xmlIdSeed: 1
     });
     let current = null;
@@ -138,7 +142,7 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
             for (const match of packed.matchAll(/<path d="M[\d.]+ ([\d.]+) L[\d.]+ \1"[^>]*stroke-width/g)) {lowest = Math.max(lowest, Number(match[1]));}
             if (unitsHigh > 0 && lowest > 0) {contentHeightMm = lowest / unitsHigh * area.heightMm;}
         }
-        return { pages, staffSpaceMm: unit / 5, systems: count, contentHeightMm };
+        return { pages, staffSpaceMm: unit / 5, systems: count, contentHeightMm, fingeringScale: spacing.fingeringScale };
     };
     const fixedSystems = Number.isInteger(layout.systems) && layout.systems > 0 ? Math.min(layout.systems, measures) : null;
     const fit = unit => {
@@ -154,10 +158,13 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
         return 'fits';
     };
     const fixedUnit = Number.isFinite(layout.unit) ? range(layout.unit, 4, 12, SHEET_UNITS[0]) : null;
-    for (const unit of fixedUnit ? [fixedUnit] : SHEET_UNITS) {
-        const outcome = fit(unit);
-        if (outcome?.error) return outcome;
-        if (outcome === 'fits') return result();
+    for (const scale of fingeringScales) {
+        spacing.fingeringScale = scale;
+        for (const unit of fixedUnit ? [fixedUnit] : SHEET_UNITS) {
+            const outcome = fit(unit);
+            if (outcome?.error) return outcome;
+            if (outcome === 'fits') return result();
+        }
     }
     // Overflow: the best attempt, on more than one page.
     const unit = fixedUnit ?? SHEET_UNITS[SHEET_UNITS.length - 1];

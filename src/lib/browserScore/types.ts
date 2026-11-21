@@ -46,16 +46,18 @@ export type MusicXmlExport = {
     partMapping: 'complete' | 'partial' | 'none'; warnings: readonly Warning[];
 };
 /** How a 'songbook' or 'fitted' part was laid out. `fillRatio` is the height the music needs over the box height. */
-export type SheetLayoutResult = { staffSpaceMm: number; systems: number; fillRatio: number };
+export type SheetLayoutResult = { staffSpaceMm: number; systems: number; fillRatio: number; fingeringScale: number };
 export type SvgPage = { view: View; revision: Revision; pageNumber: number; pageCount: number; widthMm: number; heightMm: number; svg: string; filename: string; warnings: readonly Warning[]; portability: 'self-contained';
     /** Present on 'songbook' and 'fitted' pages. */
     layout?: SheetLayoutResult };
 /**
  * Layout a host fixes for one 'songbook' or 'fitted' part instead of searching it: the staff space
  * in mm (otherwise the largest that fits one page), the number of systems (otherwise balanced) and
- * Verovio's spacing (`spacingLinear`, `spacingNonLinear`, `spacingSystem`).
+ * Verovio's spacing (`spacingLinear`, `spacingNonLinear`, `spacingSystem`) and fingering size.
  */
-export type SheetLayout = { staffSpaceMm?: number; systems?: number; spacingLinear?: number; spacingNonLinear?: number; spacingSystem?: number };
+export type SheetLayout = { staffSpaceMm?: number; systems?: number; spacingLinear?: number; spacingNonLinear?: number; spacingSystem?: number;
+    /** Verovio fingeringScale: fingering text size relative to the staff (default 0.9). */
+    fingeringScale?: number };
 export const capabilities = [
     'import.mscx', 'import.mscz', 'parts.enumerate', 'parts.generateIfAbsent',
     'svg.page', 'export.musicxml', 'selection.note', 'edit.pitch', 'edit.rhythm', 'edit.pageLayout',

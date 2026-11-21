@@ -62,5 +62,6 @@ export function sheetLayoutFor(part: ResolvedPartFormatting): SheetLayout {
     spacingLinear: part.spacing.linear,
     spacingNonLinear: part.spacing.nonLinear,
     spacingSystem: part.spacing.system,
+    ...(part.fingering.size === "auto" ? {} : { fingeringScale: part.fingering.size }),
   };
 }

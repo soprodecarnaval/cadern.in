@@ -32,7 +32,7 @@ const libraryOptions = { partPageStyle: style, ...(fitArea ? { fitArea } : {}), 
 const expectedSize = style === 'songbook' ? { widthMm: 176, heightMm: 125 } : style === 'fitted' ? fitArea : typeof partPageSize === 'object' ? partPageSize : null;
 const profile = process.env.PART_PAGES_PROFILE ? JSON.parse(await readFile(process.env.PART_PAGES_PROFILE, 'utf8')) : null;
 const cleanup = process.env.PART_PAGES_CLEANUP === '1' || !!profile;
-const bundle = (await build({ stdin: { contents: "export * from './src/lib/browserScore/index.ts'; export { cleanupMusicXmlText } from './src/lib/scoreRender/cleanup.ts'; export * from './src/lib/scoreRender/profile.ts'; export { zFormattingProfile } from './types/formattingProfile.ts';", resolveDir: resolve('.'), loader: 'ts' }, bundle: true, format: 'esm', platform: 'browser', target: 'es2022', write: false })).outputFiles[0].contents;
+const bundle = (await build({ stdin: { contents: "export * from './src/lib/browserScore/index.ts'; export { cleanupMusicXmlText } from './src/lib/scoreRender/cleanup.ts'; export * from './src/lib/scoreRender/profile.ts'; export { caderninhoPartTransform } from './src/lib/scoreRender/partTransform.ts'; export { zFormattingProfile } from './types/formattingProfile.ts';", resolveDir: resolve('.'), loader: 'ts' }, bundle: true, format: 'esm', platform: 'browser', target: 'es2022', write: false })).outputFiles[0].contents;
 const assets = resolve('public/browser-score');
 const results = resolve(process.env.PART_PAGES_RESULTS || 'test-results/browser-score');
 await rm(results, { recursive: true, force: true });
@@ -62,12 +62,19 @@ try {
         await page.goto(origin + '/');
         const bytes = [...await readFile(input)];
         const outcome = await page.evaluate(async ({ bytes, name, libraryOptions, cleanup, profile: input }) => {
-            const { createScoreLibrary, cleanupMusicXmlText, zFormattingProfile, resolvePartFormatting, libraryOptionsFor, sheetLayoutFor } = await import('/browser.js');
+            const { createScoreLibrary, cleanupMusicXmlText, zFormattingProfile, resolvePartFormatting, libraryOptionsFor, sheetLayoutFor, caderninhoPartTransform } = await import('/browser.js');
             const profile = input ? zFormattingProfile.parse(input) : null;
             if (profile) {Object.assign(libraryOptions, libraryOptionsFor(profile));}
             const cleaned = new Map();
             const partLayout = profile ? part => sheetLayoutFor(resolvePartFormatting(profile, part.name)) : undefined;
-            const partTransform = cleanup ? ({ musicXml, part }) => {
+            const fingered = new Map();
+            const partTransform = profile ? (input) => {
+                let report;
+                const result = caderninhoPartTransform(profile, r => { report = r; })(input);
+                cleaned.set(input.part.id, report.cleanup);
+                fingered.set(input.part.id, report.fingerings);
+                return result;
+            } : cleanup ? ({ musicXml, part }) => {
                 const result = cleanupMusicXmlText(musicXml, profile ? resolvePartFormatting(profile, part.name).cleanup : {});
                 cleaned.set(part.id, result.report);
                 return { musicXml: result.musicXml };
@@ -93,7 +100,7 @@ try {
                     const id = exported.parts.find(p => p.catalogPart?.id === part.id)?.id;
                     const body = [...xml.querySelectorAll('score-partwise > part')].find(p => p.getAttribute('id') === id);
                     const notes = body ? [...body.querySelectorAll('note')] : [];
-                    parts.push({ ordinal: part.ordinal, name: part.name, instrumentIds: part.instrumentIds, cleanup: cleaned.get(part.id) ?? null, layout: pages[0]?.layout ?? null, musicXmlPart: id ?? null, ms: Math.round(performance.now() - t), pageCount,
+                    parts.push({ ordinal: part.ordinal, name: part.name, instrumentIds: part.instrumentIds, cleanup: cleaned.get(part.id) ?? null, fingered: (fingered.get(part.id) ?? []).reduce((n, r) => n + r.fingered, 0), layout: pages[0]?.layout ?? null, musicXmlPart: id ?? null, ms: Math.round(performance.now() - t), pageCount,
                         pages: pages.map(p => ({ filename: p.filename, svg: p.svg, widthMm: p.widthMm, heightMm: p.heightMm })),
                         warnings: [...new Set(pages.flatMap(p => p.warnings.map(w => w.code)))],
                         rendered: { notes: count('g.note'), rests: count('g.rest, g.mRest, g.multiRest'), tempo: count('g.tempo'), rehearsal: count('g.reh'), repeatMarks: count('g.repeatMark'), dynamics: count('g.dynam'), fingerings: count('g.fing'), directions: count('g.dir') },
@@ -121,7 +128,7 @@ try {
             if (expectedSize) assert(part.pages.every(p => Math.abs(p.widthMm - expectedSize.widthMm) < 0.01 && Math.abs(p.heightMm - expectedSize.heightMm) < 0.01), `${tag}: page size`);
             if (outcome.topMarkings) assert(part.rendered.tempo + part.rendered.rehearsal + part.rendered.repeatMarks > 0 || part.warnings.includes('SYSTEM_MARKINGS_COPIED') || part.ordinal === 1, `${tag}: system markings missing`);
             const removed = part.cleanup ? ` (removed ${part.cleanup.parts.reduce((n, p) => n + p.fingerings, 0)} fingerings, ${part.cleanup.parts.reduce((n, p) => n + p.staffText.length, 0)} staff texts)` : '';
-            const laid = part.layout ? `, staff ${part.layout.staffSpaceMm.toFixed(2)} mm, ${part.layout.systems} systems, fill ${part.layout.fillRatio}` : '';
+            const laid = (part.fingered ? `, ${part.fingered} piratas` : '') + (part.layout ? `, staff ${part.layout.staffSpaceMm.toFixed(2)} mm, ${part.layout.systems} systems, fill ${part.layout.fillRatio}` : '');
             console.log(`${tag} [${part.instrumentIds.join(', ')}]${removed}${laid}: ${part.pageCount} page(s) ${part.pages[0].widthMm} × ${part.pages[0].heightMm} mm, ${part.rendered.notes} notes, ${part.rendered.rests} rests, ${part.ms} ms`);
         }
         report.files.push({ file: basename(input), ...outcome });
