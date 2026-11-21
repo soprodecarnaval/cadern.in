@@ -3,9 +3,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { inspect, defaultLimits } from './input';
 import { strToU8, zipSync } from 'fflate';
-import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport, type PartTransform, type SheetLayout, type SheetLayoutResult } from './types';
+import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport, type MidiExport, type PartTransform, type SheetLayout, type SheetLayoutResult } from './types';
 import { partMusicXml } from './parts';
 import { excerptInstruments, instrumentIdsOf } from './partInstruments';
+import { extractTracks, midiNoteCount, midiTrackCount } from './midi';
 import { composeSheet, MUSIC_AREA, SHEET, type SheetFonts } from './sheet';
 export { inspect } from './input';
 export * from './types';
@@ -83,9 +84,20 @@ async function validatePortableSvg(doc: Document): Promise<void> {
     if (references.some(id => !ids.has(id))) {fail();}
 }
 
-type NativeScore = { destroy(): void; metadata(): Promise<Metadata>; generateExcerpts(): Promise<void>; setExcerptId(id: number): Promise<void>; npages(): Promise<number>; saveSvg(page: number, background: boolean): Promise<string>; saveXml(): Promise<string> };
+type NativeScore = { destroy(): void; metadata(): Promise<Metadata>; generateExcerpts(): Promise<void>; setExcerptId(id: number): Promise<void>; npages(): Promise<number>; saveSvg(page: number, background: boolean): Promise<string>; saveXml(): Promise<string>; saveMidi(expandRepeats: boolean, exportRPNs: boolean): Promise<Uint8Array> };
 type NativePart = { instrumentName: string; name: string; instrumentId?: string };
 type Metadata = { excerpts: { title: string; parts: NativePart[] }[]; parts: (NativePart & { isVisible: string })[] };
+
+/** Staves of each part of a partwise MusicXML score, by part id. */
+function staffCounts(xml: string): Map<string, number> {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const counts = new Map<string, number>();
+    for (const part of Array.from(doc.documentElement.children).filter(e => e.localName === 'part')) {
+        const staves = Number(part.querySelector('measure > attributes > staves')?.textContent ?? 1);
+        counts.set(part.getAttribute('id') ?? '', Number.isInteger(staves) && staves > 0 ? staves : 1);
+    }
+    return counts;
+}
 
 function fileStem(value: string, fallback: string): string {
     return value.normalize('NFKD').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48).replace(/-+$/, '').toLowerCase() || fallback;
@@ -258,6 +270,9 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     } else if (method === 'musicxml') {
                         await nativeScore!.setExcerptId(-1);
                         return await nativeScore!.saveXml();
+                    } else if (method === 'midi') {
+                        await nativeScore!.setExcerptId(params[0] as number);
+                        return await nativeScore!.saveMidi(true, true);
                     } else if (method === 'renderMusicXml') {
                         const { renderMusicXml } = await import(/* @vite-ignore */ new URL('renderer.js', assetBase).href);
                         return await renderMusicXml(...params);
@@ -409,7 +424,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                             ...(metadata.parts.some(part => part.isVisible !== 'true') ? [{ code: 'PART_VISIBILITY_UNCERTAIN', message: 'Generated parts may include hidden instruments.' }] : [])] };
                 };
                 const support = Object.fromEntries(capabilities.map(capability => [capability,
-                    Object.freeze((capability.startsWith('import.') || capability.startsWith('parts.') || capability === 'svg.page' || capability === 'export.musicxml') ? { available: true }
+                    Object.freeze((capability.startsWith('import.') || capability.startsWith('parts.') || capability === 'svg.page' || capability === 'export.musicxml' || capability === 'export.midi') ? { available: true }
                         : { available: false, reason: 'Not implemented by this milestone' })])) as ScoreSession['capabilities'];
                 const viewIndex = async (view: View, signal?: AbortSignal): Promise<{ index: number; metadata?: Metadata }> => {
                     if (view?.kind === 'score') {return { index: -1 };}
@@ -420,6 +435,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     if (index < 0) {throw new ScoreError('PART_NOT_FOUND', 'svg.page', 'Part is not in this session');}
                     return { index, metadata };
                 };
+                let scoreMidiCache: { revision: number; midi: Uint8Array } | undefined;
                 // Full-score MusicXML of the current revision, exported once and shared by parts.
                 let scoreXml: { revision: number; xml: string; parts: ReturnType<typeof musicXmlParts> } | undefined;
                 const fullScore = async (signal?: AbortSignal) => {
@@ -604,6 +620,47 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                             return { view: part ? { kind: 'part' as const, partId: part.id } : { kind: 'score' as const }, revision, pageNumber, pageCount, widthMm, heightMm, svg,
                                 filename: `${scoreStem}--${target}--page-${String(pageNumber).padStart(4, '0')}.svg`, portability: 'self-contained' as const,
                                 warnings: pageWarnings.map(warning => ({ ...warning })), ...(drawn?.layout ? { layout: { ...drawn.layout } } : {}) };
+                        });
+                    },
+                    exportMidi(view: View, operation: Operation & { expectedRevision: number }) {
+                        return run('exportMidi', operation?.signal, async (): Promise<MidiExport> => {
+                            if (!operation || operation.expectedRevision !== revision) {throw new ScoreError('STALE_REVISION', 'exportMidi', 'Score revision changed');}
+                            const { index, metadata } = await viewIndex(view, operation.signal);
+                            const engineMidi = async (excerpt: number) => {
+                                const midi = await call('midi', [excerpt], operation.signal);
+                                const bytes = midi instanceof Uint8Array ? midi : ArrayBuffer.isView(midi) ? new Uint8Array(midi.buffer, midi.byteOffset, midi.byteLength) : null;
+                                // A standard MIDI file starts with the MThd header chunk.
+                                if (!bytes || bytes.length < 14 || String.fromCharCode(...bytes.subarray(0, 4)) !== 'MThd') {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'exportMidi', 'Engine returned invalid MIDI');}
+                                return bytes;
+                            };
+                            // The full-score MIDI and MusicXML are taken first and kept: the engine stops
+                            // when it exports the full score's MIDI after a part's.
+                            if (scoreMidiCache?.revision !== revision) {scoreMidiCache = { revision, midi: await engineMidi(-1) };}
+                            const scoreMidi = scoreMidiCache.midi;
+                            const score = await fullScore(operation.signal);
+                            let bytes = index < 0 ? scoreMidi : await engineMidi(index);
+                            const midiWarnings: Warning[] = [];
+                            if (index >= 0 && midiNoteCount(bytes) === 0) {
+                                // The engine plays no notes for parts saved by MuseScore 4: take the part's
+                                // staves from the full-score MIDI, one track per staff in score order.
+                                const ids = musicXmlTargets(metadata!, score.parts.map(p => p.id))[index];
+                                const staves = staffCounts(score.xml);
+                                const total = [...staves.values()].reduce((sum, count) => sum + count, 0);
+                                if (!ids || midiTrackCount(scoreMidi) !== total) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'exportMidi', 'The part could not be matched to the score MIDI tracks');}
+                                const order = score.parts.map(p => p.id);
+                                const tracks: number[] = [];
+                                for (const id of ids) {
+                                    const first = order.slice(0, order.indexOf(id)).reduce((sum, other) => sum + (staves.get(other) ?? 1), 0);
+                                    for (let staff = 0; staff < (staves.get(id) ?? 1); staff++) {tracks.push(first + staff);}
+                                }
+                                try { bytes = extractTracks(scoreMidi, tracks); } catch { throw new ScoreError('UNSUPPORTED_CAPABILITY', 'exportMidi', 'The score MIDI could not be split'); }
+                                midiWarnings.push({ code: 'MIDI_FROM_FULL_SCORE', message: 'This part\'s MIDI was taken from the full score; part-only content is not included.' });
+                            }
+                            const part = index < 0 ? undefined : parts[index];
+                            const scoreStem = fileStem(input.name.replace(/\.(mscx|mscz)$/i, ''), 'score');
+                            const target = part ? `part-${String(part.ordinal).padStart(3, '0')}-${fileStem(part.name, 'part')}` : 'score';
+                            return { view: part ? { kind: 'part' as const, partId: part.id } : { kind: 'score' as const }, revision, midi: bytes.slice(), filename: `${scoreStem}--${target}.midi`,
+                                warnings: [{ code: 'MIDI_FIDELITY_UNVERIFIED', message: 'Exported by the MuseScore 4.0 engine (webmscore 1.2.1); equivalence with desktop MuseScore output is not established for this file.' }, ...midiWarnings] };
                         });
                     },
                     exportMusicXml(operation: Operation & { expectedRevision: number }) {

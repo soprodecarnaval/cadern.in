@@ -235,6 +235,41 @@ exportMusicXml.addEventListener('click', async () => {
         render.disabled = refreshParts.disabled = prepareParts.disabled = exportMusicXml.disabled = closeButton.disabled = picker.disabled = false;
     }
 });
+const exportMidi = document.querySelector('#export-midi');
+const midiStatus = document.querySelector('#midi-status');
+const midiList = document.querySelector('#midi-list');
+let midiUrls = [];
+exportMidi.addEventListener('click', async () => {
+    midiUrls.forEach(url => URL.revokeObjectURL(url));
+    midiUrls = [];
+    midiList.replaceChildren();
+    exportMidi.disabled = true;
+    midiStatus.dataset.state = 'loading';
+    midiStatus.textContent = 'Exporting MIDI…';
+    try {
+        const views = [{ name: 'Full score', view: { kind: 'score' } }, ...catalog.parts.map(part => ({ name: part.name, view: { kind: 'part', partId: part.id } }))];
+        for (const { name, view } of views) {
+            const result = await session.exportMidi(view, { expectedRevision: catalog.revision });
+            const url = URL.createObjectURL(new Blob([result.midi], { type: 'audio/midi' }));
+            midiUrls.push(url);
+            const item = document.createElement('li');
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = result.filename;
+            link.textContent = `${name}: ${result.filename}`;
+            item.append(link);
+            if (result.warnings.some(warning => warning.code === 'MIDI_FROM_FULL_SCORE')) {item.append(' (from the full score)');}
+            midiList.append(item);
+        }
+        midiStatus.dataset.state = 'success';
+        midiStatus.textContent = `${views.length} MIDI files exported.`;
+    } catch (error) {
+        midiStatus.dataset.state = 'error';
+        midiStatus.textContent = 'MIDI export failed: ' + [error.code, error.message].filter(Boolean).join(': ');
+    } finally {
+        exportMidi.disabled = !catalog;
+    }
+});
 refreshParts.addEventListener('click', () => updateParts());
 prepareParts.addEventListener('click', () => updateParts(true));
 document.querySelector('#select-all').addEventListener('click', () => {

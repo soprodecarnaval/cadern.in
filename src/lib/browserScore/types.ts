@@ -41,6 +41,7 @@ export type MusicXmlPart = {
     transposeChromatic: number | null;
     catalogPart: { id: PartId; name: string; origin: Part['origin'] } | null;
 };
+export type MidiExport = { view: View; revision: Revision; midi: Uint8Array; filename: string; warnings: readonly Warning[] };
 export type MusicXmlExport = {
     revision: Revision; filename: string; musicXml: string; parts: readonly MusicXmlPart[];
     partMapping: 'complete' | 'partial' | 'none'; warnings: readonly Warning[];
@@ -60,7 +61,7 @@ export type SheetLayout = { staffSpaceMm?: number; systems?: number; spacingLine
     fingeringScale?: number };
 export const capabilities = [
     'import.mscx', 'import.mscz', 'parts.enumerate', 'parts.generateIfAbsent',
-    'svg.page', 'export.musicxml', 'selection.note', 'edit.pitch', 'edit.rhythm', 'edit.pageLayout',
+    'svg.page', 'export.musicxml', 'export.midi', 'selection.note', 'edit.pitch', 'edit.rhythm', 'edit.pageLayout',
     'history', 'save.mscx', 'save.mscz'
 ] as const;
 export type Capability = typeof capabilities[number];
@@ -113,6 +114,12 @@ export interface ScoreSession {
     prepareParts(options: Operation & { policy: 'preserveExistingOrGenerateIfNone'; expectedRevision: Revision }): Promise<PartCatalog>;
     getPages(view: View, options?: Operation): Promise<PageSet>;
     renderPage(view: View, pageNumber: number, options: Operation & { expectedRevision: Revision; background?: 'transparent' | 'white' }): Promise<SvgPage>;
+    /**
+     * Standard MIDI file of the full score or one part, from the engine (repeats expanded, RPNs
+     * written, as desktop MuseScore exports). Parts are the engine's excerpts: saved parts as
+     * saved, generated parts after prepareParts.
+     */
+    exportMidi(view: View, options: Operation & { expectedRevision: Revision }): Promise<MidiExport>;
     /** Full-score MusicXML (partwise, uncompressed) with every instrument part. */
     exportMusicXml(options: Operation & { expectedRevision: Revision }): Promise<MusicXmlExport>;
     hitTest(...args: unknown[]): Promise<never>;
