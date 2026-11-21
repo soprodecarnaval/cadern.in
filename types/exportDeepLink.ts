@@ -9,7 +9,11 @@
  */
 export const EXPORT_DEEP_LINK_PROTOCOL = "cadernin-export";
 
-export interface ExportDeepLinkContext {
+/**
+ * Where an upload goes and what it was launched against: the exporter's deep
+ * link and the web route `/:slug/enviar` carry the same context.
+ */
+export interface UploadContext {
   projectId: string;
   // Launched from a specific score (project page "nova versão", or the
   // songbook-scoped score page) — absent for a brand-new score.
@@ -25,6 +29,9 @@ export interface ExportDeepLinkContext {
   // re-pin never happens against state the launcher never saw.
   expectedSongbookRevisionId?: string;
 }
+
+/** The exporter's name for the upload context. */
+export type ExportDeepLinkContext = UploadContext;
 
 export function buildExportDeepLink(context: ExportDeepLinkContext): string {
   const params = new URLSearchParams({ projectId: context.projectId });
