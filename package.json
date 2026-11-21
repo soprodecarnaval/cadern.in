@@ -33,6 +33,7 @@
     "emulators:seed": "tsx scripts/dev/seedEmulators.ts",
     "test:functions": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore --project demo-cadernin 'npm --prefix functions test'",
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-cadernin 'vitest run --config vitest.rules.config.ts'",
+    "test:e2e": "npm run browser-score:assets && firebase emulators:exec --only auth,firestore,storage --project demo-cadernin 'node tests/e2e/browserUpload.mjs'",
     "test:migrations": "firebase emulators:exec --only firestore --project demo-cadernin 'vitest run --config vitest.migrations.config.ts'",
     "backfill:metajson": "tsx scripts/maintenance/backfillMetajson.ts",
     "purge:staging": "tsx --env-file=.env.staging scripts/maintenance/purgeNonCaderninData.ts",
