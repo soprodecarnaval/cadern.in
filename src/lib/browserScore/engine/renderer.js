@@ -48,6 +48,62 @@ export async function renderMusicXml(musicXml, page) {
     return { pages };
 }
 
+// Fingering heights, as the caderninhoFormatter plugin sets them (in staff spaces above the
+// note): 1, plus 2.3 for each further note of a chord, plus up to PITCH_RISE for the highest notes
+// of the page, so the numbers follow the melody up and down.
+const FINGERING_GAP = 0.6, CHORD_STEP = 2.3, PITCH_RISE = 1.5;
+
+/**
+ * Moves each fingering of a drawn page from Verovio's common row to just above its note (the top
+ * of its chord), higher for higher notes, as the plugin did. A number never rises above the row
+ * Verovio reserved for it, so the layout and the page fit are unchanged. Text-only: the worker has no DOM.
+ * @param {string} svg a Verovio page, rendered with svgAdditionalAttribute fing@startid.
+ * @param {number} unit the page's unit (half a staff space, tenths of a millimetre).
+ */
+export function withNoteHeightFingerings(svg, unit) {
+    if (!svg.includes('class="fing"')) return svg;
+    const space = unit * 20; // staff space in the page's definition units (0.01 mm)
+    // Noteheads, in document order, with the top line of the staff they belong to.
+    const notes = new Map(), byStaff = [];
+    let staffTop = null, staffIndex = -1, pendingStaff = false;
+    const token = /class="staff"|<path d="M[\d.]+ ([\d.]+) L[\d.]+ \1"|<g id="([^"]+)" class="note"[^>]*>\s*<g class="notehead">\s*<use [^>]*transform="translate\(([\d.]+), ([\d.]+)\)/g;
+    for (const match of svg.matchAll(token)) {
+        if (match[0] === 'class="staff"') { pendingStaff = true; staffIndex++; byStaff[staffIndex] = []; continue; }
+        if (match[1] !== undefined) { if (pendingStaff) { staffTop = Number(match[1]); pendingStaff = false; } continue; }
+        if (staffTop === null || staffIndex < 0) continue;
+        const note = { id: match[2], x: Number(match[3]), y: Number(match[4]), staffTop, staff: staffIndex };
+        notes.set(note.id, note);
+        byStaff[staffIndex].push(note);
+    }
+    // The chord of a note: noteheads of the same staff at (about) the same x.
+    const chordOf = note => byStaff[note.staff].filter(other => Math.abs(other.x - note.x) <= space * 1.2);
+    const anchors = new Map();
+    for (const match of svg.matchAll(/class="fing"[^>]*data-startid="#([^"]+)"/g)) {
+        const note = notes.get(match[1]);
+        if (!note) continue;
+        const chord = chordOf(note);
+        const top = chord.reduce((high, other) => (other.y < high.y ? other : high), note);
+        anchors.set(match[1], { x: note.x, y: top.y, relative: top.y - top.staffTop, count: chord.length });
+    }
+    if (!anchors.size) return svg;
+    // Articulations (staccato dots, accents) above a note: the number goes above them.
+    const articulations = [...svg.matchAll(/class="artic"[^>]*>\s*(?:<[^>]*>\s*)*?<use [^>]*transform="translate\(([\d.]+), ([\d.]+)\)/g)]
+        .map(match => ({ x: Number(match[1]), y: Number(match[2]) }));
+    const relatives = [...anchors.values()].map(anchor => anchor.relative);
+    const lowest = Math.max(...relatives), highest = Math.min(...relatives);
+    return svg.replace(/(<g [^>]*class="fing"[^>]*data-startid="#([^"]+)"[^>]*>\s*<text [^>]*?\by=")([\d.]+)(")/g, (whole, head, id, y, tail) => {
+        const anchor = anchors.get(id);
+        if (!anchor) return whole;
+        const rise = lowest > highest ? (lowest - anchor.relative) / (lowest - highest) : 0;
+        // Above the notehead (half a space above its centre), then the plugin's offsets.
+        const above = articulations
+            .filter(artic => Math.abs(artic.x - anchor.x) <= space && artic.y < anchor.y && artic.y > anchor.y - space * 3)
+            .reduce((top, artic) => Math.min(top, artic.y - space * 0.6), anchor.y);
+        const wanted = Math.min(above, anchor.y) - space * (0.5 + FINGERING_GAP + (anchor.count - 1) * CHORD_STEP + rise * PITCH_RISE);
+        return head + Math.round(Math.max(Number(y), wanted)) + tail;
+    });
+}
+
 /** Measure indexes that start each of `count` systems, balancing the summed widths (widest system minimal). */
 function balancedStarts(widths, count) {
     const total = [0];
@@ -115,7 +171,9 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
         unit, scale: 100, adjustPageHeight: natural, justifyVertically: !natural, minLastJustification: 0,
         breaks: starts ? 'line' : 'auto', header: 'none', footer: 'none',
         ...spacing,
-        svgViewBox: true, mmOutput: true, fontTextLiberation: true, svgRemoveXlink: false, xmlIdSeed: 1
+        svgViewBox: true, mmOutput: true, fontTextLiberation: true, svgRemoveXlink: false, xmlIdSeed: 1,
+        // Links each fingering to its note, for withNoteHeightFingerings.
+        svgAdditionalAttribute: ['fing@startid']
     });
     let current = null;
     const draw = (unit, starts) => {
@@ -127,7 +185,7 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
     };
     const result = () => {
         const pages = [];
-        for (let n = 1; n <= tk.getPageCount(); n++) pages.push(withoutPlaceholders(tk.renderToSVG(n, false)));
+        for (let n = 1; n <= tk.getPageCount(); n++) pages.push(withNoteHeightFingerings(withoutPlaceholders(tk.renderToSVG(n, false)), current.unit));
         const { unit, starts } = current;
         const count = pages.reduce((sum, page) => sum + systems(page), 0);
         // Height the music needs, for the fill ratio: the lowest horizontal line (staff or ledger

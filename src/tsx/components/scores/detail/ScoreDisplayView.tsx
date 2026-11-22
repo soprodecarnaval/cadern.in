@@ -61,6 +61,9 @@ function SvgImage({
     <div
       style={{
         position: "relative",
+        // A definite width: in the flex column, the page would otherwise be measured at its natural
+        // size (a library page is 171.7 mm wide) and the scaled image would overflow the card.
+        width: "100%",
         cursor: picking ? "crosshair" : undefined,
       }}
       onClick={handleClick}
