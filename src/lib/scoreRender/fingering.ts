@@ -4,7 +4,7 @@
 // - one fingering per chord, on its lowest note;
 // - a tied-to note gets none, nor do grace and cue notes;
 // - every stem points down;
-// - placed below the staff.
+// - placed above the notes (stems point down, so they stay clear).
 // DOM Level 2 only, like cleanup.ts.
 
 export type FingeringReport = {
@@ -62,7 +62,7 @@ function addFingering(note: Element, text: string) {
     notations.appendChild(technical);
   }
   const fingering = document.createElement("fingering");
-  fingering.setAttribute("placement", "below");
+  fingering.setAttribute("placement", "above");
   fingering.textContent = text;
   technical.appendChild(fingering);
 }

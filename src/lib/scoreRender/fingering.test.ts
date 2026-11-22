@@ -63,7 +63,7 @@ describe("fingerPart", () => {
     expect(order).toEqual(["pitch", "duration", "type", "stem", "notations", "lyric"]);
     const notations = last.getElementsByTagName("notations")[0];
     expect(notations.getElementsByTagName("staccato")).toHaveLength(1);
-    expect(notations.getElementsByTagName("fingering")[0].getAttribute("placement")).toBe("below");
+    expect(notations.getElementsByTagName("fingering")[0].getAttribute("placement")).toBe("above");
   });
 });
 

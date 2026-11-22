@@ -1,6 +1,7 @@
 import { Button } from "../../../atoms/Button";
 import { useSvgUrl } from "../../../../lib/useSvgUrl";
-import { useState } from "react";
+import { PartTabs } from "../PartTabs";
+import { useEffect, useState } from "react";
 import { Badge, Card, Placeholder } from "react-bootstrap";
 import { SiMidi } from "react-icons/si";
 import type { CommentAnchor } from "../../../../../types/docs";
@@ -142,6 +143,13 @@ export function ScoreDisplayView({
   parts,
   pinsProps,
 }: Props) {
+  // One part at a time, in tabs; a selected comment pin shows its part.
+  const [shownName, setShownName] = useState<string | null>(null);
+  const selectedPinPart = pinsProps?.pins.find((pin) => pin.id === pinsProps.selectedPinId)?.anchor.partName;
+  useEffect(() => {
+    if (selectedPinPart) {setShownName(selectedPinPart);}
+  }, [pinsProps?.selectedPinId, selectedPinPart]);
+  const part = parts.find((candidate) => candidate.name === shownName) ?? parts[0];
   return (
     <>
       <Card className="mb-3">
@@ -175,8 +183,14 @@ export function ScoreDisplayView({
         <Card className="mb-3">
           <Card.Body>
             <Card.Title>Partes</Card.Title>
-            {parts.map((part) => (
-              <div key={part.name} className="mb-3">
+            <PartTabs
+              label="Partes"
+              active={part?.name ?? ""}
+              onChange={setShownName}
+              tabs={parts.map((part) => ({ key: part.name, label: part.name, note: part.midiUrl ? undefined : "⚠" }))}
+            >
+              {part && (
+              <div className="mb-3">
                 <div className="d-flex align-items-center gap-2 mb-1">
                   <strong>{part.name}</strong>
                   <span className="text-muted">— {part.instrument}</span>
@@ -205,7 +219,8 @@ export function ScoreDisplayView({
                   ))}
                 </div>
               </div>
-            ))}
+              )}
+            </PartTabs>
           </Card.Body>
         </Card>
       )}

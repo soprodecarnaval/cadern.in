@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { zInstrument, type Instrument } from "../../../../types/instrument";
 import type { FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
 import { SONGBOOK_FIT_AREA } from "../../../../types/formattingProfile";
@@ -6,6 +6,7 @@ import { Button } from "../../atoms/Button";
 import { Input } from "../../atoms/Input";
 import { Page } from "../../atoms/Page";
 import { Select } from "../../atoms/Select";
+import { PartTabs } from "../../components/scores/PartTabs";
 import { projectPath, ROUTE_PATTERNS } from "../../../lib/routes";
 import type { UploadContext } from "../../../../types/exportDeepLink";
 import {
@@ -375,6 +376,12 @@ function FormatStep(props: EnviarPageViewProps) {
   const { state, onStep, onEditing, onListen, components } = props;
   const included = state.rows.filter((row) => row.include && row.instrument);
   const rendering = included.some((row) => state.previews[row.ordinal]?.rendering);
+  // One part at a time; picking a part to adjust shows it.
+  const [shown, setShown] = useState<number | null>(null);
+  useEffect(() => {
+    if (state.editing !== null) {setShown(state.editing);}
+  }, [state.editing]);
+  const shownRow = included.find((row) => row.ordinal === shown) ?? included[0];
   return (
     <section aria-labelledby="enviar-formatacao">
       <h2 id="enviar-formatacao" tabIndex={-1}>Formatação</h2>
@@ -382,10 +389,21 @@ function FormatStep(props: EnviarPageViewProps) {
       <div className="enviar-format">
         <Controls {...props} />
         <div className="enviar-previews">
-          {included.map((row) => (
-            <PreviewCard key={row.ordinal} row={row} preview={state.previews[row.ordinal]} title={state.title}
-              midi={state.midi[row.ordinal]} onEditing={onEditing} onListen={onListen} MidiPlayer={components.MidiPlayer} />
-          ))}
+          {shownRow && (
+            <PartTabs
+              label="Partes"
+              active={String(shownRow.ordinal)}
+              onChange={(key) => setShown(Number(key))}
+              tabs={included.map((row) => {
+                const preview = state.previews[row.ordinal];
+                const warned = !!preview && (preview.pages > 1 || preview.warnings.some((warning) => warningText(warning)) || !!preview.error);
+                return { key: String(row.ordinal), label: row.name, note: preview?.rendering ? "…" : warned ? "⚠" : undefined };
+              })}
+            >
+              <PreviewCard row={shownRow} preview={state.previews[shownRow.ordinal]} title={state.title}
+                midi={state.midi[shownRow.ordinal]} onEditing={onEditing} onListen={onListen} MidiPlayer={components.MidiPlayer} />
+            </PartTabs>
+          )}
         </div>
       </div>
       <div className="enviar-actions">
