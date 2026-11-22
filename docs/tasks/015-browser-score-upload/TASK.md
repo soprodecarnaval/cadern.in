@@ -80,8 +80,6 @@ copies of production scores.
 - Some files fail to open in the library: parts that can't be matched to
   the full-score MusicXML (two of 50 local scores), and a rest-count
   mismatch on one score.
-- `tenor-trombone` (common in older files) has no instrument mapping; the
-  send screen maps it through the sound id or asks the user.
 - The 4-valve tuba table, the valve-trombone rule and the tuba-46 exception
   await a brass player's review (see the test file).
 

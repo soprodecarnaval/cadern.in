@@ -118,6 +118,11 @@ describe("mapInstrumentId", () => {
     expect(mapInstrumentId("brass.tuba", ["Tuba", "", "Tba. Eb"])).toBe("tuba eb");
   });
 
+  it("maps tenor-trombone, common in older scores, as trombone with slide positions", () => {
+    expect(mapInstrumentId("tenor-trombone", ["BONE"])).toBe("trombone");
+    expect(instrumentSettings("tenor-trombone")).toEqual(instrumentSettings("trombone"));
+  });
+
   it("returns null for instruments cadern.in does not support", () => {
     expect(mapInstrumentId("pipe-organ", ["Órgão"])).toBeNull();
     expect(mapInstrumentId("toString")).toBeNull();

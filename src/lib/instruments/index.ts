@@ -59,6 +59,8 @@ const ID_MAP: Readonly<Record<string, Instrument>> = {
   "brass.trumpet.bflat": "trompete",
 
   trombone: "trombone",
+  // MuseScore's tenor trombone id, common in older scores.
+  "tenor-trombone": "trombone",
   "brass.trombone": "trombone",
   "brass.trombone.tenor": "trombone",
 
@@ -237,6 +239,7 @@ export const instrumentSettings = (
       return tuba(hasEb(names) ? "Eb" : "Bb", "concert-octave", 0, false);
     case "brass.trombone":
     case "trombone":
+    case "tenor-trombone":
     case "brass.trombone.tenor":
       return { fingering: TROMBONE, transpositionForTable: 2, dynamicTrombone: true };
     case "trumpet":
