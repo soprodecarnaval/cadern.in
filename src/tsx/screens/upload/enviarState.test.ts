@@ -50,8 +50,8 @@ describe("formatting controls", () => {
   const profile = zFormattingProfile.parse({ profileVersion: 1, staffSize: 1.5, fingering: { notation: "valves" } });
 
   it("edits the score's settings or one part's, which inherits the rest", () => {
-    const tuba = withFormatting(profile, "Tuba", { fingering: { valveCount: 4 } });
-    expect(formattingOf(tuba, "Tuba").fingering).toEqual({ notation: "valves", valveCount: 4 });
+    const tuba = withFormatting(profile, "Tuba", { fingering: { dynamicTrombone: true } });
+    expect(formattingOf(tuba, "Tuba").fingering).toEqual({ notation: "valves", dynamicTrombone: true });
     expect(formattingOf(tuba, "Tuba").staffSize).toBe(1.5);
     expect(formattingOf(tuba, null).fingering).toEqual({ notation: "valves" });
     expect(hasOverride(tuba, "Tuba")).toBe(true);

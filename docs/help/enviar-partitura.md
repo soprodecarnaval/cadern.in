@@ -24,7 +24,8 @@ Texto de ajuda para usuários (página **Ajuda**).
    *trombone pirata*.
 5. **Formatação:** cada parte aparece como vai sair no caderninho. Você pode
    mudar o tamanho da pauta, o número de sistemas, os piratas em
-   **posições (1–7)** ou **pistos** (e 3 ou 4 pistos na tuba), e o que é
+   **posições (1–7)** ou **pistos** (as notas mais graves da tuba saem sempre em
+   pistos), e o que é
    limpo do arquivo. Use **Ajustar só esta parte** para mudar uma parte só.
 6. **Enviar:** confira o destino (partitura nova, nova versão ou cópia de
    outro projeto) e clique em **Enviar partitura**.

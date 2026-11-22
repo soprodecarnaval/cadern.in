@@ -17,8 +17,10 @@ describe("FormattingProfile", () => {
     expect(() => zFormattingProfile.parse({ profileVersion: 2 })).toThrow();
     expect(() => zFormattingProfile.parse({ profileVersion: 1, staffSize: 5 })).toThrow();
     expect(() =>
-      zFormattingProfile.parse({ profileVersion: 1, fingering: { valveCount: 5 } }),
+      zFormattingProfile.parse({ profileVersion: 1, fingering: { notation: "keys" } }),
     ).toThrow();
+    // Profiles saved with the former tuba valve count still load; the setting is gone.
+    expect(zFormattingProfile.parse({ profileVersion: 1, fingering: { valveCount: 4 } }).fingering).toEqual({});
   });
 
   it("defaults to automatic layout, positions and every clean-up rule", () => {
@@ -30,7 +32,6 @@ describe("FormattingProfile", () => {
       fingering: {
         enabled: "byInstrument",
         notation: "positions",
-        valveCount: 3,
         dynamicTrombone: false,
         size: "auto",
       },
@@ -55,7 +56,7 @@ describe("FormattingProfile", () => {
       spacing: { linear: 0.2 },
       fingering: { notation: "valves" },
       parts: {
-        Tuba: { systemsPerPage: 3, spacing: { system: 6 }, fingering: { valveCount: 4 } },
+        Tuba: { systemsPerPage: 3, spacing: { system: 6 }, fingering: { dynamicTrombone: true } },
       },
     });
     const tuba = resolvePartFormatting(profile, "Tuba");
@@ -66,7 +67,7 @@ describe("FormattingProfile", () => {
       spacingNonLinear: 0.6,
       spacingSystem: 6,
     });
-    expect(tuba.fingering).toMatchObject({ notation: "valves", valveCount: 4 });
-    expect(resolvePartFormatting(profile, "Flauta").fingering.valveCount).toBe(3);
+    expect(tuba.fingering).toMatchObject({ notation: "valves", dynamicTrombone: true });
+    expect(resolvePartFormatting(profile, "Flauta").fingering.dynamicTrombone).toBe(false);
   });
 });

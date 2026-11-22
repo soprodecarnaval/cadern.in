@@ -17,8 +17,6 @@ export const zFingering = z.object({
   enabled: z.boolean().optional(),
   /** Positions 1–7 (default) or valves; valves work for any part, valve trombone included. */
   notation: z.enum(["positions", "valves"]).optional(),
-  /** Tuba only: 3 (default) or 4 valves. */
-  valveCount: z.union([z.literal(3), z.literal(4)]).optional(),
   /** Trombone in positions mode: choose among alternative positions. */
   dynamicTrombone: z.boolean().optional(),
   /** Fingering text size: "auto" fits with the staff, or a Verovio fingering scale. */

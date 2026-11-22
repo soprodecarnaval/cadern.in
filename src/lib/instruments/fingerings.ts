@@ -40,17 +40,13 @@ export const TUBA_VALVES = table(30, [
 ]);
 
 /**
- * griff_tuba_4v: a 4-valve tuba on the same C-indexed basis as TUBA_VALVES. The 4th valve lowers by
- * a perfect fourth: "4" replaces 1-3 and "24" replaces 1-2-3, and 14, 124, 234, 134 and 1234 extend
- * the range below the 3-valve table. Pending a brass player's review (ticket 008).
+ * Tuba notes below the 3-valve table (C-indexed, as TUBA_VALVES): the 4th valve lowers by a perfect
+ * fourth, so they are written 14, 124, 234, 134 and 1234. Always written as pistons, in positions mode
+ * too (there are no positions 8+). Pending a brass player's review (ticket 008).
  */
-export const TUBA_4V_VALVES: ValveTable = Object.freeze({
-  ...table(25, ["1234", "134", "234", "124", "14"]), // 25–29
-  ...TUBA_VALVES,
-  30: "24", 31: "4", 37: "24", 38: "4",
-});
+export const TUBA_LOW_VALVES: ValveTable = table(25, ["1234", "134", "234", "124", "14"]); // 25–29
 
-/** Lowest index of the 3-valve tuba table; 4-valve notes below it have no slide-style position. */
+/** Lowest index of the 3-valve tuba table; notes below it use TUBA_LOW_VALVES. */
 export const TUBA_3V_LOWEST = 30;
 
 /** Each 3-valve combination's position: every step lowers the pitch a semitone. */

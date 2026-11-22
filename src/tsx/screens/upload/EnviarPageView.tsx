@@ -294,16 +294,6 @@ function Controls({ state, onProfile, onEditing }: Pick<EnviarPageViewProps, "st
           <Choice label="Piratas" name="notation" value={notation}
             options={[["positions", "Posições (1–7)"], ["valves", "Pistos"]]}
             onChange={(value) => change({ fingering: { notation: value as "positions" | "valves" } })} />
-          {notation === "valves" && families.has("tuba") && (
-            <Choice label="Pistos da tuba" name="valves" value={String(settings.fingering?.valveCount ?? 3)}
-              options={[["3", "3 pistos"], ["4", "4 pistos"]]}
-              onChange={(value) => change({ fingering: { valveCount: Number(value) as 3 | 4 } })} />
-          )}
-          {notation === "positions" && families.has("tuba") && (
-            <Choice label="Tuba" name="valves-positions" value={String(settings.fingering?.valveCount ?? 3)}
-              options={[["3", "3 pistos"], ["4", "4 pistos (graves em pistos)"]]}
-              onChange={(value) => change({ fingering: { valveCount: Number(value) as 3 | 4 } })} />
-          )}
           {notation === "positions" && families.has("trombone") && (
             <label className="form-check">
               <input type="checkbox" className="form-check-input" checked={settings.fingering?.dynamicTrombone ?? false}

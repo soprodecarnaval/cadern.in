@@ -80,7 +80,8 @@ copies of production scores.
 - Some files fail to open in the library: parts that can't be matched to
   the full-score MusicXML (two of 50 local scores), and a rest-count
   mismatch on one score.
-- The 4-valve tuba table, the valve-trombone rule and the tuba-46 exception
+- The low tuba table (4-valve pistons below the 3-valve range, always used),
+  the valve-trombone rule and the tuba-46 exception
   await a brass player's review (see the test file).
 
 ## Sign-off

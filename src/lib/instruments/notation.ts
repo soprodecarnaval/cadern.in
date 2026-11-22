@@ -1,12 +1,13 @@
 // Fingering text for one note, per notation (ticket 008):
 // - positions (default): 1–7. Trombone uses its slide tables (or the dynamic
 //   picker); valve instruments map their valve combination to a position.
-//   A 4-valve tuba's notes below position 7 are written as valves.
 // - valves: 3 valves for every part (trombone: the trumpet table an octave
-//   down, as a valve trombone), or 4 valves for tuba.
+//   down, as a valve trombone).
+// Tuba notes below the 3-valve range are always written as 4-valve pistons
+// (14, 124, 234, 134, 1234), in either notation.
 import {
   TUBA_3V_LOWEST,
-  TUBA_4V_VALVES,
+  TUBA_LOW_VALVES,
   VALVE_POSITIONS,
   newTrombonePicker,
   valveText,
@@ -16,15 +17,12 @@ import type { InstrumentSettings } from "./index";
 
 export type FingeringNotation = {
   notation: "positions" | "valves";
-  /** Tuba only; ignored for other instruments. */
-  valveCount: 3 | 4;
   /** Trombone in positions mode only. */
   dynamicTrombone: boolean;
 };
 
 export const DEFAULT_NOTATION: FingeringNotation = Object.freeze({
   notation: "positions",
-  valveCount: 3,
   dynamicTrombone: false,
 });
 
@@ -40,11 +38,11 @@ export function fingeringFunction(
   const tables = settings?.fingering;
   if (!settings || !tables) {return null;}
   const shift = settings.transpositionForTable;
-  const fourValves = tables.family === "tuba" && options.valveCount === 4;
-  const valves = (index: number) =>
-    valveText(fourValves ? TUBA_4V_VALVES : tables.valves, index + tables.valveIndexOffset);
+  // Below the tuba's 3-valve range: 4-valve pistons, whatever the notation.
+  const low = (index: number) =>
+    tables.family === "tuba" && index < TUBA_3V_LOWEST ? valveText(TUBA_LOW_VALVES, index) : null;
   if (options.notation === "valves") {
-    return (sounding) => valves(sounding + shift);
+    return (sounding) => low(sounding + shift) ?? valveText(tables.valves, sounding + shift + tables.valveIndexOffset);
   }
   if (tables.slide) {
     if (options.dynamicTrombone) {
@@ -56,15 +54,12 @@ export function fingeringFunction(
   }
   return (sounding) => {
     const index = sounding + shift;
-    if (fourValves && index < TUBA_3V_LOWEST) {return valves(index);}
+    const pistons = low(index);
+    if (pistons !== null) {return pistons;}
     const combination = valveText(tables.valves, index);
     return combination ? String(VALVE_POSITIONS[combination]) : "";
   };
 }
-
-/** Whether `valveCount` applies to the instrument (tuba only). */
-export const hasValveCountOption = (settings: InstrumentSettings | null) =>
-  settings?.fingering?.family === "tuba";
 
 /**
  * The instrument a part is filed under: a fingered trumpet or trombone part is

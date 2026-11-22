@@ -1,13 +1,12 @@
-// 4-VALVE TUBA TABLE SIGN-OFF: PENDING. A brass player has not yet reviewed
-// TUBA_4V_VALVES, the valve-trombone rule or the tuba-46 exception (ticket
+// LOW TUBA TABLE SIGN-OFF: PENDING. A brass player has not yet reviewed
+// TUBA_LOW_VALVES (4-valve pistons), the valve-trombone rule or the tuba-46 exception (ticket
 // 008). Record the reviewer and date here when they do.
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import {
-  TUBA_4V_VALVES,
+  TUBA_LOW_VALVES,
   fingeringFunction,
-  hasValveCountOption,
   instrumentSettings,
   pirataInstrument,
   type FingeringNotation,
@@ -28,20 +27,25 @@ const pluginFn = (id: string, oneChar: boolean, dynamic = false) =>
 
 const notation = (overrides: Partial<FingeringNotation>): FingeringNotation => ({
   notation: "positions",
-  valveCount: 3,
   dynamicTrombone: false,
   ...overrides,
 });
 const fn = (id: string, overrides: Partial<FingeringNotation> = {}) =>
   fingeringFunction(instrumentSettings(id), notation(overrides))!;
 const PITCHES = Array.from({ length: 128 }, (_, i) => i);
+// Tuba notes below the 3-valve table (C-indexed 25–29) are always written as 4-valve pistons.
+const tubaLow = (id: string, pitch: number) => {
+  const settings = instrumentSettings(id)!;
+  const index = pitch + settings.transpositionForTable;
+  return settings.fingering!.family === "tuba" && index >= 25 && index < 30 ? TUBA_LOW_VALVES[index] : null;
+};
 const VALVE_IDS = ["bb-trumpet", "c-trumpet", "bb-tuba", "bass-eb-tuba", "bb-tuba-treble", "eb-tuba-treble", "sousaphone", "euphonium", "euphonium-treble"];
 
 describe("valves", () => {
   it.each(VALVE_IDS)("matches the plugin's default output for %s", (id) => {
     const ours = fn(id, { notation: "valves" });
     const theirs = pluginFn(id, false);
-    for (const pitch of PITCHES) {expect(ours(pitch), `${pitch}`).toBe(theirs(pitch));}
+    for (const pitch of PITCHES) {expect(ours(pitch), `${pitch}`).toBe(tubaLow(id, pitch) ?? theirs(pitch));}
   });
 
   it("fingers trombone as a valve trombone: the trumpet table an octave down", () => {
@@ -77,7 +81,7 @@ describe("positions", () => {
           expect(theirs(pitch)).toBe("4");
           expect(ours(pitch)).toBe("3");
         } else {
-          expect(ours(pitch), `${pitch}`).toBe(theirs(pitch));
+          expect(ours(pitch), `${pitch}`).toBe(tubaLow(id, pitch) ?? theirs(pitch));
         }
       }
     },
@@ -99,57 +103,31 @@ describe("positions", () => {
   });
 });
 
-describe("4-valve tuba", () => {
-  it("is offered for tuba only", () => {
-    for (const id of ["bb-tuba", "eb-tuba-treble", "sousaphone", "brass.tuba"]) {
-      expect(hasValveCountOption(instrumentSettings(id))).toBe(true);
-    }
-    for (const id of ["trombone", "bb-trumpet", "euphonium", "flute"]) {
-      expect(hasValveCountOption(instrumentSettings(id))).toBe(false);
-    }
-    // Other instruments ignore valveCount.
-    const euphonium = fn("euphonium", { notation: "valves", valveCount: 4 });
-    for (const pitch of PITCHES) {expect(euphonium(pitch)).toBe(fn("euphonium", { notation: "valves" })(pitch));}
-  });
-
-  // Every pitch of the Bb and Eb tubas, including the low extension.
-  it.each([["bb-tuba", 2], ["bass-eb-tuba", -3]] as const)("covers every pitch of %s", (id, shift) => {
-    const four = fn(id, { notation: "valves", valveCount: 4 });
-    const three = fn(id, { notation: "valves" });
+describe("low tuba notes", () => {
+  // Every pitch of the Bb and Eb tubas, the low extension included, in both notations.
+  it.each([["bb-tuba", 2], ["bass-eb-tuba", -3], ["sousaphone", 2], ["eb-tuba-treble", -3]] as const)("writes %s's notes below the 3-valve range as 4-valve pistons", (id, shift) => {
     const semitones: Record<string, number> = { "1": 2, "2": 1, "3": 3, "4": 5 };
-    const lowering = (combination: string) =>
-      combination === "0" ? 0 : [...combination].reduce((sum, valve) => sum + semitones[valve], 0);
-    for (const pitch of PITCHES) {
-      const index = pitch + shift;
-      const text = four(pitch);
-      if (index < 25 || index > 62) {
-        expect(text, `${pitch}`).toBe("");
-        continue;
-      }
-      if (index < 30) {
-        // The extension: each step a semitone below the open C (index 36).
-        expect(lowering(text), `${pitch}`).toBe(36 - index);
-      } else if (["13", "123"].includes(three(pitch))) {
-        expect(text).toBe(three(pitch) === "13" ? "4" : "24");
-        expect(lowering(text)).toBe(lowering(three(pitch)));
-      } else {
-        expect(text).toBe(three(pitch));
-      }
-    }
-    expect(Object.keys(TUBA_4V_VALVES).length).toBe(38);
-  });
-
-  it("keeps positions in the shared range and writes valves below position 7", () => {
-    for (const [id, shift] of [["bb-tuba", 2], ["bass-eb-tuba", -3]] as const) {
-      const four = fn(id, { valveCount: 4 });
-      const three = fn(id);
+    const lowering = (combination: string) => [...combination].reduce((sum, valve) => sum + semitones[valve], 0);
+    for (const notation of ["positions", "valves"] as const) {
+      const ours = fn(id, { notation });
       for (const pitch of PITCHES) {
         const index = pitch + shift;
-        if (index >= 30) {expect(four(pitch)).toBe(three(pitch));}
-        else if (index >= 25) {expect(four(pitch)).toBe(TUBA_4V_VALVES[index]);}
+        if (index < 25) {expect(ours(pitch), `${notation} ${pitch}`).toBe("");}
+        else if (index < 30) {
+          // Each step a semitone below the open C (index 36).
+          expect(lowering(ours(pitch)), `${notation} ${pitch}`).toBe(36 - index);
+          expect(ours(pitch)).toContain("4");
+        }
       }
     }
-    expect(fn("bb-tuba", { valveCount: 4 })(25 - 2)).toBe("1234");
+    // In the 3-valve range nothing changes: 1-3 and 1-2-3 stay as they are.
+    expect(fn(id, { notation: "valves" })(31 - shift)).toBe("13");
+    expect(fn(id)(30 - shift)).toBe("7");
+  });
+
+  it("leaves other instruments' low notes without fingering", () => {
+    expect(fn("euphonium", { notation: "valves" })(30)).toBe("");
+    expect(fn("bb-trumpet")(40)).toBe("");
   });
 });
 

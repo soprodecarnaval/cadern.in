@@ -34,7 +34,6 @@ export function resolvePartFormatting(
     fingering: {
       enabled: "byInstrument",
       notation: "positions",
-      valveCount: 3,
       dynamicTrombone: false,
       size: "auto",
       ...profile.fingering,
