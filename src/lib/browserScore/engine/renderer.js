@@ -51,12 +51,17 @@ export async function renderMusicXml(musicXml, page) {
 // Fingering heights, as the caderninhoFormatter plugin sets them (in staff spaces above the
 // note): 1, plus 2.3 for each further note of a chord, plus up to PITCH_RISE for the highest notes
 // of the page, so the numbers follow the melody up and down.
-const FINGERING_GAP = 0.6, CHORD_STEP = 2.3, PITCH_RISE = 1.5;
+const FINGERING_GAP = 0.6, CHORD_STEP = 2.3;
+// Staff spaces reserved above every system of a part with fingerings: the band the numbers float
+// in, from just above the top line (lowest notes) to FINGERING_ROOM higher (highest notes).
+export const FINGERING_ROOM = 2;
 
 /**
- * Moves each fingering of a drawn page from Verovio's common row to just above its note (the top
- * of its chord), higher for higher notes, as the plugin did. A number never rises above the row
- * Verovio reserved for it, so the layout and the page fit are unchanged. Text-only: the worker has no DOM.
+ * Moves each fingering of a drawn page from Verovio's common row into a band above the staff: never
+ * inside the staff, higher for higher notes, as the plugin did, so the numbers trace the melody; and
+ * always above its own note (the top of its chord, its articulations) when that is above the staff.
+ * The band is the FINGERING_ROOM renderSheet reserves above each system, so the page fit holds.
+ * Text-only: the worker has no DOM.
  * @param {string} svg a Verovio page, rendered with svgAdditionalAttribute fing@startid.
  * @param {number} unit the page's unit (half a staff space, tenths of a millimetre).
  */
@@ -83,7 +88,7 @@ export function withNoteHeightFingerings(svg, unit) {
         if (!note) continue;
         const chord = chordOf(note);
         const top = chord.reduce((high, other) => (other.y < high.y ? other : high), note);
-        anchors.set(match[1], { x: note.x, y: top.y, relative: top.y - top.staffTop, count: chord.length });
+        anchors.set(match[1], { x: note.x, y: top.y, staffTop: top.staffTop, relative: top.y - top.staffTop, count: chord.length });
     }
     if (!anchors.size) return svg;
     // Articulations (staccato dots, accents) above a note: the number goes above them.
@@ -91,16 +96,34 @@ export function withNoteHeightFingerings(svg, unit) {
         .map(match => ({ x: Number(match[1]), y: Number(match[2]) }));
     const relatives = [...anchors.values()].map(anchor => anchor.relative);
     const lowest = Math.max(...relatives), highest = Math.min(...relatives);
-    return svg.replace(/(<g [^>]*class="fing"[^>]*data-startid="#([^"]+)"[^>]*>\s*<text [^>]*?\by=")([\d.]+)(")/g, (whole, head, id, y, tail) => {
+    // Volta brackets: numbers under one stay below its hooks and its ending number.
+    const brackets = [...svg.matchAll(/class="ending[^"]*"[^>]*>[\s\S]*?<\/g>/g)].flatMap(group => {
+        const line = /<path d="M([\d.]+) ([\d.]+) L([\d.]+) \2"/.exec(group[0]);
+        if (!line) return [];
+        const ys = [...group[0].matchAll(/<path d="M[\d.]+ ([\d.]+) L[\d.]+ ([\d.]+)"/g), ...group[0].matchAll(/<text [^>]*\by="([\d.]+)"/g)]
+            .flatMap(m => m.slice(1).filter(Boolean).map(Number));
+        return [{ from: Number(line[1]), to: Number(line[3]), y: Math.max(...ys) }];
+    });
+    return svg.replace(/(<g [^>]*class="fing"[^>]*data-startid="#([^"]+)"[^>]*>\s*<text [^>]*?\by=")([\d.]+)("[\s\S]*?<tspan font-size="([1-9][\d.]*)px")/g, (whole, head, id, y, tail, fontSize) => {
         const anchor = anchors.get(id);
         if (!anchor) return whole;
-        const rise = lowest > highest ? (lowest - anchor.relative) / (lowest - highest) : 0;
+        const rise = lowest > highest ? (lowest - anchor.relative) / (lowest - highest) : 1;
         // Above the notehead (half a space above its centre), then the plugin's offsets.
         const above = articulations
             .filter(artic => Math.abs(artic.x - anchor.x) <= space && artic.y < anchor.y && artic.y > anchor.y - space * 3)
             .reduce((top, artic) => Math.min(top, artic.y - space * 0.6), anchor.y);
-        const wanted = Math.min(above, anchor.y) - space * (0.5 + FINGERING_GAP + (anchor.count - 1) * CHORD_STEP + rise * PITCH_RISE);
-        return head + Math.round(Math.max(Number(y), wanted)) + tail;
+        // In the band above the staff, by pitch; and clear of the note itself when it is higher.
+        const band = anchor.staffTop - space * (FINGERING_GAP + rise * FINGERING_ROOM);
+        const overNote = Math.min(above, anchor.y) - space * (0.5 + FINGERING_GAP + (anchor.count - 1) * CHORD_STEP);
+        let wanted = Math.min(band, overNote);
+        // Below a volta bracket over the note (a digit is about 0.72 of the font size tall).
+        const bottom = anchor.staffTop - space * FINGERING_GAP;
+        for (const bracket of brackets) {
+            if (anchor.x < bracket.from || anchor.x > bracket.to || bracket.y > bottom) continue;
+            wanted = Math.min(bottom, Math.max(wanted, bracket.y + Number(fontSize) * 0.72 + space * 0.3));
+        }
+        // Never higher than the room reserved above Verovio's own row.
+        return head + Math.round(Math.max(Number(y) - space * FINGERING_ROOM, wanted)) + tail;
     });
 }
 
@@ -164,13 +187,16 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
     // When nothing fits, smaller fingerings are tried, as the plugin shrinks the fingering font down
     // to 7 pt; a fingering scale the caller fixed is kept.
     const fingeringScales = Number.isFinite(layout.fingeringScale) ? [spacing.fingeringScale] : [0.9, 0.75, 0.6];
+    // Parts with fingerings get FINGERING_ROOM above each system for the numbers (and above the first).
+    const fingered = musicXml.includes('<fingering');
     const options = (unit, starts, natural) => ({
         pageWidth: tenths(area.widthMm), pageHeight: tenths(area.heightMm),
         // Room on the left for measure numbers at the start of a system.
-        pageMarginTop: 0, pageMarginRight: 0, pageMarginBottom: 0, pageMarginLeft: 15,
+        pageMarginTop: fingered ? Math.round(FINGERING_ROOM * 2 * unit) : 0, pageMarginRight: 0, pageMarginBottom: 0, pageMarginLeft: 15,
         unit, scale: 100, adjustPageHeight: natural, justifyVertically: !natural, minLastJustification: 0,
         breaks: starts ? 'line' : 'auto', header: 'none', footer: 'none',
         ...spacing,
+        spacingSystem: spacing.spacingSystem + (fingered ? FINGERING_ROOM : 0),
         svgViewBox: true, mmOutput: true, fontTextLiberation: true, svgRemoveXlink: false, xmlIdSeed: 1,
         // Links each fingering to its note, for withNoteHeightFingerings.
         svgAdditionalAttribute: ['fing@startid']
