@@ -1,0 +1,37 @@
+/* Ajuda: a section title over the home page's tools accordion, one item per
+   question, in a reading-width column. */
+.help {
+  max-width: 880px;
+  margin: 18px auto 0;
+}
+
+.help-intro {
+  font-size: 1.125rem;
+  line-height: 1.5;
+  margin: 0 0 32px;
+}
+
+/* Questions are longer than the home page's tool names. */
+.help-questions .accordion-button {
+  font-size: 1.25rem;
+  line-height: 1.3;
+  padding-block: 10px;
+}
+
+.help-questions .accordion-header {
+  margin: 0;
+}
+
+.help-questions .accordion-body p {
+  line-height: 1.5;
+}
+
+.help-questions .accordion-body a {
+  font-weight: 500;
+  text-decoration: underline !important;
+  text-decoration-color: var(--landing-yellow) !important;
+  text-decoration-thickness: 4px !important;
+  text-underline-offset: 2px;
+  /* An unbroken line, also under descenders like p and q. */
+  text-decoration-skip-ink: none;
+}

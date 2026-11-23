@@ -22,6 +22,9 @@ import { SongbookScorePage } from "./screens/songbooks/review/SongbookScorePage"
 
 import { ArticlePage } from "./screens/articles/ArticlePage";
 import { ArticlesPage } from "./screens/articles/ArticlesPage";
+import { ContributePage } from "./screens/contribute/ContributePage";
+import { AboutPage } from "./screens/about/AboutPage";
+import { HelpPage } from "./screens/help/HelpPage";
 import { HomePage } from "./screens/builder/HomePage";
 import { LandingChrome } from "./screens/landing/LandingChrome";
 import { LandingPage } from "./screens/landing/LandingPage";
@@ -83,6 +86,9 @@ function App() {
     pathname === ROUTE_PATTERNS.home ||
     pathname === ROUTE_PATTERNS.library ||
     pathname === ROUTE_PATTERNS.articles ||
+    pathname === ROUTE_PATTERNS.contribute ||
+    pathname === ROUTE_PATTERNS.about ||
+    pathname === ROUTE_PATTERNS.help ||
     pathname.startsWith(`${ROUTE_PATTERNS.articles}/`);
 
   useEffect(() => {
@@ -132,6 +138,24 @@ function App() {
           path={ROUTE_PATTERNS.article}
           element={
             <ArticlePage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
+          }
+        />
+        <Route
+          path={ROUTE_PATTERNS.help}
+          element={
+            <HelpPage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
+          }
+        />
+        <Route
+          path={ROUTE_PATTERNS.about}
+          element={
+            <AboutPage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
+          }
+        />
+        <Route
+          path={ROUTE_PATTERNS.contribute}
+          element={
+            <ContributePage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
           }
         />
         <Route path={ROUTE_PATTERNS.score} element={<ScorePage />} />
