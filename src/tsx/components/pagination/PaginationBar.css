@@ -30,5 +30,74 @@ input[type=number] {
   --bs-pagination-active-bg: var(--ds-yellow);
   --bs-pagination-active-border-color: var(--ds-ink);
   align-items: stretch;
+  gap: 2px;
+  /* Level with what sits beside it; space below is the page's to set. */
+  margin-bottom: 0;
+  /* The height of the row and its boxes. */
+  /* As tall as the Caderninho toolbar's boxes. */
+  --page-size: 45px;
+  /* The arrow images' corners: 10 of their 50 units, drawn at 41px. */
+  --page-radius: calc(41px * 10 / 50);
 }
-.paginationInfo .ds-field { height: auto; min-width: 48px; padding: var(--ds-space-1); }
+
+/* Bootstrap overlaps neighbouring borders by 1px; with the gap they stand apart. */
+.paginationInfo .page-item:not(:first-child) .page-link {
+  margin-left: 0;
+}
+
+/* Every box gets the arrows' rounded corners, not just the ends. */
+.paginationInfo .page-item {
+  display: flex;
+}
+
+/* Each box fills the row, so all match the page field's height. */
+.paginationInfo .page-item .page-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--page-radius);
+}
+.paginationInfo .ds-field { height: var(--page-size); min-width: 56px; padding: 0 var(--ds-space-1); border-radius: var(--page-radius); border-width: 1px; }
+
+/* The page field and the total. */
+.paginationInfo .page {
+  width: 56px !important;
+  font-size: var(--ds-text);
+}
+
+/* Prev/Next: bare chevrons, cropped to the arrow so "<" starts at the
+   list's left edge. They keep the size they had in the 50-unit image
+   (25.6 of 50 units of the row) and a little space toward the numbers. */
+.paginationInfo .page-arrow .page-link {
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.paginationInfo .page-arrow:first-child .page-link {
+  padding-right: 8px;
+}
+
+.paginationInfo .page-arrow:last-child .page-link {
+  padding-left: 8px;
+}
+
+.paginationInfo .page-arrow img {
+  display: block;
+  height: calc(var(--page-size) * 25.6 / 50);
+  /* The cropped image is 12.9 × 25.6 units. */
+  width: calc(var(--page-size) * 12.9 / 50);
+}
+
+.paginationInfo .page-arrow.disabled img {
+  opacity: 0.35;
+}
+
+/* The total pages: a gray box with no stroke (the border stays, clear, so it
+   keeps the page field's size). */
+.paginationInfo .page.disabled .page-link {
+  height: var(--page-size);
+  padding: 0;
+  border: var(--ds-border) solid transparent;
+}

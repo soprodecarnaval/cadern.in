@@ -18,6 +18,7 @@ import {
 } from "../../../../utils/songBookRows";
 import {
   SongbookSortableList,
+  type SectionsCollapsed,
   type SongbookSortableListHandle,
 } from "./SongbookSortableList";
 import { Sort } from "../../scores/Sort";
@@ -28,6 +29,15 @@ export interface SongBookTableProps {
   setItems: (rows: SongbookItemViewModel[]) => void;
   handleSelect: (song: ScoreViewModel, checked: boolean) => void;
   handleClear: () => void;
+  /** Off where "Criar seções por estilo" lives in a toolbar instead. */
+  showSectionsByStyle?: boolean;
+  /** Off where sorting lives in a toolbar instead; that toolbar then hears
+   * of songs moved by hand, which undo its sort. */
+  showSort?: boolean;
+  /** Off where adding a section lives in a toolbar instead. */
+  showAddSection?: boolean;
+  onManualReorder?: () => void;
+  onSectionsCollapsedChange?: (state: SectionsCollapsed) => void;
 }
 
 const SongBookTableView = forwardRef<
@@ -46,10 +56,18 @@ const SongBookTableView = forwardRef<
       setItems: setRows,
       handleSelect,
       handleClear,
+      showSectionsByStyle = true,
+      showSort = true,
+      showAddSection = true,
+      onManualReorder,
+      onSectionsCollapsedChange,
     },
     ref,
   ) => {
     const [newSection, setNewSection] = useState<string>("");
+    // The sort last applied; cleared when an item is moved by hand, since the
+    // list is then no longer in that order.
+    const [sortValue, setSortValue] = useState("");
 
     const onInputNewSection = (e: ChangeEvent<HTMLInputElement>) =>
       setNewSection(e.target.value);
@@ -88,67 +106,79 @@ const SongBookTableView = forwardRef<
 
     return (
       <>
-        <Row>
-          <Col xs={12} sm="auto">
-            <Sort
-              onSortBy={(col, dir) =>
-                setRows(sortSongsWithinSections(rows, col, dir))
-              }
-            />
-          </Col>
-          <Col>
-            <Form
-              className="d-flex justify-content-end gap-1 mb-2"
-              onSubmit={onSubmitNewSection}
-            >
-              <Col style={{ maxWidth: "200px" }}>
-                <Form.Control as={Input}
-                  type="text"
-                  onChange={onInputNewSection}
-                  value={newSection}
-                  aria-label="Adicionar seção"
-                  placeholder="Adicionar seção"
+        {(showSort || showAddSection) && (
+          <Row>
+            {showSort && (
+              <Col xs={12} sm="auto">
+                <Sort
+                  value={sortValue}
+                  onValueChange={setSortValue}
+                  onSortBy={(col, dir) =>
+                    setRows(sortSongsWithinSections(rows, col, dir))
+                  }
                 />
               </Col>
-              <Col xs="auto">
-                <Button
-                  onClick={createNewSection}
-                  className="px-0"
-                  // Square: as wide as Bootstrap's input/button height.
-                  style={{ width: "calc(1.5em + 0.75rem + 2px)" }}
-                  aria-label="Adicionar seção"
-                  title="Adicionar seção"
+            )}
+            {showAddSection && (
+              <Col>
+                <Form
+                  className="d-flex justify-content-end gap-1 mb-2"
+                  onSubmit={onSubmitNewSection}
                 >
-                  +
-                </Button>
+                  <Col style={{ maxWidth: "200px" }}>
+                    <Form.Control as={Input}
+                      type="text"
+                      onChange={onInputNewSection}
+                      value={newSection}
+                      aria-label="Adicionar seção"
+                      placeholder="Adicionar seção"
+                    />
+                  </Col>
+                  <Col xs="auto">
+                    <Button
+                      onClick={createNewSection}
+                      className="px-0"
+                      // Square, as tall as the field beside it (.ds-field, 48px).
+                      style={{ width: "48px", height: "48px", padding: 0, fontSize: "28px", lineHeight: 1 }}
+                      aria-label="Adicionar seção"
+                      title="Adicionar seção"
+                    >
+                      +
+                    </Button>
+                  </Col>
+                </Form>
               </Col>
-            </Form>
-          </Col>
-        </Row>
+            )}
+          </Row>
+        )}
         <SongbookSortableList
           Card={Card}
           songbookProjectId={songbookProjectId}
           ref={ref}
           rows={rows}
-          onReorder={setRows}
+          onRename={setRows}
+          onReorder={(reordered) => {
+            setRows(reordered);
+            setSortValue("");
+            onManualReorder?.();
+          }}
           onDelete={(index) => setRows(deleteRow(rows, index))}
           onSelect={handleSelect}
           onUpdate={handleUpdateScore}
+          onSectionsCollapsedChange={onSectionsCollapsedChange}
         />
-        <Row className="mt-4">
-          <Col>
-            <p>
-              {rows.filter(isSongbookSection).length} seções e{" "}
-              {rows.filter((r) => !isSongbookSection(r)).length} músicas
-            </p>
-          </Col>
-        </Row>
-        <div className="d-flex justify-content-between gap-2">
-          <Button onClick={() => setRows(generateSectionsByStyle(rows))}>
-            Criar seções por estilo
-          </Button>
+        <div className="d-flex justify-content-between align-items-center gap-2 mt-4">
+          <p className="m-0">
+            {rows.filter(isSongbookSection).length} seções e{" "}
+            {rows.filter((r) => !isSongbookSection(r)).length} músicas
+          </p>
           <Button onClick={handleClear}>Limpar tudo</Button>
         </div>
+        {showSectionsByStyle && (
+          <Button className="mt-3" onClick={() => setRows(generateSectionsByStyle(rows))}>
+            Criar seções por estilo
+          </Button>
+        )}
       </>
     );
   },
