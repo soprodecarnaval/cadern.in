@@ -101,24 +101,34 @@ export const FingeringSize: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const size = canvas.getByRole("spinbutton", { name: "Tamanho dos números" });
-    const increase = canvas.getByRole("button", { name: "Aumentar: Tamanho dos números" });
-    const decrease = canvas.getByRole("button", { name: "Diminuir: Tamanho dos números" });
-    const controls = within(canvas.getByRole("group", { name: "Tamanho dos números" }));
-    await expect(size).toHaveValue(null);
-    await expect(size).toHaveAttribute("placeholder", "auto");
-    await expect(increase).toBeDisabled();
-    await userEvent.selectOptions(canvas.getByLabelText("Ajustar"), "2");
-    await expect(controls.getByRole("radio", { name: "Automático" })).toBeChecked();
-    await expect(size).toHaveValue(0.75);
-    await userEvent.click(increase);
-    await expect(controls.getByRole("radio", { name: "Fixo" })).toBeChecked();
-    await expect(size).toHaveValue(0.8);
-    await userEvent.click(decrease);
-    await expect(size).toHaveValue(0.75);
-    await userEvent.click(controls.getByRole("radio", { name: "Automático" }));
-    await expect(size).toHaveValue(0.75);
-    await expect(size).toHaveAttribute("readonly");
+    const size = () => canvas.getByRole("spinbutton", { name: "Tamanho dos números" });
+    const mode = (name: string) => within(canvas.getByRole("group", { name: "Tamanho dos números" })).getByRole("radio", { name });
+    const adjust = (direction: "Aumentar" | "Diminuir") => canvas.getByRole("button", { name: `${direction}: Tamanho dos números` });
+
+    await expect(canvas.getByLabelText("Ajustar")).toHaveValue("");
+    await expect(canvas.queryByRole("spinbutton", { name: "Tamanho dos números" })).toBeNull();
+    await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
+    await expect(mode("Automático")).toBeChecked();
+    await expect(size()).toHaveValue(0.75);
+    await userEvent.click(adjust("Aumentar"));
+    await expect(mode("Fixo")).toBeChecked();
+    await expect(size()).toHaveValue(0.8);
+
+    await userEvent.click(canvas.getByRole("tab", { name: "Tuba" }));
+    await expect(mode("Automático")).toBeChecked();
+    await expect(size()).toHaveValue(0.9);
+    await userEvent.click(adjust("Diminuir"));
+    await expect(size()).toHaveValue(0.85);
+
+    await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
+    await expect(size()).toHaveValue(0.8);
+    await userEvent.click(mode("Automático"));
+    await expect(size()).toHaveValue(0.75);
+    await expect(size()).toHaveAttribute("readonly");
+
+    await userEvent.click(canvas.getByRole("tab", { name: "Tuba" }));
+    await expect(mode("Fixo")).toBeChecked();
+    await expect(size()).toHaveValue(0.85);
   },
 };
 

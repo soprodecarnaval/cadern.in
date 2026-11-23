@@ -21,6 +21,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const FIRESTORE = `http://${process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080'}/v1/projects/${PROJECT}/databases/(default)/documents/`;
 const AUTH = `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST ?? '127.0.0.1:9099'}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}`;
 const ADMIN = { Authorization: 'Bearer owner' };
+const sizedParts = [[/^Trompete/, "1.25"], [/^Tuba/, "0.65"]];
 const SCORE = resolve('test-scores/all-instruments.mscz');
 
 const run = (command, args, env = {}) => new Promise((done, fail) => {
@@ -81,8 +82,34 @@ async function sendThroughScreen(page, { file, tweak = false } = {}) {
     await page.getByRole('button', { name: /^Formatar/ }).click();
     await page.waitForFunction(() => document.querySelectorAll('.enviar-preview img').length > 0 && !document.querySelector('.enviar-preview[aria-busy=true]'), null, { timeout: 300000 });
     if (tweak) {
-        await page.getByRole('radio', { name: 'Fixo' }).first().check();
-        await page.waitForFunction(() => !document.querySelector('.enviar-preview[aria-busy=true]'), null, { timeout: 120000 });
+        const sizeControls = page.getByRole('group', { name: 'Tamanho dos números' });
+        const sizeInput = sizeControls.getByRole('spinbutton');
+        const preview = page.locator('.enviar-preview img');
+        const selectPart = async (name) => {
+            await page.getByRole('tab', { name }).first().click();
+            await preview.waitFor();
+            await page.locator('.enviar-preview[aria-busy=false]').waitFor();
+            return page.locator('.enviar-sheet-instrument').innerText();
+        };
+        const original = new Map();
+        for (const [name] of sizedParts) {
+            original.set(await selectPart(name), await preview.getAttribute('src'));
+        }
+        for (const [part, size] of sizedParts) {
+            const name = await selectPart(part);
+            assert.equal(await preview.getAttribute('src'), original.get(name), 'other parts keep their preview');
+            assert(await sizeControls.getByRole('radio', { name: 'Automático' }).isChecked());
+            await sizeControls.getByRole('radio', { name: 'Fixo' }).check();
+            await sizeInput.fill(size);
+            await page.waitForFunction(({ previous }) => {
+                const img = document.querySelector('.enviar-preview[aria-busy=false] img');
+                return img && img.getAttribute('src') !== previous;
+            }, { previous: original.get(name) });
+        }
+        for (const [name, size] of sizedParts) {
+            await selectPart(name);
+            assert.equal(await sizeInput.inputValue(), size);
+        }
     }
     await page.getByRole('button', { name: 'Continuar' }).click();
     await page.waitForFunction(() => document.querySelector('.enviar-summary') || document.querySelector('[role=alert]'), null, { timeout: 60000 });
@@ -119,7 +146,12 @@ try {
         }
         const metajson = await (await fetch(str(data.metajson.mapValue.fields.url))).json();
         assert.equal(metajson.version, 2);
-        assert.equal(typeof metajson.formatting?.staffSize, 'number', 'the formatting change is recorded');
+        assert.equal(metajson.formatting?.fingering?.size, undefined);
+        for (const [pattern, size] of sizedParts) {
+            const name = parts.map(part => str(part.name)).find(name => pattern.test(name));
+            assert(name, `saved part for ${pattern}`);
+            assert.equal(metajson.formatting.parts[name].fingering.size, Number(size));
+        }
         assert.match(metajson.renderer?.manifestSha256 ?? '', /^[0-9a-f]{64}$/);
         const svg = await (await fetch(str(parts[0].svg.arrayValue.values[0].mapValue.fields.url))).text();
         assert(!svg.includes('@font-face {\n    font-family: "Liberation"'), 'stored pages do not embed the shared fonts');

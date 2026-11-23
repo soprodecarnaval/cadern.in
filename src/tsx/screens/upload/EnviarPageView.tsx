@@ -288,16 +288,7 @@ function Controls({ state, onProfile, onEditing }: Pick<EnviarPageViewProps, "st
   const settings = formattingOf(state.profile, partName);
   const change = (patch: PartFormatting) => onProfile(withFormatting(state.profile, partName, patch));
   const included = state.rows.filter((row) => row.include && row.instrument);
-  const fingeringRows = (editingRow ? [editingRow] : included).filter((row) => row.fingerings);
-  const families = new Set(fingeringRows.map((row) => row.family));
-  const previewScales = fingeringRows.map((row) => {
-    const preview = state.previews[row.ordinal];
-    if (preview?.rendering || preview?.error || typeof formattingOf(state.profile, row.name).fingering?.size === "number") {
-      return undefined;
-    }
-    return preview?.automaticFingeringSize;
-  });
-  const automaticSize = previewScales.every((scale) => scale === previewScales[0]) ? previewScales[0] : undefined;
+  const families = new Set((editingRow ? [editingRow] : included).filter((row) => row.fingerings).map((row) => row.family));
   const notation = settings.fingering?.notation ?? "positions";
   return (
     <form className="enviar-controls" onSubmit={(event) => event.preventDefault()} aria-label="Formatação">
@@ -326,10 +317,6 @@ function Controls({ state, onProfile, onEditing }: Pick<EnviarPageViewProps, "st
               <span className="form-check-label">Trombone dinâmico (posições alternativas)</span>
             </label>
           )}
-          <AutoNumber label="Tamanho dos números" name="fingering-size" value={settings.fingering?.size}
-            min={FINGERING_SIZE.min} max={FINGERING_SIZE.max} step={FINGERING_SIZE.step}
-            fingeringSize={{ automatic: automaticSize }}
-            onChange={(size) => change({ fingering: { size } })} />
         </>
       )}
       <fieldset className="enviar-choice">
@@ -390,7 +377,7 @@ function PreviewCard({ row, preview, title, midi, onEditing, onListen, MidiPlaye
 }
 
 function FormatStep(props: EnviarPageViewProps) {
-  const { state, onStep, onEditing, onListen, components } = props;
+  const { state, onStep, onEditing, onListen, onProfile, components } = props;
   const included = state.rows.filter((row) => row.include && row.instrument);
   const rendering = included.some((row) => state.previews[row.ordinal]?.rendering);
   // One part at a time; picking a part to adjust shows it.
@@ -399,6 +386,7 @@ function FormatStep(props: EnviarPageViewProps) {
     if (state.editing !== null) {setShown(state.editing);}
   }, [state.editing]);
   const shownRow = included.find((row) => row.ordinal === shown) ?? included[0];
+  const shownPreview = shownRow && state.previews[shownRow.ordinal];
   return (
     <section aria-labelledby="enviar-formatacao">
       <h2 id="enviar-formatacao" tabIndex={-1}>Formatação</h2>
@@ -417,7 +405,14 @@ function FormatStep(props: EnviarPageViewProps) {
                 return { key: String(row.ordinal), label: row.name, note: preview?.rendering ? "…" : warned ? "⚠" : undefined };
               })}
             >
-              <PreviewCard row={shownRow} preview={state.previews[shownRow.ordinal]} title={state.title}
+              {shownRow.fingerings && (
+                <AutoNumber key={shownRow.ordinal} label="Tamanho dos números" name="fingering-size"
+                  value={formattingOf(state.profile, shownRow.name).fingering?.size}
+                  min={FINGERING_SIZE.min} max={FINGERING_SIZE.max} step={FINGERING_SIZE.step}
+                  fingeringSize={{ automatic: shownPreview?.rendering || shownPreview?.error ? undefined : shownPreview?.automaticFingeringSize }}
+                  onChange={(size) => onProfile(withFormatting(state.profile, shownRow.name, { fingering: { size } }))} />
+              )}
+              <PreviewCard row={shownRow} preview={shownPreview} title={state.title}
                 midi={state.midi[shownRow.ordinal]} onEditing={onEditing} onListen={onListen} MidiPlayer={components.MidiPlayer} />
             </PartTabs>
           )}
