@@ -25,6 +25,8 @@ export interface SongbookSortableListHandle {
   handleDragEnd: (event: DragEndEvent) => void;
   /** Where an incoming (not-yet-in-list) score should land, given the drop target. */
   resolveIncomingDrop: (operation: DragEndEvent["operation"]) => number;
+  /** Collapses every section that has songs, or expands them all. */
+  setAllSectionsCollapsed: (collapse: boolean) => void;
   label: (id: string | number | undefined) => string;
   instructions: Record<string, string>;
   announcements: {
@@ -33,6 +35,8 @@ export interface SongbookSortableListHandle {
     dragend: (event: DragEndEvent) => string;
   };
 }
+
+export type SectionsCollapsed = "none" | "all" | "some";
 
 function EmptySongbookDropzone() {
   const { ref } = useDroppable({ id: SONGBOOK_APPEND_ID, data: { group: "songbook" } });
@@ -48,16 +52,62 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
   rows: SongbookItemViewModel[];
   songbookProjectId?: string;
   onReorder: (rows: SongbookItemViewModel[]) => void;
+  /** The rows with one section renamed. */
+  onRename: (rows: SongbookItemViewModel[]) => void;
   onDelete: (index: number) => void;
   onSelect: (score: ScoreViewModel, checked: boolean) => void;
   onUpdate: (index: number, update: ScoreEditUpdate) => void;
-}>(function SongbookSortableList({ Card, songbookProjectId, rows, onReorder, onDelete, onSelect, onUpdate }, ref) {
-  const entries = useSongbookEditorItems(rows);
+  /** Told whether every section with songs is collapsed ("none" when no
+   * section has songs), for a collapse/expand-all control. */
+  onSectionsCollapsedChange?: (state: SectionsCollapsed) => void;
+}>(function SongbookSortableList({ Card, songbookProjectId, rows, onReorder, onRename, onDelete, onSelect, onUpdate, onSectionsCollapsedChange }, ref) {
+  const { entries, keepSectionId } = useSongbookEditorItems(rows);
+  const renameSection = (index: number, title: string) => {
+    const section = rows[index];
+    if (section.type !== "section") { return; }
+    const renamed = { ...section, title };
+    keepSectionId(section, renamed);
+    onRename(rows.map((row, i) => (i === index ? renamed : row)));
+  };
   const container = useRef<HTMLDivElement>(null);
   const [preparingId, setPreparingId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [keyboardDrag, setKeyboardDrag] = useState(false);
   const [drop, setDrop] = useState<DropPosition | null>(null);
+  // Sections whose songs are hidden, by entry id. Not remembered on reload.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const toggleCollapsed = (id: string) => setCollapsed((previous) => {
+    const next = new Set(previous);
+    if (!next.delete(id)) { next.add(id); }
+    return next;
+  });
+  /** Opens the section that row `index` of `list` falls in, if collapsed, so
+   * a song dropped into it stays in view. */
+  const expandSectionAt = (list: SongbookItemViewModel[], index: number) => {
+    let start = Math.min(index, list.length - 1);
+    while (start >= 0 && list[start].type !== "section") { start--; }
+    const id = start >= 0 ? entries.find((entry) => entry.item === list[start])?.id : undefined;
+    if (id && collapsed.has(id)) { toggleCollapsed(id); }
+  };
+  /** The section each row sits under (its own index for a section), or -1. */
+  const sectionOf = useMemo(() => {
+    let current = -1;
+    return rows.map((row, index) => (row.type === "section" ? (current = index) : current));
+  }, [rows]);
+  /** Ids of the sections that have songs: the ones that can collapse. */
+  const collapsibleIds = useMemo(() => entries
+    .filter((entry, index) => entry.item.type === "section" && rows[index + 1] !== undefined &&
+      rows[index + 1].type !== "section")
+    .map((entry) => entry.id), [entries, rows]);
+  const sectionsCollapsed: SectionsCollapsed = collapsibleIds.length === 0 ? "none"
+    : collapsibleIds.every((id) => collapsed.has(id)) ? "all" : "some";
+  useEffect(() => {
+    onSectionsCollapsedChange?.(sectionsCollapsed);
+  }, [sectionsCollapsed, onSectionsCollapsedChange]);
+  const setAllSectionsCollapsed = (collapse: boolean) =>
+    setCollapsed(collapse ? new Set(collapsibleIds) : new Set());
+  const hiddenAt = (index: number) => rows[index].type !== "section" && sectionOf[index] >= 0 &&
+    collapsed.has(entries[sectionOf[index]].id);
   const draggedIndex = entries.findIndex((entry) => entry.id === (activeId ?? preparingId));
   const draggedRange = songbookDragRange(rows, draggedIndex);
   const sectionDrag = rows[draggedIndex]?.type === "section";
@@ -100,6 +150,19 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
    * entry (score card or section), matching SortableSongbookRow's outer div. */
   const entryElements = () => [...(container.current?.children ?? [])] as HTMLElement[];
 
+  /** Top and bottom of a section's rows on screen, skipping songs hidden by a
+   * collapsed section. */
+  const groupBounds = (group: { start: number; end: number }) => {
+    const ids = new Set(entries.slice(group.start, group.end).map((entry) => entry.id));
+    const shown = entryElements().filter((el) =>
+      ids.has(el.dataset.editorId ?? "") && el.getClientRects().length > 0);
+    if (shown.length === 0) { return null; }
+    return {
+      top: shown[0].getBoundingClientRect().top,
+      bottom: shown[shown.length - 1].getBoundingClientRect().bottom,
+    };
+  };
+
   const destination = (operation: DragEndEvent["operation"]): DropPosition | null => {
     const { source, target, position, activatorEvent } = operation;
     if (!source || !target || source.id === target.id) { return null; }
@@ -115,12 +178,9 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
     if (to >= range.start && to < range.end) { return null; }
     if (rows[from].type === "section") {
       const group = songbookSectionRange(rows, to)!;
-      const elements = entryElements();
-      const first = elements.find((el) => el.dataset.editorId === entries[group.start].id);
-      const last = elements.find((el) => el.dataset.editorId === entries[group.end - 1].id);
-      if (!first || !last) { return null; }
-      const top = first.getBoundingClientRect().top;
-      const bottom = last.getBoundingClientRect().bottom;
+      const bounds = groupBounds(group);
+      if (!bounds) { return null; }
+      const { top, bottom } = bounds;
       const edge = rows[group.start].type !== "section" ? "after"
         : keyboard ? (to > from ? "after" : "before")
         : point.y >= (top + bottom) / 2 ? "after" : "before";
@@ -146,6 +206,11 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
   /** Where an incoming score (not yet in `rows`) should land — same edge
    * geometry as destination(), without the from/carried-range exclusion. */
   const resolveIncomingDrop = (operation: DragEndEvent["operation"]): number => {
+    const index = incomingDropIndex(operation);
+    expandSectionAt(rows, index - 1);
+    return index;
+  };
+  const incomingDropIndex = (operation: DragEndEvent["operation"]): number => {
     const target = operation.target;
     if (!target || target.id === SONGBOOK_APPEND_ID) { return rows.length; }
     const to = entries.findIndex((entry) => entry.id === target.id);
@@ -153,11 +218,7 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
     const point = operation.position.current;
     if (rows[to].type === "section") {
       const group = songbookSectionRange(rows, to)!;
-      const elements = entryElements();
-      const first = elements.find((el) => el.dataset.editorId === entries[group.start].id);
-      const last = elements.find((el) => el.dataset.editorId === entries[group.end - 1].id);
-      const top = first?.getBoundingClientRect().top ?? 0;
-      const bottom = last?.getBoundingClientRect().bottom ?? 0;
+      const { top, bottom } = groupBounds(group) ?? { top: 0, bottom: 0 };
       const edge = rows[group.start].type !== "section" ? "after"
         : point.y >= (top + bottom) / 2 ? "after" : "before";
       return destinationForIncomingScore(rows, entries, target.id, edge);
@@ -211,7 +272,12 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
     if (next && operation.source) {
       const from = entries.findIndex((entry) => entry.id === operation.source?.id);
       const reordered = moveSongbookEntry(rows, from, next.boundary);
-      if (reordered !== rows) { onReorder(reordered); }
+      if (reordered !== rows) {
+        if (rows[from].type === "score") {
+          expandSectionAt(reordered, reordered.indexOf(rows[from]));
+        }
+        onReorder(reordered);
+      }
     }
     setActiveId(null);
     setPreparingId(null);
@@ -221,14 +287,20 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
 
   useImperativeHandle(ref, () => ({
     handleDragStart, handleDragMove, handleDragOver, handleDragEnd,
-    resolveIncomingDrop, label, instructions, announcements,
+    resolveIncomingDrop, setAllSectionsCollapsed, label, instructions, announcements,
   }));
+
+  // Above the list, in a card's slot, until there are songs; then below them.
+  const hasSongs = rows.some((row) => row.type !== "section");
+  const tip = (
+    <p className={`songbook-tip text-muted small lh-sm${hasSongs ? " is-below" : ""}`}>
+      Arraste a música ou seção para alterar a ordem. No teclado, use Espaço, setas e Esc.
+    </p>
+  );
 
   return (
     <>
-      <p className="songbook-tip text-muted small lh-sm">
-        Arraste a música ou seção para alterar a ordem. No teclado, use Espaço, setas e Esc.
-      </p>
+      {!hasSongs && tip}
       <div ref={container} className="songbook-card-list" role="list"
         aria-label="Músicas e seções do caderninho">
         {entries.map((entry, index) => (
@@ -240,12 +312,17 @@ export const SongbookSortableList = forwardRef<SongbookSortableListHandle, {
             scoreCount={entry.item.type === "section" ? songbookDragRange(rows, index)!.end - index - 1 : 0}
             emptySection={entry.item.type === "section" && (!entries[index + 1] || entries[index + 1].item.type === "section")}
             insertion={drop?.target === entry.id ? drop.edge : undefined}
+            collapsed={collapsed.has(entry.id)}
+            hidden={hiddenAt(index)}
+            onToggleCollapsed={() => toggleCollapsed(entry.id)}
+            onRename={(title) => renameSection(index, title)}
             onPrepareDrag={(keyboard) => prepareDrag(entry.id, keyboard)}
             onDelete={() => onDelete(index)} onSelect={onSelect}
             onUpdate={(update) => onUpdate(index, update)} />
         ))}
         {entries.length === 0 && <EmptySongbookDropzone />}
       </div>
+      {hasSongs && tip}
     </>
   );
 });
