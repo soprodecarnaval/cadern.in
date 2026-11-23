@@ -39,6 +39,14 @@ describe("withNoteHeightFingerings", () => {
     expect(tight.f1).toBe(1000 - 200);
   });
 
+  it("enlarges fingering text beyond Verovio's limit while preserving other text", () => {
+    const otherText = '<text><tspan font-size="290px">Tempo</tspan></text>';
+    const svg = withNoteHeightFingerings(page(otherText), 5, 1.5);
+    expect(svg.match(/font-size="435px"/g)).toHaveLength(3);
+    expect(svg).toContain(otherText);
+    expect(ys(svg)).toEqual(ys(withNoteHeightFingerings(page(), 5)));
+  });
+
   it("leaves pages without fingerings alone", () => {
     expect(withNoteHeightFingerings("<svg/>", 5)).toBe("<svg/>");
   });

@@ -55,6 +55,8 @@ const FINGERING_GAP = 0.6, CHORD_STEP = 2.3;
 // Staff spaces reserved above every system of a part with fingerings: the band the numbers float
 // in, from just above the top line (lowest notes) to FINGERING_ROOM higher (highest notes).
 export const FINGERING_ROOM = 2;
+// Verovio 6.4 rejects fingeringScale above 1 and uses its default of 0.75.
+const VEROVIO_FINGERING_MAX = 1;
 
 /**
  * Moves each fingering of a drawn page from Verovio's common row into a band above the staff: never
@@ -64,9 +66,15 @@ export const FINGERING_ROOM = 2;
  * Text-only: the worker has no DOM.
  * @param {string} svg a Verovio page, rendered with svgAdditionalAttribute fing@startid.
  * @param {number} unit the page's unit (half a staff space, tenths of a millimetre).
+ * @param {number} [fontMultiplier] extra scaling beyond Verovio's supported range.
  */
-export function withNoteHeightFingerings(svg, unit) {
+export function withNoteHeightFingerings(svg, unit, fontMultiplier = 1) {
     if (!svg.includes('class="fing"')) return svg;
+    if (fontMultiplier > 1) {
+        svg = svg.replace(/<g\b[^>]*\bclass="fing"[^>]*>\s*<text\b[^>]*>[\s\S]*?<\/text>/g, text =>
+            text.replace(/(<tspan\b[^>]*\bfont-size=")([\d.]+)px"/g, (_, head, size) =>
+                head + Math.round(Number(size) * fontMultiplier) + 'px"'));
+    }
     const space = unit * 20; // staff space in the page's definition units (0.01 mm)
     // Noteheads, in document order, with the top line of the staff they belong to.
     const notes = new Map(), byStaff = [];
@@ -189,14 +197,18 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
     const fingeringScales = Number.isFinite(layout.fingeringScale) ? [spacing.fingeringScale] : [0.9, 0.75, 0.6];
     // Parts with fingerings get FINGERING_ROOM above each system for the numbers (and above the first).
     const fingered = musicXml.includes('<fingering');
+    const fontMultiplier = () => Math.max(1, spacing.fingeringScale / VEROVIO_FINGERING_MAX);
+    // At scale 1 the digits are about 1.6 staff spaces tall. Reserve room for the extra height.
+    const fingeringRoom = () => fingered ? FINGERING_ROOM + 1.7 * (fontMultiplier() - 1) : 0;
     const options = (unit, starts, natural) => ({
         pageWidth: tenths(area.widthMm), pageHeight: tenths(area.heightMm),
         // Room on the left for measure numbers at the start of a system.
-        pageMarginTop: fingered ? Math.round(FINGERING_ROOM * 2 * unit) : 0, pageMarginRight: 0, pageMarginBottom: 0, pageMarginLeft: 15,
+        pageMarginTop: Math.round(fingeringRoom() * 2 * unit), pageMarginRight: 0, pageMarginBottom: 0, pageMarginLeft: 15,
         unit, scale: 100, adjustPageHeight: natural, justifyVertically: !natural, minLastJustification: 0,
         breaks: starts ? 'line' : 'auto', header: 'none', footer: 'none',
         ...spacing,
-        spacingSystem: spacing.spacingSystem + (fingered ? FINGERING_ROOM : 0),
+        fingeringScale: Math.min(spacing.fingeringScale, VEROVIO_FINGERING_MAX),
+        spacingSystem: spacing.spacingSystem + fingeringRoom(),
         svgViewBox: true, mmOutput: true, fontTextLiberation: true, svgRemoveXlink: false, xmlIdSeed: 1,
         // Links each fingering to its note, for withNoteHeightFingerings.
         svgAdditionalAttribute: ['fing@startid']
@@ -211,7 +223,7 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
     };
     const result = () => {
         const pages = [];
-        for (let n = 1; n <= tk.getPageCount(); n++) pages.push(withNoteHeightFingerings(withoutPlaceholders(tk.renderToSVG(n, false)), current.unit));
+        for (let n = 1; n <= tk.getPageCount(); n++) pages.push(withNoteHeightFingerings(withoutPlaceholders(tk.renderToSVG(n, false)), current.unit, fontMultiplier()));
         const { unit, starts } = current;
         const count = pages.reduce((sum, page) => sum + systems(page), 0);
         // Height the music needs, for the fill ratio: the lowest horizontal line (staff or ledger
