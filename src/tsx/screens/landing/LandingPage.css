@@ -48,6 +48,14 @@
   flex: 1;
 }
 
+/* The page's content lines up with the header's: the same 1440px width and
+   side gutter. Pages that set their own narrower width (forms) keep it. */
+.landing-chrome-body > .container:not([style*="max-width"]) {
+  --landing-gutter: clamp(16px, 3.23vw, 46.5px);
+  max-width: 1440px;
+  padding-inline: var(--landing-gutter);
+}
+
 .landing.landing-chrome-bar {
   min-height: 0;
 }
@@ -836,4 +844,63 @@
 .landing :is(a, button, input):focus-visible {
   outline: var(--ds-border) solid var(--ds-ink);
   outline-offset: 3px;
+}
+
+/* A list page's filters on the left, ordering on the right (Artigos,
+   Biblioteca). */
+.landing-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin-bottom: 32px;
+}
+
+.landing-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Like the header's "Entrar" button; the chosen one fills yellow. */
+.landing .landing-filter {
+  border: 2px solid var(--landing-ink);
+  border-radius: 8px;
+  background: none;
+  padding: 2px 16px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.landing .landing-filter:hover,
+.landing .landing-filter.is-active {
+  background: var(--landing-yellow);
+}
+
+.landing-order {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px;
+}
+
+.landing-order select {
+  appearance: none;
+  border: 2px solid var(--landing-ink);
+  border-radius: 8px;
+  padding: 2px 40px 2px 14px;
+  background: url("../../../assets/brand/chevron-down.svg") right 12px center / 16px
+    no-repeat;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.landing-order select:focus-visible,
+.landing .landing-filter:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--landing-yellow);
 }

@@ -1,0 +1,71 @@
+/* Every published songbook: the home page's carousel notebooks, laid out in
+   rows instead of one scrolling line. */
+
+/* The search box above sets the space. */
+.library-title {
+  margin-top: 0;
+}
+
+/* The newest songbooks under a section title, as on the home page: the
+   title's own margin spaces the carousel. */
+.library-highlights {
+  margin-top: 30px;
+}
+
+.library-highlights .landing-carousel {
+  margin-top: 0;
+}
+
+/* Below the carousel, the search box gets the same space above as below. */
+.library-highlights + .landing-search {
+  margin-top: 56px;
+}
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 48px 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.library-grid > li {
+  display: flex;
+}
+
+/* The carousel's notebook fills its cell, with a caption below. */
+.landing .library-caderno {
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.library-caderno-title {
+  margin-top: 14px;
+  font-size: var(--ds-text);
+  font-weight: var(--ds-weight-heading);
+  line-height: 1.2;
+}
+
+.library-caderno-meta {
+  margin-top: 4px;
+  color: var(--ds-text-secondary);
+  font-size: var(--ds-caption);
+}
+
+.library-caderno:hover .library-caderno-title {
+  text-decoration: underline;
+  text-decoration-color: var(--landing-yellow);
+  text-decoration-thickness: 4px;
+  text-underline-offset: 3px;
+}
+
+.library-caderno:focus-visible {
+  outline: none;
+}
+
+.library-caderno:focus-visible .landing-caderno-cover {
+  box-shadow: 0 0 0 4px var(--landing-yellow);
+}

@@ -1,6 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
-import { AppNavigation } from "./components/navigation/AppNavigation";
 import { AuthModal } from "./screens/auth/AuthModal";
 import { ProfileModal } from "./screens/account/ProfileModal";
 import type { ProfileTab } from "./screens/account/ProfileModalView";
@@ -29,6 +28,7 @@ import { HelpPage } from "./screens/help/HelpPage";
 import { HomePage } from "./screens/builder/HomePage";
 import { LandingChrome } from "./screens/landing/LandingChrome";
 import { LandingPage } from "./screens/landing/LandingPage";
+import { LibraryPage } from "./screens/library/LibraryPage";
 
 /** Year-only URLs belonged to the old static songbook pages. Project slugs
     cannot use them. Until each static page is removed, the static file wins;
@@ -80,11 +80,11 @@ function App() {
   };
   const [inboxCount, setInboxCount] = useState(0);
   const { currentUser, pendingUser } = useAuth();
-  // The landing, article and Montar pages draw the landing header and footer.
+  // Pages that draw their own header and footer do not need LandingChrome.
   const { pathname } = useLocation();
-  const isLanding =
+  const drawsOwnChrome =
     pathname === ROUTE_PATTERNS.home ||
-    pathname === ROUTE_PATTERNS.builder ||
+    pathname === ROUTE_PATTERNS.library ||
     pathname === ROUTE_PATTERNS.articles ||
     pathname === ROUTE_PATTERNS.contribute ||
     pathname === ROUTE_PATTERNS.about ||
@@ -107,17 +107,7 @@ function App() {
     }
   }, [pendingUser]);
 
-  return (
-    <>
-      {!isLanding && (
-        <AppNavigation
-          currentUser={currentUser}
-          collabEnabled={FEATURE_FLAG_COLLAB_FLOW}
-          inboxCount={inboxCount}
-          onOpenUserModal={() => openUserModal()}
-        />
-      )}
-
+  const routes = (
       <Routes>
         <Route
           path={ROUTE_PATTERNS.home}
@@ -130,13 +120,12 @@ function App() {
         />
         <Route
           path={ROUTE_PATTERNS.builder}
+          element={<HomePage onRequestLogin={() => openUserModal()} />}
+        />
+        <Route
+          path={ROUTE_PATTERNS.library}
           element={
-            <LandingChrome
-              inboxCount={inboxCount}
-              onOpenUserModal={openUserModal}
-            >
-              <HomePage onRequestLogin={() => openUserModal()} />
-            </LandingChrome>
+            <LibraryPage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
           }
         />
         <Route
@@ -219,6 +208,17 @@ function App() {
         )}
         <Route path="*" element={<FallbackRoute />} />
       </Routes>
+  );
+
+  return (
+    <>
+      {drawsOwnChrome ? (
+        routes
+      ) : (
+        <LandingChrome inboxCount={inboxCount} onOpenUserModal={openUserModal}>
+          {routes}
+        </LandingChrome>
+      )}
 
       {currentUser ? (
         <ProfileModal

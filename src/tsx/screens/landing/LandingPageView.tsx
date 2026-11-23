@@ -18,6 +18,7 @@ import {
   aboutPath,
   contributePath,
   helpPath,
+  libraryPath,
   publicSongbookPath,
   projectsPath,
   scorePath,
@@ -48,7 +49,6 @@ export type LandingSongbooks =
 // Pages the design links to that don't exist yet. They fall through to the
 // "not found" page until they're built.
 const PLANNED = {
-  biblioteca: "/biblioteca",
   carnaval: "/2027",
   favoritos: "/favoritos",
 };
@@ -62,8 +62,18 @@ const STATIC = {
 const MAX_SEARCH_RESULTS = 8;
 const EXPORTER_ANCHOR = "exportador";
 
-export function SectionTitle({ children }: { children: ReactNode }) {
-  return <h2 className="landing-section-title">{children}</h2>;
+export function SectionTitle({
+  id,
+  children,
+}: {
+  id?: string;
+  children: ReactNode;
+}) {
+  return (
+    <h2 id={id} className="landing-section-title">
+      {children}
+    </h2>
+  );
 }
 
 export function MoreLink({ to, children }: { to: string; children: ReactNode }) {
@@ -140,7 +150,7 @@ export function LandingPageView({
         */}
 
         <SongbookCarousel songbooks={songbooks} />
-        <MoreLink to={PLANNED.biblioteca}>biblioteca</MoreLink>
+        <MoreLink to={libraryPath()}>biblioteca</MoreLink>
 
         <section className="landing-section">
           <SectionTitle>Encontre ferramentas</SectionTitle>
@@ -187,7 +197,7 @@ export function LandingPageView({
           <SectionTitle>O que você vai fazer hoje?</SectionTitle>
           <div className="landing-actions">
             <ActionCard
-              to={PLANNED.biblioteca}
+              to={libraryPath()}
               title="Explorar a biblioteca"
               text="Encontre, consulte e baixe caderninhos prontos."
             />
@@ -397,7 +407,8 @@ function LandingSearch({ collection }: { collection: CollectionContextValue }) {
   );
 }
 
-function SongbookCarousel({ songbooks }: { songbooks: LandingSongbooks }) {
+/** Published songbooks as notebooks in one scrolling row (home, Biblioteca). */
+export function SongbookCarousel({ songbooks }: { songbooks: LandingSongbooks }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const scroll = (direction: 1 | -1) => {
     const track = trackRef.current;
@@ -544,7 +555,7 @@ export function LandingFooter({
         </div>
         <nav className="landing-footer-links" aria-label="Rodapé">
           <ul>
-            <li><Link to={PLANNED.biblioteca}>Biblioteca</Link></li>
+            <li><Link to={libraryPath()}>Biblioteca</Link></li>
             <li><Link to="/montar">Musicoteca</Link></li>
             <li><Link to="/montar">Criar caderninho</Link></li>
             <li><a href={STATIC.plugin}>Plugin Musescore</a></li>

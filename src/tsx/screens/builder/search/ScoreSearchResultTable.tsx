@@ -1,51 +1,40 @@
 import { useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
-import type { FuseResultMatch } from "fuse.js";
 import { CardPointerSensor } from "../../../../lib/cardPointerSensor";
 import type { ScoreViewModel } from "../../../../../types/viewModels";
 import type { ScoreCardHighlight } from "../../../components/scores/card/ScoreCardView";
 import { AddButton } from "../../../components/scores/AddButton";
 import { DragHandle } from "../../../components/songbooks/editor/DragHandle";
 import { PaginationBar } from "../../../components/pagination/PaginationBar";
+import { queryRanges } from "../../../../lib/highlight";
 
 interface ScoreSearchResultTableProps {
   Card: import("react").ComponentType<import("../../../components/scores/card/ScoreCardView").ScoreCardProps>;
-  getMatches: import("../../../../useCollectionContext").CollectionContextValue["getMatches"];
   scores: ScoreViewModel[];
   searchQuery: string;
   handleSelect: (score: ScoreViewModel, checked: boolean) => void;
+  /** Shown at the right end of the page counter's row. */
+  pagerEnd?: import("react").ReactNode;
+  /** Shown in place of the list when there are no scores. */
+  empty?: string;
 }
 
-/** Fuse matches tags against one array element at a time; map those indices to the display string. */
-function buildHighlight(matches: readonly FuseResultMatch[] | undefined, score: ScoreViewModel): ScoreCardHighlight | undefined {
-  if (!matches?.length) {
+/** Marks where the typed words appear, not the letters the fuzzy search
+ *  happened to match. Tags are shown joined by ", ". */
+function buildHighlight(query: string, score: ScoreViewModel): ScoreCardHighlight | undefined {
+  if (!query.trim()) {
     return undefined;
   }
-  const highlight: ScoreCardHighlight = {};
-  for (const match of matches) {
-    if (!match.indices?.length) {
-      continue;
-    }
-    if (match.key === "title") {
-      highlight.title = match.indices;
-    } else if (match.key === "composer") {
-      highlight.composer = match.indices;
-    } else if (match.key === "projectTitle") {
-      highlight.projectTitle = match.indices;
-    } else if (match.key === "tags" && match.value !== undefined) {
-      const tagIndex = score.tags.indexOf(match.value);
-      if (tagIndex >= 0) {
-        const offset = score.tags.slice(0, tagIndex).reduce((sum, tag) => sum + tag.length + 2, 0);
-        highlight.tags = [...(highlight.tags ?? []), ...match.indices.map(([start, end]): [number, number] => [start + offset, end + offset])];
-      }
-    }
-  }
-  return highlight;
+  return {
+    title: queryRanges(score.title, query),
+    composer: queryRanges(score.composer, query),
+    projectTitle: queryRanges(score.projectTitle, query),
+    tags: queryRanges(score.tags.join(", "), query),
+  };
 }
 
-function AvailableScoreCard({ Card, getMatches, score, searchQuery, handleSelect }: {
+function AvailableScoreCard({ Card, score, searchQuery, handleSelect }: {
   Card: ScoreSearchResultTableProps["Card"];
-  getMatches: ScoreSearchResultTableProps["getMatches"];
   score: ScoreViewModel;
   searchQuery: string;
   handleSelect: ScoreSearchResultTableProps["handleSelect"];
@@ -62,7 +51,7 @@ function AvailableScoreCard({ Card, getMatches, score, searchQuery, handleSelect
         score={score}
         mode={mode}
         onToggleMode={() => setMode(mode === "compact" ? "expanded" : "compact")}
-        highlight={buildHighlight(getMatches(searchQuery, score.id), score)}
+        highlight={buildHighlight(searchQuery, score)}
         leading={<DragHandle label={`Arraste ${score.title} para o caderninho`} handleRef={handleRef} onPrepareDrag={() => undefined} />}
         trailing={<AddButton label={`Adicionar ${score.title}`} onClick={() => handleSelect(score, true)} />}
       />
@@ -70,7 +59,7 @@ function AvailableScoreCard({ Card, getMatches, score, searchQuery, handleSelect
   );
 }
 
-const ScoreSearchResultTable = ({ Card, getMatches, scores, searchQuery, handleSelect }: ScoreSearchResultTableProps) => {
+const ScoreSearchResultTable = ({ Card, scores, searchQuery, handleSelect, pagerEnd, empty }: ScoreSearchResultTableProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const maxNumberPages = Math.max(1, Math.ceil(scores.length / 10));
   const page = Math.min(currentPage, maxNumberPages);
@@ -87,12 +76,16 @@ const ScoreSearchResultTable = ({ Card, getMatches, scores, searchQuery, handleS
     <>
       <div ref={dropRef} className="score-card-list">
         {scores.slice((page - 1) * 10, page * 10).map((song) => (
-          <AvailableScoreCard Card={Card} getMatches={getMatches} key={song.id}
+          <AvailableScoreCard Card={Card} key={song.id}
             handleSelect={handleSelect} score={song} searchQuery={searchQuery} />
         ))}
+        {scores.length === 0 && empty && <p className="text-muted m-0">{empty}</p>}
       </div>
-      <div className="mt-2">
+      {/* 15px down from the last card, as far as the Caderninho's tip text
+          sits below its songs. */}
+      <div className="d-flex align-items-center justify-content-between" style={{ marginTop: "15px" }}>
         <PaginationBar onChange={handlePageChange} currentPage={page} maxNumberPages={maxNumberPages} />
+        {pagerEnd}
       </div>
     </>
   );

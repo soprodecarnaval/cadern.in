@@ -32,7 +32,6 @@ export interface ScoreCardProps {
 }
 
 interface ScoreCardViewProps extends ScoreCardProps {
-  lineage?: ReactNode;
   onShowDetail: () => void;
 }
 
@@ -45,7 +44,6 @@ const ScoreCardView = ({
   details,
   versionLabel,
   highlight,
-  lineage,
   onShowDetail,
 }: ScoreCardViewProps) => {
   const expanded = mode === "expanded";
@@ -119,7 +117,6 @@ const ScoreCardView = ({
               {score.sub}
             </div>
           )}
-          {lineage}
           {details}
           <div className="score-card-parts">
             {parts.map((part) => (

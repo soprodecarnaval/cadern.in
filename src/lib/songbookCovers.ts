@@ -3,7 +3,12 @@ import type { User } from "firebase/auth";
 import { storage } from "../firebase";
 import { zInstrument, type Instrument } from "../../types/instrument";
 import type { SongbookDoc, SongbookRevisionDoc } from "../../types/docs";
-import { createSongbookRevision, newSongbookRevisionId, type WithId } from "./db";
+import {
+  createSongbookRevision,
+  getSongbookRevision,
+  newSongbookRevisionId,
+  type WithId,
+} from "./db";
 import { slugify } from "./slugify";
 import { songbookRevisionStoragePath } from "./storagePaths";
 
@@ -23,6 +28,39 @@ export function representativeCoverUrl(
     }
   }
   return undefined;
+}
+
+/** Each instrument's cover image, for the instruments that have one. */
+export type CoverUrls = Partial<Record<Instrument, string>>;
+
+/**
+ * The songbook with its current revision's covers: `coverUrls` per instrument
+ * and `coverUrl`, the representative one. Without covers, or if the revision
+ * fails to load, it comes back without them.
+ */
+export async function withCovers<T extends WithId<SongbookDoc>>(
+  songbook: T,
+): Promise<T & { coverUrl?: string; coverUrls?: CoverUrls }> {
+  try {
+    const revision = await getSongbookRevision(
+      songbook.id,
+      songbook.currentRevisionId,
+    );
+    if (!revision) {
+      return songbook;
+    }
+    const coverUrls: CoverUrls = {};
+    for (const [instrument, file] of Object.entries(revision.covers)) {
+      if (file?.url) {
+        coverUrls[instrument as Instrument] = file.url;
+      }
+    }
+    const coverUrl = representativeCoverUrl(revision.covers);
+    return coverUrl ? { ...songbook, coverUrl, coverUrls } : songbook;
+  } catch (err) {
+    console.error(`Failed to load the cover of ${songbook.id}`, err);
+    return songbook;
+  }
 }
 
 /**
