@@ -86,11 +86,14 @@ try {
             const cleaned = new Map();
             const partLayout = profile ? part => sheetLayoutFor(resolvePartFormatting(profile, part.name)) : undefined;
             const fingered = new Map();
+            const folded = new Map();
             const partTransform = profile ? (input) => {
                 let report;
                 const result = caderninhoPartTransform(profile, r => { report = r; })(input);
                 cleaned.set(input.part.id, report.cleanup);
                 fingered.set(input.part.id, report.fingerings);
+                // Measures folded into multi-measure rests draw one rest for the whole run.
+                folded.set(input.part.id, report.restRuns.flatMap(r => r.runs).reduce((n, run) => n + run.count - 1, 0));
                 const before = new DOMParser().parseFromString(input.musicXml, 'application/xml');
                 const after = new DOMParser().parseFromString(result.musicXml, 'application/xml');
                 signoff.set(input.part.id, { fingerings: compareFingerings(before, after), clefsBefore: [...new Set(clefsOf(before))], clefsAfter: [...new Set(clefsOf(after))] });
@@ -121,7 +124,7 @@ try {
                     const id = exported.parts.find(p => p.catalogPart?.id === part.id)?.id;
                     const body = [...xml.querySelectorAll('score-partwise > part')].find(p => p.getAttribute('id') === id);
                     const notes = body ? [...body.querySelectorAll('note')] : [];
-                    parts.push({ ordinal: part.ordinal, name: part.name, instrumentIds: part.instrumentIds, cleanup: cleaned.get(part.id) ?? null, fingered: (fingered.get(part.id) ?? []).reduce((n, r) => n + r.fingered, 0), layout: pages[0]?.layout ?? null,
+                    parts.push({ ordinal: part.ordinal, name: part.name, instrumentIds: part.instrumentIds, cleanup: cleaned.get(part.id) ?? null, folded: folded.get(part.id) ?? 0, fingered: (fingered.get(part.id) ?? []).reduce((n, r) => n + r.fingered, 0), layout: pages[0]?.layout ?? null,
                         signoff: { ...signoff.get(part.id), stored: (stored[normalizePart(part.name)] ?? []).sort((a, b) => a.page - b.page).map(s => ({ file: s.file, layout: storedPageLayout(s.svg, 171.7) })) },
                         musicXmlPart: id ?? null, ms: Math.round(performance.now() - t), pageCount,
                         pages: pages.map(p => ({ filename: p.filename, svg: p.svg, widthMm: p.widthMm, heightMm: p.heightMm })),
@@ -146,13 +149,13 @@ try {
             assert(part.pageCount > 0, `${tag}: no pages`);
             assert(part.instrumentIds.length > 0, `${tag}: no instrument ids`);
             assert.equal(part.rendered.notes, part.source.notes, `${tag}: notes`);
-            assert.equal(part.rendered.rests, part.source.rests, `${tag}: rests`);
+            assert.equal(part.rendered.rests + part.folded, part.source.rests, `${tag}: rests`);
             assert(!part.externalUrls, `${tag}: external resource`);
             assert(!part.overflow, `${tag}: music drawn outside the page`);
             if (expectedSize) assert(part.pages.every(p => Math.abs(p.widthMm - expectedSize.widthMm) < 0.01 && Math.abs(p.heightMm - expectedSize.heightMm) < 0.01), `${tag}: page size`);
             if (outcome.topMarkings) assert(part.rendered.tempo + part.rendered.rehearsal + part.rendered.repeatMarks > 0 || part.warnings.includes('SYSTEM_MARKINGS_COPIED') || part.ordinal === 1, `${tag}: system markings missing`);
             const removed = part.cleanup ? ` (removed ${part.cleanup.parts.reduce((n, p) => n + p.fingerings, 0)} fingerings, ${part.cleanup.parts.reduce((n, p) => n + p.staffText.length, 0)} staff texts)` : '';
-            const laid = (part.fingered ? `, ${part.fingered} piratas` : '') + (part.layout ? `, staff ${part.layout.staffSpaceMm.toFixed(2)} mm, ${part.layout.systems} systems, fill ${part.layout.fillRatio}` : '');
+            const laid = (part.folded ? `, ${part.folded} rest measures folded` : '') + (part.fingered ? `, ${part.fingered} piratas` : '') + (part.layout ? `, staff ${part.layout.staffSpaceMm.toFixed(2)} mm, ${part.layout.systems} systems, fill ${part.layout.fillRatio}` : '');
             console.log(`${tag} [${part.instrumentIds.join(', ')}]${removed}${laid}: ${part.pageCount} page(s) ${part.pages[0].widthMm} × ${part.pages[0].heightMm} mm, ${part.rendered.notes} notes, ${part.rendered.rests} rests, ${part.ms} ms`);
         }
         report.files.push({ file: basename(input), ...outcome });

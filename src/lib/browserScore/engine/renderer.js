@@ -154,6 +154,28 @@ function balancedStarts(widths, count) {
     return starts;
 }
 
+/**
+ * Measures grouped as the page draws them: a multi-measure rest (<multiple-rest>N on its first
+ * measure) is one short block that a system break never splits; every other measure is its own block.
+ * @returns {{ first: number, width: number }[]}
+ */
+function measureBlocks(musicXml, widths) {
+    const runs = new Map();
+    let index = -1;
+    for (const match of musicXml.matchAll(/<measure\b[^>]*>|<multiple-rest>(\d+)<\/multiple-rest>/g)) {
+        if (match[1] === undefined) index++;
+        else runs.set(index, Number(match[1]));
+    }
+    const blocks = [];
+    for (let i = 0; i < widths.length;) {
+        const count = Math.max(1, Math.min(runs.get(i) ?? 1, widths.length - i));
+        // A multi-measure rest is about as wide as a measure with one rest and its count.
+        blocks.push({ first: i, width: count > 1 ? 4 : widths[i] });
+        i += count;
+    }
+    return blocks;
+}
+
 // A system break before each listed measure. The caller has removed every <print> element.
 function withBreaks(musicXml, starts) {
     const breaks = new Set(starts.filter(index => index > 0));
@@ -185,7 +207,10 @@ const TIGHTER_SPACING = [{ spacingLinear: 0.15, spacingNonLinear: 0.55 }, { spac
  */
 export async function renderSheet(musicXml, area, widths, layout = {}) {
     const tk = await load();
-    const measures = widths.length;
+    // Balancing works on blocks: a multi-measure rest is one, never split by a system break.
+    const blocks = measureBlocks(musicXml, widths);
+    const measures = blocks.length;
+    const startsFor = count => balancedStarts(blocks.map(block => block.width), Math.min(count, measures)).map(index => blocks[index].first);
     const spacing = {
         spacingLinear: range(layout.spacingLinear, 0, 1, SHEET_SPACING.spacingLinear),
         spacingNonLinear: range(layout.spacingNonLinear, 0, 1, SHEET_SPACING.spacingNonLinear),
@@ -246,12 +271,12 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
     const fit = unit => {
         const count = draw(unit, null);
         if (count === null) return { error: 'load' };
-        if (fixedSystems) return draw(unit, balancedStarts(widths, fixedSystems)) === 1 ? 'fits' : 'overflow';
+        if (fixedSystems) return draw(unit, startsFor(fixedSystems)) === 1 ? 'fits' : 'overflow';
         if (count !== 1) return 'overflow';
         // As in MuseScore, the spacing decides how many systems there are; the largest staff that
         // keeps them on one page wins. The measures are then balanced over those systems.
         const auto = systems(tk.renderToSVG(1, false));
-        if (draw(unit, balancedStarts(widths, auto)) === 1) return 'fits';
+        if (draw(unit, startsFor(auto)) === 1) return 'fits';
         draw(unit, null);
         return 'fits';
     };
@@ -274,6 +299,6 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
     Object.assign(spacing, given);
     // Overflow: the best attempt, on more than one page.
     const unit = fixedUnit ?? SHEET_UNITS[SHEET_UNITS.length - 1];
-    if (draw(unit, fixedSystems ? balancedStarts(widths, fixedSystems) : null) === null) return { error: 'load' };
+    if (draw(unit, fixedSystems ? startsFor(fixedSystems) : null) === null) return { error: 'load' };
     return result();
 }
