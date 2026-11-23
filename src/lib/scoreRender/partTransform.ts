@@ -7,7 +7,7 @@ import { fingeringFunction, instrumentSettings, type InstrumentSettings } from "
 import { cleanupMusicXml, type CleanupReport } from "./cleanup";
 import { fingerPart, type FingeringReport } from "./fingering";
 import { applyTubaNotation, type TubaNotationReport } from "./tubaNotation";
-import { condenseRestRuns, type RestRunsReport } from "./restRuns";
+import { narrowRestMeasures, type RestMeasuresReport } from "./restMeasures";
 import { resolvePartFormatting, type ResolvedPartFormatting } from "./profile";
 
 export type XmlCodec = { parse: (text: string) => Document; serialize: (document: Document) => string };
@@ -26,8 +26,8 @@ export type PartTransformReport = {
   tubaNotation: TubaNotationReport[];
   /** Set when the part is a tuba but has instrument changes, which the plugin also skips. */
   tubaNotationSkipped?: "instrument-changes";
-  /** Runs of rest-only measures drawn as multi-measure rests, per MusicXML part. */
-  restRuns: RestRunsReport[];
+  /** Whole-measure rests drawn narrow (one beat wide), per MusicXML part. */
+  restMeasures: RestMeasuresReport[];
   /** Empty when the part gets no fingerings. */
   fingerings: FingeringReport[];
 };
@@ -89,12 +89,12 @@ export function transformPartMusicXml(
       if (fingeringFor) {fingerings.push(fingerPart(element, fingeringFor));}
     }
   }
-  // Rests last: a run of rest-only measures becomes one multi-measure rest.
-  const restRuns = parts.map(condenseRestRuns);
+  // Rests last: whole-measure rests keep their bars but take one beat's width.
+  const restMeasures = parts.map(narrowRestMeasures);
   return {
     musicXml: codec.serialize(document),
     report: {
-      restRuns,
+      restMeasures,
       partName: part.name,
       instrumentId,
       cleanup,

@@ -41,8 +41,8 @@ export const TUBA_VALVES = table(30, [
 
 /**
  * Tuba notes below the 3-valve table (C-indexed, as TUBA_VALVES): the 4th valve lowers by a perfect
- * fourth, so they are written 14, 124, 234, 134 and 1234. Always written as pistons, in positions mode
- * too (there are no positions 8+). Pending a brass player's review (ticket 008).
+ * fourth, so in valves notation they are written 14, 124, 234, 134 and 1234; in positions notation they
+ * continue the count, 8 to 12. Pending a brass player's review (ticket 008).
  */
 export const TUBA_LOW_VALVES: ValveTable = table(25, ["1234", "134", "234", "124", "14"]); // 25–29
 

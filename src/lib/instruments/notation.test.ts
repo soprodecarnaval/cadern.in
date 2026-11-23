@@ -34,10 +34,11 @@ const fn = (id: string, overrides: Partial<FingeringNotation> = {}) =>
   fingeringFunction(instrumentSettings(id), notation(overrides))!;
 const PITCHES = Array.from({ length: 128 }, (_, i) => i);
 // Tuba notes below the 3-valve table (C-indexed 25–29) are always written as 4-valve pistons.
-const tubaLow = (id: string, pitch: number) => {
+const tubaLow = (id: string, pitch: number, notation: "positions" | "valves" = "valves") => {
   const settings = instrumentSettings(id)!;
   const index = pitch + settings.transpositionForTable;
-  return settings.fingering!.family === "tuba" && index >= 25 && index < 30 ? TUBA_LOW_VALVES[index] : null;
+  if (settings.fingering!.family !== "tuba" || index < 25 || index >= 30) {return null;}
+  return notation === "valves" ? TUBA_LOW_VALVES[index] : String(37 - index);
 };
 const VALVE_IDS = ["bb-trumpet", "c-trumpet", "bb-tuba", "bass-eb-tuba", "bb-tuba-treble", "eb-tuba-treble", "sousaphone", "euphonium", "euphonium-treble"];
 
@@ -81,7 +82,7 @@ describe("positions", () => {
           expect(theirs(pitch)).toBe("4");
           expect(ours(pitch)).toBe("3");
         } else {
-          expect(ours(pitch), `${pitch}`).toBe(tubaLow(id, pitch) ?? theirs(pitch));
+          expect(ours(pitch), `${pitch}`).toBe(tubaLow(id, pitch, "positions") ?? theirs(pitch));
         }
       }
     },
@@ -105,24 +106,26 @@ describe("positions", () => {
 
 describe("low tuba notes", () => {
   // Every pitch of the Bb and Eb tubas, the low extension included, in both notations.
-  it.each([["bb-tuba", 2], ["bass-eb-tuba", -3], ["sousaphone", 2], ["eb-tuba-treble", -3]] as const)("writes %s's notes below the 3-valve range as 4-valve pistons", (id, shift) => {
+  it.each([["bb-tuba", 2], ["bass-eb-tuba", -3], ["sousaphone", 2], ["eb-tuba-treble", -3]] as const)("writes %s's notes below the 3-valve range as positions 8-12, or 4-valve pistons", (id, shift) => {
     const semitones: Record<string, number> = { "1": 2, "2": 1, "3": 3, "4": 5 };
     const lowering = (combination: string) => [...combination].reduce((sum, valve) => sum + semitones[valve], 0);
-    for (const notation of ["positions", "valves"] as const) {
-      const ours = fn(id, { notation });
-      for (const pitch of PITCHES) {
-        const index = pitch + shift;
-        if (index < 25) {expect(ours(pitch), `${notation} ${pitch}`).toBe("");}
-        else if (index < 30) {
-          // Each step a semitone below the open C (index 36).
-          expect(lowering(ours(pitch)), `${notation} ${pitch}`).toBe(36 - index);
-          expect(ours(pitch)).toContain("4");
-        }
+    const positions = fn(id), valves = fn(id, { notation: "valves" });
+    for (const pitch of PITCHES) {
+      const index = pitch + shift;
+      if (index < 25) {
+        expect(positions(pitch), `${pitch}`).toBe("");
+        expect(valves(pitch), `${pitch}`).toBe("");
+      } else if (index < 30) {
+        // Each step a semitone below the open C (index 36): position 8 at index 29, … 12 at 25.
+        expect(positions(pitch)).toBe(String(37 - index));
+        expect(lowering(valves(pitch)), `${pitch}`).toBe(36 - index);
+        expect(valves(pitch)).toContain("4");
       }
     }
     // In the 3-valve range nothing changes: 1-3 and 1-2-3 stay as they are.
-    expect(fn(id, { notation: "valves" })(31 - shift)).toBe("13");
-    expect(fn(id)(30 - shift)).toBe("7");
+    expect(valves(31 - shift)).toBe("13");
+    expect(positions(30 - shift)).toBe("7");
+    expect(positions(29 - shift)).toBe("8");
   });
 
   it("leaves other instruments' low notes without fingering", () => {

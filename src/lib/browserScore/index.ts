@@ -155,7 +155,7 @@ let mainOwner = false;
  * Version of this library's layout code. Bump it whenever the same input could render differently
  * (renderer.js, parts.ts, sheet.ts or index.ts layout changes), so stored revisions record what drew them.
  */
-export const LIBRARY_VERSION = 'browser-score-5';
+export const LIBRARY_VERSION = 'browser-score-6';
 
 const SHEET_FONTS = { medium: 'fonts/roboto-latin-500-normal.woff2', bold: 'fonts/roboto-latin-700-normal.woff2' } as const;
 

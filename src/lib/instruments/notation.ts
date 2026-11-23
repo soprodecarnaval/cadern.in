@@ -3,8 +3,9 @@
 //   picker); valve instruments map their valve combination to a position.
 // - valves: 3 valves for every part (trombone: the trumpet table an octave
 //   down, as a valve trombone).
-// Tuba notes below the 3-valve range are always written as 4-valve pistons
-// (14, 124, 234, 134, 1234), in either notation.
+// Tuba notes below the 3-valve range: positions continue past 7 (8 to 12, a
+// semitone each); in valves notation they are 4-valve pistons (14, 124, 234,
+// 134, 1234).
 import {
   TUBA_3V_LOWEST,
   TUBA_LOW_VALVES,
@@ -54,8 +55,9 @@ export function fingeringFunction(
   }
   return (sounding) => {
     const index = sounding + shift;
-    const pistons = low(index);
-    if (pistons !== null) {return pistons;}
+    // Tuba notes below position 7 continue the count, a semitone per position (8, 9, … 12),
+    // where the table has a 4-valve fingering for them.
+    if (low(index) !== null) {return low(index) ? String(7 + TUBA_3V_LOWEST - index) : "";}
     const combination = valveText(tables.valves, index);
     return combination ? String(VALVE_POSITIONS[combination]) : "";
   };
