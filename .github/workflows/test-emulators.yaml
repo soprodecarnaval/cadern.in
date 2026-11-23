@@ -13,6 +13,9 @@ on:
       - "functions/**"
       - "vitest.rules.config.ts"
       - "vitest.migrations.config.ts"
+      - "tests/e2e/**"
+      - "src/**"
+      - "scripts/browserScore/**"
       - "package.json"
       - "package-lock.json"
   workflow_dispatch:
@@ -51,3 +54,46 @@ jobs:
         run: npm run test:functions
       - name: Run migration tests
         run: npm run test:migrations
+
+  # Browser upload, end to end (ticket 018): send, stale songbook refused,
+  # reformat and songbook PDF, in Chromium against the emulators.
+  test-browser-upload:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      VITE_FIREBASE_API_KEY: demo
+      VITE_FIREBASE_AUTH_DOMAIN: demo-cadernin.firebaseapp.com
+      VITE_FIREBASE_PROJECT_ID: demo-cadernin
+      VITE_FIREBASE_STORAGE_BUCKET: demo-cadernin.appspot.com
+      VITE_FIREBASE_MESSAGING_SENDER_ID: "0"
+      VITE_FIREBASE_APP_ID: demo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "npm"
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Cache emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('package-lock.json') }}
+      # The engine assets come from node_modules, so the lockfile keys them.
+      - name: Cache browser-score assets
+        uses: actions/cache@v4
+        with:
+          path: public/browser-score
+          key: browser-score-${{ hashFiles('package-lock.json', 'scripts/browserScore/assets.mjs', 'src/lib/browserScore/engine/**', 'src/lib/browserScore/fonts/**') }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run browser upload end-to-end test
+        run: npm run test:e2e

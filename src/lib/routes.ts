@@ -13,6 +13,7 @@ export const ROUTE_PATTERNS = {
   newProject: "/projetos/novo",
   project: "/:slug",
   projectSettings: "/:slug/config",
+  upload: "/:slug/enviar",
   publicSongbook: "/:slug/:songbookSlug",
   songbook: "/:slug/:songbookSlug/gerenciar",
   songbookScore: "/:slug/:songbookSlug/gerenciar/partituras/:scoreId",
@@ -28,6 +29,8 @@ const RESERVED_PROJECT_SLUGS = new Set([
   "montar",
   "plugin",
   "assets",
+  // Engine assets for in-browser rendering (scripts/browserScore/assets.mjs).
+  "browser-score",
   "index.html",
   "vite.svg",
   "soundfont-player.min.js",
@@ -45,7 +48,7 @@ const RESERVED_PROJECT_SLUGS = new Set([
 
 // Project routes occupy the second segment, so a songbook cannot use a name
 // that is also a project-level route.
-const RESERVED_SONGBOOK_SLUGS = new Set(["config"]);
+const RESERVED_SONGBOOK_SLUGS = new Set(["config", "enviar"]);
 
 export const YEAR_ONLY_SLUG = /^\d{4}$/;
 

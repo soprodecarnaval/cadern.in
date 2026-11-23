@@ -1,25 +1,40 @@
 import { Page } from "../../atoms/Page";
-import { Button } from "../../atoms/Button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Col, Row } from "react-bootstrap";
 
 import { ScoreSearchResultsView } from "./search/ScoreSearchResultsView";
 import { SearchBarView } from "./search/SearchBarView";
+import { ColumnDivider, type CollapsedSide } from "./ColumnDivider";
+import { SongbookToolbar } from "./SongbookToolbar";
+import {
+  filterOptions,
+  filterScores,
+  NO_FILTERS,
+  type ResultsFilters,
+} from "./search/resultsFilter";
+import "./MontarColumns.css";
 import { SongbookDragProvider } from "../../components/songbooks/editor/SongbookDragProvider";
-import type { SongbookSortableListHandle } from "../../components/songbooks/editor/SongbookSortableList";
+import type {
+  SectionsCollapsed,
+  SongbookSortableListHandle,
+} from "../../components/songbooks/editor/SongbookSortableList";
 import { SongBookTableView } from "../../components/songbooks/editor/SongBookTableView";
 
 import { sortByColumn, SortColumn, SortDirection } from "../../../utils/sort";
+import {
+  generateSectionsByStyle,
+  sortSongsWithinSections,
+} from "../../../utils/songBookRows";
+import { parseSortValue } from "../../components/scores/sortOptions";
+import { useUndoableState } from "../../../lib/useUndoableState";
 
 import type {
   ScoreViewModel,
   SongbookItemViewModel,
-  SongbookViewModel,
 } from "../../../../types/viewModels";
 import {
   isSongbookSection,
-  numberSongbookItems,
   songbookScore,
+  songbookSection,
 } from "../../../lib/songbook";
 
 import "bootstrap/dist/css/bootstrap.css";
@@ -42,7 +57,6 @@ export function HomePageView({
     Card: import("react").ComponentType<
       import("../../components/scores/card/ScoreCardView").ScoreCardProps
     >;
-    PDFGenerator: typeof import("./dialogs/PdfGenerator").PDFGenerator;
     SaveSongbookModal: typeof import("./dialogs/SaveSongbookModal").SaveSongbookModal;
   };
 }) {
@@ -55,10 +69,18 @@ export function HomePageView({
     },
     [],
   );
-  const [items, setItems] = useState<SongbookItemViewModel[]>([]);
+  // The Caderninho's rows, with undo/redo through the toolbar.
+  const history = useUndoableState<SongbookItemViewModel[]>([]);
+  const { value: items, set: setItems, reset: resetItems } = history;
+  const [sectionsCollapsed, setSectionsCollapsed] = useState<SectionsCollapsed>("none");
+  // The Caderninho's sort last applied from the toolbar; cleared once the
+  // order changes some other way.
+  const [songbookSort, setSongbookSort] = useState("");
   const { status, allScores } = collection;
   const [restored, setRestored] = useState(false);
   const [showSave, setShowSave] = useState(false);
+  // Resultados (left) or Caderninho (right) hidden by the column divider.
+  const [collapsed, setCollapsed] = useState<CollapsedSide>(null);
   const songbookRef = useRef<SongbookSortableListHandle>(null);
   const [sort, setSort] = useState<{
     column: SortColumn;
@@ -69,10 +91,10 @@ export function HomePageView({
   // loaded, then stored on every change.
   useEffect(() => {
     if (status === "ready" && !restored) {
-      setItems(storage.restoreBuilderItems(allScores));
+      resetItems(storage.restoreBuilderItems(allScores));
       setRestored(true);
     }
-  }, [status, restored, allScores, storage]);
+  }, [status, restored, allScores, storage, resetItems]);
 
   useEffect(() => {
     if (restored) {
@@ -100,13 +122,20 @@ export function HomePageView({
     checked ? handleAddScore(song) : handleRemoveScore(song);
   };
 
-  const results = useMemo(() => {
+  // Resultados' filters, chosen from the styles and arrangements among the
+  // songs found (and not yet in the Caderninho).
+  const [filters, setFilters] = useState<ResultsFilters>(NO_FILTERS);
+  const available = useMemo(() => {
     const selectedIds = new Set(
       items.flatMap((item) => isSongbookSection(item) ? [] : [item.score.id]),
     );
-    const available = searchResults.filter((score) => !selectedIds.has(score.id));
-    return sort ? sortByColumn(available, sort.column, sort.direction) : available;
-  }, [searchResults, items, sort]);
+    return searchResults.filter((score) => !selectedIds.has(score.id));
+  }, [searchResults, items]);
+  const availableFilters = useMemo(() => filterOptions(available), [available]);
+  const results = useMemo(() => {
+    const filtered = filterScores(available, filters);
+    return sort ? sortByColumn(filtered, sort.column, sort.direction) : filtered;
+  }, [available, filters, sort]);
 
   const clearSelected = () => setItems([]);
 
@@ -131,30 +160,61 @@ export function HomePageView({
     setSort({ column, direction });
   };
 
-  const songBook: SongbookViewModel = { items: numberSongbookItems(items) };
-
   return (
     <>
       <Page>
-        <Row>
-          <Col sm={6}>
-            <SearchBarView
-              status={collection.status}
-              search={collection.search}
-              handleResults={handleSearchResults}
-            />
-          </Col>
-          <Col sm={6}>
-            <components.PDFGenerator songBook={songBook} />
-          </Col>
-        </Row>
         <SongbookDragProvider
           songbookRef={songbookRef}
           onAddAt={handleAddScore}
           onRemove={handleRemoveScore}
         >
-          <Row className="mt-4">
-            <Col sm={6}>
+          <div
+            className={
+              collapsed
+                ? `montar-columns is-${collapsed}-collapsed`
+                : "montar-columns"
+            }
+          >
+            <div className="montar-cell montar-search">
+              <SearchBarView
+                status={collection.status}
+                search={collection.search}
+                handleResults={handleSearchResults}
+              />
+            </div>
+            <div className="montar-cell montar-generate">
+              <div className="montar-actions">
+                <SongbookToolbar
+                  canUndo={history.canUndo}
+                  canRedo={history.canRedo}
+                  onUndo={() => { history.undo(); setSongbookSort(""); }}
+                  onRedo={() => { history.redo(); setSongbookSort(""); }}
+                  canMakeSections={items.some((item) => !isSongbookSection(item))}
+                  onMakeSections={() => {
+                    setItems(generateSectionsByStyle(items));
+                    setSongbookSort("");
+                  }}
+                  onAddSection={(title) => setItems([...items, songbookSection(title)])}
+                  sortValue={songbookSort}
+                  onSort={(value) => {
+                    setItems(sortSongsWithinSections(items, ...parseSortValue(value)));
+                    setSongbookSort(value);
+                  }}
+                  sectionsCollapsed={sectionsCollapsed}
+                  canSave={items.length > 0}
+                  onSave={collabEnabled ? handleSave : undefined}
+                  onSetAllCollapsed={(collapse) =>
+                    songbookRef.current?.setAllSectionsCollapsed(collapse)}
+                />
+              </div>
+            </div>
+            <ColumnDivider
+              collapsed={collapsed}
+              onChange={setCollapsed}
+              leftLabel="Resultados"
+              rightLabel="Caderninho"
+            />
+            <div className="montar-cell montar-results">
               <ScoreSearchResultsView
                 collection={collection}
                 Card={components.Card}
@@ -162,21 +222,11 @@ export function HomePageView({
                 searchQuery={searchQuery}
                 onSortBy={handleResultsSortBy}
                 onSelectSong={handleSelectSong}
+                filter={{ options: availableFilters, value: filters, onChange: setFilters }}
               />
-            </Col>
-            <Col sm={6}>
-              <div className="d-flex justify-content-between align-items-baseline">
-                <h3 className="results">Caderninho</h3>
-                {collabEnabled && (
-                  <Button
-                    variant="secondary"
-                    disabled={items.length === 0}
-                    onClick={handleSave}
-                  >
-                    Salvar caderninho
-                  </Button>
-                )}
-              </div>
+            </div>
+            <div className="montar-cell montar-songbook">
+              <h3 className="results">Caderninho</h3>
               {currentUser && showSave && (
                 <components.SaveSongbookModal
                   show
@@ -192,9 +242,14 @@ export function HomePageView({
                 setItems={setItems}
                 handleSelect={handleSelectSong}
                 handleClear={clearSelected}
+                showSectionsByStyle={false}
+                showSort={false}
+                showAddSection={false}
+                onManualReorder={() => setSongbookSort("")}
+                onSectionsCollapsedChange={setSectionsCollapsed}
               />
-            </Col>
-          </Row>
+            </div>
+          </div>
         </SongbookDragProvider>
       </Page>
     </>

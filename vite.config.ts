@@ -14,8 +14,15 @@ export default defineConfig(({ mode }) => {
     },
     define,
     test: {
-      // Need the emulators; run with `npm run test:rules` / `test:functions`.
-      exclude: [...configDefaults.exclude, "tests/rules/**", "tests/migrations/**", "functions/**"],
+      exclude: [
+        ...configDefaults.exclude,
+        // Run these suites with the Firebase emulators.
+        "tests/rules/**",
+        "tests/migrations/**",
+        "functions/**",
+        // Run these suites with `node --test plugin/tests/*.test.mjs`.
+        "plugin/tests/*.test.mjs",
+      ],
     },
   };
 });

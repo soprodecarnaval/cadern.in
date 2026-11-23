@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { Inflate, zipSync } from 'fflate';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
-import { ScoreError, hasOwn, type Format, type Limits, type Warning } from './types';
+import { ScoreError, hasOwn, type Format, type Limits, type PartInstrument, type Warning } from './types';
 
 export const defaultLimits: Limits = {
     inputBytes: 32 * 1024 * 1024,
@@ -177,6 +177,31 @@ function archive(bytes: Uint8Array, limits: Limits): Record<string, Uint8Array> 
     return files;
 }
 
+/** Text of a parsed element: plain text, a number, or the text of formatted (mixed) content. */
+function textOf(node: any): string {
+    if (typeof node === 'string' || typeof node === 'number') {return String(node).trim();}
+    if (node && typeof node === 'object') {return typeof node['#text'] === 'string' || typeof node['#text'] === 'number' ? String(node['#text']).trim() : '';}
+    return '';
+}
+
+const list = (node: any): any[] => node === undefined || node === null ? [] : Array.isArray(node) ? node : [node];
+
+/** A score part of the MSCX: its id, track name and instruments (`<Instrument id>` and `<instrumentId>`). */
+export type ScorePartInfo = { partId: string; trackName: string; instruments: PartInstrument[] };
+
+function scoreParts(score: any): ScorePartInfo[] {
+    return list(score?.Part).map((part: any) => ({
+        partId: typeof part?.['@_id'] === 'string' ? part['@_id'] : '',
+        trackName: textOf(part?.trackName),
+        instruments: list(part?.Instrument).map((instrument: any) => ({
+            id: typeof instrument?.['@_id'] === 'string' ? instrument['@_id'] : '',
+            soundId: textOf(instrument?.instrumentId) || null,
+            longName: textOf(instrument?.longName),
+            shortName: textOf(instrument?.shortName)
+        })).filter(instrument => instrument.id || instrument.soundId)
+    }));
+}
+
 function inspectInput(bytes: Uint8Array, format: Format, overrides: Partial<Limits> = {}) {
     const limits = { ...defaultLimits, ...overrides };
     if (!(bytes instanceof Uint8Array) || !bytes.length) {
@@ -189,6 +214,8 @@ function inspectInput(bytes: Uint8Array, format: Format, overrides: Partial<Limi
     let entryName = '';
     let files: Record<string, Uint8Array> | undefined;
     const savedPartNames: Record<string, string> = Object.create(null);
+    // Score part ids in each saved part, keyed like savedPartNames.
+    const savedPartIds: Record<string, string[]> = Object.create(null);
     if (format === 'mscz') {
         files = archive(bytes, limits);
         const container = files['META-INF/container.xml'];
@@ -210,7 +237,9 @@ function inspectInput(bytes: Uint8Array, format: Format, overrides: Partial<Limi
         for (const [path, entry] of Object.entries(files)) {
             const match = /^Excerpts\/([^/]+)\/\1\.mscx$/.exec(path);
             if (!match) {continue;}
-            const tags = parse(entry).museScore?.Score?.metaTag;
+            const excerpt = parse(entry).museScore?.Score;
+            savedPartIds[match[1]] = scoreParts(excerpt).map(part => part.partId).filter(Boolean);
+            const tags = excerpt?.metaTag;
             const partName = (Array.isArray(tags) ? tags : [tags])
                 .find(tag => tag?.['@_name'] === 'partName')?.['#text'];
             if (typeof partName === 'string' && partName.trim()) {savedPartNames[match[1]] = partName.trim();}
@@ -229,7 +258,7 @@ function inspectInput(bytes: Uint8Array, format: Format, overrides: Partial<Limi
     const tags = doc.museScore.Score?.metaTag;
     for (const tag of Array.isArray(tags) ? tags : [tags]) {
         const name = tag?.['@_name'], value = tag?.['#text'];
-        if (typeof name === 'string' && /^[A-Za-z]+$/.test(name) && (typeof value === 'string' || typeof value === 'number')) {metaTags[name] = String(value).trim();}
+        if (typeof name === 'string' && /^[A-Za-z][A-Za-z-]*$/.test(name) && (typeof value === 'string' || typeof value === 'number')) {metaTags[name] = String(value).trim();}
     }
     const warnings: Warning[] = [];
     // A conservative resource policy: never allow the native reader to resolve
@@ -267,7 +296,8 @@ function inspectInput(bytes: Uint8Array, format: Format, overrides: Partial<Limi
     }
     warnings.push({ code: 'UNVERIFIED_INPUT', message: 'Version/feature fidelity is unverified; import success does not certify preservation.' });
     warnings.push({ code: 'RESOURCE_DIAGNOSTICS_LIMITED', message: 'Missing image paths are rejected; native font substitution and unknown constructs cannot be exhaustively diagnosed.' });
-    return { fileVersion: version, xml, bytes: files ? zipSync(files, { level: 0 }) : bytes, warnings, savedPartNames, metaTags, entryName };
+    return { fileVersion: version, xml, bytes: files ? zipSync(files, { level: 0 }) : bytes, warnings, savedPartNames, savedPartIds,
+        scoreParts: scoreParts(doc.museScore.Score), metaTags, entryName };
 }
 
 export function inspect(bytes: Uint8Array, format: Format, overrides: Partial<Limits> = {}) {

@@ -3,8 +3,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { inspect, defaultLimits } from './input';
 import { strToU8, zipSync } from 'fflate';
-import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport } from './types';
+import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport, type MidiExport, type RendererInfo, type PartTransform, type SheetLayout, type SheetLayoutResult } from './types';
 import { partMusicXml } from './parts';
+import { excerptInstruments, instrumentIdsOf } from './partInstruments';
+import { extractTracks, midiNoteCount, midiTrackCount } from './midi';
 import { composeSheet, MUSIC_AREA, SHEET, type SheetFonts } from './sheet';
 export { inspect } from './input';
 export * from './types';
@@ -23,7 +25,7 @@ export function createSvgArchive(pages: readonly { filename: string; svg: string
 // Fail closed on SVG features that can depend on fonts, external resources,
 // active content, or browser-specific CSS. This checks the returned artifact,
 // not whether the native importer substituted a font or dropped content.
-async function validatePortableSvg(doc: Document): Promise<void> {
+async function validatePortableSvg(doc: Document, sharedFamilies: ReadonlySet<string> = new Set()): Promise<void> {
     const fail = () => { throw new ScoreError('UNSUPPORTED_CAPABILITY', 'renderPage', 'SVG contains unsupported or unresolved resources'); };
     const allowed = new Set(['svg', 'g', 'path', 'polyline', 'polygon', 'line', 'rect', 'circle', 'ellipse', 'defs', 'clipPath', 'mask', 'linearGradient', 'radialGradient', 'stop', 'use', 'image', 'title', 'desc', 'text', 'tspan', 'style']);
     const ids = new Set<string>(), references: string[] = [];
@@ -52,7 +54,9 @@ async function validatePortableSvg(doc: Document): Promise<void> {
     for (const text of Array.from(doc.querySelectorAll('text, tspan'))) {
         if (!text.textContent?.trim()) {continue;}
         const families = (fontOf(text) ?? '').split(',').map(name => name.trim().replace(/^["']|["']$/g, ''));
-        if (!embedded.has(families[0]) || families.slice(1).some(name => !generic.has(name) && !embedded.has(name))) {fail();}
+        // Text fonts must be embedded, or be the manifest's shared text fonts ('shared' textFonts).
+        const available = (name: string) => embedded.has(name) || sharedFamilies.has(name);
+        if (!available(families[0]) || families.slice(1).some(name => !generic.has(name) && !available(name))) {fail();}
     }
     for (const element of Array.from(doc.querySelectorAll('*'))) {
         if (element.namespaceURI !== 'http://www.w3.org/2000/svg' || !allowed.has(element.localName)) {fail();}
@@ -82,9 +86,35 @@ async function validatePortableSvg(doc: Document): Promise<void> {
     if (references.some(id => !ids.has(id))) {fail();}
 }
 
-type NativeScore = { destroy(): void; metadata(): Promise<Metadata>; generateExcerpts(): Promise<void>; setExcerptId(id: number): Promise<void>; npages(): Promise<number>; saveSvg(page: number, background: boolean): Promise<string>; saveXml(): Promise<string> };
+type NativeScore = { destroy(): void; metadata(): Promise<Metadata>; generateExcerpts(): Promise<void>; setExcerptId(id: number): Promise<void>; npages(): Promise<number>; saveSvg(page: number, background: boolean): Promise<string>; saveXml(): Promise<string>; saveMidi(expandRepeats: boolean, exportRPNs: boolean): Promise<Uint8Array> };
 type NativePart = { instrumentName: string; name: string; instrumentId?: string };
 type Metadata = { excerpts: { title: string; parts: NativePart[] }[]; parts: (NativePart & { isVisible: string })[] };
+
+/**
+ * A renderer SVG without the embedded @font-face rules of the shared families (the text keeps its
+ * font-family). Other faces stay, such as the Leipzig subset Verovio embeds for chord-symbol glyphs.
+ */
+export function withoutEmbeddedFonts(svg: string, families: ReadonlySet<string>): string {
+    return svg.replace(/(<style\b[^>]*>)([\s\S]*?)(<\/style>)/g, (whole, open: string, css: string, close: string) => {
+        const kept = css.replace(/@font-face\s*\{[^}]*\}/g, rule => {
+            const family = /font-family:\s*(["']?)([^"';]+)\1/.exec(rule)?.[2]?.trim();
+            return family && families.has(family) ? '' : rule;
+        });
+        if (kept === css) {return whole;}
+        return kept.trim() ? open + kept + close : '';
+    });
+}
+
+/** Staves of each part of a partwise MusicXML score, by part id. */
+function staffCounts(xml: string): Map<string, number> {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const counts = new Map<string, number>();
+    for (const part of Array.from(doc.documentElement.children).filter(e => e.localName === 'part')) {
+        const staves = Number(part.querySelector('measure > attributes > staves')?.textContent ?? 1);
+        counts.set(part.getAttribute('id') ?? '', Number.isInteger(staves) && staves > 0 ? staves : 1);
+    }
+    return counts;
+}
 
 function fileStem(value: string, fallback: string): string {
     return value.normalize('NFKD').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48).replace(/-+$/, '').toLowerCase() || fallback;
@@ -121,9 +151,15 @@ type Engine = {
 };
 let mainOwner = false;
 
+/**
+ * Version of this library's layout code. Bump it whenever the same input could render differently
+ * (renderer.js, parts.ts, sheet.ts or index.ts layout changes), so stored revisions record what drew them.
+ */
+export const LIBRARY_VERSION = 'browser-score-6';
+
 const SHEET_FONTS = { medium: 'fonts/roboto-latin-500-normal.woff2', bold: 'fonts/roboto-latin-700-normal.woff2' } as const;
 
-async function assets(options: LibraryOptions): Promise<{ base: URL; sheetFonts: SheetFonts }> {
+async function assets(options: LibraryOptions): Promise<{ base: URL; sheetFonts: SheetFonts; renderer: RendererInfo; textFontFamilies: ReadonlySet<string> }> {
     const kept = new Map<string, Uint8Array>();
     const base = new URL(options.assets.manifestUrl);
     async function fetchBytes(url: URL) {
@@ -136,7 +172,8 @@ async function assets(options: LibraryOptions): Promise<{ base: URL; sheetFonts:
         }
         return new Uint8Array(await response.arrayBuffer());
     }
-    const manifest = JSON.parse(new TextDecoder().decode(await fetchBytes(base)));
+    const manifestBytes = await fetchBytes(base);
+    const manifest = JSON.parse(new TextDecoder().decode(manifestBytes));
     const required = ['worker.js', 'src/index.js', 'webmscore.mjs',
         'webmscore.lib.wasm', 'webmscore.lib.mem.wasm', 'webmscore.lib.data',
         'renderer.js', 'verovio/verovio-module.mjs', 'verovio/verovio.mjs', SHEET_FONTS.medium, SHEET_FONTS.bold];
@@ -164,7 +201,18 @@ async function assets(options: LibraryOptions): Promise<{ base: URL; sheetFonts:
         || options.assets.workerUrl.href !== new URL('worker.js', base).href) {
         throw new ScoreError('ASSET_MISMATCH', 'create', 'Missing or mismatched engine entry');
     }
-    return { base, sheetFonts: { medium: kept.get(SHEET_FONTS.medium)!, bold: kept.get(SHEET_FONTS.bold)! } };
+    const textFonts = Array.isArray(manifest.textFonts) ? manifest.textFonts as { family?: unknown; path?: unknown }[] : [];
+    if (textFonts.some(font => typeof font.family !== 'string' || !/^[A-Za-z0-9 _-]+$/.test(font.family) || typeof font.path !== 'string' || !paths.has(font.path))) {
+        throw new ScoreError('ASSET_MISMATCH', 'create', 'Invalid text font entry');
+    }
+    const manifestDigest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', manifestBytes)), byte => byte.toString(16).padStart(2, '0')).join('');
+    const renderer: RendererInfo = Object.freeze({
+        library: LIBRARY_VERSION, engine: String(manifest.engine), renderer: typeof manifest.renderer === 'string' ? manifest.renderer : 'unknown',
+        manifestSha256: manifestDigest,
+        fonts: Object.freeze((manifest.assets as { path: string; sha256: string }[]).filter(asset => asset.path.startsWith('fonts/')).map(asset => Object.freeze({ path: asset.path, sha256: asset.sha256 })))
+    });
+    return { base, sheetFonts: { medium: kept.get(SHEET_FONTS.medium)!, bold: kept.get(SHEET_FONTS.bold)! }, renderer,
+        textFontFamilies: new Set(textFonts.map(font => font.family as string)) };
 }
 
 const validSize = (size: { widthMm: number; heightMm: number }) =>
@@ -175,6 +223,8 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
         throw new ScoreError('UNSUPPORTED_CAPABILITY', 'create', 'Unknown adapter or execution mode');
     }
     const partPageStyle = options.partPageStyle ?? 'songbook';
+    if (options.textFonts !== undefined && !['embedded', 'shared'].includes(options.textFonts)) {throw new ScoreError('INVALID_INPUT', 'create', 'textFonts must be "embedded" or "shared"');}
+    const sharedTextFonts = options.textFonts === 'shared';
     if (!['songbook', 'fitted', 'plain'].includes(partPageStyle)) {throw new ScoreError('INVALID_INPUT', 'create', 'partPageStyle must be "songbook", "fitted" or "plain"');}
     const partPageSize = options.partPageSize ?? 'B6';
     if (partPageSize !== 'B6' && partPageSize !== 'score') {
@@ -257,6 +307,9 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     } else if (method === 'musicxml') {
                         await nativeScore!.setExcerptId(-1);
                         return await nativeScore!.saveXml();
+                    } else if (method === 'midi') {
+                        await nativeScore!.setExcerptId(params[0] as number);
+                        return await nativeScore!.saveMidi(true, true);
                     } else if (method === 'renderMusicXml') {
                         const { renderMusicXml } = await import(/* @vite-ignore */ new URL('renderer.js', assetBase).href);
                         return await renderMusicXml(...params);
@@ -294,8 +347,13 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
         return result;
     }
 
+    let rendererInfo: RendererInfo | undefined;
+    let textFontFamilies: ReadonlySet<string> = new Set();
     try {
         const loaded = await assets(options);
+        rendererInfo = loaded.renderer;
+        textFontFamilies = loaded.textFontFamilies;
+        if (sharedTextFonts && !textFontFamilies.size) {throw new ScoreError('ASSET_MISMATCH', 'create', 'The manifest lists no shared text fonts');}
         const base = assetBase = loaded.base;
         sheetFonts = loaded.sheetFonts;
         if (options.execution === 'worker') {
@@ -332,6 +390,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
     }
 
     return {
+        renderer: rendererInfo,
         async open(input, operation = {}) {
             if (disposed) {
                 throw new ScoreError('DISPOSED', 'open', 'Library disposed', true);
@@ -355,6 +414,10 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                 if (operation.compatibility !== 'allowUnverified') {
                     throw new ScoreError('UNSUPPORTED_VERSION', 'open', 'No versions have completed fidelity validation');
                 }
+                const partTransform = operation.partTransform;
+                const partLayout = operation.partLayout;
+                if (partLayout !== undefined && typeof partLayout !== 'function') {throw new ScoreError('INVALID_INPUT', 'open', 'partLayout must be a function');}
+                if (partTransform !== undefined && typeof partTransform !== 'function') {throw new ScoreError('INVALID_INPUT', 'open', 'partTransform must be a function');}
                 const songbook: SongbookInfo = {};
                 if (operation.songbook !== undefined) {
                     if (!operation.songbook || typeof operation.songbook !== 'object') {throw new ScoreError('INVALID_INPUT', 'open', 'songbook must be an object');}
@@ -387,20 +450,24 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                 };
                 const catalog = (metadata: Metadata): PartCatalog => {
                     if (parts.length !== metadata.excerpts.length) {
-                        parts = metadata.excerpts.map((excerpt, index) => ({
-                            id: crypto.randomUUID(), name: info.savedPartNames[excerpt.title] || excerpt.title?.trim() || `Part ${index + 1}`,
-                            ordinal: index + 1, origin,
-                            instrumentNames: (excerpt.parts || []).map(part => part.instrumentName || part.name).filter(Boolean),
-                            staffCount: null
-                        }));
+                        parts = metadata.excerpts.map((excerpt, index) => {
+                            const instruments = excerptInstruments(excerpt, index, metadata.excerpts.length, info);
+                            return {
+                                id: crypto.randomUUID(), name: info.savedPartNames[excerpt.title] || excerpt.title?.trim() || `Part ${index + 1}`,
+                                ordinal: index + 1, origin,
+                                instrumentNames: (excerpt.parts || []).map(part => part.instrumentName || part.name).filter(Boolean),
+                                staffCount: null, instruments, instrumentIds: instrumentIdsOf(instruments)
+                            };
+                        });
                     }
-                    return { revision, parts: parts.map(part => ({ ...part, instrumentNames: [...part.instrumentNames] })),
+                    return { revision, parts: parts.map(part => ({ ...part, instrumentNames: [...part.instrumentNames],
+                        instruments: part.instruments.map(instrument => ({ ...instrument })), instrumentIds: [...part.instrumentIds] })),
                         coverage: 'unknown', warnings: [{ code: 'PART_COVERAGE_UNKNOWN', message: 'Excerpt coverage and staff counts cannot be established from engine metadata.' },
                             { code: 'PART_FIDELITY_UNVERIFIED', message: 'Part notation and layout fidelity have not been established for this file.' },
                             ...(metadata.parts.some(part => part.isVisible !== 'true') ? [{ code: 'PART_VISIBILITY_UNCERTAIN', message: 'Generated parts may include hidden instruments.' }] : [])] };
                 };
                 const support = Object.fromEntries(capabilities.map(capability => [capability,
-                    Object.freeze((capability.startsWith('import.') || capability.startsWith('parts.') || capability === 'svg.page' || capability === 'export.musicxml') ? { available: true }
+                    Object.freeze((capability.startsWith('import.') || capability.startsWith('parts.') || capability === 'svg.page' || capability === 'export.musicxml' || capability === 'export.midi') ? { available: true }
                         : { available: false, reason: 'Not implemented by this milestone' })])) as ScoreSession['capabilities'];
                 const viewIndex = async (view: View, signal?: AbortSignal): Promise<{ index: number; metadata?: Metadata }> => {
                     if (view?.kind === 'score') {return { index: -1 };}
@@ -411,6 +478,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     if (index < 0) {throw new ScoreError('PART_NOT_FOUND', 'svg.page', 'Part is not in this session');}
                     return { index, metadata };
                 };
+                let scoreMidiCache: { revision: number; midi: Uint8Array } | undefined;
                 // Full-score MusicXML of the current revision, exported once and shared by parts.
                 let scoreXml: { revision: number; xml: string; parts: ReturnType<typeof musicXmlParts> } | undefined;
                 const fullScore = async (signal?: AbortSignal) => {
@@ -448,7 +516,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     };
                 };
                 // Part pages are drawn by the MusicXML renderer, one part at a time.
-                const rendered = new Map<PartId, { revision: number; pages: string[]; warnings: Warning[]; geometry: { widthMm: number; heightMm: number } }>();
+                const rendered = new Map<PartId, { revision: number; pages: string[]; warnings: Warning[]; geometry: { widthMm: number; heightMm: number }; layout?: SheetLayoutResult }>();
                 const partPages = async (index: number, metadata: Metadata, signal?: AbortSignal) => {
                     const part = parts[index];
                     const cached = rendered.get(part.id);
@@ -458,14 +526,31 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     if (!ids) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'getPages', 'Part could not be matched to the full-score MusicXML');}
                     let built: ReturnType<typeof partMusicXml>;
                     try { built = partMusicXml(score.xml, ids, partPageSize, partPageStyle); } catch { throw new ScoreError('UNSUPPORTED_CAPABILITY', 'getPages', 'Part MusicXML could not be built'); }
+                    const transformWarnings: Warning[] = [];
+                    if (partTransform) {
+                        let transformed: ReturnType<PartTransform>;
+                        try { transformed = partTransform({ musicXml: built.musicXml, part: { ...part }, musicXmlPartIds: [...ids] }); } catch { throw new ScoreError('INVALID_INPUT', 'getPages', 'The part transform failed'); }
+                        if (typeof transformed?.musicXml !== 'string' || !transformed.musicXml) {throw new ScoreError('INVALID_INPUT', 'getPages', 'The part transform returned no MusicXML');}
+                        built = { ...built, musicXml: transformed.musicXml };
+                        transformWarnings.push(...(transformed.warnings ?? []).map(warning => ({ code: String(warning.code), message: String(warning.message) })));
+                    }
                     const sheet = partPageStyle === 'songbook';
                     const fitted = sheet || partPageStyle === 'fitted';
                     const area = sheet ? { widthMm: MUSIC_AREA.widthMm, heightMm: MUSIC_AREA.heightMm } : { widthMm: fitArea.widthMm, heightMm: fitArea.heightMm };
+                    let layout: SheetLayout = {};
+                    if (fitted && partLayout) {
+                        try { layout = partLayout({ ...part }) ?? {}; } catch { throw new ScoreError('INVALID_INPUT', 'getPages', 'The part layout failed'); }
+                    }
+                    const sheetLayout = Object.fromEntries(Object.entries({ unit: layout.staffSpaceMm === undefined ? undefined : layout.staffSpaceMm * 5,
+                        systems: layout.systems, spacingLinear: layout.spacingLinear, spacingNonLinear: layout.spacingNonLinear, spacingSystem: layout.spacingSystem, fingeringScale: layout.fingeringScale })
+                        .filter(([, value]) => typeof value === 'number' && Number.isFinite(value)));
                     const output = await (fitted
-                        ? call('renderSheet', [built.musicXml, area, built.measureWeights], signal)
-                        : call('renderMusicXml', [built.musicXml, built.geometry], signal)) as { pages?: unknown; staffSpaceMm?: unknown };
+                        ? call('renderSheet', [built.musicXml, area, built.measureWeights, sheetLayout], signal)
+                        : call('renderMusicXml', [built.musicXml, built.geometry], signal)) as { pages?: unknown; staffSpaceMm?: unknown; systems?: unknown; contentHeightMm?: unknown; fingeringScale?: unknown; spacingTightened?: unknown };
                     if (!output || !Array.isArray(output.pages) || output.pages.some(page => typeof page !== 'string')) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'getPages', 'The renderer could not read the part MusicXML');}
                     let pages = output.pages as string[];
+                    // Shared text fonts: drop the renderer's embedded @font-face rules; the pages keep naming the families.
+                    if (sharedTextFonts && !sheet) {pages = pages.map(page => withoutEmbeddedFonts(page, textFontFamilies));}
                     let geometry: { widthMm: number; heightMm: number } = built.geometry;
                     const sheetWarnings: Warning[] = [];
                     if (fitted) {
@@ -477,7 +562,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                             if (!header.number) {sheetWarnings.push({ code: 'SHEET_NUMBER_MISSING', message: 'No song number was given; the sheet shows none.' });}
                         }
                         if (pages.length > 1) {sheetWarnings.push({ code: 'SHEET_OVERFLOW', message: `The part does not fit one sheet at the smallest staff size and continues on ${pages.length} sheets.` });}
-                        else if (typeof output.staffSpaceMm === 'number' && output.staffSpaceMm < 1.7) {sheetWarnings.push({ code: 'SHEET_STAFF_REDUCED', message: `The staff was reduced to ${output.staffSpaceMm.toFixed(2)} mm per space to fit one sheet.` });}
+                        else if (typeof output.staffSpaceMm === 'number' && output.staffSpaceMm < 1.2) {sheetWarnings.push({ code: 'SHEET_STAFF_REDUCED', message: `The staff was reduced below the usual caderninho size, to ${output.staffSpaceMm.toFixed(2)} mm per space to fit one sheet.` });}
                     }
                     const warnings: Warning[] = [
                         { code: 'PART_RENDERED_FROM_MUSICXML', message: 'Drawn by Verovio 6.4.0 from the full-score MusicXML. Spacing, system breaks and engraving differ from MuseScore.' },
@@ -485,8 +570,14 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     if (origin === 'existing') {warnings.push({ code: 'MUSICXML_FROM_FULL_SCORE', message: 'This saved part is drawn from the full score; part-only content and part layout are not included.' });}
                     if (built.copiedMarkings) {warnings.push({ code: 'SYSTEM_MARKINGS_COPIED', message: `${built.copiedMarkings} tempo, jump and rehearsal markings were copied from the top part of the score.` });}
                     warnings.push(...sheetWarnings);
+                    warnings.push(...transformWarnings);
                     if (!fitted && !built.geometryFromScore) {warnings.push({ code: 'PAGE_SIZE_DEFAULTED', message: partPageSize === 'score' ? 'The score has no usable page layout; A4 pages were used.' : 'The score has no usable page layout; default margins and staff size were used.' });}
-                    const entry = { revision, pages, warnings, geometry };
+                    const layoutResult: SheetLayoutResult | undefined = fitted && typeof output.staffSpaceMm === 'number' && typeof output.systems === 'number' && typeof output.contentHeightMm === 'number'
+                        ? { staffSpaceMm: output.staffSpaceMm, systems: output.systems, fillRatio: Math.round(output.contentHeightMm / area.heightMm * 1000) / 1000,
+                            fingeringScale: typeof output.fingeringScale === 'number' ? output.fingeringScale : 0.9 } : undefined;
+                    if (layoutResult && layout.fingeringScale === undefined && layoutResult.fingeringScale < 0.9) {warnings.push({ code: 'FINGERINGS_REDUCED', message: `The fingerings were reduced to ${Math.round(layoutResult.fingeringScale / 0.9 * 100)}% to fit one sheet.` });}
+                    if (output.spacingTightened === true) {warnings.push({ code: 'SHEET_SPACING_TIGHTENED', message: 'The part is dense: its horizontal spacing was tightened to fit one sheet.' });}
+                    const entry = { revision, pages, warnings, geometry, layout: layoutResult };
                     rendered.set(part.id, entry);
                     return entry;
                 };
@@ -539,7 +630,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                             const doc = new DOMParser().parseFromString(nativeSvg, 'image/svg+xml');
                             const root = doc.documentElement;
                             if (root.localName !== 'svg' || doc.querySelector('parsererror')) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'renderPage', 'Renderer returned invalid SVG');}
-                            await validatePortableSvg(doc);
+                            await validatePortableSvg(doc, drawn && sharedTextFonts && partPageStyle !== 'songbook' ? textFontFamilies : undefined);
                             if (drawn) {
                                 // Verovio with mmOutput: the viewBox is the page in millimetres, rounded to
                                 // its internal units; the physical size is the score's page size.
@@ -573,8 +664,53 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                             const pageWarnings = drawn ? drawn.warnings : [{ code: 'SOURCE_COMPLETENESS_UNVERIFIED', message: 'The engine cannot report every font substitution, missing glyph, or imported element loss.' }, { code: 'PART_FIDELITY_UNVERIFIED', message: 'Imported notation and layout fidelity are not established for this file.' }];
                             const target = part ? `part-${String(part.ordinal).padStart(3, '0')}-${stem(part.name, 'part')}` : 'score';
                             return { view: part ? { kind: 'part' as const, partId: part.id } : { kind: 'score' as const }, revision, pageNumber, pageCount, widthMm, heightMm, svg,
-                                filename: `${scoreStem}--${target}--page-${String(pageNumber).padStart(4, '0')}.svg`, portability: 'self-contained' as const,
-                                warnings: pageWarnings.map(warning => ({ ...warning })) };
+                                filename: `${scoreStem}--${target}--page-${String(pageNumber).padStart(4, '0')}.svg`, portability: drawn && sharedTextFonts && partPageStyle !== 'songbook' ? 'shared-fonts' as const : 'self-contained' as const,
+                                warnings: pageWarnings.map(warning => ({ ...warning })), ...(drawn?.layout ? { layout: { ...drawn.layout } } : {}) };
+                        });
+                    },
+                    invalidate(view?: View) {
+                        if (view === undefined) { rendered.clear(); return; }
+                        if (view?.kind === 'part' && typeof view.partId === 'string') {rendered.delete(view.partId);}
+                    },
+                    exportMidi(view: View, operation: Operation & { expectedRevision: number }) {
+                        return run('exportMidi', operation?.signal, async (): Promise<MidiExport> => {
+                            if (!operation || operation.expectedRevision !== revision) {throw new ScoreError('STALE_REVISION', 'exportMidi', 'Score revision changed');}
+                            const { index, metadata } = await viewIndex(view, operation.signal);
+                            const engineMidi = async (excerpt: number) => {
+                                const midi = await call('midi', [excerpt], operation.signal);
+                                const bytes = midi instanceof Uint8Array ? midi : ArrayBuffer.isView(midi) ? new Uint8Array(midi.buffer, midi.byteOffset, midi.byteLength) : null;
+                                // A standard MIDI file starts with the MThd header chunk.
+                                if (!bytes || bytes.length < 14 || String.fromCharCode(...bytes.subarray(0, 4)) !== 'MThd') {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'exportMidi', 'Engine returned invalid MIDI');}
+                                return bytes;
+                            };
+                            // The full-score MIDI and MusicXML are taken first and kept: the engine stops
+                            // when it exports the full score's MIDI after a part's.
+                            if (scoreMidiCache?.revision !== revision) {scoreMidiCache = { revision, midi: await engineMidi(-1) };}
+                            const scoreMidi = scoreMidiCache.midi;
+                            const score = await fullScore(operation.signal);
+                            let bytes = index < 0 ? scoreMidi : await engineMidi(index);
+                            const midiWarnings: Warning[] = [];
+                            if (index >= 0 && midiNoteCount(bytes) === 0) {
+                                // The engine plays no notes for parts saved by MuseScore 4: take the part's
+                                // staves from the full-score MIDI, one track per staff in score order.
+                                const ids = musicXmlTargets(metadata!, score.parts.map(p => p.id))[index];
+                                const staves = staffCounts(score.xml);
+                                const total = [...staves.values()].reduce((sum, count) => sum + count, 0);
+                                if (!ids || midiTrackCount(scoreMidi) !== total) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'exportMidi', 'The part could not be matched to the score MIDI tracks');}
+                                const order = score.parts.map(p => p.id);
+                                const tracks: number[] = [];
+                                for (const id of ids) {
+                                    const first = order.slice(0, order.indexOf(id)).reduce((sum, other) => sum + (staves.get(other) ?? 1), 0);
+                                    for (let staff = 0; staff < (staves.get(id) ?? 1); staff++) {tracks.push(first + staff);}
+                                }
+                                try { bytes = extractTracks(scoreMidi, tracks); } catch { throw new ScoreError('UNSUPPORTED_CAPABILITY', 'exportMidi', 'The score MIDI could not be split'); }
+                                midiWarnings.push({ code: 'MIDI_FROM_FULL_SCORE', message: 'This part\'s MIDI was taken from the full score; part-only content is not included.' });
+                            }
+                            const part = index < 0 ? undefined : parts[index];
+                            const scoreStem = fileStem(input.name.replace(/\.(mscx|mscz)$/i, ''), 'score');
+                            const target = part ? `part-${String(part.ordinal).padStart(3, '0')}-${fileStem(part.name, 'part')}` : 'score';
+                            return { view: part ? { kind: 'part' as const, partId: part.id } : { kind: 'score' as const }, revision, midi: bytes.slice(), filename: `${scoreStem}--${target}.midi`,
+                                warnings: [{ code: 'MIDI_FIDELITY_UNVERIFIED', message: 'Exported by the MuseScore 4.0 engine (webmscore 1.2.1); equivalence with desktop MuseScore output is not established for this file.' }, ...midiWarnings] };
                         });
                     },
                     exportMusicXml(operation: Operation & { expectedRevision: number }) {

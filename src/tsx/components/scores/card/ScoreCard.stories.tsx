@@ -13,7 +13,6 @@ const meta = {
     onToggleMode: noop,
     onShowDetail: fn(),
     trailing: <button className="btn btn-outline-primary">Adicionar</button>,
-    lineage: "Carnaval BH 2020 → (…) → Carnaval BH 2025 → Carnaval BH 2026",
   },
   render: function Render(args) {
     const [mode, setMode] = useState(args.mode);

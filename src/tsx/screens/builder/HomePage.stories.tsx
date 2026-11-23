@@ -54,3 +54,26 @@ export const SaveDialog: Story = {
     });
   },
 };
+// The column divider (wide screens only; phones stack both columns).
+export const ResultadosCollapsed: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Recolher Resultados" }),
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Mostrar Resultados" }),
+    ).toHaveFocus();
+  },
+};
+export const CaderninhoCollapsed: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Recolher Caderninho" }),
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Mostrar Caderninho" }),
+    ).toHaveFocus();
+  },
+};

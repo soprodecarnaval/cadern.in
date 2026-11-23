@@ -10,6 +10,8 @@ import { isEditor } from "../../../../lib/roles";
 import { resolveScoreMetadata } from "../../../../lib/scoreMetadata";
 import { publicSongbookPath, songbookPath } from "../../../../lib/routes";
 import { buildExportDeepLink } from "../../../../../types/exportDeepLink";
+import { BROWSER_UPLOAD_MODE, FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
+import { uploadPath } from "../../../../lib/uploadPath";
 
 import type { ScoreDisplayPart, ScorePin } from "../../../components/scores/detail/ScoreDisplay";
 
@@ -233,6 +235,13 @@ export function SongbookScorePageView({
     );
   }
 
+  const uploadContext = {
+    projectId: loaded.songbookProjectId,
+    scoreId,
+    expectedScoreRevisionId: loaded.revisionId,
+    songbookId: loaded.songbookId,
+    expectedSongbookRevisionId: loaded.songbookRevisionId,
+  };
   return (
     <Page className="mt-4">
       <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
@@ -241,15 +250,26 @@ export function SongbookScorePageView({
           {loaded.foreign && <Badge bg="warning">de outro projeto</Badge>}
         </div>
         {isEditor(role) && (
-          <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink({
-              projectId: loaded.songbookProjectId,
-              scoreId,
-              expectedScoreRevisionId: loaded.revisionId,
-              songbookId: loaded.songbookId,
-              expectedSongbookRevisionId: loaded.songbookRevisionId,
-            })}>
-            Enviar nova versão
-          </a>
+          <div className="d-flex flex-wrap gap-2">
+            {FEATURE_FLAG_BROWSER_UPLOAD && (
+              <Link className="btn btn-outline-secondary ds-button btn-sm" to={uploadPath(uploadContext)}>
+                {BROWSER_UPLOAD_MODE === "beta" ? "Enviar nova versão no navegador" : "Enviar nova versão"}
+              </Link>
+            )}
+            {BROWSER_UPLOAD_MODE !== "default" && (
+              <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink(uploadContext)}>
+                Enviar nova versão
+              </a>
+            )}
+            {FEATURE_FLAG_BROWSER_UPLOAD && (
+              <Link
+                className="btn btn-outline-secondary ds-button btn-sm"
+                to={uploadPath({ ...uploadContext, baseRevisionId: loaded.revisionId, mode: "reformat" })}
+              >
+                Reformatar
+              </Link>
+            )}
+          </div>
         )}
       </div>
       <p className="text-muted mb-3">

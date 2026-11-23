@@ -34,6 +34,11 @@ self.onmessage = ({ data }) => {
                 await score.setExcerptId(data.params[0]);
                 result = await score.saveSvg(data.params[1], data.params[2]);
                 break;
+            case 'midi':
+                // Repeats expanded and RPNs written, as `mscore` exports MIDI by default.
+                await score.setExcerptId(data.params[0]);
+                result = await score.saveMidi(true, true);
+                break;
             case 'musicxml':
                 await score.setExcerptId(-1);
                 result = await score.saveXml();

@@ -54,7 +54,7 @@ service cloud.firestore {
     function isReservedProjectId(projectId) {
       return projectId.matches('^[0-9]{4}$') || projectId in [
         'projetos', 'partituras', 'artigos', 'montar', 'plugin', 'assets',
-        'index.html', 'vite.svg', 'soundfont-player.min.js', 'favicon.ico',
+        'browser-score', 'index.html', 'vite.svg', 'soundfont-player.min.js', 'favicon.ico',
         'robots.txt', 'sitemap.xml', 'projects', 'project', 'score',
         'songbook', 'manage', 'settings'
       ];
@@ -321,7 +321,7 @@ service cloud.firestore {
       allow create: if request.auth != null &&
         isAdmin(request.resource.data.projectId) &&
         songbookId == request.resource.data.projectId + '~' + request.resource.data.slug &&
-        request.resource.data.slug != 'config' &&
+        !(request.resource.data.slug in ['config', 'enviar']) &&
         request.resource.data.isPublished == false &&
         request.resource.data.deletedAt == null &&
         existsAfter(songbookRevisionPath(songbookId, request.resource.data.currentRevisionId));

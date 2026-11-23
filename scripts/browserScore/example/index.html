@@ -64,6 +64,14 @@
             <button id="select-none" type="button">Clear selection</button>
             <ol id="parts-list"></ol>
         </section>
+        <section aria-labelledby="midi-heading">
+            <h2 id="midi-heading">MIDI</h2>
+            <p>Exports a MIDI file for the full score and for each part, with repeats expanded, as desktop MuseScore does.
+                Prepare the parts first for a file without saved parts.</p>
+            <button id="export-midi" type="button">Export MIDI</button>
+            <p id="midi-status" role="status" aria-live="polite"></p>
+            <ul id="midi-list"></ul>
+        </section>
         <section aria-labelledby="musicxml-heading">
             <h2 id="musicxml-heading">Full-score MusicXML</h2>
             <p>Exports one MusicXML file containing every instrument part, with transpositions, keys and clefs.
