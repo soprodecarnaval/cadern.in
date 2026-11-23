@@ -53,7 +53,8 @@ service cloud.firestore {
     // year-only legacy pages would shadow these names.
     function isReservedProjectId(projectId) {
       return projectId.matches('^[0-9]{4}$') || projectId in [
-        'projetos', 'partituras', 'artigos', 'montar', 'plugin', 'assets',
+        'projetos', 'partituras', 'artigos', 'montar', 'biblioteca', 'plugin',
+        'assets',
         'index.html', 'vite.svg', 'soundfont-player.min.js', 'favicon.ico',
         'robots.txt', 'sitemap.xml', 'projects', 'project', 'score',
         'songbook', 'manage', 'settings'

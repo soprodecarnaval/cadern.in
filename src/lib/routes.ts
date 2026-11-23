@@ -5,6 +5,7 @@
 export const ROUTE_PATTERNS = {
   home: "/",
   builder: "/montar",
+  library: "/biblioteca",
   articles: "/artigos",
   article: "/artigos/:slug",
   score: "/partituras/:scoreId",
@@ -26,6 +27,7 @@ const RESERVED_PROJECT_SLUGS = new Set([
   "partituras",
   "artigos",
   "montar",
+  "biblioteca",
   "plugin",
   "assets",
   "index.html",
@@ -61,6 +63,8 @@ export function isReservedProjectSlug(slug: string | undefined): boolean {
 export function isReservedSongbookSlug(slug: string | undefined): boolean {
   return slug !== undefined && RESERVED_SONGBOOK_SLUGS.has(slug);
 }
+
+export const libraryPath = () => ROUTE_PATTERNS.library;
 
 export const articlesPath = () => ROUTE_PATTERNS.articles;
 

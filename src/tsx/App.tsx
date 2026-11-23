@@ -25,6 +25,7 @@ import { ArticlesPage } from "./screens/articles/ArticlesPage";
 import { HomePage } from "./screens/builder/HomePage";
 import { LandingChrome } from "./screens/landing/LandingChrome";
 import { LandingPage } from "./screens/landing/LandingPage";
+import { LibraryPage } from "./screens/library/LibraryPage";
 
 /** Year-only URLs belonged to the old static songbook pages. Project slugs
     cannot use them. Until each static page is removed, the static file wins;
@@ -76,11 +77,11 @@ function App() {
   };
   const [inboxCount, setInboxCount] = useState(0);
   const { currentUser, pendingUser } = useAuth();
-  // Every page has the landing header and footer. The landing and article
-  // pages draw their own; the rest get them from LandingChrome.
+  // Pages that draw their own header and footer do not need LandingChrome.
   const { pathname } = useLocation();
   const drawsOwnChrome =
     pathname === ROUTE_PATTERNS.home ||
+    pathname === ROUTE_PATTERNS.library ||
     pathname === ROUTE_PATTERNS.articles ||
     pathname.startsWith(`${ROUTE_PATTERNS.articles}/`);
 
@@ -114,6 +115,12 @@ function App() {
         <Route
           path={ROUTE_PATTERNS.builder}
           element={<HomePage onRequestLogin={() => openUserModal()} />}
+        />
+        <Route
+          path={ROUTE_PATTERNS.library}
+          element={
+            <LibraryPage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
+          }
         />
         <Route
           path={ROUTE_PATTERNS.articles}
