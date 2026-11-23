@@ -24,6 +24,7 @@ import {
   type Preview,
   type Step,
 } from "./enviarState";
+import { FINGERING_SIZE, stepFingeringSize } from "./fingeringSize";
 
 import "./EnviarPage.css";
 
@@ -229,11 +230,14 @@ function Choice({ label, value, options, onChange, name }: {
   );
 }
 
-function AutoNumber({ label, name, value, min, max, step, unit, onChange }: {
+function AutoNumber({ label, name, value, min, max, step, unit, fingeringSize, onChange }: {
   label: string; name: string; value: "auto" | number | undefined; min: number; max: number; step: number; unit?: string;
+  fingeringSize?: { automatic: number | undefined };
   onChange: (value: "auto" | number) => void;
 }) {
   const manual = typeof value === "number";
+  const displayedValue = manual ? value : fingeringSize?.automatic;
+  const fixedDefault = fingeringSize ? fingeringSize.automatic ?? FINGERING_SIZE.default : min + (max - min) / 2;
   return (
     <fieldset className="enviar-choice">
       <legend>{label}</legend>
@@ -242,23 +246,35 @@ function AutoNumber({ label, name, value, min, max, step, unit, onChange }: {
         <span className="form-check-label">Automático</span>
       </label>
       <label className="form-check form-check-inline">
-        <input type="radio" className="form-check-input" name={name} checked={manual} onChange={() => onChange(manual ? value : min + (max - min) / 2)} />
+        <input type="radio" className="form-check-input" name={name} checked={manual} onChange={() => onChange(fixedDefault)} />
         <span className="form-check-label">Fixo</span>
       </label>
-      {manual && (
+      {(manual || fingeringSize) && (
         <span className="enviar-number">
+          {fingeringSize && (
+            <Button variant="secondary" size="sm" aria-label={`Diminuir: ${label}`}
+              disabled={displayedValue === undefined || displayedValue <= min}
+              onClick={() => { if (displayedValue !== undefined) {onChange(stepFingeringSize(displayedValue, -1));} }}>−</Button>
+          )}
           <Input
             type="number"
             aria-label={`${label}${unit ? ` (${unit})` : ""}`}
             min={min}
             max={max}
             step={step}
-            value={value}
+            value={displayedValue ?? ""}
+            placeholder={fingeringSize ? "auto" : undefined}
+            readOnly={!!fingeringSize && !manual}
             onChange={(event) => {
               const number = Number(event.target.value);
               if (Number.isFinite(number) && number >= min && number <= max) {onChange(number);}
             }}
           />
+          {fingeringSize && (
+            <Button variant="secondary" size="sm" aria-label={`Aumentar: ${label}`}
+              disabled={displayedValue === undefined || displayedValue >= max}
+              onClick={() => { if (displayedValue !== undefined) {onChange(stepFingeringSize(displayedValue, 1));} }}>+</Button>
+          )}
           {unit && <span>{unit}</span>}
         </span>
       )}
@@ -272,7 +288,16 @@ function Controls({ state, onProfile, onEditing }: Pick<EnviarPageViewProps, "st
   const settings = formattingOf(state.profile, partName);
   const change = (patch: PartFormatting) => onProfile(withFormatting(state.profile, partName, patch));
   const included = state.rows.filter((row) => row.include && row.instrument);
-  const families = new Set((editingRow ? [editingRow] : included).filter((row) => row.fingerings).map((row) => row.family));
+  const fingeringRows = (editingRow ? [editingRow] : included).filter((row) => row.fingerings);
+  const families = new Set(fingeringRows.map((row) => row.family));
+  const previewScales = fingeringRows.map((row) => {
+    const preview = state.previews[row.ordinal];
+    if (preview?.rendering || preview?.error || typeof formattingOf(state.profile, row.name).fingering?.size === "number") {
+      return undefined;
+    }
+    return preview?.automaticFingeringSize;
+  });
+  const automaticSize = previewScales.every((scale) => scale === previewScales[0]) ? previewScales[0] : undefined;
   const notation = settings.fingering?.notation ?? "positions";
   return (
     <form className="enviar-controls" onSubmit={(event) => event.preventDefault()} aria-label="Formatação">
@@ -301,7 +326,9 @@ function Controls({ state, onProfile, onEditing }: Pick<EnviarPageViewProps, "st
               <span className="form-check-label">Trombone dinâmico (posições alternativas)</span>
             </label>
           )}
-          <AutoNumber label="Tamanho dos números" name="fingering-size" value={settings.fingering?.size} min={0.4} max={1.6} step={0.05}
+          <AutoNumber label="Tamanho dos números" name="fingering-size" value={settings.fingering?.size}
+            min={FINGERING_SIZE.min} max={FINGERING_SIZE.max} step={FINGERING_SIZE.step}
+            fingeringSize={{ automatic: automaticSize }}
             onChange={(size) => change({ fingering: { size } })} />
         </>
       )}

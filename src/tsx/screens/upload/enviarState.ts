@@ -148,6 +148,7 @@ export type Preview = {
   svg: string | null;
   pages: number;
   layout: SheetLayoutResult | null;
+  automaticFingeringSize?: number;
   warnings: readonly Warning[];
   rendering: boolean;
   error?: string;

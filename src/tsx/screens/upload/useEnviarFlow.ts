@@ -226,6 +226,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
           svg: previous?.svg ?? null,
           pages: previous?.pages ?? 0,
           layout: previous?.layout ?? null,
+          automaticFingeringSize: previous?.automaticFingeringSize,
           warnings: previous?.warnings ?? [],
           rendering: pending.has(ordinal),
         }];
@@ -247,11 +248,14 @@ export function useEnviarFlow(deps: EnviarDeps) {
             const view = { kind: "part" as const, partId: part.id };
             const { revision, pageCount } = await open.getPages(view, { signal });
             const page = await open.renderPage(view, 1, { expectedRevision: revision, signal, background: "white" });
-            if (signal.aborted || session.current !== open || superseded) {return;}
-            rendered.current.set(ordinal, signature);
             // Pages name their shared text fonts; a preview shown as an image needs them embedded (014).
             const svg = page.portability === "shared-fonts" ? withTextFonts(page.svg, await textFontCss()) : page.svg;
-            update((current) => ({ previews: { ...current.previews, [ordinal]: { ordinal, svg, pages: pageCount, layout: page.layout ?? null, warnings: page.warnings, rendering: false } } }));
+            if (signal.aborted || session.current !== open || superseded) {return;}
+            rendered.current.set(ordinal, signature);
+            const automaticFingeringSize = resolvePartFormatting(signatures.profile, part.name).fingering.size === "auto"
+              ? page.layout?.fingeringScale
+              : undefined;
+            update((current) => ({ previews: { ...current.previews, [ordinal]: { ordinal, svg, pages: pageCount, layout: page.layout ?? null, automaticFingeringSize, warnings: page.warnings, rendering: false } } }));
           } catch (error) {
             const text = message(error);
             if (text && !signal.aborted && !superseded) {update((current) => ({ previews: { ...current.previews, [ordinal]: { ...current.previews[ordinal], ordinal, rendering: false, error: text } } }));}

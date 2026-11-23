@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { useState } from "react";
 import { expect, fn, userEvent, within } from "@storybook/test";
 import { DEFAULT_FORMATTING_PROFILE } from "../../../../types/formattingProfile";
 import { initialState, partRows, type EnviarState } from "./enviarState";
@@ -13,8 +14,9 @@ const rows = partRows([
 // A stand-in for an engraved page: five staff lines per system.
 const sheet = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 171.7 98.2">${[10, 35, 60].map((y) =>
   [0, 2, 4, 6, 8].map((d) => `<line x1="2" x2="170" y1="${y + d}" y2="${y + d}" stroke="black" stroke-width="0.2"/>`).join("")).join("")}</svg>`;
-const preview = (ordinal: number, extra = {}) => ({
-  ordinal, svg: sheet, pages: 1, layout: { staffSpaceMm: 1.45, systems: 3, fillRatio: 0.82, fingeringScale: 0.9 }, warnings: [], rendering: false, ...extra,
+const preview = (ordinal: number, extra = {}, fingeringScale = 0.9) => ({
+  ordinal, svg: sheet, pages: 1, layout: { staffSpaceMm: 1.45, systems: 3, fillRatio: 0.82, fingeringScale },
+  automaticFingeringSize: fingeringScale, warnings: [], rendering: false, ...extra,
 });
 const base: EnviarState = { ...initialState(), fileName: "Cilada.mscz", title: "CILADA", rows };
 const state = (change: Partial<EnviarState>): EnviarState => ({ ...base, ...change });
@@ -82,6 +84,41 @@ export const Formatting: Story = {
     await expect(canvas.getByText(/Não coube em uma página/)).toBeVisible();
     await userEvent.click(canvas.getByRole("tab", { name: /Pete/ }));
     await expect(canvas.getByText("Atualizando…")).toBeVisible();
+  },
+};
+
+export const FingeringSize: Story = {
+  args: {
+    state: state({
+      step: "formatacao",
+      previews: { 1: preview(1), 2: preview(2, {}, 0.75), 3: preview(3, {}, 0.9) },
+    }),
+  },
+  render: function Render(args) {
+    const [profile, setProfile] = useState(args.state.profile);
+    const [editing, setEditing] = useState(args.state.editing);
+    return <EnviarPageView {...args} state={{ ...args.state, profile, editing }} onProfile={setProfile} onEditing={setEditing} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const size = canvas.getByRole("spinbutton", { name: "Tamanho dos números" });
+    const increase = canvas.getByRole("button", { name: "Aumentar: Tamanho dos números" });
+    const decrease = canvas.getByRole("button", { name: "Diminuir: Tamanho dos números" });
+    const controls = within(canvas.getByRole("group", { name: "Tamanho dos números" }));
+    await expect(size).toHaveValue(null);
+    await expect(size).toHaveAttribute("placeholder", "auto");
+    await expect(increase).toBeDisabled();
+    await userEvent.selectOptions(canvas.getByLabelText("Ajustar"), "2");
+    await expect(controls.getByRole("radio", { name: "Automático" })).toBeChecked();
+    await expect(size).toHaveValue(0.75);
+    await userEvent.click(increase);
+    await expect(controls.getByRole("radio", { name: "Fixo" })).toBeChecked();
+    await expect(size).toHaveValue(0.8);
+    await userEvent.click(decrease);
+    await expect(size).toHaveValue(0.75);
+    await userEvent.click(controls.getByRole("radio", { name: "Automático" }));
+    await expect(size).toHaveValue(0.75);
+    await expect(size).toHaveAttribute("readonly");
   },
 };
 
