@@ -111,12 +111,12 @@ async function sendThroughScreen(page, { file, tweak = false } = {}) {
             assert.equal(await sizeInput.inputValue(), size);
         }
         // Staff size of one part: the stepper starts from the size the fit chose and goes up 0.05 mm.
-        const staff = page.getByRole('group', { name: 'Tamanho da pauta (desta parte)' });
+        const staff = page.getByRole('group', { name: 'Tamanho da pauta' });
         const staffInput = staff.getByRole('spinbutton');
         const automatic = Number(await staffInput.inputValue());
         assert(automatic >= 0.8 && automatic <= 2.4, `automatic staff size shown (${automatic})`);
         const before = await preview.getAttribute('src');
-        await page.getByRole('button', { name: 'Diminuir: Tamanho da pauta (desta parte)' }).click();
+        await page.getByRole('button', { name: 'Diminuir: Tamanho da pauta' }).click();
         await page.waitForFunction(({ previous }) => {
             const img = document.querySelector('.enviar-preview[aria-busy=false] img');
             return img && img.getAttribute('src') !== previous;

@@ -79,18 +79,18 @@ export const Formatting: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const general = within(canvas.getByRole("region", { name: "Toda a partitura" }));
-    await expect(general.getByRole("radio", { name: "Posições (1–7)" })).toBeChecked();
+    await expect(canvas.queryByRole("region", { name: "Toda a partitura" })).toBeNull();
     // One part at a time, in tabs; the tuba's tab is marked for its warning.
     await expect(canvas.getAllByRole("tab")).toHaveLength(3);
     await expect(canvas.getByRole("tab", { name: "Flauta" })).toHaveAttribute("aria-selected", "true");
     const part = within(canvas.getByRole("region", { name: "Parte: Flauta" }));
-    await expect(part.getByRole("spinbutton", { name: "Tamanho da pauta (desta parte) (mm)" })).toHaveValue(1.45);
+    await expect(part.getByRole("spinbutton", { name: "Tamanho da pauta (mm)" })).toHaveValue(1.45);
     await expect(canvas.getAllByText(/Pauta de 1,45 mm/)).toHaveLength(1);
     await userEvent.click(canvas.getByRole("tab", { name: /Tuba/ }));
     await expect(canvas.getByRole("region", { name: "Parte: Tuba" })).toBeVisible();
     await expect(canvas.getByText(/Não coube em uma página/)).toBeVisible();
     await userEvent.click(canvas.getByRole("tab", { name: /Pete/ }));
+    await expect(within(canvas.getByRole("region", { name: "Parte: Pete" })).getByRole("radio", { name: "Posições (1–7)" })).toBeChecked();
     await expect(canvas.getByText("Atualizando…")).toBeVisible();
   },
 };

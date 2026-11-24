@@ -286,30 +286,14 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
 function Controls({ state, onProfile, shownRow, shownPreview }: Pick<EnviarPageViewProps, "state" | "onProfile"> & {
   shownRow: PartRow | undefined; shownPreview: Preview | undefined;
 }) {
-  const score = formattingOf(state.profile, null);
-  const changeScore = (patch: PartFormatting) => onProfile(withFormatting(state.profile, null, patch));
-  const included = state.rows.filter((row) => row.include && row.instrument);
-  const families = new Set(included.filter((row) => row.fingerings).map((row) => row.family));
   const ready = !!shownPreview && !shownPreview.rendering && !shownPreview.error;
   return (
     <form className="enviar-controls" onSubmit={(event) => event.preventDefault()} aria-label="Formatação">
-      <section className="enviar-controls-section" aria-labelledby="enviar-geral">
-        <header>
-          <h3 id="enviar-geral">Toda a partitura</h3>
-          <p>Vale para todas as partes.</p>
-        </header>
-        <AutoNumber label="Tamanho da pauta" name="staff" unit="mm" value={score.staffSize} min={STAFF_SIZE.min} max={STAFF_SIZE.max} step={STAFF_SIZE.step}
-          onChange={(staffSize) => changeScore({ staffSize })} />
-        <AutoNumber label="Sistemas na página" name="systems" value={score.systemsPerPage} min={1} max={12} step={1}
-          onChange={(systemsPerPage) => changeScore({ systemsPerPage })} />
-        <FingeringAndCleanupControls settings={score} onChange={changeScore}
-          scope="score" showFingering={families.size > 0} showTrombone={families.has("trombone")} />
-      </section>
       {shownRow && (
         <section className="enviar-controls-section" aria-labelledby="enviar-parte">
           <header>
             <h3 id="enviar-parte">Parte: {shownRow.name}</h3>
-            <p>Vale só para a parte aberta na prévia.</p>
+            <p>Vale só para a parte aberta na prévia; escolha outra nas abas.</p>
           </header>
           <PartControls key={shownRow.ordinal} state={state} onProfile={onProfile} row={shownRow}
             automaticStaff={ready ? shownPreview.layout?.staffSpaceMm : undefined}
@@ -320,7 +304,7 @@ function Controls({ state, onProfile, shownRow, shownPreview }: Pick<EnviarPageV
   );
 }
 
-/** The settings of the part shown in the preview: its own override of the score's. */
+/** The settings of the part shown in the preview. */
 function PartControls({ state, onProfile, row, automaticStaff, automaticFingering }: Pick<EnviarPageViewProps, "state" | "onProfile"> & {
   row: PartRow; automaticStaff: number | undefined; automaticFingering: number | undefined;
 }) {
@@ -328,7 +312,7 @@ function PartControls({ state, onProfile, row, automaticStaff, automaticFingerin
   const change = (patch: PartFormatting) => onProfile(withFormatting(state.profile, row.name, patch));
   return (
     <>
-      <AutoNumber label="Tamanho da pauta (desta parte)" name="part-staff-size" unit="mm" value={settings.staffSize}
+      <AutoNumber label="Tamanho da pauta" name="part-staff-size" unit="mm" value={settings.staffSize}
         min={STAFF_SIZE.min} max={STAFF_SIZE.max} step={STAFF_SIZE.step}
         stepper={{ range: STAFF_SIZE, automatic: automaticStaff }}
         onChange={(staffSize) => change({ staffSize })} />
@@ -341,20 +325,19 @@ function PartControls({ state, onProfile, row, automaticStaff, automaticFingerin
           onChange={(size) => change({ fingering: { size } })} />
       )}
       <FingeringAndCleanupControls settings={settings} onChange={change}
-        scope="part" showFingering={row.fingerings} showTrombone={row.family === "trombone"} />
+        showFingering={row.fingerings} showTrombone={row.family === "trombone"} />
       {hasOverride(state.profile, row.name) && (
         <Button variant="text" onClick={() => onProfile(withoutOverride(state.profile, row.name))}>
-          Voltar {row.name} para o ajuste de toda a partitura
+          Voltar {row.name} ao padrão
         </Button>
       )}
     </>
   );
 }
 
-function FingeringAndCleanupControls({ settings, onChange, scope, showFingering, showTrombone }: {
+function FingeringAndCleanupControls({ settings, onChange, showFingering, showTrombone }: {
   settings: PartFormatting;
   onChange: (patch: PartFormatting) => void;
-  scope: "score" | "part";
   showFingering: boolean;
   showTrombone: boolean;
 }) {
@@ -363,7 +346,7 @@ function FingeringAndCleanupControls({ settings, onChange, scope, showFingering,
     <>
       {showFingering && (
         <>
-          <Choice label="Piratas" name={`${scope}-notation`} value={notation}
+          <Choice label="Piratas" name="part-notation" value={notation}
             options={[["positions", "Posições (1–7)"], ["valves", "Pistos"]]}
             onChange={(value) => onChange({ fingering: { notation: value as "positions" | "valves" } })} />
           {notation === "positions" && showTrombone && (
