@@ -74,7 +74,23 @@ function timeline(measure: Element, divisions: number) {
     return { at, end: t, divisions };
 }
 
-/** Copy system-wide directions of the top part into `target` at the same musical position. */
+/**
+ * Drop repeated system-wide directions within each measure. MuseScore exports the markings of
+ * every system-object staff into the top part, so a score with several such staves has each one
+ * written more than once.
+ */
+function dedupeSystemMarkings(part: Element): void {
+    for (const measure of children(part, 'measure')) {
+        const seen = new Set<string>();
+        for (const direction of children(measure, 'direction').filter(isSystemMarking)) {
+            const key = signature(direction);
+            if (seen.has(key)) {direction.remove();}
+            else {seen.add(key);}
+        }
+    }
+}
+
+/** Copy system-wide directions of the top part into `target` at the same musical position, unless the target already has them. */
 function copySystemMarkings(source: Element, target: Element): void {
     const sourceMeasures = children(source, 'measure'), targetMeasures = children(target, 'measure');
     if (sourceMeasures.length !== targetMeasures.length) {return;}
@@ -109,6 +125,7 @@ function copySystemMarkings(source: Element, target: Element): void {
                 types[types.length - 1].after(element);
             }
             into.insertBefore(clone, at?.before ?? null);
+            existing.add(signature(direction));
         }
         sourceDivisions = from.divisions;
         targetDivisions = to.divisions;
@@ -216,6 +233,8 @@ export function partMusicXml(fullScore: string, partIds: readonly string[], page
     const top = bodies[0];
     const kept = bodies.filter(part => keep.has(part.getAttribute('id') ?? ''));
     if (!list || !kept.length || kept.length !== keep.size) {throw new Error('Part not in MusicXML');}
+    dedupeSystemMarkings(top);
+    for (const part of kept) {dedupeSystemMarkings(part);}
     if (!keep.has(top.getAttribute('id') ?? '')) {copySystemMarkings(top, kept[0]);}
     for (const e of Array.from(list.children)) {if (e.localName === 'part-group' || (e.localName === 'score-part' && !keep.has(e.getAttribute('id') ?? ''))) {e.remove();}}
     for (const part of bodies) {if (!keep.has(part.getAttribute('id') ?? '')) {part.remove();}}
