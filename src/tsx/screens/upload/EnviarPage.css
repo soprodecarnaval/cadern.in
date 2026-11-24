@@ -106,3 +106,10 @@
 .enviar-summary { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem var(--ds-space-3); }
 .enviar-summary dt { font-weight: var(--ds-weight-heading); }
 .enviar-summary dd { margin: 0; }
+
+.enviar-part-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2) var(--ds-space-3);
+  margin-bottom: var(--ds-space-2);
+}

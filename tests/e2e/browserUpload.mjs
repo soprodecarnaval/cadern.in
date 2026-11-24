@@ -110,6 +110,20 @@ async function sendThroughScreen(page, { file, tweak = false } = {}) {
             await selectPart(name);
             assert.equal(await sizeInput.inputValue(), size);
         }
+        // Staff size of one part: the stepper starts from the size the fit chose and goes up 0.05 mm.
+        const staff = page.getByRole('group', { name: 'Tamanho da pauta (desta parte)' });
+        const staffInput = staff.getByRole('spinbutton');
+        const automatic = Number(await staffInput.inputValue());
+        assert(automatic >= 0.8 && automatic <= 2.4, `automatic staff size shown (${automatic})`);
+        const before = await preview.getAttribute('src');
+        await page.getByRole('button', { name: 'Diminuir: Tamanho da pauta (desta parte)' }).click();
+        await page.waitForFunction(({ previous }) => {
+            const img = document.querySelector('.enviar-preview[aria-busy=false] img');
+            return img && img.getAttribute('src') !== previous;
+        }, { previous: before }, { timeout: 120000 });
+        assert(await staff.getByRole('radio', { name: 'Fixo' }).isChecked());
+        assert.equal(Number(await staffInput.inputValue()), Number((automatic - 0.05).toFixed(2)));
+        assert.match(await page.locator('.enviar-preview-info').innerText(), new RegExp(`Pauta de ${(automatic - 0.05).toFixed(2).replace('.', ',')} mm`));
     }
     await page.getByRole('button', { name: 'Continuar' }).click();
     await page.waitForFunction(() => document.querySelector('.enviar-summary') || document.querySelector('[role=alert]'), null, { timeout: 60000 });
@@ -123,8 +137,12 @@ try {
         await sendThroughScreen(page, { file: SCORE, tweak: true });
         assert.equal(await page.locator('[role=alert]').count(), 0, 'no error');
         assert.match(await page.locator('.enviar-summary').innerText(), /Partitura nova/);
+        const sendStarted = Date.now();
         await page.getByRole('button', { name: 'Enviar partitura' }).click();
+        await page.waitForFunction(() => /Enviando arquivos|Salvando/.test(document.querySelector('[role=status]')?.textContent ?? '') || document.querySelector('#enviar-feito'), null, { timeout: 300000 });
+        const prepared = Date.now() - sendStarted;
         await page.locator('#enviar-feito').waitFor({ timeout: 300000 });
+        console.log(`  sent 19 parts in ${Date.now() - sendStarted} ms, of which ${prepared} ms preparing pages and MIDI`);
         const href = await page.getByRole('link', { name: 'Ver a partitura' }).getAttribute('href');
         const [, scoreId, revision] = /\/partituras\/([^/]+)\/versoes\/([^/?]+)/.exec(href);
         assert.match(scoreId, /^acervo-dev-/);

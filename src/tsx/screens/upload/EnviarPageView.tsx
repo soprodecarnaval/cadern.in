@@ -24,7 +24,7 @@ import {
   type Preview,
   type Step,
 } from "./enviarState";
-import { FINGERING_SIZE, stepFingeringSize } from "./fingeringSize";
+import { FINGERING_SIZE, STAFF_SIZE, stepSize, type SizeRange } from "./fingeringSize";
 
 import "./EnviarPage.css";
 
@@ -230,14 +230,15 @@ function Choice({ label, value, options, onChange, name }: {
   );
 }
 
-function AutoNumber({ label, name, value, min, max, step, unit, fingeringSize, onChange }: {
+function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChange }: {
   label: string; name: string; value: "auto" | number | undefined; min: number; max: number; step: number; unit?: string;
-  fingeringSize?: { automatic: number | undefined };
+  /** −/+ buttons, and the value the automatic fit chose shown (and used as the start) while automatic. */
+  stepper?: { automatic: number | undefined; range: SizeRange };
   onChange: (value: "auto" | number) => void;
 }) {
   const manual = typeof value === "number";
-  const displayedValue = manual ? value : fingeringSize?.automatic;
-  const fixedDefault = fingeringSize ? fingeringSize.automatic ?? FINGERING_SIZE.default : min + (max - min) / 2;
+  const displayedValue = manual ? value : stepper?.automatic;
+  const fixedDefault = stepper ? stepper.automatic ?? stepper.range.default : min + (max - min) / 2;
   return (
     <fieldset className="enviar-choice">
       <legend>{label}</legend>
@@ -249,12 +250,12 @@ function AutoNumber({ label, name, value, min, max, step, unit, fingeringSize, o
         <input type="radio" className="form-check-input" name={name} checked={manual} onChange={() => onChange(fixedDefault)} />
         <span className="form-check-label">Fixo</span>
       </label>
-      {(manual || fingeringSize) && (
+      {(manual || stepper) && (
         <span className="enviar-number">
-          {fingeringSize && (
+          {stepper && (
             <Button variant="secondary" size="sm" aria-label={`Diminuir: ${label}`}
               disabled={displayedValue === undefined || displayedValue <= min}
-              onClick={() => { if (displayedValue !== undefined) {onChange(stepFingeringSize(displayedValue, -1));} }}>−</Button>
+              onClick={() => { if (displayedValue !== undefined) {onChange(stepSize(stepper.range, displayedValue, -1));} }}>−</Button>
           )}
           <Input
             type="number"
@@ -263,17 +264,17 @@ function AutoNumber({ label, name, value, min, max, step, unit, fingeringSize, o
             max={max}
             step={step}
             value={displayedValue ?? ""}
-            placeholder={fingeringSize ? "auto" : undefined}
-            readOnly={!!fingeringSize && !manual}
+            placeholder={stepper ? "auto" : undefined}
+            readOnly={!!stepper && !manual}
             onChange={(event) => {
               const number = Number(event.target.value);
               if (Number.isFinite(number) && number >= min && number <= max) {onChange(number);}
             }}
           />
-          {fingeringSize && (
+          {stepper && (
             <Button variant="secondary" size="sm" aria-label={`Aumentar: ${label}`}
               disabled={displayedValue === undefined || displayedValue >= max}
-              onClick={() => { if (displayedValue !== undefined) {onChange(stepFingeringSize(displayedValue, 1));} }}>+</Button>
+              onClick={() => { if (displayedValue !== undefined) {onChange(stepSize(stepper.range, displayedValue, 1));} }}>+</Button>
           )}
           {unit && <span>{unit}</span>}
         </span>
@@ -405,13 +406,20 @@ function FormatStep(props: EnviarPageViewProps) {
                 return { key: String(row.ordinal), label: row.name, note: preview?.rendering ? "…" : warned ? "⚠" : undefined };
               })}
             >
-              {shownRow.fingerings && (
-                <AutoNumber key={shownRow.ordinal} label="Tamanho dos números" name="fingering-size"
-                  value={formattingOf(state.profile, shownRow.name).fingering?.size}
-                  min={FINGERING_SIZE.min} max={FINGERING_SIZE.max} step={FINGERING_SIZE.step}
-                  fingeringSize={{ automatic: shownPreview?.rendering || shownPreview?.error ? undefined : shownPreview?.automaticFingeringSize }}
-                  onChange={(size) => onProfile(withFormatting(state.profile, shownRow.name, { fingering: { size } }))} />
-              )}
+              <div className="enviar-part-sizes">
+                <AutoNumber key={`staff-${shownRow.ordinal}`} label="Tamanho da pauta (desta parte)" name="part-staff-size" unit="mm"
+                  value={formattingOf(state.profile, shownRow.name).staffSize}
+                  min={STAFF_SIZE.min} max={STAFF_SIZE.max} step={STAFF_SIZE.step}
+                  stepper={{ range: STAFF_SIZE, automatic: shownPreview?.rendering || shownPreview?.error ? undefined : shownPreview?.layout?.staffSpaceMm }}
+                  onChange={(staffSize) => onProfile(withFormatting(state.profile, shownRow.name, { staffSize }))} />
+                {shownRow.fingerings && (
+                  <AutoNumber key={`fingering-${shownRow.ordinal}`} label="Tamanho dos números" name="fingering-size"
+                    value={formattingOf(state.profile, shownRow.name).fingering?.size}
+                    min={FINGERING_SIZE.min} max={FINGERING_SIZE.max} step={FINGERING_SIZE.step}
+                    stepper={{ range: FINGERING_SIZE, automatic: shownPreview?.rendering || shownPreview?.error ? undefined : shownPreview?.automaticFingeringSize }}
+                    onChange={(size) => onProfile(withFormatting(state.profile, shownRow.name, { fingering: { size } }))} />
+                )}
+              </div>
               <PreviewCard row={shownRow} preview={shownPreview} title={state.title}
                 midi={state.midi[shownRow.ordinal]} onEditing={onEditing} onListen={onListen} MidiPlayer={components.MidiPlayer} />
             </PartTabs>
