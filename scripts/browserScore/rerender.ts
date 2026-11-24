@@ -1,3 +1,4 @@
+import type { ParsedArrangement } from "../../src/lib/parseUploadedFiles";
 // Re-render stored revisions in the browser pipeline (ticket 013), for when the
 // formatting profile or the renderer changes, or to migrate plugin-formatted
 // scores. Dry-run by default: the pages go to a review folder. With --write,
@@ -17,7 +18,7 @@
 // (uploadedBy of written revisions), GOOGLE_APPLICATION_CREDENTIALS; CHROME.
 import { createServer } from "node:http";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { extname, resolve } from "node:path";
+import { dirname, extname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { build } from "esbuild";
 import { chromium } from "playwright-core";
@@ -107,7 +108,8 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME || "/
 
 type Rendered = {
   title: string; composer: string; sub: string; tags: string[];
-  parts: { name: string; basename: string; instrument: string; svg: string[]; midi: string }[];
+  parts: { name: string; basename: string; instrument: string; svg: string[]; midi: string; playback?: { midi: string; timing: string } }[];
+  arrangement?: ParsedArrangement;
   files: { key: string; name: string; type: string; bytes: number[] }[];
   report: { name: string; pages: number; staff: number | null; warnings: string[] }[];
 };
@@ -134,7 +136,7 @@ try {
         // @ts-expect-error served by the script's own server
         const m = await import("/browser.js");
         const data = new Uint8Array(bytes);
-        const library = await m.createScoreLibrary({ adapter: "webmscore-1.2.1", execution: "worker", ...m.libraryOptionsFor(profile),
+        const library = await m.createScoreLibrary({ adapter: "webmscore-1.2.1", execution: "worker", ...m.libraryOptionsFor(profile), partPlayback: true,
           assets: { manifestUrl: new URL("/browser-score/manifest.json", location.href), workerUrl: new URL("/browser-score/worker.js", location.href) } });
         try {
           const session = await library.open({ bytes: data, format: "mscz", name: `${title}.mscz` }, { compatibility: "allowUnverified" });
@@ -144,7 +146,7 @@ try {
           const { parsed, report } = await m.renderForUpload(data, `${title}.mscz`, profile, choices, { library });
           const files = await Promise.all([...parsed.fileMap].map(async ([key, file]: [string, File]) =>
             ({ key, name: file.name, type: file.type, bytes: [...new Uint8Array(await file.arrayBuffer())] })));
-          return { title: parsed.title, composer: parsed.composer, sub: parsed.sub, tags: parsed.tags, parts: parsed.parts, files,
+          return { title: parsed.title, composer: parsed.composer, sub: parsed.sub, tags: parsed.tags, parts: parsed.parts, arrangement: parsed.arrangement, files,
             report: report.parts.map((p: { name: string; pages: number; layout: { staffSpaceMm: number } | null; warnings: { code: string }[] }) =>
               ({ name: p.name, pages: p.pages, staff: p.layout?.staffSpaceMm ?? null, warnings: p.warnings.map((w) => w.code) })) };
         } finally { await library.dispose(); }
@@ -152,8 +154,11 @@ try {
       await page.close();
 
       const folder = resolve(results, scoreId);
-      await mkdir(resolve(folder, "parts"), { recursive: true });
-      for (const file of rendered.files) {await writeFile(resolve(folder, file.key.startsWith("parts/") ? file.key : file.name), new Uint8Array(file.bytes));}
+      for (const file of rendered.files) {
+        const path = resolve(folder, file.key.includes("/") ? file.key : file.name);
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, new Uint8Array(file.bytes));
+      }
       const entry: Record<string, unknown> = { scoreId, baseRevisionId: revisionId, storedProfile: !!manifest?.formatting, parts: rendered.report };
 
       if (args.write) {
@@ -181,8 +186,18 @@ try {
             revisionNumber: previous.revisionNumber + 1, prevRevisionId: revisionId, uploadedBy: CADERNIN_UID, slug, metadata,
             origin: { type: "upload" }, kind: "reformat", notes: "",
             mscz: stored.mscz ?? missing("mscz"), metajson: stored.metajson ?? missing("metajson"), midi: stored.midi ?? missing("midi"),
+            ...(rendered.arrangement ? {
+              arrangement: {
+                svg: rendered.arrangement.svg.map((key) => stored[key]),
+                ...(rendered.arrangement.playback ? {
+                  playback: { midi: stored[rendered.arrangement.playback.midi], timing: stored[rendered.arrangement.playback.timing] },
+                } : {}),
+              },
+            } : {}),
             parts: rendered.parts.map((part) => ({ name: part.name, instrument: part.instrument,
-              svg: part.svg.map((key) => stored[key] ?? missing(key)), midi: stored[part.midi] ?? missing(part.midi) })),
+              svg: part.svg.map((key) => stored[key] ?? missing(key)), midi: stored[part.midi] ?? missing(part.midi),
+              ...(part.playback ? { playback: { midi: stored[part.playback.midi], timing: stored[part.playback.timing] } } : {}),
+            })),
           };
           tx.set(db.doc(`scores/${scoreId}/scoreRevisions/${newId}`), { ...data, uploadedAt: FieldValue.serverTimestamp() });
           tx.set(db.doc(`scores/${scoreId}/revisions/${newId}`), { ...data, isLatest: true, uploadedAt: FieldValue.serverTimestamp() });

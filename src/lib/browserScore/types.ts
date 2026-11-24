@@ -1,3 +1,4 @@
+import type { PlaybackFrame } from "../../../types/scorePlayback";
 // SPDX-License-Identifier: GPL-3.0-only
 /** `Object.hasOwn` for the ES2020 target. */
 export const hasOwn = (object: object, key: PropertyKey) => Object.prototype.hasOwnProperty.call(object, key);
@@ -41,6 +42,9 @@ export type MusicXmlPart = {
     transposeChromatic: number | null;
     catalogPart: { id: PartId; name: string; origin: Part['origin'] } | null;
 };
+export type { PlaybackFrame };
+export type ArrangementRender = { pages: readonly string[]; playback: PartPlayback | null; staffSpaceMm: number };
+export type PartPlayback = { midi: Uint8Array; frames: readonly PlaybackFrame[] };
 export type MidiExport = { view: View; revision: Revision; midi: Uint8Array; filename: string; warnings: readonly Warning[] };
 export type MusicXmlExport = {
     revision: Revision; filename: string; musicXml: string; parts: readonly MusicXmlPart[];
@@ -83,6 +87,8 @@ export type LibraryOptions = Operation & {
      * - 'plain': renderer pages sized by `partPageSize`.
      */
     partPageStyle?: PartPageStyle;
+    /** Include matching audio and note timings for interactive part previews. */
+    partPlayback?: boolean;
     /**
      * Text fonts of 'fitted' and 'plain' part pages. 'embedded' (default): each SVG carries its fonts
      * as data URIs. 'shared': the SVG only names the families; the fonts are the manifest's
@@ -122,6 +128,15 @@ export interface ScoreSession {
     prepareParts(options: Operation & { policy: 'preserveExistingOrGenerateIfNone'; expectedRevision: Revision }): Promise<PartCatalog>;
     getPages(view: View, options?: Operation): Promise<PageSet>;
     renderPage(view: View, pageNumber: number, options: Operation & { expectedRevision: Revision; background?: 'transparent' | 'white' }): Promise<SvgPage>;
+    renderArrangement(options: Operation & {
+        expectedRevision: Revision;
+        marginMm?: number;
+        staffSizeMm?: number;
+        staffSpacing?: number;
+        labels?: Readonly<Record<number, string>>;
+        fallbackLabel?: (names: readonly string[]) => string | undefined;
+    }): Promise<ArrangementRender>;
+    getPartPlayback(partId: PartId, options: Operation & { expectedRevision: Revision }): Promise<PartPlayback | null>;
     /**
      * Standard MIDI file of the full score or one part, from the engine (repeats expanded, RPNs
      * written, as desktop MuseScore exports). Parts are the engine's excerpts: saved parts as

@@ -15,7 +15,7 @@ const rows = partRows([
 const sheet = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 171.7 98.2">${[10, 35, 60].map((y) =>
   [0, 2, 4, 6, 8].map((d) => `<line x1="2" x2="170" y1="${y + d}" y2="${y + d}" stroke="black" stroke-width="0.2"/>`).join("")).join("")}</svg>`;
 const preview = (ordinal: number, extra = {}, fingeringScale = 0.9) => ({
-  ordinal, svg: sheet, pages: 1, layout: { staffSpaceMm: 1.45, systems: 3, fillRatio: 0.82, fingeringScale },
+  ordinal, svg: sheet, pageSvg: sheet, pages: 1, layout: { staffSpaceMm: 1.45, systems: 3, fillRatio: 0.82, fingeringScale },
   automaticFingeringSize: fingeringScale, warnings: [], rendering: false, ...extra,
 });
 const base: EnviarState = { ...initialState(), fileName: "Cilada.mscz", metadata: { title: "CILADA", composer: "Tim Maia", sub: "", tags: ["marcha"] }, rows };
@@ -29,7 +29,8 @@ const meta = {
     context: { projectId: "bloco-exemplo" },
     signedIn: true,
     components: { MidiPlayer: ({ src }: { src: string }) => <p>MIDI: {src}</p> },
-    onFile: fn(), onStep: fn(), onRows: fn(), onProfile: fn(), onMetadata: fn(), onEditing: fn(), onListen: fn(),
+    onArrangementPreview: () => Promise.resolve({ svg: sheet, staffSpaceMm: 1.45 }),
+    onCollision: fn(), onFile: fn(), onStep: fn(), onRows: fn(), onProfile: fn(), onMetadata: fn(), onEditing: fn(), onListen: fn(),
     onSend: fn(), onCancel: fn(), onDismissError: fn(), onReset: fn(),
   },
 } satisfies Meta<typeof EnviarPageView>;
@@ -196,7 +197,7 @@ export const ApplyToAllParts: Story = {
     const [profile, setProfile] = useState(args.state.profile);
     const [rows, setRows] = useState(args.state.rows);
     const [editing, setEditing] = useState(args.state.editing);
-    return <EnviarPageView {...args} state={{ ...args.state, profile, rows, editing }} onProfile={setProfile} onRows={setRows} onEditing={setEditing} />;
+    return <EnviarPageView {...args} state={{ ...args.state, profile, rows, editing }} onProfile={setProfile} onRows={(next, formatting) => { setRows(next); if (formatting) {setProfile(formatting);} }} onEditing={setEditing} />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

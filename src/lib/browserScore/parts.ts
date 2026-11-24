@@ -164,6 +164,49 @@ function forSheet(root: Element, parts: Element[]) {
     }
 }
 
+/** Keep the full instrumentation and notation, with fingering removed from every staff. */
+export function arrangementMusicXml(fullScore: string, labels: ReadonlyMap<string, string> = new Map()): string {
+    const doc = new DOMParser().parseFromString(fullScore, 'application/xml');
+    const root = doc.documentElement;
+    if (root.localName !== 'score-partwise') {throw new Error('Invalid MusicXML');}
+    const list = Array.from(root.getElementsByTagName('score-part'));
+    for (const part of list) {
+        const label = labels.get(part.getAttribute('id') ?? '');
+        if (!label) {continue;}
+        for (const display of ['part-name-display', 'part-abbreviation-display']) {
+            const element = child(part, display);
+            if (element) {part.removeChild(element);}
+        }
+        for (const name of ['part-name', 'part-abbreviation']) {
+            const found = child(part, name);
+            const element = found ?? doc.createElement(name);
+            element.removeAttribute('print-object');
+            element.textContent = label;
+            if (!found) {
+                const before = name === 'part-name' ? part.firstChild : child(part, 'part-name')?.nextSibling ?? null;
+                part.insertBefore(element, before);
+            }
+        }
+    }
+    for (const tag of ['fingering', 'pluck']) {
+        for (const fingering of Array.from(root.getElementsByTagName(tag))) {
+            fingering.parentNode?.removeChild(fingering);
+        }
+    }
+    // Some exports represent manually placed fingering numbers as staff text.
+    // Require a standalone numeric direction so tempo, repeats and rehearsal marks survive.
+    for (const direction of Array.from(root.getElementsByTagName('direction'))) {
+        const types = children(direction, 'direction-type');
+        const words = types.length === 1 ? children(types[0], 'words') : [];
+        const text = words[0]?.textContent?.replace(/<\/?(?:font|b|i|u)\b[^>]*>/gi, '').trim() ?? '';
+        if (words.length === 1 && types[0].children.length === 1 && !child(direction, 'sound') &&
+            /^(?:[0-9]|1[0-2]|(?=[1-4])1?2?3?4?)$/.test(text)) {
+            direction.parentNode?.removeChild(direction);
+        }
+    }
+    return new XMLSerializer().serializeToString(doc);
+}
+
 /** MusicXML with only the given parts (in score order); system markings copied from the top part when it is not among them. */
 export function partMusicXml(fullScore: string, partIds: readonly string[], pageSize: PartPageSize = 'B6', style: PartPageStyle = 'plain'): PartXml {
     const doc = new DOMParser().parseFromString(fullScore, 'application/xml');

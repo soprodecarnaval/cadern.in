@@ -10,18 +10,69 @@ const SOUNDFONT_URLS: Record<SoundFont, string> = {
   sgm_plus: "https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus",
 };
 
-interface Props {
+export interface MidiPlayerProps {
   src: string;
   soundFont?: SoundFont;
+  onPlaybackTime?: (seconds: number | null) => void;
 }
 
-export function MidiPlayer({ src, soundFont = "sgm_plus" }: Props) {
-  const ref = useRef<HTMLElement & { stop?: () => void }>(null);
+type MidiElement = HTMLElement & { stop?: () => void; currentTime: number; seeking?: boolean };
+
+export function MidiPlayer({ src, soundFont = "sgm_plus", onPlaybackTime }: MidiPlayerProps) {
+  const ref = useRef<MidiElement>(null);
+  const report = useRef(onPlaybackTime);
+  report.current = onPlaybackTime;
+  const trackPlayback = !!onPlaybackTime;
 
   useEffect(() => {
     const el = ref.current;
     return () => { el?.stop?.(); };
   }, []);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !trackPlayback) {return;}
+    let animation = 0;
+    let position = 0;
+    let began = 0;
+    let observed = 0;
+    const sync = (seconds: number) => {
+      position = seconds;
+      observed = seconds;
+      began = performance.now();
+    };
+    const tick = (now: number) => {
+      // html-midi-player updates currentTime on note onsets and seeks.
+      // Interpolate between them so note-offs and rests clear the highlight.
+      if (el.currentTime !== observed || el.seeking) {sync(el.currentTime);}
+      report.current?.(el.seeking ? null : position + Math.max(0, now - began) / 1000);
+      animation = requestAnimationFrame(tick);
+    };
+    const start = () => {
+      cancelAnimationFrame(animation);
+      sync(el.currentTime);
+      animation = requestAnimationFrame(tick);
+    };
+    const note = (event: Event) => {
+      const seconds = (event as CustomEvent<{ note: { startTime: number } }>).detail.note.startTime;
+      if (!el.seeking && Number.isFinite(seconds)) {sync(seconds);}
+    };
+    const stop = () => {
+      cancelAnimationFrame(animation);
+      report.current?.(null);
+    };
+    el.addEventListener("start", start);
+    el.addEventListener("loop", start);
+    el.addEventListener("note", note);
+    el.addEventListener("stop", stop);
+    return () => {
+      cancelAnimationFrame(animation);
+      el.removeEventListener("start", start);
+      el.removeEventListener("loop", start);
+      el.removeEventListener("note", note);
+      el.removeEventListener("stop", stop);
+    };
+  }, [src, trackPlayback]);
 
   return <midi-player ref={ref} src={src} sound-font={SOUNDFONT_URLS[soundFont]} />;
 }

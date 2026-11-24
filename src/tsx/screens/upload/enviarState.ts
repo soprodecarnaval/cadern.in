@@ -2,7 +2,7 @@
 // pirata instrument rule, and the choices handed to renderForUpload.
 import type { FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
 import type { Instrument } from "../../../../types/instrument";
-import type { Part } from "../../../lib/browserScore/types";
+import type { Part, PlaybackFrame } from "../../../lib/browserScore/types";
 import { chosenFamily, guessInstrument, mapInstrumentId, pirataInstrument } from "../../../lib/instruments";
 import type { SheetLayoutResult, Warning } from "../../../lib/browserScore/types";
 import type { RenderProgress } from "../../../lib/scoreRender/renderForUpload";
@@ -162,6 +162,9 @@ export const MAX_SCORE_BYTES = 32 * 1024 * 1024;
 export type Preview = {
   ordinal: number;
   svg: string | null;
+  pageSvg?: string;
+  fontCss?: string;
+  signature?: string;
   pages: number;
   layout: SheetLayoutResult | null;
   automaticFingeringSize?: number;
@@ -169,6 +172,12 @@ export type Preview = {
   rendering: boolean;
   error?: string;
 };
+
+export type ArrangementPreview = { svg: string; staffSpaceMm: number };
+
+export type PreviewAudio = { url: string; pageSvg: string; frames: readonly PlaybackFrame[] };
+
+export type CollisionDraft = { original: string; signature: string; history: readonly string[] };
 
 export type Status =
   | { kind: "idle" }
@@ -190,8 +199,9 @@ export type EnviarState = {
   /** The part whose settings the formatting controls edit; null for the whole score. */
   editing: number | null;
   previews: Record<number, Preview>;
-  /** Object URLs of part MIDI files, made when the user asks to listen. */
-  midi: Record<number, string>;
+  collisions: Record<number, CollisionDraft>;
+  /** Preview audio tied to the exact rendered page. */
+  midi: Record<number, PreviewAudio>;
   target: UploadTarget | null;
   checks: UploadChecks | null;
   result: { identity: ScoreIdentity; target: UploadTarget; repin: RepinOutcome } | null;
@@ -206,6 +216,7 @@ export const initialState = (): EnviarState => ({
   profile: DEFAULT_FORMATTING_PROFILE,
   editing: null,
   previews: {},
+  collisions: {},
   midi: {},
   target: null,
   checks: null,

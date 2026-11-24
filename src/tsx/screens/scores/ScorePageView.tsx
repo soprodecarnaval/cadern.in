@@ -3,7 +3,7 @@ import { Button } from "../../atoms/Button";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Col, Row, Spinner } from "react-bootstrap";
 
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import type { WithId } from "../../../lib/db";
 
 import type { CommentAnchor, ReviewCommentDoc } from "../../../../types/docs";
@@ -137,7 +137,7 @@ export function ScorePageView({
         )}
       </div>
       <div className="d-flex align-items-center justify-content-between mb-3">
-        <p className="text-muted mb-0">{score.projectTitle}</p>
+        <p className="mb-0"><Link to={projectPath(score.projectId)}>{score.projectTitle}</Link></p>
         <div className="d-flex gap-2">
           {role !== "loading" && canDeleteScore(role) && (
             <Button
@@ -192,6 +192,7 @@ export function ScorePageView({
             sub={score.sub}
             tags={score.tags}
             arrangementMidiUrl={score.arrangementMidiUrl}
+            arrangement={score.arrangement}
             parts={score.parts}
             pinsProps={
               reviewing

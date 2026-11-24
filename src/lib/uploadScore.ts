@@ -1,7 +1,7 @@
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
 import { scoreRevisionStoragePath } from "./storagePaths";
-import type { ParsedScore } from "./parseUploadedFiles";
+import type { ParsedPlayback, ParsedScore } from "./parseUploadedFiles";
 import type { User } from "firebase/auth";
 import { commitScoreRevision, createScore, softDeleteScore } from "./db";
 import { newRevisionId, revisionSlug } from "./revisionId";
@@ -99,6 +99,11 @@ export async function uploadScore(
 
     const missing = (key: string) => ({ path: key, url: "" });
 
+    const playbackFiles = (playback: ParsedPlayback) => ({
+      midi: storageFiles.get(playback.midi) ?? missing(playback.midi),
+      timing: storageFiles.get(playback.timing) ?? missing(playback.timing),
+    });
+
     const revisionParts = parsed.parts.map((part) => ({
       // `name` is the authored part name and may contain anything, including a
       // path separator — keys are built from `basename`, never from it.
@@ -108,6 +113,7 @@ export async function uploadScore(
         (svgKey) => storageFiles.get(svgKey) ?? missing(svgKey),
       ),
       midi: storageFiles.get(part.midi) ?? missing(part.midi),
+      ...(part.playback ? { playback: playbackFiles(part.playback) } : {}),
     }));
 
     await commitScoreRevision(scoreId, revId, {
@@ -127,6 +133,12 @@ export async function uploadScore(
       metajson: storageFiles.get("metajson") ?? missing("metajson"),
       midi: storageFiles.get("midi") ?? missing("midi"),
       parts: revisionParts,
+      ...(parsed.arrangement ? {
+        arrangement: {
+          svg: parsed.arrangement.svg.map((key) => storageFiles.get(key) ?? missing(key)),
+          ...(parsed.arrangement.playback ? { playback: playbackFiles(parsed.arrangement.playback) } : {}),
+        },
+      } : {}),
       notes: "",
       ...(kind === "reformat" ? { kind } : {}),
     });

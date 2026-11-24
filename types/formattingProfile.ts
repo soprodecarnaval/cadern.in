@@ -57,6 +57,9 @@ export const zFormattingProfile = zPartFormatting.extend({
       heightMm: z.number().min(20).max(1000),
     })
     .optional(),
+  arrangementMarginMm: z.number().min(5).max(20).optional(),
+  arrangementStaffSizeMm: z.number().min(0.8).max(8).optional(),
+  arrangementStaffSpacing: z.number().int().min(0).max(48).optional(),
   /** Overrides keyed by part name (the name of the part in the .mscz). */
   parts: z.record(z.string(), zPartFormatting).optional(),
 });

@@ -13,7 +13,7 @@ import { buildExportDeepLink } from "../../../../../types/exportDeepLink";
 import { BROWSER_UPLOAD_MODE, FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
 import { uploadPath } from "../../../../lib/uploadPath";
 
-import type { ScoreDisplayPart, ScorePin } from "../../../components/scores/detail/ScoreDisplay";
+import type { ScoreDisplayArrangement, ScoreDisplayPart, ScorePin } from "../../../components/scores/detail/ScoreDisplay";
 
 interface LoadedScoreThread {
   songbookId: string;
@@ -38,6 +38,7 @@ interface LoadedScoreThread {
   sub: string;
   tags: string[];
   arrangementMidiUrl: string | null;
+  arrangement?: ScoreDisplayArrangement;
   parts: ScoreDisplayPart[];
 }
 
@@ -75,11 +76,22 @@ async function load(
     latestRevisionId: score.latestRevisionId,
     ...resolveScoreMetadata(score),
     arrangementMidiUrl: scoreRevision.midi.url || null,
+    arrangement: scoreRevision.arrangement && {
+      svgUrls: scoreRevision.arrangement.svg.map(({ url }) => url),
+      playback: scoreRevision.arrangement.playback && {
+        midiUrl: scoreRevision.arrangement.playback.midi.url,
+        timingUrl: scoreRevision.arrangement.playback.timing.url,
+      },
+    },
     parts: scoreRevision.parts.map((part) => ({
       name: part.name,
       instrument: part.instrument,
       svgUrls: part.svg.map((f) => f.url),
       midiUrl: part.midi.url || null,
+      playback: part.playback && {
+        midiUrl: part.playback.midi.url,
+        timingUrl: part.playback.timing.url,
+      },
     })),
   };
 }
@@ -258,12 +270,12 @@ export function SongbookScorePageView({
           <div className="d-flex flex-wrap gap-2">
             {FEATURE_FLAG_BROWSER_UPLOAD && (
               <Link className="btn btn-outline-secondary ds-button btn-sm" to={uploadPath(uploadContext)}>
-                {BROWSER_UPLOAD_MODE === "beta" ? "Enviar nova versão no navegador" : "Enviar nova versão"}
+                Enviar nova versão pelo navegador
               </Link>
             )}
             {BROWSER_UPLOAD_MODE !== "default" && (
               <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink(uploadContext)}>
-                Enviar nova versão
+                Enviar nova versão pelo MuseScore
               </a>
             )}
             {FEATURE_FLAG_BROWSER_UPLOAD && (
@@ -291,6 +303,7 @@ export function SongbookScorePageView({
             sub={loaded.sub}
             tags={loaded.tags}
             arrangementMidiUrl={loaded.arrangementMidiUrl}
+            arrangement={loaded.arrangement}
             parts={loaded.parts}
             pinsProps={{
               pins,

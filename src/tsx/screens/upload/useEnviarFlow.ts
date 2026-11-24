@@ -13,11 +13,12 @@ import { packageMscx, readMsczIdentityBytes, stampMsczIdentityBytes } from "../.
 import { safeFilename } from "../../../lib/partFiles";
 import { caderninhoPartTransform } from "../../../lib/scoreRender/partTransform";
 import { libraryOptionsFor, resolvePartFormatting, sheetLayoutFor } from "../../../lib/scoreRender/profile";
-import { profileWithChoices, renderForUpload } from "../../../lib/scoreRender/renderForUpload";
+import { arrangementOptions, profileWithChoices, renderForUpload } from "../../../lib/scoreRender/renderForUpload";
 import { commitUpload, prepareUpload, type UploadContext, type UploadFlowServices } from "../../../lib/uploadFlow";
 import { MAX_SCORE_BYTES, choicesFrom, initialState, metadataFromTags, partRows, rowsFromStored, type EnviarState, type PartRow, type Step, type StoredPart } from "./enviarState";
 import { zMetajson } from "../../../../types/metajson";
 import type { ScoreMetadata } from "../../../../types/docs";
+import { moveMarking, type MarkingMove } from "./collisionSvg";
 import type { Instrument } from "../../../../types/instrument";
 
 export { initialState, MAX_SCORE_BYTES, type EnviarState } from "./enviarState";
@@ -27,7 +28,7 @@ export type EnviarDeps = {
   context: UploadContext;
   user: User | null;
   services: UploadFlowServices & Pick<typeof import("../../../lib/db"), "getScoreRevision">;
-  loadLibrary: (options: ReturnType<typeof libraryOptionsFor> & { signal: AbortSignal }) => Promise<ScoreLibrary>;
+  loadLibrary: (options: ReturnType<typeof libraryOptionsFor> & { signal: AbortSignal; partPlayback: boolean }) => Promise<ScoreLibrary>;
   upload: Parameters<typeof commitUpload>[4]["upload"];
 };
 
@@ -132,7 +133,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
     controller.current = new AbortController();
     const signal = controller.current.signal;
     clearMidi();
-    update({ fileName, midi: {}, status: { kind: "opening" } });
+    update({ fileName, midi: {}, previews: {}, collisions: {}, status: { kind: "opening" } });
     await closeSession();
     try {
       const fileBytes = await read(signal);
@@ -141,7 +142,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
       bytes.current = fileBytes;
       if (!library.current) {
         update({ fileName, status: { kind: "loading-engine" } });
-        const loaded = await depsRef.current.loadLibrary({ ...libraryOptionsFor(DEFAULT_FORMATTING_PROFILE), signal });
+        const loaded = await depsRef.current.loadLibrary({ ...libraryOptionsFor(DEFAULT_FORMATTING_PROFILE), signal, partPlayback: true });
         if (signal.aborted) {
           await loaded.dispose();
           signal.throwIfAborted();
@@ -238,6 +239,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
         const ordinal = Number(key);
         const previous = current.previews[ordinal];
         return [ordinal, {
+          ...previous,
           ordinal,
           svg: previous?.svg ?? null,
           pages: previous?.pages ?? 0,
@@ -263,15 +265,16 @@ export function useEnviarFlow(deps: EnviarDeps) {
             open.invalidate({ kind: "part", partId: part.id });
             const view = { kind: "part" as const, partId: part.id };
             const { revision, pageCount } = await open.getPages(view, { signal });
-            const page = await open.renderPage(view, 1, { expectedRevision: revision, signal, background: "white" });
+            const page = await open.renderPage(view, 1, { expectedRevision: revision, signal });
             // Pages name their shared text fonts; a preview shown as an image needs them embedded (014).
-            const svg = page.portability === "shared-fonts" ? withTextFonts(page.svg, await textFontCss()) : page.svg;
+            const fontCss = page.portability === "shared-fonts" ? await textFontCss() : "";
+            const svg = fontCss ? withTextFonts(page.svg, fontCss) : page.svg;
             if (signal.aborted || session.current !== open || superseded) {return;}
             rendered.current.set(ordinal, signature);
             const automaticFingeringSize = resolvePartFormatting(signatures.profile, part.name).fingering.size === "auto"
               ? page.layout?.fingeringScale
               : undefined;
-            update((current) => ({ previews: { ...current.previews, [ordinal]: { ordinal, svg, pages: pageCount, layout: page.layout ?? null, automaticFingeringSize, warnings: page.warnings, rendering: false } } }));
+            update((current) => ({ previews: { ...current.previews, [ordinal]: { ordinal, svg, pageSvg: page.svg, fontCss, signature, pages: pageCount, layout: page.layout ?? null, automaticFingeringSize, warnings: page.warnings, rendering: false } } }));
           } catch (error) {
             const text = message(error);
             if (text && !signal.aborted && !superseded) {update((current) => ({ previews: { ...current.previews, [ordinal]: { ...current.previews[ordinal], ordinal, rendering: false, error: text } } }));}
@@ -338,6 +341,16 @@ export function useEnviarFlow(deps: EnviarDeps) {
       const { parsed } = await renderForUpload(bytes.current, fileName, state.profile, choicesFrom(state.rows), {
         signal,
         metadata: state.metadata,
+        arrangementRows: state.rows,
+        editedPages: Object.entries(state.collisions).flatMap(([key, draft]) => {
+          const ordinal = Number(key);
+          const svg = draft.history.at(-1);
+          if (!svg) {return [];}
+          if (draft.signature !== signatures.parts[ordinal]) {
+            throw new Error("A formatação mudou. Confira as correções manuais antes de enviar.");
+          }
+          return [{ ordinal, page: 1, original: draft.original, svg }];
+        }),
         openSession: {
           session: open,
           catalog: catalogRef.current!,
@@ -373,26 +386,51 @@ export function useEnviarFlow(deps: EnviarDeps) {
     } catch (error) {
       if (!signal.aborted) {fail(error);}
     }
-  }, [fail, openSession, state.fileName, state.metadata, state.profile, state.rows, state.target, update]);
+  }, [signatures.parts, fail, openSession, state.collisions, state.fileName, state.metadata, state.profile, state.rows, state.target, update]);
+
+  const previewArrangement = useCallback(async (signal: AbortSignal) => {
+    const open = session.current;
+    const catalog = catalogRef.current;
+    if (!open || !catalog) {throw new Error("Abra a partitura para visualizar o arranjo.");}
+    const { pages, staffSpaceMm } = await open.renderArrangement({
+      ...arrangementOptions({
+        arrangementMarginMm: state.profile.arrangementMarginMm,
+        arrangementStaffSizeMm: state.profile.arrangementStaffSizeMm,
+        arrangementStaffSpacing: state.profile.arrangementStaffSpacing,
+      }, state.rows),
+      expectedRevision: catalog.revision,
+      signal,
+    });
+    const css = await textFontCss();
+    signal.throwIfAborted();
+    return { svg: css ? withTextFonts(pages[0], css) : pages[0], staffSpaceMm };
+  }, [state.profile.arrangementMarginMm, state.profile.arrangementStaffSizeMm, state.profile.arrangementStaffSpacing, state.rows]);
 
   const listen = useCallback(async (ordinal: number) => {
     const open = session.current;
     const part = parts.current.find((candidate) => candidate.ordinal === ordinal);
-    if (!open || !part) {return;}
+    const preview = state.previews[ordinal];
+    if (!open || !part || !preview?.pageSvg || preview.rendering || preview.error ||
+        preview.signature !== signatures.parts[ordinal]) {return;}
+    if (state.midi[ordinal]?.pageSvg === preview.pageSvg) {return;}
+    const pageSvg = preview.pageSvg;
     const signal = controller.current.signal;
     try {
       const { revision } = await open.getPages({ kind: "part", partId: part.id }, { signal });
-      const midi = await open.exportMidi({ kind: "part", partId: part.id }, { expectedRevision: revision, signal });
+      const playback = await open.getPartPlayback(part.id, { expectedRevision: revision, signal });
+      const midi = playback ?? await open.exportMidi({ kind: "part", partId: part.id }, { expectedRevision: revision, signal });
       if (signal.aborted || session.current !== open) {return;}
       const url = URL.createObjectURL(new Blob([midi.midi], { type: "audio/midi" }));
       const previous = midiUrls.current.get(ordinal);
       if (previous) {URL.revokeObjectURL(previous);}
       midiUrls.current.set(ordinal, url);
-      update((current) => ({ midi: { ...current.midi, [ordinal]: url } }));
+      update((current) => ({
+        midi: { ...current.midi, [ordinal]: { url, pageSvg, frames: playback?.frames ?? [] } },
+      }));
     } catch (error) {
       if (!signal.aborted) {fail(error);}
     }
-  }, [fail, update]);
+  }, [fail, signatures.parts, state.midi, state.previews, update]);
 
   const cancel = useCallback(() => {
     controller.current.abort();
@@ -404,6 +442,43 @@ export function useEnviarFlow(deps: EnviarDeps) {
     }));
   }, [update]);
 
+  const changeFormatting = (rows: PartRow[], profile: FormattingProfile) => {
+    const choices = choicesFrom(rows);
+    const nextProfile = profileWithChoices(profile, parts.current, choices);
+    const nextCollisions = Object.fromEntries(choices.flatMap((choice) => {
+      const draft = state.collisions[choice.ordinal];
+      const part = parts.current.find((candidate) => candidate.ordinal === choice.ordinal);
+      return draft && part && draft.signature === pageSignature(nextProfile, part.name, choice.instrument)
+        ? [[choice.ordinal, draft] as const] : [];
+    }));
+    if (Object.keys(nextCollisions).length !== Object.keys(state.collisions).length &&
+        !window.confirm("Esta alteração apaga as correções manuais nas partes afetadas. Continuar?")) {return false;}
+    update({ rows, profile, collisions: nextCollisions });
+    return true;
+  };
+
+  const editCollision = (ordinal: number, action: MarkingMove | "undo" | "reset") => {
+    update((current) => {
+      const preview = current.previews[ordinal];
+      if (!preview?.pageSvg || !preview.signature || preview.rendering || preview.error ||
+          preview.signature !== signatures.parts[ordinal]) {return {};}
+      const existing = current.collisions[ordinal];
+      const draft = existing?.original === preview.pageSvg && existing.signature === preview.signature
+        ? existing : { original: preview.pageSvg, signature: preview.signature, history: [] };
+      let history: readonly string[] = [];
+      if (action === "undo") {history = draft.history.slice(0, -1);}
+      else if (action !== "reset") {
+        const svg = moveMarking(draft.history.at(-1) ?? draft.original, action);
+        if (!svg) {return {};}
+        history = [...draft.history, svg];
+      }
+      const collisions = { ...current.collisions };
+      if (history.length) {collisions[ordinal] = { ...draft, history };}
+      else {delete collisions[ordinal];}
+      return { collisions };
+    });
+  };
+
   return {
     state,
     chooseFile,
@@ -411,8 +486,10 @@ export function useEnviarFlow(deps: EnviarDeps) {
     send,
     cancel,
     listen,
-    setRows: (rows: PartRow[]) => update({ rows }),
-    setProfile: (profile: FormattingProfile) => update({ profile }),
+    previewArrangement,
+    setRows: (rows: PartRow[], profile = state.profile) => changeFormatting(rows, profile),
+    setProfile: (profile: FormattingProfile) => changeFormatting(state.rows, profile),
+    editCollision,
     setMetadata: (metadata: ScoreMetadata) => update({ metadata }),
     setEditing: (editing: number | null) => update({ editing }),
     dismissError: () => update({ status: { kind: "idle" } }),

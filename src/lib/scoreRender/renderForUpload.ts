@@ -7,13 +7,24 @@ import type { FormattingProfile } from "../../../types/formattingProfile";
 import type { Instrument } from "../../../types/instrument";
 import { METAJSON_VERSION, type Metajson } from "../../../types/metajson";
 import type { Warning as AppWarning } from "../../result";
-import type { Part, PartCatalog, RendererInfo, ScoreLibrary, ScoreSession, SheetLayoutResult, Warning } from "../browserScore/types";
-import { pirataInstrument } from "../instruments";
+import type { Part, PartCatalog, RendererInfo, PartPlayback, ScoreLibrary, ScoreSession, SheetLayoutResult, Warning } from "../browserScore/types";
+import { guessInstrument, pirataInstrument } from "../instruments";
 import { packageMscx, readMsczIdentityBytes } from "../msczIdentity";
 import { buildPartBasenames, safeFilename } from "../partFiles";
-import type { ParsedPart, ParsedScore } from "../parseUploadedFiles";
+import type { ParsedArrangement, ParsedPart, ParsedPlayback, ParsedScore } from "../parseUploadedFiles";
 import { caderninhoPartTransform, partSettings, type PartTransformReport } from "./partTransform";
 import { libraryOptionsFor, resolvePartFormatting, sheetLayoutFor } from "./profile";
+
+function savePlayback(files: Map<string, File>, stem: string, playback: PartPlayback | null | undefined, folder = "playback"): ParsedPlayback | undefined {
+  if (!playback?.frames.length) {return;}
+  const midiName = `${stem}-playback.midi`;
+  const timingName = `${stem}-timing.json`;
+  const midi = `${folder}/${midiName}`;
+  const timing = `${folder}/${timingName}`;
+  files.set(midi, new File([playback.midi], midiName, { type: "audio/midi" }));
+  files.set(timing, new File([JSON.stringify({ version: 1, frames: playback.frames })], timingName, { type: "application/json" }));
+  return { midi, timing };
+}
 
 /** What the user chose for one part of the score; parts not listed are not uploaded. */
 export type PartChoice = {
@@ -26,6 +37,24 @@ export type PartChoice = {
   /** Fingerings on or off; defaults to the profile (by instrument). */
   fingerings?: boolean;
 };
+
+function arrangementLabel(instrument: Instrument): string {
+  const name = pirataInstrument(instrument, false).replace(/ eb$/, " Eb");
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+export function arrangementOptions(profile: Pick<FormattingProfile, "arrangementMarginMm" | "arrangementStaffSizeMm" | "arrangementStaffSpacing">, rows: readonly { ordinal: number; instrument: Instrument | null }[]) {
+  return {
+    marginMm: profile.arrangementMarginMm,
+    staffSizeMm: profile.arrangementStaffSizeMm,
+    staffSpacing: profile.arrangementStaffSpacing,
+    labels: Object.fromEntries(rows.flatMap(({ ordinal, instrument }) => instrument ? [[ordinal, arrangementLabel(instrument)]] : [])),
+    fallbackLabel: (names: readonly string[]) => {
+      const instrument = guessInstrument([...names]);
+      return instrument ? arrangementLabel(instrument) : undefined;
+    },
+  };
+}
 
 export type PartRenderReport = {
   ordinal: number;
@@ -44,13 +73,16 @@ export type RenderProgress = { step: "open" | "parts" | "render" | "midi" | "don
 
 export type RenderOptions = {
   signal?: AbortSignal;
+  arrangementRows?: readonly { ordinal: number; instrument: Instrument | null }[];
   /** Metadata the user checked (send screen); without it the file's tags are used. */
   metadata?: ScoreMetadata;
   onProgress?: (progress: RenderProgress) => void;
+  /** Final markup from the send draft, bound to the original rendered page. */
+  editedPages?: readonly { ordinal: number; page: number; original: string; svg: string }[];
   /** A library created with `libraryOptionsFor(profile)`; created (and disposed) here when absent. */
   library?: ScoreLibrary;
   /** Creates the library when none is given (the app passes loadScoreLibrary). */
-  createLibrary?: (options: ReturnType<typeof libraryOptionsFor>) => Promise<ScoreLibrary>;
+  createLibrary?: (options: ReturnType<typeof libraryOptionsFor> & { partPlayback: boolean }) => Promise<ScoreLibrary>;
   /**
    * An open session of the same file (the send screen's), so pages already drawn for the preview
    * are reused instead of drawn again. Its transforms must read the profile `useProfile` receives;
@@ -103,7 +135,7 @@ export async function renderForUpload(
     ? null
     : options.library ??
       (await (options.createLibrary ?? ((o) => import("../scoreEngine").then((m) => m.loadScoreLibrary(o))))(
-        libraryOptionsFor(profile),
+        { ...libraryOptionsFor(profile), partPlayback: true },
       ));
   const owned = !reused && !options.library;
   try {
@@ -171,7 +203,11 @@ export async function renderForUpload(
           const rendered = await session.renderPage(view, page, { expectedRevision: catalog.revision, signal });
           const key = `parts/${basename}-${page}.svg`;
           const fileName = `${basename}-${page}.svg`;
-          fileMap.set(key, new File([rendered.svg], fileName, { type: "image/svg+xml" }));
+          const edited = options.editedPages?.find((edit) => edit.ordinal === part.ordinal && edit.page === page);
+          if (edited && edited.original !== rendered.svg) {
+            throw new Error("A página foi redesenhada. Volte à formatação e refaça as correções manuais.");
+          }
+          fileMap.set(key, new File([edited?.svg ?? rendered.svg], fileName, { type: "image/svg+xml" }));
           svg.push(key);
           svgNames.push(fileName);
           layout ??= rendered.layout ?? null;
@@ -180,7 +216,10 @@ export async function renderForUpload(
         onProgress?.({ step: "midi", done: index, total: chosen.length, part: name });
         const midi = await session.exportMidi(view, { expectedRevision: catalog.revision, signal });
         fileMap.set(`parts/${basename}.midi`, new File([midi.midi], `${basename}.midi`, { type: "audio/midi" }));
-        parts.push({ name, basename, instrument, svg, midi: `parts/${basename}.midi` });
+        const uploadedPart: ParsedPart = { name, basename, instrument, svg, midi: `parts/${basename}.midi` };
+        const playback = await session.getPartPlayback?.(part.id, { expectedRevision: catalog.revision, signal });
+        uploadedPart.playback = savePlayback(fileMap, basename, playback);
+        parts.push(uploadedPart);
         metajsonParts.push({ name, instrument, svg: svgNames, midi: `${basename}.midi` });
         reportParts.push({
           ordinal: part.ordinal,
@@ -196,6 +235,17 @@ export async function renderForUpload(
 
       const scoreMidi = await session.exportMidi({ kind: "score" }, { expectedRevision: catalog.revision, signal });
       fileMap.set("midi", new File([scoreMidi.midi], `${title}.midi`, { type: "audio/midi" }));
+      const arrangementRender = await session.renderArrangement?.({ ...arrangementOptions(effective, options.arrangementRows ?? choices), expectedRevision: catalog.revision, signal });
+      let arrangement: ParsedArrangement | undefined;
+      if (arrangementRender) {
+        const svg = arrangementRender.pages.map((markup, index) => {
+          const name = `arrangement-${index + 1}.svg`;
+          const key = `arrangement/${name}`;
+          fileMap.set(key, new File([markup], name, { type: "image/svg+xml" }));
+          return key;
+        });
+        arrangement = { svg, playback: savePlayback(fileMap, "full", arrangementRender.playback, "arrangement") };
+      }
       const archive = fileName.toLowerCase().endsWith(".mscx") ? packageMscx(bytes) : bytes;
       fileMap.set("mscz", new File([archive], `${title}.mscz`, { type: "application/octet-stream" }));
       const source = readMsczIdentityBytes(archive);
@@ -224,6 +274,7 @@ export async function renderForUpload(
           // As parseUploadedFiles reads the .metajson.
           tags: options.metadata ? [...options.metadata.tags] : fields.poet.split(",").map((tag) => tag.trim()),
           parts,
+          ...(arrangement ? { arrangement } : {}),
           fileMap,
           warnings,
           ...(source ? { source } : {}),

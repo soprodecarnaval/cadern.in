@@ -25,11 +25,19 @@ import {
   withInstrument,
   withoutOverride,
   MAX_SCORE_BYTES,
+  type ArrangementPreview,
+  type CollisionDraft,
   type EnviarState,
   type PartRow,
   type Preview,
+  type PreviewAudio,
   type Step,
 } from "./enviarState";
+import type { MidiPlayerProps } from "../../components/audio/MidiPlayer";
+import { notesAtTime } from "../../../lib/browserScore/playbackNotes";
+import { withTextFonts } from "../../../lib/sharedFonts";
+import { CollisionPage } from "./CollisionPage";
+import type { MarkingMove } from "./collisionSvg";
 import { FINGERING_SIZE, STAFF_SIZE, stepSize, type SizeRange } from "./fingeringSize";
 
 import "./EnviarPage.css";
@@ -40,8 +48,10 @@ export type EnviarPageViewProps = {
   signedIn: boolean;
   onFile: (file: File) => void;
   onStep: (step: Step) => void;
-  onRows: (rows: PartRow[]) => void;
-  onProfile: (profile: FormattingProfile) => void;
+  onRows: (rows: PartRow[], profile?: FormattingProfile) => boolean | void;
+  onProfile: (profile: FormattingProfile) => boolean | void;
+  onArrangementPreview: (signal: AbortSignal) => Promise<ArrangementPreview>;
+  onCollision: (ordinal: number, action: MarkingMove | "undo" | "reset") => void;
   onMetadata: (metadata: ScoreMetadata) => void;
   onEditing: (ordinal: number | null) => void;
   onListen: (ordinal: number) => void;
@@ -49,7 +59,7 @@ export type EnviarPageViewProps = {
   onCancel: () => void;
   onDismissError: () => void;
   onReset: () => void;
-  components: { MidiPlayer: ComponentType<{ src: string }> };
+  components: { MidiPlayer: ComponentType<MidiPlayerProps> };
 };
 
 const mb = (bytes: number) => `${Math.round(bytes / 1024 / 1024)} MB`;
@@ -273,7 +283,7 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
   children?: ReactNode;
   /** −/+ buttons, and the value the automatic fit chose shown (and used as the start) while automatic. */
   stepper?: { automatic: number | undefined; range: SizeRange };
-  onChange: (value: "auto" | number) => void;
+  onChange: (value: "auto" | number) => boolean | void;
 }) {
   const manual = typeof value === "number";
   const displayedValue = manual ? value : stepper?.automatic;
@@ -281,8 +291,9 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
   // What is being typed: applied as soon as it is a number in range (typing fixes the value);
   // anything else waits, with a hint, and leaving the field shows the applied value again.
   const [draft, setDraft] = useState<string | null>(null);
-  const typed = draft === null ? null : Number(draft.trim().replace(",", "."));
-  const invalid = draft !== null && !(draft.trim() !== "" && Number.isFinite(typed) && typed! >= min && typed! <= max);
+  const validNumber = (text: string, number: number) =>
+    text.trim() !== "" && Number.isFinite(number) && number >= min && number <= max && (step < 1 || Number.isInteger(number));
+  const invalid = draft !== null && !validNumber(draft, Number(draft.trim().replace(",", ".")));
   const hintId = `${name}-range`;
   return (
     <fieldset className="enviar-choice">
@@ -327,7 +338,8 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
               const text = event.target.value;
               setDraft(text);
               const number = Number(text.trim().replace(",", "."));
-              if (text.trim() !== "" && Number.isFinite(number) && number >= min && number <= max) {onChange(Math.round(number * 100) / 100);}
+              if (validNumber(text, number) &&
+                  onChange(Math.round(number * 100) / 100) === false) {setDraft(null);}
             }}
             onBlur={() => setDraft(null)}
           />
@@ -341,7 +353,7 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
       )}
       {invalid && (
         <p id={hintId} className="enviar-field-error">
-          Use um valor de {decimal(min, step < 1 ? 2 : 0)} a {decimal(max, step < 1 ? 2 : 0)}{unit ? ` ${unit}` : ""}.
+          Use um {step < 1 ? "valor" : "valor inteiro"} de {decimal(min, step < 1 ? 2 : 0)} a {decimal(max, step < 1 ? 2 : 0)}{unit ? ` ${unit}` : ""}.
         </p>
       )}
       {children}
@@ -349,7 +361,7 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
   );
 }
 
-function Controls({ state, onProfile, onRows, shownRow, shownPreview }: Pick<EnviarPageViewProps, "state" | "onProfile" | "onRows"> & {
+function Controls({ state, onProfile, onRows, onCollision, shownRow, shownPreview }: Pick<EnviarPageViewProps, "state" | "onProfile" | "onRows" | "onCollision"> & {
   shownRow: PartRow | undefined; shownPreview: Preview | undefined;
 }) {
   const ready = !!shownPreview && !shownPreview.rendering && !shownPreview.error;
@@ -368,6 +380,8 @@ function Controls({ state, onProfile, onRows, shownRow, shownPreview }: Pick<Env
             onApplied={(text) => setNotice((current) => ({ id: (current?.id ?? 0) + 1, text }))}
             automaticStaff={ready ? shownPreview.layout?.staffSpaceMm : undefined}
             automaticFingering={ready ? shownPreview.automaticFingeringSize : undefined} />
+          <Button size="sm" variant="secondary" disabled={!ready || !state.collisions[shownRow.ordinal]}
+            onClick={() => onCollision(shownRow.ordinal, "reset")}>Restaurar posições</Button>
         </section>
       )}
     </form>
@@ -414,7 +428,7 @@ function PartControls({ state, onProfile, onRows, row, automaticStaff, automatic
   const names = (targets: readonly PartRow[]) => [...new Set([row.name, ...targets.map((target) => target.name)])];
   const countText = (count: number) => `${count} ${count === 1 ? "outra parte" : "outras partes"}`;
   const applyToAll = (field: string, targets: readonly PartRow[], patch: PartFormatting) => {
-    onProfile(withFormattingForAll(state.profile, names(targets), patch));
+    if (onProfile(withFormattingForAll(state.profile, names(targets), patch)) === false) {return;}
     onApplied(`${field} aplicado a ${countText(targets.length)}.`);
   };
   const link = (field: string, targets: readonly PartRow[], apply: () => void) => targets.length > 0 && (
@@ -431,8 +445,9 @@ function PartControls({ state, onProfile, onRows, row, automaticStaff, automatic
   const setPiratas = (targets: readonly PartRow[], value: string) => {
     const on = value !== "off";
     const affected = new Set([row.ordinal, ...targets.map((target) => target.ordinal)]);
-    onRows(state.rows.map((candidate) => (affected.has(candidate.ordinal) ? withFingerings(candidate, on) : candidate)));
-    if (on) {onProfile(withFormattingForAll(state.profile, names(targets), { fingering: { notation: value as "positions" | "valves" } }));}
+    const rows = state.rows.map((candidate) => affected.has(candidate.ordinal) ? withFingerings(candidate, on) : candidate);
+    const profile = on ? withFormattingForAll(state.profile, names(targets), { fingering: { notation: value as "positions" | "valves" } }) : state.profile;
+    onRows(rows, profile);
   };
   const fingeredOthers = others.filter((candidate) => candidate.fingeringsAvailable);
   return (
@@ -502,17 +517,33 @@ function FingeringAndCleanupControls({ settings, onChange, showTrombone }: {
   );
 }
 
-function PreviewCard({ row, preview, midi, onListen, MidiPlayer }: {
-  row: PartRow; preview: Preview | undefined; midi: string | undefined;
-  onListen: (ordinal: number) => void; MidiPlayer: ComponentType<{ src: string }>;
+function PreviewCard({ row, preview, draft, midi, onListen, onCollision, MidiPlayer }: {
+  row: PartRow; preview: Preview | undefined; draft: CollisionDraft | undefined; midi: PreviewAudio | undefined;
+  onListen: (ordinal: number) => void; onCollision: EnviarPageViewProps["onCollision"];
+  MidiPlayer: ComponentType<MidiPlayerProps>;
 }) {
+  const ready = !!preview?.pageSvg && !preview.rendering && !preview.error;
+  const audio = ready && midi?.pageSvg === preview?.pageSvg ? midi : undefined;
+  const [playing, setPlaying] = useState<{ url: string; notes: readonly string[] } | null>(null);
+  const onPlaybackTime = (seconds: number | null) => {
+    if (!audio) {return;}
+    const notes = notesAtTime(audio.frames, seconds);
+    setPlaying((current) => current?.url === audio.url && current.notes === notes ? current : { url: audio.url, notes });
+  };
+  const corrected = draft && draft.signature === preview?.signature && draft.original === preview?.pageSvg
+    ? draft.history.at(-1) : undefined;
+  const svg = corrected
+    ? (preview?.fontCss ? withTextFonts(corrected, preview.fontCss) : corrected)
+    : preview?.svg;
   const warnings = (preview?.warnings ?? []).map(warningText).filter((text): text is string => !!text);
   if (preview && preview.pages > 1 && !warnings.some((text) => text.startsWith("Não coube"))) {warnings.unshift("Não coube em uma página.");}
   return (
     <article className="enviar-preview" aria-busy={preview?.rendering ?? true} aria-label={`Prévia de ${row.name}`}>
       <div className="enviar-sheet" style={{ aspectRatio: `${SONGBOOK_FIT_AREA.widthMm} / ${SONGBOOK_FIT_AREA.heightMm}` }}>
-        {preview?.svg ? (
-          <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(preview.svg)}`} alt={`Página de ${row.name}`} />
+        {ready && svg ? (
+          <CollisionPage svg={svg} label={`Página de ${row.name}`} activeNotes={playing?.url === audio?.url ? playing?.notes : undefined} onMove={(move) => onCollision(row.ordinal, move)} />
+        ) : svg ? (
+          <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`} alt={`Página de ${row.name}`} />
         ) : (
           <span className="enviar-sheet-placeholder">{preview?.error ?? "Desenhando…"}</span>
         )}
@@ -527,10 +558,75 @@ function PreviewCard({ row, preview, midi, onListen, MidiPlayer }: {
         <ul className="enviar-warnings">{warnings.map((text) => <li key={text}>{text}</li>)}</ul>
       )}
       <div className="enviar-preview-actions">
-        <Button size="sm" variant="text" onClick={() => onListen(row.ordinal)}>Ouvir</Button>
+        <Button size="sm" variant="text" disabled={!ready} onClick={() => onListen(row.ordinal)}>Ouvir</Button>
+        {ready && <Button size="sm" variant="text" disabled={!corrected} onClick={() => onCollision(row.ordinal, "undo")}>
+          Desfazer movimento
+        </Button>}
       </div>
-      {midi && <MidiPlayer src={midi} />}
+      {ready && <p className="enviar-preview-info">Arraste números dos piratas, indicações de texto ou marcas de repetição.</p>}
+      {audio && <MidiPlayer key={audio.url} src={audio.url} onPlaybackTime={onPlaybackTime} />}
     </article>
+  );
+}
+
+const ARRANGEMENT_MARGIN: SizeRange = { min: 5, max: 20, step: 1, default: 10 };
+const ARRANGEMENT_SPACING: SizeRange = { min: 0, max: 48, step: 1, default: 4 };
+
+function ArrangementFormatting({ state, onProfile, onArrangementPreview }: Pick<EnviarPageViewProps, "state" | "onProfile" | "onArrangementPreview">) {
+  const [open, setOpen] = useState(false);
+  const [preview, setPreview] = useState({ page: null as ArrangementPreview | null, error: "", loading: false });
+  useEffect(() => {
+    if (!open) {return;}
+    const controller = new AbortController();
+    setPreview((current) => ({ ...current, loading: true, error: "" }));
+    const timeout = window.setTimeout(() => {
+      void onArrangementPreview(controller.signal).then((page) => {
+        if (!controller.signal.aborted) {setPreview({ page, error: "", loading: false });}
+      }).catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setPreview((current) => ({ ...current, error: error instanceof Error ? error.message : "Não foi possível desenhar o arranjo.", loading: false }));
+        }
+      });
+    }, 300);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [open, onArrangementPreview]);
+
+  const change = (field: "arrangementMarginMm" | "arrangementStaffSizeMm" | "arrangementStaffSpacing", value: number | "auto") =>
+    onProfile({ ...state.profile, [field]: value === "auto" ? undefined : value });
+  const staffSize = state.profile.arrangementStaffSizeMm;
+  const actualSize = !preview.loading && !preview.error ? preview.page?.staffSpaceMm : undefined;
+  return (
+    <details className="mt-3" onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>Formatar arranjo (opcional)</summary>
+      {open && <div className="mt-2">
+        <div className="enviar-format">
+          <div className="enviar-controls">
+            <AutoNumber label="Margens do arranjo" name="arrangement-margin" unit="mm" value={state.profile.arrangementMarginMm}
+              min={ARRANGEMENT_MARGIN.min} max={ARRANGEMENT_MARGIN.max} step={ARRANGEMENT_MARGIN.step} stepper={{ range: ARRANGEMENT_MARGIN, automatic: ARRANGEMENT_MARGIN.default }}
+              onChange={(value) => change("arrangementMarginMm", value)} />
+            <AutoNumber label="Tamanho da pauta" name="arrangement-staff-size" unit="mm" value={staffSize}
+              min={STAFF_SIZE.min} max={STAFF_SIZE.max} step={STAFF_SIZE.step} stepper={{ range: STAFF_SIZE, automatic: actualSize === undefined ? undefined : Number(actualSize.toFixed(2)) }}
+              onChange={(value) => change("arrangementStaffSizeMm", value)} />
+            <AutoNumber label="Espaço entre pautas" name="arrangement-spacing" value={state.profile.arrangementStaffSpacing}
+              min={ARRANGEMENT_SPACING.min} max={ARRANGEMENT_SPACING.max} step={ARRANGEMENT_SPACING.step} stepper={{ range: ARRANGEMENT_SPACING, automatic: ARRANGEMENT_SPACING.default }}
+              onChange={(value) => change("arrangementStaffSpacing", value)} />
+            <p className="enviar-preview-info">O tamanho da pauta pode ser reduzido para caber em uma página A4 horizontal.</p>
+            {staffSize !== undefined && actualSize !== undefined && actualSize < staffSize - 0.01 &&
+              <p className="enviar-preview-info">Tamanho na página: {decimal(actualSize)} mm.</p>}
+          </div>
+          <div>
+            {preview.loading && <p role="status">Atualizando arranjo…</p>}
+            {preview.error && <p role="alert">{preview.error}</p>}
+            {preview.page && <div className="enviar-sheet" style={{ aspectRatio: "297 / 210" }}>
+              <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(preview.page.svg)}`} alt="Prévia do arranjo" />
+            </div>}
+          </div>
+        </div>
+      </div>}
+    </details>
   );
 }
 
@@ -559,12 +655,14 @@ function FormatStep(props: EnviarPageViewProps) {
                 return { key: String(row.ordinal), label: row.name, note: preview?.rendering ? "…" : warned ? "⚠" : undefined };
               })}
             >
-              <PreviewCard row={shownRow} preview={shownPreview}
+              <PreviewCard key={`${shownRow.ordinal}:${shownPreview?.signature ?? ""}`} row={shownRow} preview={shownPreview}
+                draft={state.collisions[shownRow.ordinal]} onCollision={props.onCollision}
                 midi={state.midi[shownRow.ordinal]} onListen={onListen} MidiPlayer={components.MidiPlayer} />
             </PartTabs>
           )}
         </div>
       </div>
+      <ArrangementFormatting {...props} />
       <div className="enviar-actions">
         <Button variant="secondary" onClick={() => onStep("dados")}>Voltar aos dados</Button>
         {rendering && <Button variant="text" onClick={props.onCancel}>Parar prévias</Button>}
@@ -650,7 +748,7 @@ export function EnviarPageView(props: EnviarPageViewProps) {
     <Page className="enviar-page">
       <h1>{reformat ? `Reformatar ${state.metadata.title || "partitura"}` : "Enviar partitura"}</h1>
       {reformat && (
-        <p>A música fica como está; só a formatação muda. O resultado é salvo como uma nova versão da partitura.</p>
+        <p>As posições das indicações são recalculadas na nova versão. Refaça as correções manuais de posição que quiser manter.</p>
       )}
       <Stepper step={state.step} />
       <p className="enviar-status" role="status" aria-live="polite">

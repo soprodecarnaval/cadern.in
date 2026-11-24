@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { inspect, defaultLimits } from './input';
 import { strToU8, zipSync } from 'fflate';
-import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport, type MidiExport, type RendererInfo, type PartTransform, type SheetLayout, type SheetLayoutResult } from './types';
-import { partMusicXml } from './parts';
+import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport, type MidiExport, type ArrangementRender, type PlaybackFrame, type RendererInfo, type PartTransform, type SheetLayout, type SheetLayoutResult } from './types';
+import { arrangementMusicXml, partMusicXml } from './parts';
 import { excerptInstruments, instrumentIdsOf } from './partInstruments';
 import { extractTracks, midiNoteCount, midiTrackCount } from './midi';
 import { composeSheet, MUSIC_AREA, SHEET, type SheetFonts } from './sheet';
@@ -516,7 +516,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     };
                 };
                 // Part pages are drawn by the MusicXML renderer, one part at a time.
-                const rendered = new Map<PartId, { revision: number; pages: string[]; warnings: Warning[]; geometry: { widthMm: number; heightMm: number }; layout?: SheetLayoutResult }>();
+                const rendered = new Map<PartId, { revision: number; pages: string[]; warnings: Warning[]; geometry: { widthMm: number; heightMm: number }; layout?: SheetLayoutResult; playback?: { midi: string; frames: PlaybackFrame[] } }>();
                 const partPages = async (index: number, metadata: Metadata, signal?: AbortSignal) => {
                     const part = parts[index];
                     const cached = rendered.get(part.id);
@@ -545,8 +545,8 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                         systems: layout.systems, spacingLinear: layout.spacingLinear, spacingNonLinear: layout.spacingNonLinear, spacingSystem: layout.spacingSystem, fingeringScale: layout.fingeringScale })
                         .filter(([, value]) => typeof value === 'number' && Number.isFinite(value)));
                     const output = await (fitted
-                        ? call('renderSheet', [built.musicXml, area, built.measureWeights, sheetLayout], signal)
-                        : call('renderMusicXml', [built.musicXml, built.geometry], signal)) as { pages?: unknown; staffSpaceMm?: unknown; systems?: unknown; contentHeightMm?: unknown; fingeringScale?: unknown; spacingTightened?: unknown };
+                        ? call('renderSheet', [built.musicXml, area, built.measureWeights, sheetLayout, options.partPlayback ?? false], signal)
+                        : call('renderMusicXml', [built.musicXml, built.geometry, options.partPlayback ?? false], signal)) as { pages?: unknown; staffSpaceMm?: unknown; systems?: unknown; contentHeightMm?: unknown; fingeringScale?: unknown; spacingTightened?: unknown; playback?: { midi: string; frames: PlaybackFrame[] } };
                     if (!output || !Array.isArray(output.pages) || output.pages.some(page => typeof page !== 'string')) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'getPages', 'The renderer could not read the part MusicXML');}
                     let pages = output.pages as string[];
                     // Shared text fonts: drop the renderer's embedded @font-face rules; the pages keep naming the families.
@@ -577,7 +577,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                             fingeringScale: typeof output.fingeringScale === 'number' ? output.fingeringScale : 0.9 } : undefined;
                     if (layoutResult && layout.fingeringScale === undefined && layoutResult.fingeringScale < 0.9) {warnings.push({ code: 'FINGERINGS_REDUCED', message: `The fingerings were reduced to ${Math.round(layoutResult.fingeringScale / 0.9 * 100)}% to fit one sheet.` });}
                     if (output.spacingTightened === true) {warnings.push({ code: 'SHEET_SPACING_TIGHTENED', message: 'The part is dense: its horizontal spacing was tightened to fit one sheet.' });}
-                    const entry = { revision, pages, warnings, geometry, layout: layoutResult };
+                    const entry = { revision, pages, warnings, geometry, layout: layoutResult, playback: output.playback };
                     rendered.set(part.id, entry);
                     return entry;
                 };
@@ -671,6 +671,67 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     invalidate(view?: View) {
                         if (view === undefined) { rendered.clear(); return; }
                         if (view?.kind === 'part' && typeof view.partId === 'string') {rendered.delete(view.partId);}
+                    },
+                    renderArrangement(operation: Parameters<import("./types").ScoreSession["renderArrangement"]>[0]) {
+                        return run('renderArrangement', operation?.signal, async (): Promise<ArrangementRender> => {
+                            if (!operation || operation.expectedRevision !== revision) {throw new ScoreError('STALE_REVISION', 'renderArrangement', 'Score revision changed');}
+                            const { xml, parts: scoreParts } = await fullScore(operation.signal);
+                            const metadata = await call('metadata', [], operation.signal) as Metadata;
+                            const labels = new Map<string, string>();
+                            for (const part of scoreParts) {
+                                const label = operation.fallbackLabel?.([part.name, ...part.instrumentNames]);
+                                if (label) {labels.set(part.id, label);}
+                            }
+                            // A combined excerpt may represent several different instruments.
+                            musicXmlTargets(metadata, scoreParts.map((part) => part.id)).forEach((ids, index) => {
+                                const label = operation.labels?.[index + 1];
+                                if (ids?.length === 1 && label) {labels.set(ids[0], label);}
+                            });
+                            const margin = Math.max(5, Math.min(20, operation.marginMm ?? 10));
+                            const width = 297, height = 210;
+                            // Keep margins in physical A4 units. Verovio's virtual margins
+                            // have a fixed upper bound when the canvas grows to fit a large score.
+                            const page = { widthMm: width - 2 * margin, heightMm: height - 2 * margin, marginsMm: [0, 0, 0, 0], staffSpaceMm: operation.staffSizeMm ?? 1.8, staffSpacing: operation.staffSpacing, singlePage: true };
+                            const output = await call('renderMusicXml', [arrangementMusicXml(xml, labels), page, true], operation.signal) as {
+                                pages?: string[]; staffSpaceMm?: number; playback?: { midi: string; frames: PlaybackFrame[] };
+                            };
+                            if (output?.pages?.length !== 1) {
+                                throw new ScoreError('UNSUPPORTED_CAPABILITY', 'renderArrangement', 'Não foi possível colocar o arranjo completo em uma página.');
+                            }
+                            const pages: string[] = [];
+                            for (const original of output.pages) {
+                                const doc = new DOMParser().parseFromString(sharedTextFonts ? withoutEmbeddedFonts(original, textFontFamilies) : original, 'image/svg+xml');
+                                const root = doc.documentElement;
+                                if (root.localName !== 'svg' || doc.querySelector('parsererror')) {throw new ScoreError('UNSUPPORTED_CAPABILITY', 'renderArrangement', 'Renderer returned invalid arrangement SVG');}
+                                await validatePortableSvg(doc, sharedTextFonts ? textFontFamilies : undefined);
+                                root.setAttribute('x', String(margin));
+                                root.setAttribute('y', String(margin));
+                                root.setAttribute('width', String(page.widthMm));
+                                root.setAttribute('height', String(page.heightMm));
+                                const paper = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                                paper.setAttribute('width', `${width}mm`);
+                                paper.setAttribute('height', `${height}mm`);
+                                paper.setAttribute('viewBox', `0 0 ${width} ${height}`);
+                                doc.replaceChild(paper, root);
+                                paper.appendChild(root);
+                                pages.push(new XMLSerializer().serializeToString(paper));
+                            }
+                            const playback = output.playback;
+                            return {
+                                pages,
+                                staffSpaceMm: output.staffSpaceMm ?? page.staffSpaceMm,
+                                playback: playback ? { midi: Uint8Array.from(atob(playback.midi), (char) => char.charCodeAt(0)), frames: playback.frames } : null,
+                            };
+                        });
+                    },
+                    getPartPlayback(partId: PartId, operation: Operation & { expectedRevision: number }) {
+                        return run('getPartPlayback', operation?.signal, async () => {
+                            if (!operation || operation.expectedRevision !== revision) {throw new ScoreError('STALE_REVISION', 'getPartPlayback', 'Score revision changed');}
+                            const { index, metadata } = await viewIndex({ kind: 'part', partId }, operation.signal);
+                            const { playback } = await partPages(index, metadata!, operation.signal);
+                            if (!playback?.midi) {return null;}
+                            return { midi: Uint8Array.from(atob(playback.midi), (char) => char.charCodeAt(0)), frames: playback.frames };
+                        });
                     },
                     exportMidi(view: View, operation: Operation & { expectedRevision: number }) {
                         return run('exportMidi', operation?.signal, async (): Promise<MidiExport> => {

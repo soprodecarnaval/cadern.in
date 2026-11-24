@@ -257,12 +257,12 @@ export function PublicProjectPageView({
             <div className="d-flex flex-wrap gap-2">
               {FEATURE_FLAG_BROWSER_UPLOAD && (
                 <RouterLink className="btn btn-outline-secondary ds-button btn-sm" to={uploadPath({ projectId: project.id })}>
-                  {BROWSER_UPLOAD_MODE === "beta" ? "Enviar partitura no navegador" : "Enviar partitura"}
+                  Enviar partitura pelo navegador
                 </RouterLink>
               )}
               {BROWSER_UPLOAD_MODE !== "default" && (
                 <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink({ projectId: project.id })}>
-                  Enviar partitura
+                  Enviar partitura pelo MuseScore
                 </a>
               )}
             </div>

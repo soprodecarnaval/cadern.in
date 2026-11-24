@@ -10,11 +10,14 @@ export const zStorageFile = z.object({
 });
 export type StorageFile = z.infer<typeof zStorageFile>;
 
+const zPlaybackFiles = z.object({ midi: zStorageFile, timing: zStorageFile });
+
 export const zPartData = z.object({
   name: z.string(),
   instrument: zInstrument,
   svg: z.array(zStorageFile),
   midi: zStorageFile,
+  playback: zPlaybackFiles.optional(),
 });
 export type PartData = z.infer<typeof zPartData>;
 
@@ -131,6 +134,7 @@ export const zScoreRevisionData = z.object({
   metajson: zStorageFile,
   midi: zStorageFile,
   parts: z.array(zPartData),
+  arrangement: z.object({ svg: z.array(zStorageFile).min(1), playback: zPlaybackFiles.optional() }).optional(),
   notes: z.string(),
   // Optional until collab-flow M3/M4 backfill them; every new revision has
   // them (zNewScoreRevisionData).

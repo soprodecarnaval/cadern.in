@@ -76,6 +76,54 @@ async function signedInPage(path) {
     return page;
 }
 
+async function correctFingering(page) {
+    await page.getByRole('tab', { name: /^Trompete/ }).first().click();
+    const partName = (await page.locator('#enviar-parte').innerText()).replace(/^Parte: /, '');
+    const fingering = page.frameLocator('.enviar-collision-page').locator('g.fing[id]').first();
+    const id = await fingering.getAttribute('id');
+    const original = await fingering.getAttribute('transform');
+    const undo = page.getByRole('button', { name: 'Desfazer movimento' });
+    const waitForOriginal = () => page.waitForFunction(({ id, original }) => {
+        const marking = document.querySelector('.enviar-collision-page')?.contentDocument?.getElementById(id);
+        return marking && marking.getAttribute('transform') === original;
+    }, { id, original });
+    const drag = async () => {
+        const text = fingering.locator('text');
+        await text.scrollIntoViewIfNeeded();
+        const box = await text.boundingBox();
+        assert(box, 'the fingering has rendered text');
+        const x = box.x + box.width / 2;
+        const y = box.y + box.height / 2;
+        await page.mouse.move(x, y);
+        await page.mouse.down();
+        await page.mouse.move(x + 9, y - 6, { steps: 4 });
+        await page.mouse.up();
+        await undo.click({ trial: true });
+        const transform = await fingering.getAttribute('transform');
+        assert.match(transform, /^translate\([\d.]+ -[\d.]+\)/);
+        return transform;
+    };
+
+    await drag();
+    await undo.click();
+    await waitForOriginal();
+    await page.setViewportSize({ width: 1050, height: 1000 });
+    await drag();
+    await page.locator('.enviar-controls').getByRole('button', { name: 'Restaurar posições' }).click();
+    await waitForOriginal();
+    await page.setViewportSize({ width: 1400, height: 1000 });
+    const transform = await drag();
+    const preview = page.locator('.enviar-preview iframe');
+    const corrected = await preview.getAttribute('srcdoc');
+    page.once('dialog', (dialog) => dialog.dismiss());
+    await page.getByRole('button', { name: 'Aumentar: Tamanho da pauta' }).click();
+    assert.equal(await preview.getAttribute('srcdoc'), corrected, 'cancelling a layout change preserves the correction');
+    await page.getByRole('tab', { name: /^Tuba/ }).first().click();
+    await page.getByRole('tab', { name: /^Trompete/ }).first().click();
+    assert.equal(await preview.getAttribute('srcdoc'), corrected, 'switching parts preserves the correction');
+    return { partName, id, transform, corrected };
+}
+
 async function sendThroughScreen(page, { file, tweak = false, metadata = null } = {}) {
     if (file) await page.locator('input[type=file]').setInputFiles(file);
     await page.getByRole('heading', { name: 'Partes', exact: true }).waitFor({ timeout: 180000 });
@@ -91,11 +139,12 @@ async function sendThroughScreen(page, { file, tweak = false, metadata = null } 
         assert.equal(await page.getByLabel('Tags').inputValue(), metadata.expect.tags);
     }
     await page.getByRole('button', { name: /^Formatar/ }).click();
-    await page.waitForFunction(() => document.querySelectorAll('.enviar-preview img').length > 0 && !document.querySelector('.enviar-preview[aria-busy=true]'), null, { timeout: 300000 });
+    await page.waitForFunction(() => document.querySelectorAll('.enviar-preview iframe').length > 0 && !document.querySelector('.enviar-preview[aria-busy=true]'), null, { timeout: 300000 });
+    let correction;
     if (tweak) {
         const sizeControls = page.getByRole('group', { name: 'Tamanho dos números' });
         const sizeInput = sizeControls.getByRole('spinbutton');
-        const preview = page.locator('.enviar-preview img');
+        const preview = page.locator('.enviar-preview iframe');
         const selectPart = async (name) => {
             await page.getByRole('tab', { name }).first().click();
             await preview.waitFor();
@@ -104,17 +153,17 @@ async function sendThroughScreen(page, { file, tweak = false, metadata = null } 
         };
         const original = new Map();
         for (const [name] of sizedParts) {
-            original.set(await selectPart(name), await preview.getAttribute('src'));
+            original.set(await selectPart(name), await preview.getAttribute('srcdoc'));
         }
         for (const [part, size] of sizedParts) {
             const name = await selectPart(part);
-            assert.equal(await preview.getAttribute('src'), original.get(name), 'other parts keep their preview');
+            assert.equal(await preview.getAttribute('srcdoc'), original.get(name), 'other parts keep their preview');
             assert(await sizeControls.getByRole('radio', { name: 'Automático' }).isChecked());
             await sizeControls.getByRole('radio', { name: 'Fixo' }).check();
             await sizeInput.fill(size);
             await page.waitForFunction(({ previous }) => {
-                const img = document.querySelector('.enviar-preview[aria-busy=false] img');
-                return img && img.getAttribute('src') !== previous;
+                const frame = document.querySelector('.enviar-preview[aria-busy=false] iframe');
+                return frame && frame.getAttribute('srcdoc') !== previous;
             }, { previous: original.get(name) });
         }
         for (const [name, size] of sizedParts) {
@@ -126,26 +175,35 @@ async function sendThroughScreen(page, { file, tweak = false, metadata = null } 
         const staffInput = staff.getByRole('spinbutton');
         const automatic = Number((await staffInput.inputValue()).replace(',', '.'));
         assert(automatic >= 0.8 && automatic <= 2.4, `automatic staff size shown (${automatic})`);
-        const before = await preview.getAttribute('src');
+        const before = await preview.getAttribute('srcdoc');
         await page.getByRole('button', { name: 'Diminuir: Tamanho da pauta' }).click();
         await page.waitForFunction(({ previous }) => {
-            const img = document.querySelector('.enviar-preview[aria-busy=false] img');
-            return img && img.getAttribute('src') !== previous;
+            const frame = document.querySelector('.enviar-preview[aria-busy=false] iframe');
+            return frame && frame.getAttribute('srcdoc') !== previous;
         }, { previous: before }, { timeout: 120000 });
         assert(await staff.getByRole('radio', { name: 'Fixo' }).isChecked());
         assert.equal(Number((await staffInput.inputValue()).replace(',', '.')), Number((automatic - 0.05).toFixed(2)));
         assert.match(await page.locator('.enviar-preview-info').innerText(), new RegExp(`Pauta de ${(automatic - 0.05).toFixed(2).replace('.', ',')} mm`));
+        correction = await correctFingering(page);
     }
     await page.getByRole('button', { name: 'Continuar' }).click();
     await page.waitForFunction(() => document.querySelector('.enviar-summary') || document.querySelector('[role=alert]'), null, { timeout: 60000 });
+    if (correction) {
+        await page.getByRole('button', { name: 'Voltar à formatação' }).click();
+        assert.equal(await page.locator('.enviar-preview iframe').getAttribute('srcdoc'), correction.corrected, 'returning from send preserves the correction');
+        await page.getByRole('button', { name: 'Continuar' }).click();
+        await page.locator('.enviar-summary').waitFor();
+    }
+    return correction;
 }
 
 let revisionId = null;
 let sentScoreId = null;
+let correctedPart = null;
 try {
     await step('sends all-instruments.mscz from the browser', async () => {
         const page = await signedInPage('/acervo-dev/enviar');
-        await sendThroughScreen(page, { file: SCORE, tweak: true, metadata: { composer: 'Compositora E2E', tags: 'marcha, frevo' } });
+        const correction = await sendThroughScreen(page, { file: SCORE, tweak: true, metadata: { composer: 'Compositora E2E', tags: 'marcha, frevo' } });
         assert.equal(await page.locator('[role=alert]').count(), 0, 'no error');
         assert.match(await page.locator('.enviar-summary').innerText(), /Partitura nova/);
         const sendStarted = Date.now();
@@ -188,9 +246,62 @@ try {
         assert.match(metajson.renderer?.manifestSha256 ?? '', /^[0-9a-f]{64}$/);
         const svg = await (await fetch(str(parts[0].svg.arrayValue.values[0].mapValue.fields.url))).text();
         assert(!svg.includes('@font-face {\n    font-family: "Liberation"'), 'stored pages do not embed the shared fonts');
-        // Reader: the score page shows the parts, with the shared fonts embedded again.
+        correctedPart = parts.find(part => str(part.name) === correction.partName);
+        assert(correctedPart, 'the corrected part was uploaded');
+        const correctedSvg = await (await fetch(str(correctedPart.svg.arrayValue.values[0].mapValue.fields.url))).text();
+        const storedTransform = await page.evaluate(({ correctedSvg, id }) => {
+            const doc = new DOMParser().parseFromString(correctedSvg, 'image/svg+xml');
+            return doc.getElementById(id)?.getAttribute('transform');
+        }, { correctedSvg, id: correction.id });
+        assert.equal(storedTransform, correction.transform, 'Storage contains the exact preview correction');
+        assert(!correctedSvg.includes('data-dragging'), 'editor state stays out of Storage');
+        const playback = correctedPart.playback?.mapValue.fields;
+        assert(playback, 'the corrected part has playback assets');
+        const listeningUrl = str(playback.midi.mapValue.fields.url);
+        const timingResponse = await fetch(str(playback.timing.mapValue.fields.url));
+        assert(timingResponse.ok, 'the timing sidecar is readable');
+        const { version, frames } = await timingResponse.json();
+        assert.equal(version, 1);
+        const listeningMidi = Buffer.from(await (await fetch(listeningUrl)).arrayBuffer());
+        assert.equal(listeningMidi.subarray(0, 4).toString(), 'MThd');
+        const noteId = await page.evaluate(({ correctedSvg, frames }) => {
+            const doc = new DOMParser().parseFromString(correctedSvg, 'image/svg+xml');
+            return frames.flatMap(frame => frame.notes).find(id => doc.getElementById(id)?.classList.contains('note'));
+        }, { correctedSvg, frames });
+        assert(noteId, 'the timing map refers to notes on the saved, corrected SVG');
+        // The reader loads the saved pages and matched playback without entering reformat.
         await page.goto(BASE + href);
+        await page.getByRole('tab', { name: correction.partName, exact: true }).click();
+        await page.waitForFunction(url => [...document.querySelectorAll('midi-player')].some(
+            player => player.getAttribute('src') === url,
+        ), listeningUrl, { timeout: 60000 });
+        const readerPage = page.frameLocator('iframe[title$="Página 1"]');
+        await readerPage.locator(`[id="${noteId}"]`).waitFor();
         await page.waitForFunction(() => [...document.images].some(img => img.src.startsWith('blob:') && img.naturalWidth > 0), null, { timeout: 60000 });
+        const arrangement = data.arrangement?.mapValue.fields;
+        assert(arrangement, 'the full arrangement is stored with the revision');
+        const arrangementPages = arrangement.svg.arrayValue.values;
+        assert.equal(arrangementPages.length, 1, 'the full score fits on one A4 page');
+        const fullSvg = await (await fetch(str(arrangementPages[0].mapValue.fields.url))).text();
+        assert(!/class="fing"/.test(fullSvg), 'the full score omits fingering on all staves');
+        const panel = page.locator('details').filter({ hasText: 'Arranjo completo' });
+        assert.equal(await panel.locator('iframe').count(), 0, 'the arrangement starts collapsed');
+        await panel.locator('summary').click();
+        const arrangementMidiUrl = str(arrangement.playback.mapValue.fields.midi.mapValue.fields.url);
+        await panel.locator('midi-player').waitFor();
+        assert.equal(await panel.locator('midi-player').getAttribute('src'), arrangementMidiUrl);
+        const arrangementPdf = page.waitForEvent('download', { timeout: 120000 });
+        await panel.getByRole('button', { name: 'Imprimir arranjo' }).click();
+        const pdf = await (await arrangementPdf).createReadStream();
+        const buffers = [];
+        for await (const chunk of pdf) buffers.push(chunk);
+        const print = Buffer.concat(buffers).toString('latin1');
+        assert(print.startsWith('%PDF'));
+        const paper = [...print.matchAll(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/g)];
+        assert.equal(paper.length, arrangementPages.length, 'the PDF contains only the arrangement pages');
+        for (const [, width, height] of paper) {
+            assert(Math.abs(Number(width) - 841.89) < 0.1 && Math.abs(Number(height) - 595.28) < 0.1);
+        }
         await page.close();
     });
 
@@ -207,7 +318,7 @@ try {
         await page.close();
     });
 
-    await step('reformats the revision and builds a songbook PDF from it', async () => {
+    await step('reformats the revision and builds a songbook PDF from the corrected pages', async () => {
         assert(revisionId, 'needs the first case');
         const scoreId = sentScoreId;
         const page = await signedInPage(`/acervo-dev/enviar?partitura=${scoreId}&versao=${revisionId}&base=${revisionId}&modo=reformatar`);
@@ -219,10 +330,9 @@ try {
         const data = await doc(`scores/${scoreId}/scoreRevisions/${latest}`);
         assert.equal(str(data.kind), 'reformat');
         assert.equal(str(data.prevRevisionId), revisionId);
-        // The songbook PDF, from the reformatted pages, with the shared text fonts embedded.
-        const parts = data.parts.arrayValue.values.map(v => v.mapValue.fields);
-        const trumpet = parts.find(p => str(p.instrument) === 'trompete pirata');
-        const svg = trumpet.svg.arrayValue.values.map(v => str(v.mapValue.fields.url));
+        // The songbook can still print the corrected revision with its shared fonts.
+        assert(correctedPart, 'needs the corrected part from the first case');
+        const svg = correctedPart.svg.arrayValue.values.map(v => str(v.mapValue.fields.url));
         const download = page.waitForEvent('download', { timeout: 120000 });
         await page.evaluate(async ({ svg }) => {
             const { createSongBook } = await import('/src/createSongBook.ts');

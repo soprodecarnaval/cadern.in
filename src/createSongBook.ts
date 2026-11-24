@@ -1,3 +1,4 @@
+import { safeFilename } from "./lib/partFiles";
 import SVGtoPDF from "svg-to-pdfkit";
 import { loadTextFonts, pdfFontName, textFontCallback } from "./lib/sharedFonts";
 import type { Instrument } from "../types/instrument";
@@ -165,7 +166,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
   const nonNullPromises = promises.filter((promise) => promise !== null);
   if (nonNullPromises.length > 0) {
     await Promise.all(nonNullPromises);
-    download(doc, createFileName(opts));
+    await download(doc, createFileName(opts));
   }
 };
 
@@ -201,20 +202,24 @@ function drawCoverPage(doc: PDFKit.PDFDocument, opts: CreateSongBookOptions) {
 
 const sectionTitleOutlines = new Map<string, PDFKit.PDFOutline>();
 
-const a = document.createElement("a");
-document.body.appendChild(a);
-
-const download = (doc: PDFKit.PDFDocument, file_name: string) => {
-  const stream = doc.pipe(window.blobStream());
-  stream.on("finish", function () {
-    const url = stream.toBlobURL("application/pdf");
-    a.href = url;
-    a.download = file_name;
-    a.click();
-    window.URL.revokeObjectURL(url);
+const download = (doc: PDFKit.PDFDocument, fileName: string): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const stream = doc.pipe(window.blobStream());
+    stream.on("error", reject);
+    doc.on("error", reject);
+    stream.on("finish", () => {
+      const url = stream.toBlobURL("application/pdf");
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      resolve();
+    });
+    doc.end();
   });
-  doc.end();
-};
 
 const drawSvg = async (doc: PDFKit.PDFDocument, url: string, page: number): Promise<void> => {
   try {
@@ -291,6 +296,10 @@ const loadFonts = async (doc: PDFKit.PDFDocument) => {
     const buffer = await resp.arrayBuffer();
     doc.registerFont(font, buffer);
   }
+  await registerSharedTextFonts(doc);
+};
+
+const registerSharedTextFonts = async (doc: PDFKit.PDFDocument) => {
   // Library-rendered pages name their text fonts instead of embedding them:
   // register them once per document, so the text stays text in the PDF.
   const names = new Set<string>();
@@ -305,6 +314,28 @@ const loadFonts = async (doc: PDFKit.PDFDocument) => {
   }
   sharedFonts.set(doc, names);
 };
+
+
+/** Download only the stored full-score pages, one SVG per A4 landscape page. */
+export async function createArrangementPdf(urls: readonly string[], title: string): Promise<void> {
+  if (!urls.length) {throw new Error("O arranjo ainda não tem páginas.");}
+  const pages = await Promise.all(urls.map(async (url) => {
+    const response = await fetch(url);
+    if (!response.ok) {throw new Error("Não foi possível carregar todas as páginas do arranjo.");}
+    return response.text();
+  }));
+  const doc = new window.PDFDocument({ size: "A4", layout: "landscape", margin: 0, autoFirstPage: false });
+  await registerSharedTextFonts(doc);
+  for (const svg of pages) {
+    doc.addPage();
+    SVGtoPDF(doc, svg, 0, 0, {
+      width: doc.page.width,
+      height: doc.page.height,
+      fontCallback: textFontCallback(sharedFonts.get(doc) ?? new Set()),
+    });
+  }
+  await download(doc, `${safeFilename(title || "Partitura")}-arranjo.pdf`);
+}
 
 
 const addSongPage = async (

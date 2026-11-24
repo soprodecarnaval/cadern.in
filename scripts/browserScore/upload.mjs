@@ -13,7 +13,7 @@ import { chromium } from 'playwright-core';
 import { build } from 'esbuild';
 import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
-import { resolve, extname, basename } from 'node:path';
+import { resolve, extname, basename, dirname } from 'node:path';
 
 const inputs = (process.env.UPLOAD_INPUT || '').split(',').filter(Boolean).map(path => resolve(path));
 if (!inputs.length) throw Error('Set UPLOAD_INPUT (comma-separated .mscz files).');
@@ -75,9 +75,10 @@ try {
                     if (!other || await digest(file) !== await digest(other)) differing.push(key);
                 }
                 const validation = m.validateParsedScore(first.parsed);
-                const reparsed = await m.parseUploadedFiles([...first.parsed.fileMap.values()]);
+                const exporterFiles = [...first.parsed.fileMap].filter(([key]) => !key.startsWith('arrangement/') && !key.startsWith('playback/'));
+                const reparsed = await m.parseUploadedFiles(exporterFiles.map(([, file]) => file));
                 const shape = parsed => JSON.stringify({ title: parsed.title, composer: parsed.composer, sub: parsed.sub, tags: parsed.tags, source: parsed.source ?? null,
-                    parts: parsed.parts, keys: [...parsed.fileMap.keys()].sort() });
+                    parts: parsed.parts.map(({ playback, ...part }) => part), keys: [...parsed.fileMap.keys()].filter(key => !key.startsWith('arrangement/') && !key.startsWith('playback/')).sort() });
                 const files = await Promise.all([...first.parsed.fileMap].map(async ([key, file]) => ({ key, name: file.name, bytes: [...new Uint8Array(await file.arrayBuffer())] })));
                 return { parts: first.parsed.parts.length, skipped: catalog.parts.length - choices.length, validation, differing,
                     sameAsExporterFolder: shape(first.parsed) === shape(reparsed), ours: shape(first.parsed), exporter: shape(reparsed),
@@ -86,8 +87,11 @@ try {
         }, { bytes: [...await readFile(input)], name: basename(input), profile });
         await page.close();
         const stem = basename(input).replace(/\.mscz$/i, '');
-        await mkdir(resolve(results, stem, 'parts'), { recursive: true });
-        for (const file of outcome.files) await writeFile(resolve(results, stem, file.key === 'mscz' || file.key === 'midi' || file.key === 'metajson' ? file.name : file.key), new Uint8Array(file.bytes));
+        for (const file of outcome.files) {
+            const path = resolve(results, stem, file.key.includes('/') ? file.key : file.name);
+            await mkdir(dirname(path), { recursive: true });
+            await writeFile(path, new Uint8Array(file.bytes));
+        }
         delete outcome.files;
         await writeFile(resolve(results, stem, 'report.json'), JSON.stringify(outcome, null, 2) + '\n');
         const ok = !outcome.validation.length && !outcome.differing.length && outcome.sameAsExporterFolder;

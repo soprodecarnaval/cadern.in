@@ -18,25 +18,63 @@ describe("withNoteHeightFingerings", () => {
     const y = ys(withNoteHeightFingerings(page(), 5));
     // Never inside the staff: at least 0.6 spaces above the top line (1000).
     for (const value of Object.values(y)) {expect(value).toBeLessThanOrEqual(940);}
-    // The band: the lowest note just above the staff, the highest 2 spaces higher.
-    expect(y.f2).toBe(940);
-    expect(y.f1).toBe(740);
+    // The lowest note gets 1.45 spaces of clearance and this leap is capped at two spaces.
+    expect(y.f2).toBe(855);
+    expect(y.f1).toBe(655);
     expect(y.f3).toBeGreaterThan(y.f1);
     expect(y.f3).toBeLessThan(y.f2);
   });
 
   it("stays above notes over the staff, and below volta brackets", () => {
     const ledger = ys(withNoteHeightFingerings(page().replace("translate(100, 950)", "translate(100, 600)"), 5));
-    expect(ledger.f1).toBe(600 - 100 * (0.5 + 0.6));
+    expect(ledger.f1).toBe(600 - 100 * (0.5 + 1.45));
     const bracket = '<g class="ending"><g class="voltaBracket"><text x="1050" y="780" font-size="0px"><tspan font-size="200px">1</tspan></text>'
       + '<path d="M1000 600 L1300 600"/><path d="M1000 600 L1000 800"/></g></g>';
     const under = ys(withNoteHeightFingerings(page(bracket), 5));
     expect(under.f3).toBe(940);
   });
 
-  it("never rises more than the reserved room above Verovio's row", () => {
-    const tight = ys(withNoteHeightFingerings(page().replace(/y="600"/g, 'y="1000"'), 5));
-    expect(tight.f1).toBe(1000 - 200);
+  it("uses each system's pitch range and the gap above that system", () => {
+    const secondSystem = (top: number) =>
+      `<g class="system"><g class="staff">${staff.replace(/\b1[0-4]00\b/g, (y) => String(Number(y) - 1000 + top))}` +
+      `${note("a", 100, top + 100)}</g><g class="staff">${staff.replace(/\b1[0-4]00\b/g, (y) => String(Number(y) - 1000 + top))}` +
+      `${note("b", 600, top + 150)}</g>` +
+      `${fing("f4", "a", 100).replace('y="600"', `y="${top - 200}"`)}` +
+      `${fing("f5", "b", 600).replace('y="600"', `y="${top - 200}"`)}</g>`;
+    const first = `<g class="system">${page().slice(5, -6)}</g>`;
+    const roomy = ys(withNoteHeightFingerings(`<svg>${first}${secondSystem(3000)}</svg>`, 5));
+    const tight = ys(withNoteHeightFingerings(`<svg>${first}${secondSystem(2050)}</svg>`, 5));
+    expect(roomy.f5).toBe(2855);
+    expect(roomy.f5 - roomy.f4).toBe(200);
+    expect(tight.f5).toBe(1990);
+    expect(tight.f5 - tight.f4).toBe(100);
+    expect(roomy.f1).toBe(tight.f1);
+  });
+
+  it("leaves room below a repeat sign in the same column", () => {
+    const sign = '<g class="repeatMark"><use transform="translate(600, 550) scale(0.64)"/></g>';
+    const withSign = ys(withNoteHeightFingerings(page(sign), 5));
+    expect(withSign.f2).toBe(889);
+    expect(withSign.f1).toBe(655);
+  });
+
+  it("follows pitch even when Verovio placed numbers on a common high row", () => {
+    const original = ys(withNoteHeightFingerings(page(), 5));
+    const crowded = ys(withNoteHeightFingerings(page().replace(/y="600"/g, 'y="1000"'), 5));
+    expect(crowded).toEqual(original);
+  });
+
+  it("distinguishes consecutive notes close enough to look like a chord", () => {
+    const close = page().replace("translate(600, 1500)", "translate(155, 1500)");
+    const result = ys(withNoteHeightFingerings(close, 5));
+    expect(result.f1).toBeLessThan(result.f2);
+  });
+
+  it("clears the highest note of a chord while keeping the fingering attached to its own note", () => {
+    const first = note("high", 100, 950);
+    const chord = `<g class="chord">${first}${note("chord-top", 100, 850)}</g>`;
+    const result = ys(withNoteHeightFingerings(page().replace(first, chord), 5));
+    expect(result.f1).toBeLessThanOrEqual(850 - 100 * (0.5 + 2.3 + 0.6));
   });
 
   it("enlarges fingering text beyond Verovio's limit while preserving other text", () => {
