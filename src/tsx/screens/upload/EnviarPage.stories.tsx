@@ -73,14 +73,22 @@ export const Formatting: Story = {
       },
     }),
   },
+  render: function Render(args) {
+    const [editing, setEditing] = useState(args.state.editing);
+    return <EnviarPageView {...args} state={{ ...args.state, editing }} onEditing={setEditing} />;
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("radio", { name: "Posições (1–7)" })).toBeChecked();
+    const general = within(canvas.getByRole("region", { name: "Toda a partitura" }));
+    await expect(general.getByRole("radio", { name: "Posições (1–7)" })).toBeChecked();
     // One part at a time, in tabs; the tuba's tab is marked for its warning.
     await expect(canvas.getAllByRole("tab")).toHaveLength(3);
     await expect(canvas.getByRole("tab", { name: "Flauta" })).toHaveAttribute("aria-selected", "true");
+    const part = within(canvas.getByRole("region", { name: "Parte: Flauta" }));
+    await expect(part.getByRole("spinbutton", { name: "Tamanho da pauta (desta parte) (mm)" })).toHaveValue(1.45);
     await expect(canvas.getAllByText(/Pauta de 1,45 mm/)).toHaveLength(1);
     await userEvent.click(canvas.getByRole("tab", { name: /Tuba/ }));
+    await expect(canvas.getByRole("region", { name: "Parte: Tuba" })).toBeVisible();
     await expect(canvas.getByText(/Não coube em uma página/)).toBeVisible();
     await userEvent.click(canvas.getByRole("tab", { name: /Pete/ }));
     await expect(canvas.getByText("Atualizando…")).toBeVisible();
@@ -105,7 +113,6 @@ export const FingeringSize: Story = {
     const mode = (name: string) => within(canvas.getByRole("group", { name: "Tamanho dos números" })).getByRole("radio", { name });
     const adjust = (direction: "Aumentar" | "Diminuir") => canvas.getByRole("button", { name: `${direction}: Tamanho dos números` });
 
-    await expect(canvas.getByLabelText("Ajustar")).toHaveValue("");
     await expect(canvas.queryByRole("spinbutton", { name: "Tamanho dos números" })).toBeNull();
     await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
     await expect(mode("Automático")).toBeChecked();

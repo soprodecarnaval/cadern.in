@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useRef, type ComponentType } from "react";
 import { zInstrument, type Instrument } from "../../../../types/instrument";
 import type { FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
 import { SONGBOOK_FIT_AREA } from "../../../../types/formattingProfile";
@@ -283,38 +283,87 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
   );
 }
 
-function Controls({ state, onProfile, onEditing }: Pick<EnviarPageViewProps, "state" | "onProfile" | "onEditing">) {
-  const editingRow = state.rows.find((row) => row.ordinal === state.editing) ?? null;
-  const partName = editingRow?.name ?? null;
-  const settings = formattingOf(state.profile, partName);
-  const change = (patch: PartFormatting) => onProfile(withFormatting(state.profile, partName, patch));
+function Controls({ state, onProfile, shownRow, shownPreview }: Pick<EnviarPageViewProps, "state" | "onProfile"> & {
+  shownRow: PartRow | undefined; shownPreview: Preview | undefined;
+}) {
+  const score = formattingOf(state.profile, null);
+  const changeScore = (patch: PartFormatting) => onProfile(withFormatting(state.profile, null, patch));
   const included = state.rows.filter((row) => row.include && row.instrument);
-  const families = new Set((editingRow ? [editingRow] : included).filter((row) => row.fingerings).map((row) => row.family));
-  const notation = settings.fingering?.notation ?? "positions";
+  const families = new Set(included.filter((row) => row.fingerings).map((row) => row.family));
+  const ready = !!shownPreview && !shownPreview.rendering && !shownPreview.error;
   return (
     <form className="enviar-controls" onSubmit={(event) => event.preventDefault()} aria-label="Formatação">
-      <label className="form-label" htmlFor="enviar-editing">Ajustar</label>
-      <Select id="enviar-editing" value={state.editing ?? ""} onChange={(event) => onEditing(event.target.value ? Number(event.target.value) : null)}>
-        <option value="">Todas as partes</option>
-        {included.map((row) => (
-          <option key={row.ordinal} value={row.ordinal}>
-            Só {row.name}{hasOverride(state.profile, row.name) ? " (ajustada)" : ""}
-          </option>
-        ))}
-      </Select>
-      <AutoNumber label="Tamanho da pauta" name="staff" unit="mm" value={settings.staffSize} min={0.8} max={2.4} step={0.05}
+      <section className="enviar-controls-section" aria-labelledby="enviar-geral">
+        <h3 id="enviar-geral">Toda a partitura</h3>
+        <AutoNumber label="Tamanho da pauta" name="staff" unit="mm" value={score.staffSize} min={STAFF_SIZE.min} max={STAFF_SIZE.max} step={STAFF_SIZE.step}
+          onChange={(staffSize) => changeScore({ staffSize })} />
+        <AutoNumber label="Sistemas na página" name="systems" value={score.systemsPerPage} min={1} max={12} step={1}
+          onChange={(systemsPerPage) => changeScore({ systemsPerPage })} />
+        <FingeringAndCleanupControls settings={score} onChange={changeScore}
+          scope="score" showFingering={families.size > 0} showTrombone={families.has("trombone")} />
+      </section>
+      {shownRow && (
+        <section className="enviar-controls-section" aria-labelledby="enviar-parte">
+          <h3 id="enviar-parte">Parte: {shownRow.name}</h3>
+          <PartControls key={shownRow.ordinal} state={state} onProfile={onProfile} row={shownRow}
+            automaticStaff={ready ? shownPreview.layout?.staffSpaceMm : undefined}
+            automaticFingering={ready ? shownPreview.automaticFingeringSize : undefined} />
+        </section>
+      )}
+    </form>
+  );
+}
+
+/** The settings of the part shown in the preview: its own override of the score's. */
+function PartControls({ state, onProfile, row, automaticStaff, automaticFingering }: Pick<EnviarPageViewProps, "state" | "onProfile"> & {
+  row: PartRow; automaticStaff: number | undefined; automaticFingering: number | undefined;
+}) {
+  const settings = formattingOf(state.profile, row.name);
+  const change = (patch: PartFormatting) => onProfile(withFormatting(state.profile, row.name, patch));
+  return (
+    <>
+      <AutoNumber label="Tamanho da pauta (desta parte)" name="part-staff-size" unit="mm" value={settings.staffSize}
+        min={STAFF_SIZE.min} max={STAFF_SIZE.max} step={STAFF_SIZE.step}
+        stepper={{ range: STAFF_SIZE, automatic: automaticStaff }}
         onChange={(staffSize) => change({ staffSize })} />
-      <AutoNumber label="Sistemas na página" name="systems" value={settings.systemsPerPage} min={1} max={12} step={1}
+      <AutoNumber label="Sistemas na página" name="part-systems" value={settings.systemsPerPage} min={1} max={12} step={1}
         onChange={(systemsPerPage) => change({ systemsPerPage })} />
-      {families.size > 0 && (
+      {row.fingerings && (
+        <AutoNumber label="Tamanho dos números" name="fingering-size" value={settings.fingering?.size}
+          min={FINGERING_SIZE.min} max={FINGERING_SIZE.max} step={FINGERING_SIZE.step}
+          stepper={{ range: FINGERING_SIZE, automatic: automaticFingering }}
+          onChange={(size) => change({ fingering: { size } })} />
+      )}
+      <FingeringAndCleanupControls settings={settings} onChange={change}
+        scope="part" showFingering={row.fingerings} showTrombone={row.family === "trombone"} />
+      {hasOverride(state.profile, row.name) && (
+        <Button variant="text" onClick={() => onProfile(withoutOverride(state.profile, row.name))}>
+          Voltar {row.name} para o ajuste de toda a partitura
+        </Button>
+      )}
+    </>
+  );
+}
+
+function FingeringAndCleanupControls({ settings, onChange, scope, showFingering, showTrombone }: {
+  settings: PartFormatting;
+  onChange: (patch: PartFormatting) => void;
+  scope: "score" | "part";
+  showFingering: boolean;
+  showTrombone: boolean;
+}) {
+  const notation = settings.fingering?.notation ?? "positions";
+  return (
+    <>
+      {showFingering && (
         <>
-          <Choice label="Piratas" name="notation" value={notation}
+          <Choice label="Piratas" name={`${scope}-notation`} value={notation}
             options={[["positions", "Posições (1–7)"], ["valves", "Pistos"]]}
-            onChange={(value) => change({ fingering: { notation: value as "positions" | "valves" } })} />
-          {notation === "positions" && families.has("trombone") && (
+            onChange={(value) => onChange({ fingering: { notation: value as "positions" | "valves" } })} />
+          {notation === "positions" && showTrombone && (
             <label className="form-check">
               <input type="checkbox" className="form-check-input" checked={settings.fingering?.dynamicTrombone ?? false}
-                onChange={(event) => change({ fingering: { dynamicTrombone: event.target.checked } })} />
+                onChange={(event) => onChange({ fingering: { dynamicTrombone: event.target.checked } })} />
               <span className="form-check-label">Trombone dinâmico (posições alternativas)</span>
             </label>
           )}
@@ -325,23 +374,18 @@ function Controls({ state, onProfile, onEditing }: Pick<EnviarPageViewProps, "st
         {([["credits", "Tirar título e textos de cabeçalho"], ["fingerings", "Tirar dedilhados do arquivo"], ["staffText", "Tirar textos de pauta"]] as const).map(([key, text]) => (
           <label key={key} className="form-check">
             <input type="checkbox" className="form-check-input" checked={settings.cleanup?.[key] ?? true}
-              onChange={(event) => change({ cleanup: { [key]: event.target.checked } })} />
+              onChange={(event) => onChange({ cleanup: { [key]: event.target.checked } })} />
             <span className="form-check-label">{text}</span>
           </label>
         ))}
       </fieldset>
-      {editingRow && hasOverride(state.profile, editingRow.name) && (
-        <Button variant="text" onClick={() => onProfile(withoutOverride(state.profile, editingRow.name))}>
-          Voltar {editingRow.name} para o ajuste de todas as partes
-        </Button>
-      )}
-    </form>
+    </>
   );
 }
 
-function PreviewCard({ row, preview, title, midi, onEditing, onListen, MidiPlayer }: {
+function PreviewCard({ row, preview, title, midi, onListen, MidiPlayer }: {
   row: PartRow; preview: Preview | undefined; title: string; midi: string | undefined;
-  onEditing: (ordinal: number) => void; onListen: (ordinal: number) => void; MidiPlayer: ComponentType<{ src: string }>;
+  onListen: (ordinal: number) => void; MidiPlayer: ComponentType<{ src: string }>;
 }) {
   const warnings = (preview?.warnings ?? []).map(warningText).filter((text): text is string => !!text);
   if (preview && preview.pages > 1 && !warnings.some((text) => text.startsWith("Não coube"))) {warnings.unshift("Não coube em uma página.");}
@@ -369,7 +413,6 @@ function PreviewCard({ row, preview, title, midi, onEditing, onListen, MidiPlaye
         <ul className="enviar-warnings">{warnings.map((text) => <li key={text}>{text}</li>)}</ul>
       )}
       <div className="enviar-preview-actions">
-        <Button size="sm" variant="secondary" onClick={() => onEditing(row.ordinal)}>Ajustar só esta parte</Button>
         <Button size="sm" variant="text" onClick={() => onListen(row.ordinal)}>Ouvir</Button>
       </div>
       {midi && <MidiPlayer src={midi} />}
@@ -378,50 +421,32 @@ function PreviewCard({ row, preview, title, midi, onEditing, onListen, MidiPlaye
 }
 
 function FormatStep(props: EnviarPageViewProps) {
-  const { state, onStep, onEditing, onListen, onProfile, components } = props;
+  const { state, onStep, onEditing, onListen, components } = props;
   const included = state.rows.filter((row) => row.include && row.instrument);
   const rendering = included.some((row) => state.previews[row.ordinal]?.rendering);
-  // One part at a time; picking a part to adjust shows it.
-  const [shown, setShown] = useState<number | null>(null);
-  useEffect(() => {
-    if (state.editing !== null) {setShown(state.editing);}
-  }, [state.editing]);
-  const shownRow = included.find((row) => row.ordinal === shown) ?? included[0];
+  // One part at a time: the active tab is also the part the "Parte" settings change.
+  const shownRow = included.find((row) => row.ordinal === state.editing) ?? included[0];
   const shownPreview = shownRow && state.previews[shownRow.ordinal];
   return (
     <section aria-labelledby="enviar-formatacao">
       <h2 id="enviar-formatacao" tabIndex={-1}>Formatação</h2>
       <p>As prévias mostram cada parte no tamanho em que sai no caderninho ({decimal(SONGBOOK_FIT_AREA.widthMm, 1)} × {decimal(SONGBOOK_FIT_AREA.heightMm, 1)} mm).</p>
       <div className="enviar-format">
-        <Controls {...props} />
+        <Controls {...props} shownRow={shownRow} shownPreview={shownPreview} />
         <div className="enviar-previews">
           {shownRow && (
             <PartTabs
               label="Partes"
               active={String(shownRow.ordinal)}
-              onChange={(key) => setShown(Number(key))}
+              onChange={(key) => onEditing(Number(key))}
               tabs={included.map((row) => {
                 const preview = state.previews[row.ordinal];
                 const warned = !!preview && (preview.pages > 1 || preview.warnings.some((warning) => warningText(warning)) || !!preview.error);
                 return { key: String(row.ordinal), label: row.name, note: preview?.rendering ? "…" : warned ? "⚠" : undefined };
               })}
             >
-              <div className="enviar-part-sizes">
-                <AutoNumber key={`staff-${shownRow.ordinal}`} label="Tamanho da pauta (desta parte)" name="part-staff-size" unit="mm"
-                  value={formattingOf(state.profile, shownRow.name).staffSize}
-                  min={STAFF_SIZE.min} max={STAFF_SIZE.max} step={STAFF_SIZE.step}
-                  stepper={{ range: STAFF_SIZE, automatic: shownPreview?.rendering || shownPreview?.error ? undefined : shownPreview?.layout?.staffSpaceMm }}
-                  onChange={(staffSize) => onProfile(withFormatting(state.profile, shownRow.name, { staffSize }))} />
-                {shownRow.fingerings && (
-                  <AutoNumber key={`fingering-${shownRow.ordinal}`} label="Tamanho dos números" name="fingering-size"
-                    value={formattingOf(state.profile, shownRow.name).fingering?.size}
-                    min={FINGERING_SIZE.min} max={FINGERING_SIZE.max} step={FINGERING_SIZE.step}
-                    stepper={{ range: FINGERING_SIZE, automatic: shownPreview?.rendering || shownPreview?.error ? undefined : shownPreview?.automaticFingeringSize }}
-                    onChange={(size) => onProfile(withFormatting(state.profile, shownRow.name, { fingering: { size } }))} />
-                )}
-              </div>
               <PreviewCard row={shownRow} preview={shownPreview} title={state.title}
-                midi={state.midi[shownRow.ordinal]} onEditing={onEditing} onListen={onListen} MidiPlayer={components.MidiPlayer} />
+                midi={state.midi[shownRow.ordinal]} onListen={onListen} MidiPlayer={components.MidiPlayer} />
             </PartTabs>
           )}
         </div>
