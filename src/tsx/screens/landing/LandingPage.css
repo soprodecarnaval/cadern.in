@@ -95,6 +95,7 @@
 .landing-header-nav {
   display: flex;
   align-items: center;
+  margin-left: auto;
   gap: clamp(16px, 2.5vw, 36px);
   font-size: 18px;
   font-weight: 300;
@@ -105,22 +106,11 @@
   text-decoration: underline;
 }
 
-.landing-login {
-  position: relative;
-  border: 2px solid var(--landing-ink);
-  border-radius: 8px;
-  background: none;
-  padding: 2px 20px;
-  font-weight: 500;
+/* The design system's secondary button (atoms/Button.css), with the
+   header's own narrower side padding. */
+.landing .landing-login.ds-button {
+  padding-inline: 20px;
   white-space: nowrap;
-  max-width: 200px;
-  overflow: visible;
-  text-overflow: ellipsis;
-  font-size: 18px;
-}
-
-.landing-login:hover {
-  background: var(--landing-yellow);
 }
 
 .landing-login-badge {
@@ -711,17 +701,31 @@
   max-width: 1440px;
   margin: 0 auto;
   padding: 48px var(--landing-gutter) 56px;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "logo links"
+    "social links";
   justify-content: space-between;
   gap: 40px;
-  flex-wrap: wrap;
 }
 
-.landing-footer-brand {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 40px;
+/* The logo top left, Instagram and "Feito em BH" bottom left, the links on
+   the right. The markup runs logo, links, then the rest, so the stacked
+   phone layout and keyboard order follow it. */
+.landing-footer-inner > .landing-logo {
+  grid-area: logo;
+  justify-self: start;
+}
+
+.landing-footer-links {
+  grid-area: links;
+}
+
+.landing-footer-row {
+  grid-area: social;
+  align-self: end;
 }
 
 .landing-footer-social {
@@ -737,7 +741,7 @@
   height: 30px;
 }
 
-/* Instagram, then the flag and "Feito em BH." beside it. */
+/* Instagram, then the sun and "Feito em BH" beside it. */
 .landing-footer-row {
   display: flex;
   flex-wrap: wrap;
@@ -748,7 +752,7 @@
 .landing-footer-made-in {
   display: inline-flex;
   align-items: center;
-  gap: 12px; /* as between the Instagram icon and handle */
+  gap: 6px;
   margin: 0;
   font-size: 15px;
   font-weight: 400;
@@ -761,10 +765,10 @@
   line-height: 1.1;
 }
 
-/* The flag's own 10:7 proportions. */
+/* The sun from Belo Horizonte's flag, square. */
 .landing-footer-made-in img {
-  width: 45px;
-  height: 31.5px;
+  width: 40px;
+  height: 40px;
 }
 
 .landing-footer-links {
@@ -795,6 +799,66 @@
 .landing-footer a:hover,
 .landing-footer-links button:hover {
   text-decoration: underline !important;
+}
+
+/* Footer links: three columns need 1087px to sit beside the logo block
+   (logo block 325 + gap 40 + links 651 + two 3.23vw gutters), plus up to 17px
+   for a classic scrollbar, which media queries count but layout doesn't.
+   Below that they go to two columns, which still fit beside it down to
+   767px; only then do they move under it. */
+@media (max-width: 1103px) {
+  /* The three link groups flow as one list into two even columns, so the
+     third group doesn't sit alone on a second row. Each column keeps the
+     width it has in the three-column layout. */
+  .landing-footer-links {
+    display: block;
+    width: 352px; /* 2 × 164px columns + the 24px gap */
+    max-width: 100%;
+    columns: 2;
+    column-gap: 24px;
+  }
+
+  .landing-footer-links ul {
+    display: block;
+  }
+
+  .landing-footer-links li {
+    margin-bottom: 14px;
+    break-inside: avoid;
+  }
+
+  .landing-footer-links ul:last-child li:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* Too narrow for the links beside the logo (767px, plus up to 17px for a
+   classic scrollbar): logo, links, then Instagram and "Feito em BH". */
+@media (max-width: 783px) {
+  .landing-footer-inner {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      "logo"
+      "links"
+      "social";
+    justify-content: start;
+  }
+}
+
+/* Header on two lines: the logo, then the links at the left and the login
+   or account menu at the right. 566px is where the signed-out header stops
+   fitting on one line; signed in it switches here too, so signing in doesn't
+   change the header's height. */
+@media (max-width: 566px) {
+  .landing-header-nav {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .landing-auth {
+    margin-left: auto;
+  }
 }
 
 /* Small screens */
@@ -834,14 +898,68 @@
   .landing-action {
     min-height: 0;
   }
-
-  .landing-footer-links {
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-  }
 }
 
 .landing :is(a, button, input):focus-visible {
   outline: var(--ds-border) solid var(--ds-ink);
   outline-offset: 3px;
+}
+
+/* A list page's filters on the left, ordering on the right (Artigos,
+   Biblioteca). */
+.landing-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin-bottom: 32px;
+}
+
+.landing-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Like the header's "Entrar" button; the chosen one fills yellow. */
+.landing .landing-filter {
+  border: 2px solid var(--landing-ink);
+  border-radius: 8px;
+  background: none;
+  padding: 2px 16px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.landing .landing-filter:hover,
+.landing .landing-filter.is-active {
+  background: var(--landing-yellow);
+}
+
+.landing-order {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px;
+}
+
+.landing-order select {
+  appearance: none;
+  border: 2px solid var(--landing-ink);
+  border-radius: 8px;
+  padding: 2px 40px 2px 14px;
+  background: url("../../../assets/brand/chevron-down.svg") right 12px center / 16px
+    no-repeat;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.landing-order select:focus-visible,
+.landing .landing-filter:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--landing-yellow);
 }

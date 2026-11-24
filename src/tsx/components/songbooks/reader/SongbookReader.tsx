@@ -1,7 +1,6 @@
 import { Select } from "../../../atoms/Select";
 import { useSvgUrl } from "../../../../lib/useSvgUrl";
 import { Modal } from "../../../atoms/Modal";
-import { Input } from "../../../atoms/Input";
 import { Button } from "../../../atoms/Button";
 import {
   useCallback,
@@ -13,7 +12,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { Form, InputGroup, Offcanvas, Spinner } from "react-bootstrap";
+import { Offcanvas, Spinner } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
 import {
   BsAspectRatio,
@@ -36,6 +35,12 @@ import {
   songbookScoreVersionLabel,
 } from "../../../../lib/songbook";
 import "./SongbookReader.css";
+import searchIcon from "../../../../assets/brand/search.svg";
+import {
+  instrumentLabel,
+  readPreferredInstrument,
+  storePreferredInstrument,
+} from "../../../../lib/preferredInstrument";
 
 interface Song {
   // Position among the songbook's openable scores, for prev/next.
@@ -98,7 +103,6 @@ function buildBook(items: NumberedSongbookItemViewModel[], projectId?: string) {
   return { groups, songs };
 }
 
-const INSTRUMENT_KEY = "cadernin:instrumento";
 const SONG_PARAM = "musica";
 const BAR_HIDE_MS = 3500;
 const SWIPE_MIN_PX = 50;
@@ -127,24 +131,6 @@ const normalize = (s: string) =>
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase();
-
-const instrumentLabel = (i: string) => i.charAt(0).toUpperCase() + i.slice(1);
-
-function readStoredInstrument(): string | null {
-  try {
-    return localStorage.getItem(INSTRUMENT_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function storeInstrument(instrument: string) {
-  try {
-    localStorage.setItem(INSTRUMENT_KEY, instrument);
-  } catch {
-    // Private mode or blocked storage: the choice just isn't remembered.
-  }
-}
 
 /**
  * The public way to read a songbook: an index with collapsible sections is the
@@ -184,12 +170,12 @@ export function SongbookReader({
   const cur = songs.find((s) => String(s.number) === songParam) ?? null;
 
   const [instrument, setInstrumentState] = useState<Instrument | null>(() => {
-    const stored = readStoredInstrument();
+    const stored = readPreferredInstrument();
     return instruments.find((i) => i === stored) ?? instruments[0] ?? null;
   });
   const setInstrument = (i: Instrument) => {
     setInstrumentState(i);
-    storeInstrument(i);
+    storePreferredInstrument(i);
   };
 
   const [query, setQuery] = useState("");
@@ -952,20 +938,19 @@ function SongIndex({
             </Button>
           )}
         </div>
-        <InputGroup>
-          <InputGroup.Text>
-            <BsSearch aria-hidden />
-          </InputGroup.Text>
-          <Form.Control as={Input}
+        {/* The home page's search box. */}
+        <label className="reader-search">
+          <img src={searchIcon} alt="" className="reader-search-icon" />
+          <span className="visually-hidden">Buscar música</span>
+          <input
             ref={inputRef}
             type="search"
             placeholder="Buscar por nome ou número"
-            aria-label="Buscar música"
             autoComplete="off"
             value={query}
             onChange={(e) => onQuery(e.target.value)}
           />
-        </InputGroup>
+        </label>
         {pdfError && (
           <div className="text-danger small mt-2" role="alert">
             {pdfError}

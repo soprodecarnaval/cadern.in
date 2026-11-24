@@ -610,15 +610,16 @@ export async function getProjectSongbooks(
  * recently updated first. The rules let anyone run this query, signed in or
  * not.
  */
+/** Newest first. Without `max`, every published songbook. */
 export async function getPublishedSongbooks(
-  max = 12,
+  max?: number,
 ): Promise<WithId<SongbookDoc>[]> {
   const snap = await getDocs(
     query(
       collection(db, "songbooks"),
       where("isPublished", "==", true),
       where("deletedAt", "==", null),
-      limit(max),
+      ...(max === undefined ? [] : [limit(max)]),
     ),
   );
   return snap.docs

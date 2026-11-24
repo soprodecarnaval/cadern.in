@@ -18,7 +18,7 @@ import {
 
 // The reader remembers the chosen instrument in localStorage; stories start
 // from the songbook's first instrument (Flauta) instead.
-const INSTRUMENT_KEY = "cadernin:instrumento";
+import { INSTRUMENT_KEY } from "../../../../lib/preferredInstrument";
 
 // The score opens from `?musica=<number>`. Canvases at least 900px wide (and
 // wider than tall, with a mouse) show it in a modal over the index; narrower

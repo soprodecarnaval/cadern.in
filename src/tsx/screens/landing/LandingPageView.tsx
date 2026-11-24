@@ -14,14 +14,22 @@ import { ARTICLES_PATH, type ArticleCard } from "../../../articles";
 import type { WithId } from "../../../lib/db";
 import type { CollectionContextValue } from "../../../useCollectionContext";
 import { initialsOf } from "../../../lib/displayName";
-import { publicSongbookPath, projectsPath, scorePath } from "../../../lib/routes";
+import {
+  aboutPath,
+  contributePath,
+  helpPath,
+  libraryPath,
+  publicSongbookPath,
+  projectsPath,
+  scorePath,
+} from "../../../lib/routes";
 import { ArticleCards } from "../articles/ArticleCards";
 import type { ProfileTab } from "../account/ProfileModalView";
 
 import arrowNext from "../../../assets/brand/arrow-next.svg";
 import arrowPrev from "../../../assets/brand/arrow-prev.svg";
 import chevronRight from "../../../assets/brand/chevron-right.svg";
-import flagBeloHorizonte from "../../../assets/brand/flag-belo-horizonte.svg";
+import sunBeloHorizonte from "../../../assets/brand/sun-belo-horizonte.svg";
 import instagram from "../../../assets/brand/instagram.svg";
 import logoWhite from "../../../assets/brand/logo-white.svg";
 import logo from "../../../assets/brand/logo.svg";
@@ -41,10 +49,6 @@ export type LandingSongbooks =
 // Pages the design links to that don't exist yet. They fall through to the
 // "not found" page until they're built.
 const PLANNED = {
-  sobre: "/sobre",
-  contribua: "/contribua",
-  ajuda: "/ajuda",
-  biblioteca: "/biblioteca",
   carnaval: "/2027",
   favoritos: "/favoritos",
 };
@@ -58,8 +62,18 @@ const STATIC = {
 const MAX_SEARCH_RESULTS = 8;
 const EXPORTER_ANCHOR = "exportador";
 
-export function SectionTitle({ children }: { children: ReactNode }) {
-  return <h2 className="landing-section-title">{children}</h2>;
+export function SectionTitle({
+  id,
+  children,
+}: {
+  id?: string;
+  children: ReactNode;
+}) {
+  return (
+    <h2 id={id} className="landing-section-title">
+      {children}
+    </h2>
+  );
 }
 
 export function MoreLink({ to, children }: { to: string; children: ReactNode }) {
@@ -136,7 +150,7 @@ export function LandingPageView({
         */}
 
         <SongbookCarousel songbooks={songbooks} />
-        <MoreLink to={PLANNED.biblioteca}>biblioteca</MoreLink>
+        <MoreLink to={libraryPath()}>biblioteca</MoreLink>
 
         <section className="landing-section">
           <SectionTitle>Encontre ferramentas</SectionTitle>
@@ -183,7 +197,7 @@ export function LandingPageView({
           <SectionTitle>O que você vai fazer hoje?</SectionTitle>
           <div className="landing-actions">
             <ActionCard
-              to={PLANNED.biblioteca}
+              to={libraryPath()}
               title="Explorar a biblioteca"
               text="Encontre, consulte e baixe caderninhos prontos."
             />
@@ -212,7 +226,7 @@ export function LandingPageView({
                 />
               ))}
             <ActionCard
-              to={PLANNED.contribua}
+              to={contributePath()}
               title="Contribuir"
               text="Ajude o projeto cadern.in a colocar os blocos na rua!"
             />
@@ -262,9 +276,9 @@ export function LandingHeader({
     <header className="landing-header">
       <Logo />
       <nav className="landing-header-nav" aria-label="Principal">
-        <Link to={PLANNED.sobre}>Sobre</Link>
-        <Link to={PLANNED.contribua}>Contribua</Link>
-        <Link to={PLANNED.ajuda}>Ajuda</Link>
+        <Link to={aboutPath()}>Sobre</Link>
+        <Link to={contributePath()}>Contribua</Link>
+        <Link to={helpPath()}>Ajuda</Link>
         {collabEnabled && (
           // Fixed height, so logging in doesn't move the page down.
           <div className="landing-auth">
@@ -276,13 +290,13 @@ export function LandingHeader({
                 onSignOut={onSignOut}
               />
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 className="landing-login"
                 onClick={() => onOpenUserModal()}
               >
                 Entrar
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -393,7 +407,8 @@ function LandingSearch({ collection }: { collection: CollectionContextValue }) {
   );
 }
 
-function SongbookCarousel({ songbooks }: { songbooks: LandingSongbooks }) {
+/** Published songbooks as notebooks in one scrolling row (home, Biblioteca). */
+export function SongbookCarousel({ songbooks }: { songbooks: LandingSongbooks }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const scroll = (direction: 1 | -1) => {
     const track = trackRef.current;
@@ -521,26 +536,10 @@ export function LandingFooter({
   return (
     <footer className="landing-footer">
       <div className="landing-footer-inner">
-        <div className="landing-footer-brand">
-          <Logo inverted />
-          <div className="landing-footer-row">
-            <a href={STATIC.instagram} className="landing-footer-social">
-              <img src={instagram} alt="" />
-              /soprodecarnaval
-            </a>
-            <p className="landing-footer-made-in">
-              <img src={flagBeloHorizonte} alt="Bandeira de Belo Horizonte" />
-              <span>
-                Feito
-                <br />
-                em BH
-              </span>
-            </p>
-          </div>
-        </div>
+        <Logo inverted />
         <nav className="landing-footer-links" aria-label="Rodapé">
           <ul>
-            <li><Link to={PLANNED.biblioteca}>Biblioteca</Link></li>
+            <li><Link to={libraryPath()}>Biblioteca</Link></li>
             <li><Link to="/montar">Musicoteca</Link></li>
             <li><Link to="/montar">Criar caderninho</Link></li>
             <li><a href={STATIC.plugin}>Plugin Musescore</a></li>
@@ -582,12 +581,26 @@ export function LandingFooter({
             </li>
           </ul>
           <ul>
-            <li><Link to={PLANNED.sobre}>Sobre</Link></li>
-            <li><Link to={PLANNED.contribua}>Contribua</Link></li>
-            <li><Link to={PLANNED.ajuda}>Ajuda</Link></li>
+            <li><Link to={aboutPath()}>Sobre</Link></li>
+            <li><Link to={contributePath()}>Contribua</Link></li>
+            <li><Link to={helpPath()}>Ajuda</Link></li>
             <li><Link to={ARTICLES_PATH}>Artigos</Link></li>
           </ul>
         </nav>
+        <div className="landing-footer-row">
+          <a href={STATIC.instagram} className="landing-footer-social">
+            <img src={instagram} alt="" />
+            /soprodecarnaval
+          </a>
+          <p className="landing-footer-made-in">
+            <img src={sunBeloHorizonte} alt="" />
+            <span>
+              Feito
+              <br />
+              em BH
+            </span>
+          </p>
+        </div>
       </div>
     </footer>
   );
