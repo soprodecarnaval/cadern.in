@@ -294,7 +294,10 @@ function Controls({ state, onProfile, shownRow, shownPreview }: Pick<EnviarPageV
   return (
     <form className="enviar-controls" onSubmit={(event) => event.preventDefault()} aria-label="Formatação">
       <section className="enviar-controls-section" aria-labelledby="enviar-geral">
-        <h3 id="enviar-geral">Toda a partitura</h3>
+        <header>
+          <h3 id="enviar-geral">Toda a partitura</h3>
+          <p>Vale para todas as partes.</p>
+        </header>
         <AutoNumber label="Tamanho da pauta" name="staff" unit="mm" value={score.staffSize} min={STAFF_SIZE.min} max={STAFF_SIZE.max} step={STAFF_SIZE.step}
           onChange={(staffSize) => changeScore({ staffSize })} />
         <AutoNumber label="Sistemas na página" name="systems" value={score.systemsPerPage} min={1} max={12} step={1}
@@ -304,7 +307,10 @@ function Controls({ state, onProfile, shownRow, shownPreview }: Pick<EnviarPageV
       </section>
       {shownRow && (
         <section className="enviar-controls-section" aria-labelledby="enviar-parte">
-          <h3 id="enviar-parte">Parte: {shownRow.name}</h3>
+          <header>
+            <h3 id="enviar-parte">Parte: {shownRow.name}</h3>
+            <p>Vale só para a parte aberta na prévia.</p>
+          </header>
           <PartControls key={shownRow.ordinal} state={state} onProfile={onProfile} row={shownRow}
             automaticStaff={ready ? shownPreview.layout?.staffSpaceMm : undefined}
             automaticFingering={ready ? shownPreview.automaticFingeringSize : undefined} />

@@ -2,7 +2,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
-  border-bottom: 1px solid var(--ds-border);
+  border-bottom: 1px solid var(--ds-ink);
   margin-bottom: var(--ds-space-2);
 }
 .part-tabs-tab {
@@ -17,7 +17,7 @@
 }
 .part-tabs-tab:hover { color: var(--ds-ink); }
 .part-tabs-tab.is-active {
-  border-color: var(--ds-border);
+  border-color: var(--ds-ink);
   background: var(--ds-paper);
   color: var(--ds-ink);
   font-weight: var(--ds-weight-heading);
