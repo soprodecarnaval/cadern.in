@@ -7,7 +7,7 @@ import type { ProfileTab } from "./screens/account/ProfileModalView";
 import "bootstrap/dist/css/bootstrap.css";
 import { useAuth } from "../auth";
 import "../styles/app.css";
-import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
+import { FEATURE_FLAG_BROWSER_UPLOAD, FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { getPendingUserProjectInvitations } from "../lib/db";
 import { ROUTE_PATTERNS, isReservedProjectSlug, isYearOnlySlug } from "../lib/routes";
 import { CreateProjectPage } from "./screens/projects/create/CreateProjectPage";
@@ -16,6 +16,7 @@ import { NotFoundPage } from "./screens/not-found/NotFoundPage";
 import { ProjectSettingsPage } from "./screens/projects/settings/ProjectSettingsPage";
 import { PublicProjectPage } from "./screens/projects/detail/PublicProjectPage";
 import { ScorePage } from "./screens/scores/ScorePage";
+import { EnviarPage } from "./screens/upload/EnviarPage";
 import { SongbookManagePage } from "./screens/songbooks/manage/SongbookManagePage";
 import { SongbookPage } from "./screens/songbooks/public/SongbookPage";
 import { SongbookScorePage } from "./screens/songbooks/review/SongbookScorePage";
@@ -172,6 +173,16 @@ function App() {
                 </ProjectRoute>
               }
             />
+            {FEATURE_FLAG_BROWSER_UPLOAD && (
+              <Route
+                path={ROUTE_PATTERNS.upload}
+                element={
+                  <ProjectRoute>
+                    <EnviarPage />
+                  </ProjectRoute>
+                }
+              />
+            )}
             <Route
               path={ROUTE_PATTERNS.projectSettings}
               element={

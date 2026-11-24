@@ -322,7 +322,7 @@ service cloud.firestore {
       allow create: if request.auth != null &&
         isAdmin(request.resource.data.projectId) &&
         songbookId == request.resource.data.projectId + '~' + request.resource.data.slug &&
-        request.resource.data.slug != 'config' &&
+        !(request.resource.data.slug in ['config', 'enviar']) &&
         request.resource.data.isPublished == false &&
         request.resource.data.deletedAt == null &&
         existsAfter(songbookRevisionPath(songbookId, request.resource.data.currentRevisionId));

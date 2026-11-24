@@ -7,6 +7,9 @@ import {
 } from "../../types/metajson";
 import type { Warning } from "../result";
 
+export type ParsedPlayback = { midi: string; timing: string };
+export type ParsedArrangement = { svg: string[]; playback?: ParsedPlayback };
+
 export interface ParsedPart {
   /** Display name. Authored in MuseScore; arbitrary. */
   name: string;
@@ -18,6 +21,7 @@ export interface ParsedPart {
   instrument: Instrument;
   svg: string[];
   midi: string;
+  playback?: ParsedPlayback;
 }
 
 export interface ParsedScore {
@@ -26,6 +30,7 @@ export interface ParsedScore {
   sub: string;
   tags: string[];
   parts: ParsedPart[];
+  arrangement?: ParsedArrangement;
   fileMap: Map<string, File>;
   warnings: Warning[];
   /** The score and version the exported .mscz came from, if it says. */

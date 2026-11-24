@@ -1,4 +1,5 @@
 import z from "zod";
+import { zFormattingProfile } from "./formattingProfile";
 import { zInstrument } from "./instrument";
 
 /**
@@ -33,6 +34,18 @@ export const zMetajson = z.object({
   previousSource: z.string(),
   poet: z.string(),
   parts: z.array(zMetajsonPart),
+  /** Browser uploads: the formatting profile the pages were rendered with. */
+  formatting: zFormattingProfile.optional(),
+  /** Browser uploads: what rendered the pages, so a re-render can be checked or reproduced. */
+  renderer: z
+    .object({
+      library: z.string(),
+      engine: z.string(),
+      renderer: z.string(),
+      manifestSha256: z.string(),
+      fonts: z.array(z.object({ path: z.string(), sha256: z.string() })),
+    })
+    .optional(),
 });
 export type Metajson = z.infer<typeof zMetajson>;
 

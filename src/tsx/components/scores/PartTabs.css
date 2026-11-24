@@ -1,0 +1,25 @@
+.part-tabs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--ds-ink);
+  margin-bottom: var(--ds-space-2);
+}
+.part-tabs-tab {
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--ds-radius-surface) var(--ds-radius-surface) 0 0;
+  background: none;
+  padding: 0.35rem 0.75rem;
+  color: var(--ds-text-secondary);
+  font: inherit;
+  margin-bottom: -1px;
+}
+.part-tabs-tab:hover { color: var(--ds-ink); }
+.part-tabs-tab.is-active {
+  border-color: var(--ds-ink);
+  background: var(--ds-paper);
+  color: var(--ds-ink);
+  font-weight: var(--ds-weight-heading);
+}
+.part-tabs-note { color: var(--ds-invalid); }

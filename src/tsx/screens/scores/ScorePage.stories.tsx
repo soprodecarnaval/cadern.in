@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within, waitFor } from "@storybook/test";
 import { ScorePageView } from "./ScorePageView";
+import { projectPath } from "../../../lib/routes";
 import {
   loadedScore,
   metadata,
@@ -27,7 +28,13 @@ export default meta;
 type Story = StoryObj<typeof ScorePageView>;
 
 export const Review: Story = {};
-export const Public: Story = { args: { currentUser: null } };
+export const Public: Story = {
+  args: { currentUser: null },
+  play: async ({ canvasElement }) => {
+    const link = await within(canvasElement).findByRole("link", { name: loadedScore.projectTitle });
+    await expect(link).toHaveAttribute("href", projectPath(loadedScore.projectId));
+  },
+};
 export const Legacy: Story = { args: { collabEnabled: false } };
 export const Loading: Story = {
   args: { services: { ...services, loadScore: () => pending() } },
@@ -50,6 +57,29 @@ export const NoParts: Story = {
     },
   },
 };
+export const Arrangement: Story = {
+  args: {
+    services: {
+      ...services,
+      loadScore: () => Promise.resolve({
+        ...loadedScore,
+        arrangement: { svgUrls: loadedScore.parts[0].svgUrls },
+      }),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const trigger = await canvas.findByRole("button", { name: "Arranjo completo" });
+    await expect(body.queryByRole("dialog", { name: "Arranjo completo" })).not.toBeInTheDocument();
+    await userEvent.click(trigger);
+    const dialog = await body.findByRole("dialog", { name: "Arranjo completo" });
+    await expect(within(dialog).getByRole("button", { name: "Imprimir arranjo" })).toBeVisible();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Fechar arranjo" }));
+    await waitFor(() => expect(body.queryByRole("dialog", { name: "Arranjo completo" })).not.toBeInTheDocument());
+  },
+};
+
 export const EditMetadata: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

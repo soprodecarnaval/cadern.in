@@ -3,13 +3,15 @@ import { Button } from "../../atoms/Button";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Col, Row, Spinner } from "react-bootstrap";
 
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import type { WithId } from "../../../lib/db";
 
 import type { CommentAnchor, ReviewCommentDoc } from "../../../../types/docs";
 import { commentThreads } from "../../../lib/comments";
 import type { LoadedScore } from "../../../lib/loadScore";
-import { canDeleteScore, canEditScoreMetadata, isReviewer } from "../../../lib/roles";
+import { canDeleteScore, canEditScoreMetadata, isEditor, isReviewer } from "../../../lib/roles";
+import { FEATURE_FLAG_BROWSER_UPLOAD } from "../../../featureFlags";
+import { uploadPath } from "../../../lib/uploadPath";
 import { projectPath } from "../../../lib/routes";
 import { useMemberRoleValue } from "../../../lib/useMemberRoleValue";
 
@@ -135,7 +137,7 @@ export function ScorePageView({
         )}
       </div>
       <div className="d-flex align-items-center justify-content-between mb-3">
-        <p className="text-muted mb-0">{score.projectTitle}</p>
+        <p className="mb-0"><Link to={projectPath(score.projectId)}>{score.projectTitle}</Link></p>
         <div className="d-flex gap-2">
           {role !== "loading" && canDeleteScore(role) && (
             <Button
@@ -155,6 +157,20 @@ export function ScorePageView({
             >
               Editar metadados
             </Button>
+          )}
+          {FEATURE_FLAG_BROWSER_UPLOAD && role !== "loading" && isEditor(role) && (
+            <a
+              className="btn btn-outline-secondary ds-button btn-sm"
+              href={uploadPath({
+                projectId: score.projectId,
+                scoreId: score.scoreId,
+                expectedScoreRevisionId: score.latestRevisionId,
+                baseRevisionId: score.revisionId,
+                mode: "reformat",
+              })}
+            >
+              Reformatar
+            </a>
           )}
           <a className="btn btn-outline-secondary ds-button btn-sm" href={score.msczUrl}
             download={`${score.title}.mscz`}>
@@ -176,6 +192,7 @@ export function ScorePageView({
             sub={score.sub}
             tags={score.tags}
             arrangementMidiUrl={score.arrangementMidiUrl}
+            arrangement={score.arrangement}
             parts={score.parts}
             pinsProps={
               reviewing

@@ -29,6 +29,12 @@ export default meta;
 type Story = StoryObj<typeof SongbookManagePageView>;
 
 export const OwnerDetails: Story = {};
+export const DirectEdit: Story = {
+  parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByRole("button", { name: "Salvar versão" })).toBeVisible();
+  },
+};
 export const AccessDenied: Story = {
   args: { currentUser: null, role: undefined },
 };

@@ -3,6 +3,7 @@ import { MidiPlayer } from "../../audio/MidiPlayer";
 import { ScoreDisplayView } from "./ScoreDisplayView";
 export type {
   ScoreDisplayPart,
+  ScoreDisplayArrangement,
   ScorePin,
   ScorePinsProps,
 } from "./ScoreDisplayView";

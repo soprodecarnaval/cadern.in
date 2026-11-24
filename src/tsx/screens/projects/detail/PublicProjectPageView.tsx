@@ -10,14 +10,17 @@ import {
 } from "react-bootstrap";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import type { WithId } from "../../../../lib/db";
-import { isAdmin, isEditor, isReviewer } from "../../../../lib/roles";
+import { canEditSongbook, canPublishSongbook, isAdmin, isEditor, isReviewer } from "../../../../lib/roles";
 import {
   projectSettingsPath,
   publicSongbookPath,
   scorePath,
+  songbookEditPath,
   songbookPath,
 } from "../../../../lib/routes";
 import { buildExportDeepLink } from "../../../../../types/exportDeepLink";
+import { BROWSER_UPLOAD_MODE, FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
+import { uploadPath } from "../../../../lib/uploadPath";
 
 import type {
   ProjectDoc,
@@ -25,6 +28,7 @@ import type {
   SongbookDoc,
   UserProjectRole,
 } from "../../../../../types/docs";
+import { SongbookPrintDialog, type SongbookPrintServices } from "./SongbookPrintDialog";
 import { CreateSongbookForm } from "./CreateSongbookForm";
 import { resolveScoreMetadata } from "../../../../lib/scoreMetadata";
 
@@ -49,7 +53,8 @@ export type PublicProjectPageServices = Pick<
   | "getProjectSongbooks"
   | "createSongbook"
   | "getSongbook"
->;
+  | "setSongbookPublished"
+> & SongbookPrintServices;
 
 export function PublicProjectPageView({
   services,
@@ -68,6 +73,9 @@ export function PublicProjectPageView({
   const [scores, setScores] = useState<WithId<ScoreDoc>[]>([]);
   const [scoresLoading, setScoresLoading] = useState(true);
   const [songbooks, setSongbooks] = useState<WithId<SongbookDoc>[] | null>(null);
+  const [publishing, setPublishing] = useState<ReadonlySet<string>>(new Set());
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [printBook, setPrintBook] = useState<WithId<SongbookDoc> | null>(null);
   const [creating, setCreating] = useState(false);
   const [projectError, setProjectError] = useState(false);
   const [songbooksError, setSongbooksError] = useState(false);
@@ -174,6 +182,24 @@ export function PublicProjectPageView({
   const canManage = isAdmin(myRole);
   const canUpload = isEditor(myRole);
 
+  const publish = async (id: string) => {
+    if (publishing.has(id)) {return;}
+    setPublishing((current) => new Set(current).add(id));
+    setPublishError(null);
+    try {
+      await services.setSongbookPublished(id, true);
+      setSongbooks((current) => current?.map((book) => book.id === id ? { ...book, isPublished: true } : book) ?? null);
+    } catch {
+      setPublishError(id);
+    } finally {
+      setPublishing((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
   return (
     <Page className="mt-4">
       <div className="d-flex justify-content-between align-items-start mb-1">
@@ -240,24 +266,47 @@ export function PublicProjectPageView({
                     {sb.title}
                   </RouterLink>
                 </td>
-                <td className="text-muted text-end">
-                  {!sb.isPublished && "não publicado"}
+                <td className="text-end">
+                  <div className="d-flex flex-wrap align-items-center justify-content-end gap-2">
+                    {!sb.isPublished && <small className="text-muted">não publicado</small>}
+                    <Button size="sm" variant="secondary" onClick={() => setPrintBook(sb)} aria-label={`Imprimir ${sb.title}`}>
+                      Imprimir
+                    </Button>
+                    {canEditSongbook(myRole) && (
+                      <Link to={songbookEditPath(project.id, sb.slug)} size="sm" variant="secondary" aria-label={`Editar ${sb.title}`}>
+                        Editar
+                      </Link>
+                    )}
+                    {!sb.isPublished && canPublishSongbook(myRole) && (
+                      <Button size="sm" disabled={publishing.has(sb.id)} onClick={() => void publish(sb.id)} aria-label={`Publicar ${sb.title}`}>
+                        {publishing.has(sb.id) ? "Publicando…" : "Publicar"}
+                      </Button>
+                    )}
+                  </div>
+                  {publishError === sb.id && <div role="alert" className="text-danger">Não foi possível publicar este caderninho.</div>}
                 </td>
               </tr>
             ))}
           </tbody>
         </Table>
       )}
+      {printBook && <SongbookPrintDialog key={printBook.id} songbook={printBook} services={services} onHide={() => setPrintBook(null)} />}
       {isMember && (
         <div className="d-flex justify-content-between align-items-center mb-2 gap-2">
           <h5 className="mb-0">Partituras</h5>
           {canUpload && (
-            <a
-              className="btn btn-outline-secondary ds-button btn-sm"
-              href={buildExportDeepLink({ projectId: project.id })}
-            >
-              Enviar partitura
-            </a>
+            <div className="d-flex flex-wrap gap-2">
+              {FEATURE_FLAG_BROWSER_UPLOAD && (
+                <RouterLink className="btn btn-outline-secondary ds-button btn-sm" to={uploadPath({ projectId: project.id })}>
+                  Enviar partitura pelo navegador
+                </RouterLink>
+              )}
+              {BROWSER_UPLOAD_MODE !== "default" && (
+                <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink({ projectId: project.id })}>
+                  Enviar partitura pelo MuseScore
+                </a>
+              )}
+            </div>
           )}
         </div>
       )}

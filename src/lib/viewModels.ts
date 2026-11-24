@@ -22,6 +22,7 @@ export function toScoreRevisionViewModel(
       svg: p.svg.map((f) => f.url),
       midi: p.midi.url,
     })),
+    ...(revision.arrangement ? { arrangementSvg: revision.arrangement.svg.map(({ url }) => url) } : {}),
     notes: revision.notes,
   };
 }

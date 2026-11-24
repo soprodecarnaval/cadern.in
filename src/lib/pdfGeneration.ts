@@ -1,4 +1,4 @@
-import type { Instrument } from "../../types/instrument";
+import { zInstrument, type Instrument } from "../../types/instrument";
 import type {
   ScoreViewModel,
   ScoreRevisionViewModel,
@@ -7,19 +7,7 @@ import type {
 } from "../../types/viewModels";
 import { isSongbookSection, getScoreRevision } from "./songbook";
 
-export const allInstruments: Instrument[] = [
-  "trompete",
-  "trombone",
-  "sax alto",
-  "sax soprano",
-  "sax tenor",
-  "sax baritono",
-  "flauta",
-  "tuba",
-  "tuba eb",
-  "bombardino",
-  "clarinete",
-];
+export const allInstruments = zInstrument.options.filter((instrument) => !instrument.endsWith(" pirata"));
 
 // Fallback instrument mapping: when primary instrument is missing, use fallback
 export const instrumentFallbacks: Partial<Record<Instrument, Instrument>> = {
@@ -71,9 +59,6 @@ export function computeInstrumentStats(
       stats.push({ instrument, count, countWithFallback });
     }
   }
-
-  // Sort by count descending
-  stats.sort((a, b) => b.count - a.count);
 
   return { stats, totalScores };
 }

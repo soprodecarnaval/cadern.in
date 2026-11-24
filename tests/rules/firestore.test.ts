@@ -114,7 +114,7 @@ describe("projects", () => {
   });
 
   it("denies reserved project IDs", async () => {
-    for (const projectId of ["projetos", "partituras", "2026"]) {
+    for (const projectId of ["projetos", "partituras", "browser-score", "2026"]) {
       const db = as(OUTSIDER);
       const batch = writeBatch(db);
       batch.set(doc(db, "projects", projectId), {
@@ -664,9 +664,11 @@ describe("songbooks", () => {
 
   it("denies a reserved songbook slug", async () => {
     await seedProject(testEnv());
-    await assertFails(
-      createBatch(as(ADMIN), `${PROJECT}~config`, "config").commit(),
-    );
+    for (const slug of ["config", "enviar"]) {
+      await assertFails(
+        createBatch(as(ADMIN), `${PROJECT}~${slug}`, slug).commit(),
+      );
+    }
   });
 
   it("denies creating a published songbook", async () => {

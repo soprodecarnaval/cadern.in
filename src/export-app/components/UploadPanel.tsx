@@ -15,7 +15,7 @@ import {
   validateExportContext,
   type ResolvedExportContext,
 } from "../../lib/exportContext";
-import { pinnedToRevision } from "../../lib/songbook";
+import { repinSongbook } from "../../lib/uploadFlow";
 import type { ExportDeepLinkContext } from "../../../types/exportDeepLink";
 import type { UploadTarget } from "../../lib/uploadTarget";
 import {
@@ -128,8 +128,8 @@ export function UploadPanel({
           setWarnings([...score.warnings, ...validateParsedScore(score)]);
         },
       });
-      const repin = await repinSongbook(result.scoreId, result.revisionId);
-      setStatus({ kind: "done", ...result, repin });
+      const repinned = await repin(result.scoreId, result.revisionId);
+      setStatus({ kind: "done", ...result, repin: repinned });
     } catch (e) {
       setStatus({
         kind: "error",
@@ -140,45 +140,13 @@ export function UploadPanel({
     }
   };
 
-  // Offers to update the songbook's pin under the role/concurrency rules
-  // already enforced by createSongbookRevision; never touches any other
-  // songbook pinning the same score. A final staleness check right before
-  // this specific write — the gap since the pre-upload check is the whole
-  // export + upload, which can take a while.
-  const repinSongbook = async (
-    scoreId: string,
-    revisionId: string,
-  ): Promise<"updated" | "skipped-stale" | "none"> => {
-    if (!context.songbookId) {
-      return "none";
-    }
-    const songbook = await getSongbookById(context.songbookId);
-    if (
-      !songbook ||
-      songbook.deletedAt ||
-      songbook.currentRevisionId !== context.expectedSongbookRevisionId
-    ) {
-      return "skipped-stale";
-    }
-    const current = await getSongbookRevision(
-      songbook.id,
-      songbook.currentRevisionId,
-    );
-    if (!current) {
-      return "skipped-stale";
-    }
-    const { content, note } = pinnedToRevision(
-      current,
-      scoreId,
-      revisionId,
-      parsed?.title ?? scoreId,
-    );
-    await createSongbookRevision(songbook.id, content, {
-      createdBy: user.uid,
-      note,
+  // Re-pins the songbook the upload was launched from (src/lib/uploadFlow).
+  const repin = (scoreId: string, revisionId: string) =>
+    repinSongbook(context, { scoreId, revisionId }, parsed?.title ?? scoreId, user.uid, {
+      getSongbookById,
+      getSongbookRevision,
+      createSongbookRevision,
     });
-    return "updated";
-  };
 
   if (contextState.kind === "loading") {
     return (
