@@ -6,7 +6,7 @@ import type { FormattingProfile } from "../../../types/formattingProfile";
 import type { Instrument } from "../../../types/instrument";
 import { METAJSON_VERSION, type Metajson } from "../../../types/metajson";
 import type { Warning as AppWarning } from "../../result";
-import type { Part, ScoreLibrary, SheetLayoutResult, Warning } from "../browserScore/types";
+import type { Part, PartCatalog, RendererInfo, ScoreLibrary, ScoreSession, SheetLayoutResult, Warning } from "../browserScore/types";
 import { pirataInstrument } from "../instruments";
 import { packageMscx, readMsczIdentityBytes } from "../msczIdentity";
 import { buildPartBasenames, safeFilename } from "../partFiles";
@@ -48,6 +48,19 @@ export type RenderOptions = {
   library?: ScoreLibrary;
   /** Creates the library when none is given (the app passes loadScoreLibrary). */
   createLibrary?: (options: ReturnType<typeof libraryOptionsFor>) => Promise<ScoreLibrary>;
+  /**
+   * An open session of the same file (the send screen's), so pages already drawn for the preview
+   * are reused instead of drawn again. Its transforms must read the profile `useProfile` receives;
+   * `useProfile` is called with the final profile before any page is read, and should forget the
+   * pages drawn with other settings (session.invalidate). Not disposed here.
+   */
+  openSession?: {
+    session: ScoreSession;
+    catalog: PartCatalog;
+    /** The library's renderer record, for the .metajson. */
+    renderer: RendererInfo;
+    useProfile: (profile: FormattingProfile) => void;
+  };
 };
 
 const metajsonFields = (tags: Readonly<Record<string, string>>) => ({
@@ -82,31 +95,39 @@ export async function renderForUpload(
   const { signal, onProgress } = options;
   if (!choices.length) {throw new Error("Choose at least one part");}
   onProgress?.({ step: "open", done: 0, total: choices.length });
-  const library =
-    options.library ??
-    (await (options.createLibrary ?? ((o) => import("../scoreEngine").then((m) => m.loadScoreLibrary(o))))(
-      libraryOptionsFor(profile),
-    ));
-  const owned = !options.library;
+  const reused = options.openSession;
+  const library = reused
+    ? null
+    : options.library ??
+      (await (options.createLibrary ?? ((o) => import("../scoreEngine").then((m) => m.loadScoreLibrary(o))))(
+        libraryOptionsFor(profile),
+      ));
+  const owned = !reused && !options.library;
   try {
     // The catalog is needed before the profile can be completed, so it is read first and the
     // transforms look the effective profile up when the pages are drawn.
     let effective = profile;
     const transforms = new Map<string, PartTransformReport>();
-    const session = await library.open(
-      { bytes, format: fileName.toLowerCase().endsWith(".mscx") ? "mscx" : "mscz", name: fileName },
-      {
-        signal,
-        compatibility: "allowUnverified",
-        partTransform: (input) =>
-          caderninhoPartTransform(effective, (report) => transforms.set(input.part.id, report))(input),
-        partLayout: (part) => sheetLayoutFor(resolvePartFormatting(effective, part.name)),
-      },
-    );
+    const session = reused
+      ? reused.session
+      : await library!.open(
+          { bytes, format: fileName.toLowerCase().endsWith(".mscx") ? "mscx" : "mscz", name: fileName },
+          {
+            signal,
+            compatibility: "allowUnverified",
+            partTransform: (input) =>
+              caderninhoPartTransform(effective, (report) => transforms.set(input.part.id, report))(input),
+            partLayout: (part) => sheetLayoutFor(resolvePartFormatting(effective, part.name)),
+          },
+        );
     try {
-      const catalog = await session.prepareParts({ policy: "preserveExistingOrGenerateIfNone", expectedRevision: 0, signal });
+      const catalog = reused
+        ? reused.catalog
+        : await session.prepareParts({ policy: "preserveExistingOrGenerateIfNone", expectedRevision: 0, signal });
       onProgress?.({ step: "parts", done: 0, total: choices.length });
       effective = profileWithChoices(profile, catalog.parts, choices);
+      reused?.useProfile(effective);
+      const renderer = reused?.renderer ?? library!.renderer;
       const chosen = [...choices]
         .sort((a, b) => a.ordinal - b.ordinal)
         .map((choice) => {
@@ -181,7 +202,7 @@ export async function renderForUpload(
         ...fields,
         parts: metajsonParts,
         formatting: effective,
-        renderer: { ...library.renderer, fonts: library.renderer.fonts.map((font) => ({ ...font })) },
+        renderer: { ...renderer, fonts: renderer.fonts.map((font) => ({ ...font })) },
       };
       fileMap.set(
         "metajson",
@@ -204,9 +225,9 @@ export async function renderForUpload(
         report: { parts: reportParts, profile: effective },
       };
     } finally {
-      await session.dispose();
+      if (!reused) {await session.dispose();}
     }
   } finally {
-    if (owned) {await library.dispose();}
+    if (owned) {await library!.dispose();}
   }
 }

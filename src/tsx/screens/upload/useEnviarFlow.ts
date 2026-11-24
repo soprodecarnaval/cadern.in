@@ -8,7 +8,7 @@ import { fontFaceCss, loadTextFonts, withTextFonts } from "../../../lib/sharedFo
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormattingProfile } from "../../../../types/formattingProfile";
 import { DEFAULT_FORMATTING_PROFILE } from "../../../../types/formattingProfile";
-import type { Part, ScoreLibrary, ScoreSession } from "../../../lib/browserScore/types";
+import type { Part, PartCatalog, ScoreLibrary, ScoreSession } from "../../../lib/browserScore/types";
 import { packageMscx, readMsczIdentityBytes, stampMsczIdentityBytes } from "../../../lib/msczIdentity";
 import { safeFilename } from "../../../lib/partFiles";
 import { caderninhoPartTransform } from "../../../lib/scoreRender/partTransform";
@@ -54,6 +54,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
   const library = useRef<ScoreLibrary | null>(null);
   const session = useRef<ScoreSession | null>(null);
   const parts = useRef<readonly Part[]>([]);
+  const catalogRef = useRef<PartCatalog | null>(null);
   const bytes = useRef<Uint8Array | null>(null);
   const midiUrls = useRef(new Map<number, string>());
   const controller = useRef(new AbortController());
@@ -72,6 +73,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
   const closeSession = useCallback(async () => {
     const open = session.current;
     session.current = null;
+    catalogRef.current = null;
     rendered.current.clear();
     await open?.dispose().catch(() => undefined);
   }, []);
@@ -94,6 +96,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
     const catalog = await open.prepareParts({ policy: "preserveExistingOrGenerateIfNone", expectedRevision: 0, signal });
     signal.throwIfAborted();
     parts.current = catalog.parts;
+    catalogRef.current = catalog;
     return { session: open, catalog };
   }, []);
 
@@ -315,11 +318,27 @@ export function useEnviarFlow(deps: EnviarDeps) {
     const signal = controller.current.signal;
     update({ status: { kind: "rendering" } });
     try {
-      // renderForUpload opens its own session: the engine holds one score at a time.
-      await closeSession();
-      const { parsed } = await renderForUpload(bytes.current, state.fileName ?? "partitura.mscz", state.profile, choicesFrom(state.rows), {
-        library: library.current,
+      // Reuse the preview session: pages already drawn with the final settings are not drawn again.
+      const fileName = state.fileName ?? "partitura.mscz";
+      if (!session.current || !catalogRef.current) {await openSession(fileName, signal);}
+      const open = session.current!;
+      const { parsed } = await renderForUpload(bytes.current, fileName, state.profile, choicesFrom(state.rows), {
         signal,
+        openSession: {
+          session: open,
+          catalog: catalogRef.current!,
+          renderer: library.current.renderer,
+          useProfile: (profile) => {
+            effective.current = profile;
+            for (const part of catalogRef.current?.parts ?? []) {
+              const signature = JSON.stringify(resolvePartFormatting(profile, part.name));
+              if (rendered.current.get(part.ordinal) !== signature) {
+                open.invalidate({ kind: "part", partId: part.id });
+                rendered.current.delete(part.ordinal);
+              }
+            }
+          },
+        },
         onProgress: (progress) => {if (!signal.aborted) {update({ status: { kind: "rendering", progress } });}},
       });
       signal.throwIfAborted();
@@ -340,7 +359,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
     } catch (error) {
       if (!signal.aborted) {fail(error);}
     }
-  }, [closeSession, fail, state.fileName, state.profile, state.rows, state.target, update]);
+  }, [fail, openSession, state.fileName, state.profile, state.rows, state.target, update]);
 
   const listen = useCallback(async (ordinal: number) => {
     const open = session.current;
