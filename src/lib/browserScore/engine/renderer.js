@@ -198,6 +198,18 @@ const TIGHTER_SPACING = [{ spacingLinear: 0.15, spacingNonLinear: 0.55 }, { spac
  * search finds its first entry in about 5 layouts instead of trying every size from the largest.
  * Deterministic for a given input, like the linear search it replaces.
  */
+// Verovio's largest `unit` (2.4 mm staff space); a staff size fixed above it, up to
+// MAX_FIXED_UNIT (8 mm), is drawn at this unit and enlarged with Verovio's `scale`.
+const VEROVIO_MAX_UNIT = 12;
+const MAX_FIXED_UNIT = 40;
+/** The Verovio unit and enlargement that draw `unit`; the enlargement is a whole percentage. */
+export function verovioScale(unit) {
+    if (unit <= VEROVIO_MAX_UNIT) return { verovioUnit: unit, zoom: 1 };
+    // Rounded up, so the unit stays within what Verovio accepts.
+    const zoom = Math.ceil(unit / VEROVIO_MAX_UNIT * 100) / 100;
+    return { verovioUnit: unit / zoom, zoom };
+}
+
 function largestFitting(units, fit) {
     const last = fit(units[units.length - 1]);
     if (last?.error) return last;
@@ -245,11 +257,15 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
     const fontMultiplier = () => Math.max(1, spacing.fingeringScale / VEROVIO_FINGERING_MAX);
     // At scale 1 the digits are about 1.6 staff spaces tall. Reserve room for the extra height.
     const fingeringRoom = () => fingered ? FINGERING_ROOM + 1.7 * (fontMultiplier() - 1) : 0;
-    const options = (unit, starts, natural) => ({
-        pageWidth: tenths(area.widthMm), pageHeight: tenths(area.heightMm),
+    const options = (unit, starts, natural) => {
+        // Above Verovio's largest unit the drawing is enlarged instead: laid out on a page `zoom`
+        // times smaller, then scaled up to the area.
+        const { verovioUnit, zoom } = verovioScale(unit);
+        return {
+        pageWidth: Math.round(tenths(area.widthMm) / zoom), pageHeight: Math.round(tenths(area.heightMm) / zoom),
         // Room on the left for measure numbers at the start of a system.
-        pageMarginTop: Math.round(fingeringRoom() * 2 * unit), pageMarginRight: 0, pageMarginBottom: 0, pageMarginLeft: 15,
-        unit, scale: 100, adjustPageHeight: natural, justifyVertically: !natural, minLastJustification: 0,
+        pageMarginTop: Math.round(fingeringRoom() * 2 * verovioUnit), pageMarginRight: 0, pageMarginBottom: 0, pageMarginLeft: Math.round(15 / zoom),
+        unit: verovioUnit, scale: Math.round(zoom * 100), adjustPageHeight: natural, justifyVertically: !natural, minLastJustification: 0,
         breaks: starts ? 'line' : 'auto', header: 'none', footer: 'none',
         ...spacing,
         fingeringScale: Math.min(spacing.fingeringScale, VEROVIO_FINGERING_MAX),
@@ -257,7 +273,8 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
         svgViewBox: true, mmOutput: true, fontTextLiberation: true, svgRemoveXlink: false, xmlIdSeed: 1,
         // Links each fingering to its note, for withNoteHeightFingerings.
         svgAdditionalAttribute: ['fing@startid']
-    });
+        };
+    };
     let current = null;
     const draw = (unit, starts) => {
         tk.resetOptions();
@@ -268,7 +285,7 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
     };
     const result = () => {
         const pages = [];
-        for (let n = 1; n <= tk.getPageCount(); n++) pages.push(withNoteHeightFingerings(withoutPlaceholders(tk.renderToSVG(n, false)), current.unit, fontMultiplier()));
+        for (let n = 1; n <= tk.getPageCount(); n++) pages.push(withNoteHeightFingerings(withoutPlaceholders(tk.renderToSVG(n, false)), verovioScale(current.unit).verovioUnit, fontMultiplier()));
         const { unit, starts } = current;
         const count = pages.reduce((sum, page) => sum + systems(page), 0);
         // Height the music needs, for the fill ratio: the lowest horizontal line (staff or ledger
@@ -300,7 +317,7 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
         draw(unit, null);
         return 'fits';
     };
-    const fixedUnit = Number.isFinite(layout.unit) ? range(layout.unit, 4, 12, SHEET_UNITS[0]) : null;
+    const fixedUnit = Number.isFinite(layout.unit) ? range(layout.unit, 4, MAX_FIXED_UNIT, SHEET_UNITS[0]) : null;
     // Dense parts that fit no staff size get tighter horizontal spacing (fewer, fuller systems)
     // before smaller fingerings; the plugin's MuseScore spacing was tighter for such music.
     const given = { spacingLinear: spacing.spacingLinear, spacingNonLinear: spacing.spacingNonLinear };

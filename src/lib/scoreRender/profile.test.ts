@@ -15,7 +15,8 @@ describe("FormattingProfile", () => {
   it("accepts the minimal profile and rejects unknown versions and values", () => {
     expect(zFormattingProfile.parse({ profileVersion: 1 })).toEqual(DEFAULT_FORMATTING_PROFILE);
     expect(() => zFormattingProfile.parse({ profileVersion: 2 })).toThrow();
-    expect(() => zFormattingProfile.parse({ profileVersion: 1, staffSize: 5 })).toThrow();
+    expect(() => zFormattingProfile.parse({ profileVersion: 1, staffSize: 8.05 })).toThrow();
+    expect(zFormattingProfile.parse({ profileVersion: 1, staffSize: 8 }).staffSize).toBe(8);
     expect(() =>
       zFormattingProfile.parse({ profileVersion: 1, fingering: { notation: "keys" } }),
     ).toThrow();

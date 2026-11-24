@@ -41,7 +41,7 @@ export const zSpacing = z.object({
 /** Settings a single part can override. */
 export const zPartFormatting = z.object({
   /** Staff space in millimetres, or "auto": the largest that keeps the part on one page. */
-  staffSize: z.union([zAuto, z.number().min(0.8).max(2.4)]).optional(),
+  staffSize: z.union([zAuto, z.number().min(0.8).max(8)]).optional(),
   /** Systems on the page, or "auto": as many as fit, about five measures each. */
   systemsPerPage: z.union([zAuto, z.number().int().min(1).max(24)]).optional(),
   spacing: zSpacing.optional(),
