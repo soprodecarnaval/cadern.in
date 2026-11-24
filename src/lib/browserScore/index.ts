@@ -749,11 +749,14 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                             if (scoreMidiCache?.revision !== revision) {scoreMidiCache = { revision, midi: await engineMidi(-1) };}
                             const scoreMidi = scoreMidiCache.midi;
                             const score = await fullScore(operation.signal);
-                            let bytes = index < 0 ? scoreMidi : await engineMidi(index);
+                            // The engine plays no notes for parts saved by MuseScore 4, and for some files it
+                            // stops outright, taking the session with it. Those parts skip the engine.
+                            const savedByMuseScore4 = origin === 'existing' && Number(info.fileVersion.split('.')[0]) >= 4;
+                            const fromEngine = index < 0 ? scoreMidi : savedByMuseScore4 ? undefined : await engineMidi(index);
+                            let bytes = fromEngine ?? new Uint8Array();
                             const midiWarnings: Warning[] = [];
-                            if (index >= 0 && midiNoteCount(bytes) === 0) {
-                                // The engine plays no notes for parts saved by MuseScore 4: take the part's
-                                // staves from the full-score MIDI, one track per staff in score order.
+                            if (index >= 0 && (!fromEngine || midiNoteCount(fromEngine) === 0)) {
+                                // Take the part's staves from the full-score MIDI, one track per staff in score order.
                                 const ids = musicXmlTargets(metadata!, score.parts.map(p => p.id))[index];
                                 const staves = staffCounts(score.xml);
                                 const total = [...staves.values()].reduce((sum, count) => sum + count, 0);
