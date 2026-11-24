@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { zInstrument, type Instrument } from "../../../../types/instrument";
+import { pirataInstrument } from "../../../lib/instruments";
 import type { FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
 import { SONGBOOK_FIT_AREA } from "../../../../types/formattingProfile";
 import { Button } from "../../atoms/Button";
@@ -143,8 +144,8 @@ function PartsStep({ state, context, onRows, onStep }: Pick<EnviarPageViewProps,
     <section aria-labelledby="enviar-partes">
       <h2 id="enviar-partes" tabIndex={-1}>Partes</h2>
       <p>
-        Confira o instrumento de cada parte. Partes sem instrumento ficam de fora. Com piratas, trompete e
-        trombone entram como <em>trompete pirata</em> e <em>trombone pirata</em>.
+        Confira o instrumento de cada parte. Partes sem instrumento ficam de fora. Os piratas (números de
+        posição ou pisto) se escolhem na formatação.
       </p>
       <div className="table-responsive">
         <table className="table enviar-parts">
@@ -154,7 +155,6 @@ function PartsStep({ state, context, onRows, onStep }: Pick<EnviarPageViewProps,
               <th scope="col">Parte</th>
               <th scope="col">No MuseScore</th>
               <th scope="col">Instrumento</th>
-              <th scope="col">Piratas</th>
             </tr>
           </thead>
           <tbody>
@@ -175,28 +175,18 @@ function PartsStep({ state, context, onRows, onStep }: Pick<EnviarPageViewProps,
                 <td>
                   <Select
                     aria-label={`Instrumento de ${row.name}`}
-                    value={row.instrument ?? ""}
+                    value={row.instrument ? pirataInstrument(row.instrument, false) : ""}
                     onChange={(event) =>
                       set(row.ordinal, (current) => withInstrument(current, (event.target.value || null) as Instrument | null))
                     }
                   >
                     <option value="">— escolha —</option>
-                    {zInstrument.options.map((instrument) => (
+                    {zInstrument.options.filter((instrument) => !instrument.endsWith(" pirata")).map((instrument) => (
                       <option key={instrument} value={instrument}>{instrument}</option>
                     ))}
                   </Select>
                   {row.guessed && <small className="text-muted d-block">Adivinhado pelo nome; confira.</small>}
                   {!row.instrument && <small className="text-danger d-block">Sem instrumento: fica de fora.</small>}
-                </td>
-                <td>
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
-                    aria-label={`Piratas em ${row.name}`}
-                    checked={row.fingerings}
-                    disabled={!row.fingeringsAvailable}
-                    onChange={(event) => set(row.ordinal, (current) => withFingerings(current, event.target.checked))}
-                  />
                 </td>
               </tr>
             ))}
@@ -252,8 +242,9 @@ function DataStep({ state, onMetadata, onStep }: Pick<EnviarPageViewProps, "stat
   );
 }
 
-function Choice({ label, value, options, onChange, name }: {
+function Choice({ label, value, options, onChange, name, children }: {
   label: string; name: string; value: string; options: [string, string][]; onChange: (value: string) => void;
+  children?: ReactNode;
 }) {
   return (
     <fieldset className="enviar-choice">
@@ -271,6 +262,7 @@ function Choice({ label, value, options, onChange, name }: {
           <span className="form-check-label">{text}</span>
         </label>
       ))}
+      {children}
     </fieldset>
   );
 }
@@ -357,7 +349,7 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
   );
 }
 
-function Controls({ state, onProfile, shownRow, shownPreview }: Pick<EnviarPageViewProps, "state" | "onProfile"> & {
+function Controls({ state, onProfile, onRows, shownRow, shownPreview }: Pick<EnviarPageViewProps, "state" | "onProfile" | "onRows"> & {
   shownRow: PartRow | undefined; shownPreview: Preview | undefined;
 }) {
   const ready = !!shownPreview && !shownPreview.rendering && !shownPreview.error;
@@ -372,7 +364,7 @@ function Controls({ state, onProfile, shownRow, shownPreview }: Pick<EnviarPageV
             <h3 id="enviar-parte">Parte: {shownRow.name}</h3>
             <p>Vale só para a parte aberta na prévia; escolha outra nas abas.</p>
           </header>
-          <PartControls key={shownRow.ordinal} state={state} onProfile={onProfile} row={shownRow}
+          <PartControls key={shownRow.ordinal} state={state} onProfile={onProfile} onRows={onRows} row={shownRow}
             onApplied={(text) => setNotice((current) => ({ id: (current?.id ?? 0) + 1, text }))}
             automaticStaff={ready ? shownPreview.layout?.staffSpaceMm : undefined}
             automaticFingering={ready ? shownPreview.automaticFingeringSize : undefined} />
@@ -411,7 +403,7 @@ function Toast({ notice, onClose }: { notice: { id: number; text: string } | nul
   );
 }
 
-function PartControls({ state, onProfile, row, automaticStaff, automaticFingering, onApplied }: Pick<EnviarPageViewProps, "state" | "onProfile"> & {
+function PartControls({ state, onProfile, onRows, row, automaticStaff, automaticFingering, onApplied }: Pick<EnviarPageViewProps, "state" | "onProfile" | "onRows"> & {
   row: PartRow; automaticStaff: number | undefined; automaticFingering: number | undefined;
   onApplied: (text: string) => void;
 }) {
@@ -419,17 +411,30 @@ function PartControls({ state, onProfile, row, automaticStaff, automaticFingerin
   const change = (patch: PartFormatting) => onProfile(withFormatting(state.profile, row.name, patch));
   const included = state.rows.filter((candidate) => candidate.include && candidate.instrument);
   // This part's choice (a fixed size, or automatic) made the choice of every other part.
+  const names = (targets: readonly PartRow[]) => [...new Set([row.name, ...targets.map((target) => target.name)])];
+  const countText = (count: number) => `${count} ${count === 1 ? "outra parte" : "outras partes"}`;
   const applyToAll = (field: string, targets: readonly PartRow[], patch: PartFormatting) => {
-    onProfile(withFormattingForAll(state.profile, [...new Set([row.name, ...targets.map((target) => target.name)])], patch));
-    onApplied(`${field} aplicado a ${targets.length} ${targets.length === 1 ? "outra parte" : "outras partes"}.`);
+    onProfile(withFormattingForAll(state.profile, names(targets), patch));
+    onApplied(`${field} aplicado a ${countText(targets.length)}.`);
   };
-  const applyLink = (field: string, targets: readonly PartRow[], patch: PartFormatting) => targets.length > 0 && (
-    <Button variant="text" size="sm" className="enviar-apply-all" aria-label={`Aplicar a todas as partes: ${field}`}
-      onClick={() => applyToAll(field, targets, patch)}>
+  const link = (field: string, targets: readonly PartRow[], apply: () => void) => targets.length > 0 && (
+    <Button variant="text" size="sm" className="enviar-apply-all" aria-label={`Aplicar a todas as partes: ${field}`} onClick={apply}>
       Aplicar a todas as partes
     </Button>
   );
+  const applyLink = (field: string, targets: readonly PartRow[], patch: PartFormatting) =>
+    link(field, targets, () => applyToAll(field, targets, patch));
   const others = included.filter((candidate) => candidate.ordinal !== row.ordinal);
+  // Piratas: off (the part goes without numbers, and is filed under its plain instrument), or on in a notation.
+  const notation = settings.fingering?.notation ?? "positions";
+  const piratas: "off" | "positions" | "valves" = row.fingerings ? notation : "off";
+  const setPiratas = (targets: readonly PartRow[], value: string) => {
+    const on = value !== "off";
+    const affected = new Set([row.ordinal, ...targets.map((target) => target.ordinal)]);
+    onRows(state.rows.map((candidate) => (affected.has(candidate.ordinal) ? withFingerings(candidate, on) : candidate)));
+    if (on) {onProfile(withFormattingForAll(state.profile, names(targets), { fingering: { notation: value as "positions" | "valves" } }));}
+  };
+  const fingeredOthers = others.filter((candidate) => candidate.fingeringsAvailable);
   return (
     <>
       <AutoNumber label="Tamanho da pauta" name="part-staff-size" unit="mm" value={settings.staffSize}
@@ -448,8 +453,18 @@ function PartControls({ state, onProfile, row, automaticStaff, automaticFingerin
           {applyLink("Tamanho dos números", others.filter((candidate) => candidate.fingerings), { fingering: { size: settings.fingering?.size ?? "auto" } })}
         </AutoNumber>
       )}
+      {row.fingeringsAvailable && (
+        <Choice label="Piratas" name="part-notation" value={piratas}
+          options={[["positions", "Posições (1–7)"], ["valves", "Pistos"], ["off", "Desligado"]]}
+          onChange={(value) => setPiratas([], value)}>
+          {link("Piratas", fingeredOthers, () => {
+            setPiratas(fingeredOthers, piratas);
+            onApplied(`Piratas aplicados a ${countText(fingeredOthers.length)}.`);
+          })}
+        </Choice>
+      )}
       <FingeringAndCleanupControls settings={settings} onChange={change}
-        showFingering={row.fingerings} showTrombone={row.family === "trombone"} />
+        showTrombone={row.fingerings && notation === "positions" && row.family === "trombone"} />
       {hasOverride(state.profile, row.name) && (
         <Button variant="text" onClick={() => onProfile(withoutOverride(state.profile, row.name))}>
           Voltar {row.name} ao padrão
@@ -459,28 +474,19 @@ function PartControls({ state, onProfile, row, automaticStaff, automaticFingerin
   );
 }
 
-function FingeringAndCleanupControls({ settings, onChange, showFingering, showTrombone }: {
+function FingeringAndCleanupControls({ settings, onChange, showTrombone }: {
   settings: PartFormatting;
   onChange: (patch: PartFormatting) => void;
-  showFingering: boolean;
   showTrombone: boolean;
 }) {
-  const notation = settings.fingering?.notation ?? "positions";
   return (
     <>
-      {showFingering && (
-        <>
-          <Choice label="Piratas" name="part-notation" value={notation}
-            options={[["positions", "Posições (1–7)"], ["valves", "Pistos"]]}
-            onChange={(value) => onChange({ fingering: { notation: value as "positions" | "valves" } })} />
-          {notation === "positions" && showTrombone && (
-            <label className="form-check">
-              <input type="checkbox" className="form-check-input" checked={settings.fingering?.dynamicTrombone ?? false}
-                onChange={(event) => onChange({ fingering: { dynamicTrombone: event.target.checked } })} />
-              <span className="form-check-label">Trombone dinâmico (posições alternativas)</span>
-            </label>
-          )}
-        </>
+      {showTrombone && (
+        <label className="form-check">
+          <input type="checkbox" className="form-check-input" checked={settings.fingering?.dynamicTrombone ?? false}
+            onChange={(event) => onChange({ fingering: { dynamicTrombone: event.target.checked } })} />
+          <span className="form-check-label">Trombone dinâmico (posições alternativas)</span>
+        </label>
       )}
       <fieldset className="enviar-choice">
         <legend>Limpeza</legend>

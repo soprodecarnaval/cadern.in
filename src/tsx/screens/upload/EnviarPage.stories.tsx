@@ -55,7 +55,10 @@ export const Parts: Story = {
   args: { state: state({ step: "partes" }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByLabelText("Instrumento de Pete")).toHaveValue("trompete pirata");
+    // Piratas are chosen in Formatação: here only plain instruments, and no pirata column.
+    await expect(canvas.getByLabelText("Instrumento de Pete")).toHaveValue("trompete");
+    await expect(canvas.queryByRole("columnheader", { name: "Piratas" })).toBeNull();
+    await expect(canvas.queryByRole("option", { name: "trompete pirata" })).toBeNull();
     await expect(canvas.getByLabelText("Enviar Órgão")).toBeDisabled();
     await expect(canvas.getByRole("button", { name: "Continuar" })).toBeEnabled();
   },
@@ -191,8 +194,9 @@ export const ApplyToAllParts: Story = {
   },
   render: function Render(args) {
     const [profile, setProfile] = useState(args.state.profile);
+    const [rows, setRows] = useState(args.state.rows);
     const [editing, setEditing] = useState(args.state.editing);
-    return <EnviarPageView {...args} state={{ ...args.state, profile, editing }} onProfile={setProfile} onEditing={setEditing} />;
+    return <EnviarPageView {...args} state={{ ...args.state, profile, rows, editing }} onProfile={setProfile} onRows={setRows} onEditing={setEditing} />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -227,6 +231,23 @@ export const ApplyToAllParts: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Aplicar a todas as partes: Tamanho da pauta" }));
     await expect(body.getByText("Tamanho da pauta aplicado a 2 outras partes.")).toBeVisible();
     await waitFor(() => expect(body.queryByText(/aplicado a/)).toBeNull(), { timeout: 6000 });
+
+    // Piratas: a third choice turns the numbers off; applied to the other parts that can have them.
+    const piratas = (name: string) => within(canvas.getByRole("group", { name: "Piratas" })).getByRole("radio", { name });
+    await userEvent.click(piratas("Desligado"));
+    await expect(piratas("Desligado")).toBeChecked();
+    await expect(canvas.queryByRole("group", { name: "Tamanho dos números" })).toBeNull();
+    await userEvent.click(canvas.getByRole("button", { name: "Aplicar a todas as partes: Piratas" }));
+    await expect(body.getByText("Piratas aplicados a 1 outra parte.")).toBeVisible();
+    await userEvent.click(canvas.getByRole("tab", { name: "Tuba" }));
+    await expect(piratas("Desligado")).toBeChecked();
+    await userEvent.click(piratas("Pistos"));
+    await expect(canvas.getByRole("group", { name: "Tamanho dos números" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Aplicar a todas as partes: Piratas" }));
+    await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
+    await expect(piratas("Pistos")).toBeChecked();
+    await userEvent.click(canvas.getByRole("tab", { name: "Flauta" }));
+    await expect(canvas.queryByRole("group", { name: "Piratas" })).toBeNull();
   },
 };
 
