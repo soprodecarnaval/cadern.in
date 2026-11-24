@@ -3,7 +3,8 @@
 // (008), as the FormattingProfile asks.
 import type { FormattingProfile } from "../../../types/formattingProfile";
 import type { Part, PartTransform, Warning } from "../browserScore/types";
-import { fingeringFunction, instrumentSettings, type InstrumentSettings } from "../instruments";
+import { chosenInstrumentSettings, fingeringFunction, instrumentSettings, type InstrumentSettings } from "../instruments";
+import type { Instrument } from "../../../types/instrument";
 import { cleanupMusicXml, type CleanupReport } from "./cleanup";
 import { fingerPart, type FingeringReport } from "./fingering";
 import { applyTubaNotation, type TubaNotationReport } from "./tubaNotation";
@@ -47,6 +48,18 @@ export function partInstrumentSettings(part: Pick<Part, "instruments" | "name">)
   return { instrumentId: instrument.id || instrument.soundId, settings: null };
 }
 
+/**
+ * The settings a part is formatted with: the instrument the user filed it under when there is one,
+ * else the one the file declares.
+ */
+export function partSettings(part: Pick<Part, "instruments" | "name">, chosen?: Instrument | null): {
+  instrumentId: string | null;
+  settings: InstrumentSettings | null;
+} {
+  const source = partInstrumentSettings(part);
+  return chosen ? { instrumentId: source.instrumentId, settings: chosenInstrumentSettings(chosen, source.settings) } : source;
+}
+
 /** Whether a resolved part gets fingerings: by its own setting, else by instrument. */
 export const fingeringsOn = (
   formatting: ResolvedPartFormatting,
@@ -61,11 +74,13 @@ export function transformPartMusicXml(
   part: Pick<Part, "instruments" | "name">,
   profile: FormattingProfile,
   codec: XmlCodec = browserCodec,
+  /** The instrument the part is filed under; its settings win over the file's. */
+  chosen?: Instrument | null,
 ): { musicXml: string; report: PartTransformReport } {
   const formatting = resolvePartFormatting(profile, part.name);
   const document = codec.parse(musicXml);
   const cleanup = cleanupMusicXml(document, formatting.cleanup);
-  const { instrumentId, settings } = partInstrumentSettings(part);
+  const { instrumentId, settings } = partSettings(part, chosen);
   const parts = Array.from(document.documentElement.childNodes).filter(
     (node): node is Element => node.nodeType === 1 && (node as Element).localName === "part",
   );
@@ -109,9 +124,11 @@ export function transformPartMusicXml(
 export function caderninhoPartTransform(
   profile: FormattingProfile,
   onReport?: (report: PartTransformReport) => void,
+  /** The instrument each part is filed under (by ordinal), when the user chose one. */
+  instrumentOf?: (part: Part) => Instrument | null | undefined,
 ): PartTransform {
   return ({ musicXml, part }) => {
-    const result = transformPartMusicXml(musicXml, part, profile);
+    const result = transformPartMusicXml(musicXml, part, profile, browserCodec, instrumentOf?.(part));
     onReport?.(result.report);
     const warnings: Warning[] = [];
     if (result.report.tubaNotationSkipped) {

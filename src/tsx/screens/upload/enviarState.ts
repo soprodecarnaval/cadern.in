@@ -3,8 +3,7 @@
 import type { FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
 import type { Instrument } from "../../../../types/instrument";
 import type { Part } from "../../../lib/browserScore/types";
-import { guessInstrument, mapInstrumentId, pirataInstrument } from "../../../lib/instruments";
-import { partInstrumentSettings } from "../../../lib/scoreRender/partTransform";
+import { chosenFamily, guessInstrument, mapInstrumentId, pirataInstrument } from "../../../lib/instruments";
 import type { SheetLayoutResult, Warning } from "../../../lib/browserScore/types";
 import type { RenderProgress } from "../../../lib/scoreRender/renderForUpload";
 import type { PartChoice } from "../../../lib/scoreRender/renderForUpload";
@@ -34,7 +33,7 @@ export type PartRow = {
   instrument: Instrument | null;
   /** True when the instrument came from a name guess, not the MuseScore id. */
   guessed: boolean;
-  /** The instrument has fingering tables (trumpet, trombone, tuba, bombardino). */
+  /** The chosen instrument has fingering tables (trumpet, trombone, tuba, bombardino), whatever the file declares. */
   fingeringsAvailable: boolean;
   fingerings: boolean;
   family: "trumpet" | "trombone" | "tuba" | "euphonium" | null;
@@ -48,9 +47,9 @@ export function partRows(parts: readonly Pick<Part, "ordinal" | "name" | "instru
     const names = [part.name, first?.longName, first?.shortName];
     const byId = first ? (mapInstrumentId(first.id, names) ?? (first.soundId ? mapInstrumentId(first.soundId, names) : null)) : null;
     const guess = byId ? null : guessInstrument(names);
-    const { settings } = partInstrumentSettings(part);
-    const fingeringsAvailable = !!settings?.fingering;
     const base = byId ?? guess;
+    const family = base ? chosenFamily(base) : null;
+    const fingeringsAvailable = !!family;
     return {
       ordinal: part.ordinal,
       name: part.name,
@@ -59,7 +58,7 @@ export function partRows(parts: readonly Pick<Part, "ordinal" | "name" | "instru
       guessed: !byId && !!guess,
       fingeringsAvailable,
       fingerings: fingeringsAvailable,
-      family: settings?.fingering?.family ?? null,
+      family,
       include: !!base,
     };
   });
@@ -71,11 +70,20 @@ export function withFingerings(row: PartRow, fingerings: boolean): PartRow {
   return { ...row, fingerings: on, instrument: row.instrument ? pirataInstrument(row.instrument, on) : null };
 }
 
-/** A new instrument keeps the pirata rule: a fingered part is filed as a pirata when its instrument has one. */
+/**
+ * A new instrument makes the part that instrument: piratas become available (on) or go away with it,
+ * and a fingered part is filed as a pirata when its instrument has one.
+ */
 export function withInstrument(row: PartRow, instrument: Instrument | null): PartRow {
+  const family = instrument ? chosenFamily(instrument) : null;
+  const fingeringsAvailable = !!family;
+  const fingerings = fingeringsAvailable && (row.fingeringsAvailable ? row.fingerings : true);
   return {
     ...row,
-    instrument: instrument ? pirataInstrument(instrument, row.fingerings) : null,
+    family,
+    fingeringsAvailable,
+    fingerings,
+    instrument: instrument ? pirataInstrument(instrument, fingerings) : null,
     include: instrument ? row.include || row.instrument === null : false,
     guessed: false,
   };

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { expect, fn, userEvent, waitFor, within } from "@storybook/test";
 import { DEFAULT_FORMATTING_PROFILE } from "../../../../types/formattingProfile";
-import { initialState, partRows, type EnviarState } from "./enviarState";
+import { initialState, partRows, withInstrument, type EnviarState } from "./enviarState";
 import { EnviarPageView } from "./EnviarPageView";
 
 const rows = partRows([
@@ -248,6 +248,23 @@ export const ApplyToAllParts: Story = {
     await expect(piratas("Pistos")).toBeChecked();
     await userEvent.click(canvas.getByRole("tab", { name: "Flauta" }));
     await expect(canvas.queryByRole("group", { name: "Piratas" })).toBeNull();
+  },
+};
+
+export const ChosenInstrument: Story = {
+  // The file says flute; the user filed the part as trompete, so it is formatted as one.
+  args: {
+    state: state({
+      step: "formatacao",
+      rows: rows.map((row) => (row.name === "Flauta" ? withInstrument(row, "trompete") : row)),
+      previews: { 1: preview(1), 2: preview(2), 3: preview(3) },
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("tab", { name: "Flauta" })).toHaveAttribute("aria-selected", "true");
+    await expect(within(canvas.getByRole("group", { name: "Piratas" })).getByRole("radio", { name: "Posições (1–7)" })).toBeChecked();
+    await expect(canvas.getByRole("group", { name: "Tamanho dos números" })).toBeVisible();
   },
 };
 

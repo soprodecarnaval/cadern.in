@@ -257,4 +257,39 @@ export const instrumentSettings = (
       return null;
   }
 };
+/** The fingering family a cadern.in instrument plays in, or null (no fingerings). */
+export function chosenFamily(instrument: Instrument): FingeringTables["family"] | null {
+  switch (instrument.replace(/ pirata$/, "")) {
+    case "trompete": return "trumpet";
+    case "trombone": return "trombone";
+    case "tuba":
+    case "tuba eb": return "tuba";
+    case "bombardino": return "euphonium";
+    default: return null;
+  }
+}
+
+/**
+ * The formatting settings of a part filed as `chosen`, whatever the file declares (`source`, the
+ * MuseScore instrument's settings): its fingering table, tuba tuning, trombone options. The source's
+ * settings are kept when they already are that instrument (a C trumpet, a tuba written in treble clef).
+ * Tuba notation (clefs, octave) describes how the file is written, so it only applies to a part the
+ * file already declares as a tuba; the written notes are never transposed.
+ */
+export function chosenInstrumentSettings(chosen: Instrument, source: InstrumentSettings | null): InstrumentSettings | null {
+  const family = chosenFamily(chosen);
+  if (!family) {return null;}
+  if (family !== "tuba") {
+    if (source?.fingering?.family === family) {return source;}
+    if (family === "trumpet") {return { fingering: TRUMPET, transpositionForTable: 2 };}
+    if (family === "trombone") {return { fingering: TROMBONE, transpositionForTable: 2, dynamicTrombone: true };}
+    return { fingering: EUPHONIUM, transpositionForTable: 2 };
+  }
+  const tuning = chosen === "tuba eb" ? "Eb" : "Bb";
+  const transpositionForTable = tuning === "Eb" ? -3 : 2;
+  if (source?.tubaPolicy) {
+    return source.tubaPolicy.tuning === tuning ? source : { ...source, fingering: TUBA, transpositionForTable };
+  }
+  return { fingering: TUBA, transpositionForTable };
+}
 export * from "./notation";

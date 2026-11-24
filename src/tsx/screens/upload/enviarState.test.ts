@@ -114,3 +114,20 @@ describe("withFormattingForAll", () => {
     expect(withFormattingForAll(profile, ["Pete", "Tuba"], { staffSize: "auto" }).parts?.Tuba).toEqual({ staffSize: "auto" });
   });
 });
+
+describe("withInstrument", () => {
+  const [flute, trumpet] = partRows([
+    { ordinal: 1, name: "Flauta", instruments: [{ id: "flute", soundId: null, longName: "Flauta", shortName: "" }] },
+    { ordinal: 2, name: "Pete", instruments: [{ id: "bb-trumpet", soundId: null, longName: "Trompete", shortName: "" }] },
+  ]);
+  it("makes the part the chosen instrument, whatever the file declares", () => {
+    const asTrumpet = withInstrument(flute, "trompete");
+    expect([asTrumpet.instrument, asTrumpet.fingeringsAvailable, asTrumpet.fingerings, asTrumpet.family]).toEqual(["trompete pirata", true, true, "trumpet"]);
+    const asFlute = withInstrument(trumpet, "flauta");
+    expect([asFlute.instrument, asFlute.fingeringsAvailable, asFlute.fingerings, asFlute.family]).toEqual(["flauta", false, false, null]);
+  });
+  it("keeps piratas off when switching between instruments that have them", () => {
+    const off = withFingerings(trumpet, false);
+    expect(withInstrument(off, "trombone")).toMatchObject({ instrument: "trombone", fingerings: false, family: "trombone" });
+  });
+});

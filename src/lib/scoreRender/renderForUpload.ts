@@ -12,7 +12,7 @@ import { pirataInstrument } from "../instruments";
 import { packageMscx, readMsczIdentityBytes } from "../msczIdentity";
 import { buildPartBasenames, safeFilename } from "../partFiles";
 import type { ParsedPart, ParsedScore } from "../parseUploadedFiles";
-import { caderninhoPartTransform, partInstrumentSettings, type PartTransformReport } from "./partTransform";
+import { caderninhoPartTransform, partSettings, type PartTransformReport } from "./partTransform";
 import { libraryOptionsFor, resolvePartFormatting, sheetLayoutFor } from "./profile";
 
 /** What the user chose for one part of the score; parts not listed are not uploaded. */
@@ -119,7 +119,8 @@ export async function renderForUpload(
             signal,
             compatibility: "allowUnverified",
             partTransform: (input) =>
-              caderninhoPartTransform(effective, (report) => transforms.set(input.part.id, report))(input),
+              caderninhoPartTransform(effective, (report) => transforms.set(input.part.id, report),
+                (part) => choices.find((choice) => choice.ordinal === part.ordinal)?.instrument)(input),
             partLayout: (part) => sheetLayoutFor(resolvePartFormatting(effective, part.name)),
           },
         );
@@ -137,7 +138,7 @@ export async function renderForUpload(
           const part = catalog.parts.find((candidate) => candidate.ordinal === choice.ordinal);
           if (!part) {throw new Error(`Part ${choice.ordinal} is not in the score`);}
           const formatting = resolvePartFormatting(effective, part.name);
-          const { settings } = partInstrumentSettings(part);
+          const { settings } = partSettings(part, choice.instrument);
           const fingered =
             !!settings?.fingering &&
             (formatting.fingering.enabled === "byInstrument" || formatting.fingering.enabled);

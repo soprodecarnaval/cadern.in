@@ -18,6 +18,7 @@ import { commitUpload, prepareUpload, type UploadContext, type UploadFlowService
 import { MAX_SCORE_BYTES, choicesFrom, initialState, metadataFromTags, partRows, rowsFromStored, type EnviarState, type PartRow, type Step, type StoredPart } from "./enviarState";
 import { zMetajson } from "../../../../types/metajson";
 import type { ScoreMetadata } from "../../../../types/docs";
+import type { Instrument } from "../../../../types/instrument";
 
 export { initialState, MAX_SCORE_BYTES, type EnviarState } from "./enviarState";
 export type { Preview, Status } from "./enviarState";
@@ -50,6 +51,10 @@ const message = (error: unknown) => {
   return error instanceof Error ? error.message : String(error);
 };
 
+/** What a part's pages depend on: its resolved settings and the instrument it is filed under. */
+const pageSignature = (profile: FormattingProfile, partName: string, instrument: Instrument | undefined) =>
+  JSON.stringify([instrument ?? null, resolvePartFormatting(profile, partName)]);
+
 export function useEnviarFlow(deps: EnviarDeps) {
   const [state, setState] = useState<EnviarState>(initialState);
   const library = useRef<ScoreLibrary | null>(null);
@@ -63,6 +68,9 @@ export function useEnviarFlow(deps: EnviarDeps) {
   const rendered = useRef(new Map<number, string>());
   const depsRef = useRef(deps);
   depsRef.current = deps;
+  // The instrument each part is filed under: it, not the file's instrument, drives the formatting.
+  const instruments = useRef(new Map<number, Instrument>());
+  instruments.current = new Map(choicesFrom(state.rows).map((choice) => [choice.ordinal, choice.instrument]));
 
   const update = useCallback((change: Partial<EnviarState> | ((state: EnviarState) => Partial<EnviarState>)) =>
     setState((current) => ({ ...current, ...(typeof change === "function" ? change(current) : change) })), []);
@@ -85,7 +93,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
       {
         signal,
         compatibility: "allowUnverified",
-        partTransform: (input) => caderninhoPartTransform(effective.current)(input),
+        partTransform: (input) => caderninhoPartTransform(effective.current, undefined, (part) => instruments.current.get(part.ordinal))(input),
         partLayout: (part) => sheetLayoutFor(resolvePartFormatting(effective.current, part.name)),
       },
     );
@@ -215,7 +223,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
       profile,
       parts: Object.fromEntries(choices.map((choice) => {
         const part = parts.current.find((candidate) => candidate.ordinal === choice.ordinal);
-        return [choice.ordinal, part ? JSON.stringify(resolvePartFormatting(profile, part.name)) : ""];
+        return [choice.ordinal, part ? pageSignature(profile, part.name, choice.instrument) : ""];
       })),
     };
   }, [state.profile, state.rows]);
@@ -337,7 +345,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
           useProfile: (profile) => {
             effective.current = profile;
             for (const part of catalogRef.current?.parts ?? []) {
-              const signature = JSON.stringify(resolvePartFormatting(profile, part.name));
+              const signature = pageSignature(profile, part.name, instruments.current.get(part.ordinal));
               if (rendered.current.get(part.ordinal) !== signature) {
                 open.invalidate({ kind: "part", partId: part.id });
                 rendered.current.delete(part.ordinal);

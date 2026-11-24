@@ -5,6 +5,8 @@ import type { Instrument } from "../../../types/instrument";
 import { inspect } from "../browserScore/input";
 import { excerptInstruments } from "../browserScore/partInstruments";
 import {
+  chosenFamily,
+  chosenInstrumentSettings,
   guessInstrument,
   instrumentSettings,
   mapInstrumentId,
@@ -250,5 +252,37 @@ describe("test-scores/all-instruments.mscz", () => {
     expect(
       excerptInstruments({ title: "12_Tuba_Eb", parts: [] }, 0, 19, info).map((i) => i.id),
     ).toEqual(["bass-eb-tuba"]);
+  });
+});
+
+describe("chosenInstrumentSettings", () => {
+  it("formats a part as the instrument it is filed under", () => {
+    expect(chosenInstrumentSettings("trompete pirata", instrumentSettings("flute"))?.fingering?.family).toBe("trumpet");
+    expect(chosenInstrumentSettings("trombone", null)).toMatchObject({ transpositionForTable: 2, dynamicTrombone: true });
+    expect(chosenInstrumentSettings("bombardino", null)?.fingering?.family).toBe("euphonium");
+    expect(chosenInstrumentSettings("flauta", instrumentSettings("bb-trumpet"))).toBeNull();
+    expect(chosenInstrumentSettings("sax alto", instrumentSettings("bb-tuba"))).toBeNull();
+  });
+
+  it("keeps the file's settings when they already are that instrument", () => {
+    const cTrumpet = instrumentSettings("c-trumpet");
+    expect(chosenInstrumentSettings("trompete", cTrumpet)).toBe(cTrumpet);
+    const trebleTuba = instrumentSettings("bb-tuba-treble");
+    expect(chosenInstrumentSettings("tuba", trebleTuba)).toBe(trebleTuba);
+  });
+
+  it("uses the chosen tuning for tuba fingerings, keeping how the file writes the tuba", () => {
+    const asEb = chosenInstrumentSettings("tuba eb", instrumentSettings("bb-tuba-treble"));
+    expect(asEb?.transpositionForTable).toBe(-3);
+    expect(asEb?.tubaPolicy).toEqual(instrumentSettings("bb-tuba-treble")?.tubaPolicy);
+    // A part the file does not declare as a tuba gets tuba fingerings, but no tuba notation.
+    const fromHorn = chosenInstrumentSettings("tuba", instrumentSettings("horn"));
+    expect(fromHorn).toMatchObject({ transpositionForTable: 2 });
+    expect(fromHorn?.tubaPolicy).toBeUndefined();
+  });
+
+  it("names the fingering family of each instrument", () => {
+    expect((["trompete", "trombone pirata", "tuba eb", "bombardino", "clarinete"] as const).map(chosenFamily))
+      .toEqual(["trumpet", "trombone", "tuba", "euphonium", null]);
   });
 });

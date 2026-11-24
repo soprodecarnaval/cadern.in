@@ -88,4 +88,14 @@ describe("transformPartMusicXml", () => {
     const off = transformPartMusicXml(PART, { ...trumpet, name: "Outro" }, profile, codec);
     expect(off.report.fingerings).toEqual([]);
   });
+
+  it("formats a part as the instrument it is filed under, whatever the file declares", () => {
+    const asTrumpet = transformPartMusicXml(PART, flute, DEFAULT_FORMATTING_PROFILE, codec, "trompete pirata");
+    expect(fingeringsOf(codec.parse(asTrumpet.musicXml))).toEqual(["1", null, "1", "6", null, null, null, null, "3"]);
+    const asFlute = transformPartMusicXml(PART, trumpet, DEFAULT_FORMATTING_PROFILE, codec, "flauta");
+    expect(asFlute.report.fingerings).toEqual([]);
+    // The written notes are left as they are.
+    const pitches = (xml: string) => [...xml.matchAll(/<step>(\w)<\/step>/g)].map((m) => m[1]);
+    expect(pitches(asTrumpet.musicXml)).toEqual(pitches(PART));
+  });
 });
