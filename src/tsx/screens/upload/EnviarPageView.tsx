@@ -282,6 +282,12 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
   const manual = typeof value === "number";
   const displayedValue = manual ? value : stepper?.automatic;
   const fixedDefault = stepper ? stepper.automatic ?? stepper.range.default : min + (max - min) / 2;
+  // What is being typed: applied as soon as it is a number in range (typing fixes the value);
+  // anything else waits, with a hint, and leaving the field shows the applied value again.
+  const [draft, setDraft] = useState<string | null>(null);
+  const typed = draft === null ? null : Number(draft.trim().replace(",", "."));
+  const invalid = draft !== null && !(draft.trim() !== "" && Number.isFinite(typed) && typed! >= min && typed! <= max);
+  const hintId = `${name}-range`;
   return (
     <fieldset className="enviar-choice">
       <legend>{label}</legend>
@@ -301,18 +307,33 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
               onClick={() => { if (displayedValue !== undefined) {onChange(stepSize(stepper.range, displayedValue, -1));} }}>−</Button>
           )}
           <Input
-            type="number"
+            type="text"
+            inputMode="decimal"
+            role="spinbutton"
             aria-label={`${label}${unit ? ` (${unit})` : ""}`}
-            min={min}
-            max={max}
-            step={step}
-            value={displayedValue ?? ""}
+            aria-valuemin={min}
+            aria-valuemax={max}
+            aria-valuenow={displayedValue}
+            value={draft ?? (displayedValue === undefined ? "" : decimal(displayedValue, step < 1 ? 2 : 0))}
             placeholder={stepper ? "auto" : undefined}
-            readOnly={!!stepper && !manual}
-            onChange={(event) => {
-              const number = Number(event.target.value);
-              if (Number.isFinite(number) && number >= min && number <= max) {onChange(number);}
+            aria-invalid={invalid || undefined}
+            aria-describedby={invalid ? hintId : undefined}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {return;}
+              event.preventDefault();
+              const from = displayedValue ?? fixedDefault;
+              const direction = event.key === "ArrowUp" ? 1 : -1;
+              const next = stepper ? stepSize(stepper.range, from, direction) : Math.min(max, Math.max(min, from + direction * step));
+              setDraft(null);
+              onChange(next);
             }}
+            onChange={(event) => {
+              const text = event.target.value;
+              setDraft(text);
+              const number = Number(text.trim().replace(",", "."));
+              if (text.trim() !== "" && Number.isFinite(number) && number >= min && number <= max) {onChange(Math.round(number * 100) / 100);}
+            }}
+            onBlur={() => setDraft(null)}
           />
           {stepper && (
             <Button variant="secondary" size="sm" aria-label={`Aumentar: ${label}`}
@@ -321,6 +342,11 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
           )}
           {unit && <span>{unit}</span>}
         </span>
+      )}
+      {invalid && (
+        <p id={hintId} className="enviar-field-error">
+          Use um valor de {decimal(min, step < 1 ? 2 : 0)} a {decimal(max, step < 1 ? 2 : 0)}{unit ? ` ${unit}` : ""}.
+        </p>
       )}
     </fieldset>
   );

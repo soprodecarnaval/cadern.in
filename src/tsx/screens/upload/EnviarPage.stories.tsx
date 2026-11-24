@@ -108,7 +108,7 @@ export const Formatting: Story = {
     await expect(canvas.getAllByRole("tab")).toHaveLength(3);
     await expect(canvas.getByRole("tab", { name: "Flauta" })).toHaveAttribute("aria-selected", "true");
     const part = within(canvas.getByRole("region", { name: "Parte: Flauta" }));
-    await expect(part.getByRole("spinbutton", { name: "Tamanho da pauta (mm)" })).toHaveValue(1.45);
+    await expect(part.getByRole("spinbutton", { name: "Tamanho da pauta (mm)" })).toHaveValue("1,45");
     await expect(canvas.getAllByText(/Pauta de 1,45 mm/)).toHaveLength(1);
     await userEvent.click(canvas.getByRole("tab", { name: /Tuba/ }));
     await expect(canvas.getByRole("region", { name: "Parte: Tuba" })).toBeVisible();
@@ -140,26 +140,45 @@ export const FingeringSize: Story = {
     await expect(canvas.queryByRole("spinbutton", { name: "Tamanho dos números" })).toBeNull();
     await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
     await expect(mode("Automático")).toBeChecked();
-    await expect(size()).toHaveValue(0.75);
+    await expect(size()).toHaveValue("0,75");
     await userEvent.click(adjust("Aumentar"));
     await expect(mode("Fixo")).toBeChecked();
-    await expect(size()).toHaveValue(0.8);
+    await expect(size()).toHaveValue("0,80");
 
     await userEvent.click(canvas.getByRole("tab", { name: "Tuba" }));
     await expect(mode("Automático")).toBeChecked();
-    await expect(size()).toHaveValue(0.9);
+    await expect(size()).toHaveValue("0,90");
     await userEvent.click(adjust("Diminuir"));
-    await expect(size()).toHaveValue(0.85);
+    await expect(size()).toHaveValue("0,85");
 
     await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
-    await expect(size()).toHaveValue(0.8);
+    await expect(size()).toHaveValue("0,80");
     await userEvent.click(mode("Automático"));
-    await expect(size()).toHaveValue(0.75);
-    await expect(size()).toHaveAttribute("readonly");
+    await expect(size()).toHaveValue("0,75");
 
     await userEvent.click(canvas.getByRole("tab", { name: "Tuba" }));
     await expect(mode("Fixo")).toBeChecked();
-    await expect(size()).toHaveValue(0.85);
+    await expect(size()).toHaveValue("0,85");
+
+    // A value typed in, with a comma, applies at once and fixes the size.
+    const staff = () => canvas.getByRole("spinbutton", { name: "Tamanho da pauta (mm)" });
+    const staffMode = (name: string) => within(canvas.getByRole("group", { name: "Tamanho da pauta" })).getByRole("radio", { name });
+    await expect(staffMode("Automático")).toBeChecked();
+    await userEvent.clear(staff());
+    await userEvent.type(staff(), "3,5");
+    await expect(staffMode("Fixo")).toBeChecked();
+    await expect(staff()).toHaveValue("3,5");
+    await expect(staff()).toHaveAttribute("aria-valuenow", "3.5");
+    // Out of range: a hint, and the applied value stays.
+    await userEvent.clear(staff());
+    await userEvent.type(staff(), "9");
+    await expect(staff()).toHaveAttribute("aria-invalid", "true");
+    await expect(canvas.getByText("Use um valor de 0,80 a 8,00 mm.")).toBeVisible();
+    await userEvent.tab();
+    await expect(staff()).toHaveValue("3,50");
+    await userEvent.click(staff());
+    await userEvent.keyboard("{ArrowUp}");
+    await expect(staff()).toHaveValue("3,55");
   },
 };
 

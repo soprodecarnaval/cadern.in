@@ -119,12 +119,12 @@ async function sendThroughScreen(page, { file, tweak = false, metadata = null } 
         }
         for (const [name, size] of sizedParts) {
             await selectPart(name);
-            assert.equal(await sizeInput.inputValue(), size);
+            assert.equal(Number((await sizeInput.inputValue()).replace(',', '.')), Number(size));
         }
         // Staff size of one part: the stepper starts from the size the fit chose and goes up 0.05 mm.
         const staff = page.getByRole('group', { name: 'Tamanho da pauta' });
         const staffInput = staff.getByRole('spinbutton');
-        const automatic = Number(await staffInput.inputValue());
+        const automatic = Number((await staffInput.inputValue()).replace(',', '.'));
         assert(automatic >= 0.8 && automatic <= 2.4, `automatic staff size shown (${automatic})`);
         const before = await preview.getAttribute('src');
         await page.getByRole('button', { name: 'Diminuir: Tamanho da pauta' }).click();
@@ -133,7 +133,7 @@ async function sendThroughScreen(page, { file, tweak = false, metadata = null } 
             return img && img.getAttribute('src') !== previous;
         }, { previous: before }, { timeout: 120000 });
         assert(await staff.getByRole('radio', { name: 'Fixo' }).isChecked());
-        assert.equal(Number(await staffInput.inputValue()), Number((automatic - 0.05).toFixed(2)));
+        assert.equal(Number((await staffInput.inputValue()).replace(',', '.')), Number((automatic - 0.05).toFixed(2)));
         assert.match(await page.locator('.enviar-preview-info').innerText(), new RegExp(`Pauta de ${(automatic - 0.05).toFixed(2).replace('.', ',')} mm`));
     }
     await page.getByRole('button', { name: 'Continuar' }).click();
