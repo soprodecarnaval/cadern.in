@@ -768,7 +768,9 @@ function StepActions({ state, context, onStep, onSend, onCancel }: Pick<EnviarPa
     default:
       return null;
   }
-  return <div className="enviar-step-actions">
+  // Keyed by step: reusing the clicked button as the next step's submit button
+  // would let the click's default action submit the Dados form, skipping it.
+  return <div className="enviar-step-actions" key={state.step}>
     <div className="enviar-step-secondary">{secondary}</div>
     {primary}
   </div>;
