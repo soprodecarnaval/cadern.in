@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { zInstrument, type Instrument } from "../../../../types/instrument";
 import type { FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
 import { SONGBOOK_FIT_AREA } from "../../../../types/formattingProfile";
@@ -360,8 +361,11 @@ function Controls({ state, onProfile, shownRow, shownPreview }: Pick<EnviarPageV
   shownRow: PartRow | undefined; shownPreview: Preview | undefined;
 }) {
   const ready = !!shownPreview && !shownPreview.rendering && !shownPreview.error;
+  // Confirmations float over the page, so the column never shifts; kept here so a tab switch keeps them.
+  const [notice, setNotice] = useState<{ id: number; text: string } | null>(null);
   return (
     <form className="enviar-controls" onSubmit={(event) => event.preventDefault()} aria-label="Formatação">
+      <Toast notice={notice} onClose={() => setNotice(null)} />
       {shownRow && (
         <section className="enviar-controls-section" aria-labelledby="enviar-parte">
           <header>
@@ -369,6 +373,7 @@ function Controls({ state, onProfile, shownRow, shownPreview }: Pick<EnviarPageV
             <p>Vale só para a parte aberta na prévia; escolha outra nas abas.</p>
           </header>
           <PartControls key={shownRow.ordinal} state={state} onProfile={onProfile} row={shownRow}
+            onApplied={(text) => setNotice((current) => ({ id: (current?.id ?? 0) + 1, text }))}
             automaticStaff={ready ? shownPreview.layout?.staffSpaceMm : undefined}
             automaticFingering={ready ? shownPreview.automaticFingeringSize : undefined} />
         </section>
@@ -378,17 +383,45 @@ function Controls({ state, onProfile, shownRow, shownPreview }: Pick<EnviarPageV
 }
 
 /** The settings of the part shown in the preview. */
-function PartControls({ state, onProfile, row, automaticStaff, automaticFingering }: Pick<EnviarPageViewProps, "state" | "onProfile"> & {
+/** How long a confirmation stays on screen. */
+export const TOAST_MS = 5000;
+
+/**
+ * A short confirmation at the top right of the window, over the page, gone after TOAST_MS.
+ * The live region is always there, so screen readers announce each new text.
+ */
+function Toast({ notice, onClose }: { notice: { id: number; text: string } | null; onClose: () => void }) {
+  const close = useRef(onClose);
+  close.current = onClose;
+  useEffect(() => {
+    if (!notice) {return;}
+    const timer = setTimeout(() => close.current(), TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  return createPortal(
+    <div className="enviar-toast-region" role="status" aria-live="polite">
+      {notice && (
+        <div className="enviar-toast" key={notice.id}>
+          <span>{notice.text}</span>
+          <button type="button" className="enviar-toast-close" aria-label="Fechar aviso" onClick={onClose}>×</button>
+        </div>
+      )}
+    </div>,
+    document.body,
+  );
+}
+
+function PartControls({ state, onProfile, row, automaticStaff, automaticFingering, onApplied }: Pick<EnviarPageViewProps, "state" | "onProfile"> & {
   row: PartRow; automaticStaff: number | undefined; automaticFingering: number | undefined;
+  onApplied: (text: string) => void;
 }) {
   const settings = formattingOf(state.profile, row.name);
-  const [applied, setApplied] = useState<string | null>(null);
-  const change = (patch: PartFormatting) => { setApplied(null); onProfile(withFormatting(state.profile, row.name, patch)); };
+  const change = (patch: PartFormatting) => onProfile(withFormatting(state.profile, row.name, patch));
   const included = state.rows.filter((candidate) => candidate.include && candidate.instrument);
   // This part's choice (a fixed size, or automatic) made the choice of every other part.
   const applyToAll = (field: string, targets: readonly PartRow[], patch: PartFormatting) => {
     onProfile(withFormattingForAll(state.profile, [...new Set([row.name, ...targets.map((target) => target.name)])], patch));
-    setApplied(`${field} aplicado a ${targets.length} ${targets.length === 1 ? "outra parte" : "outras partes"}.`);
+    onApplied(`${field} aplicado a ${targets.length} ${targets.length === 1 ? "outra parte" : "outras partes"}.`);
   };
   const applyLink = (field: string, targets: readonly PartRow[], patch: PartFormatting) => targets.length > 0 && (
     <Button variant="text" size="sm" className="enviar-apply-all" aria-label={`Aplicar a todas as partes: ${field}`}
@@ -415,7 +448,6 @@ function PartControls({ state, onProfile, row, automaticStaff, automaticFingerin
           {applyLink("Tamanho dos números", others.filter((candidate) => candidate.fingerings), { fingering: { size: settings.fingering?.size ?? "auto" } })}
         </AutoNumber>
       )}
-      <p className="enviar-applied" role="status">{applied}</p>
       <FingeringAndCleanupControls settings={settings} onChange={change}
         showFingering={row.fingerings} showTrombone={row.family === "trombone"} />
       {hasOverride(state.profile, row.name) && (

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "@storybook/test";
 import { DEFAULT_FORMATTING_PROFILE } from "../../../../types/formattingProfile";
 import { initialState, partRows, type EnviarState } from "./enviarState";
 import { EnviarPageView } from "./EnviarPageView";
@@ -203,10 +203,14 @@ export const ApplyToAllParts: Story = {
     await userEvent.type(field("Tamanho da pauta (mm)"), "2,5");
     await userEvent.click(canvas.getByRole("button", { name: "Aumentar: Tamanho dos números" }));
     await userEvent.click(canvas.getByRole("button", { name: "Aplicar a todas as partes: Tamanho da pauta" }));
-    await expect(canvas.getByText("Tamanho da pauta aplicado a 2 outras partes.")).toHaveAttribute("role", "status");
+    // The confirmation floats at the top right, outside the settings column.
+    const body = within(canvasElement.ownerDocument.body);
+    const notice = body.getByText("Tamanho da pauta aplicado a 2 outras partes.");
+    await expect(notice.closest(".enviar-controls")).toBeNull();
+    await expect(notice.closest("[role=status]")).toHaveClass("enviar-toast-region");
     // Fingering size goes only to the other parts with fingerings (the tuba, not the flute).
     await userEvent.click(canvas.getByRole("button", { name: "Aplicar a todas as partes: Tamanho dos números" }));
-    await expect(canvas.getByText("Tamanho dos números aplicado a 1 outra parte.")).toBeVisible();
+    await expect(body.getByText("Tamanho dos números aplicado a 1 outra parte.")).toBeVisible();
 
     await userEvent.click(canvas.getByRole("tab", { name: "Tuba" }));
     await expect(fixed("Tamanho da pauta")).toBeChecked();
@@ -216,7 +220,13 @@ export const ApplyToAllParts: Story = {
     await userEvent.click(canvas.getByRole("tab", { name: "Flauta" }));
     await expect(field("Tamanho da pauta (mm)")).toHaveValue("2,50");
     await expect(canvas.queryByRole("group", { name: "Tamanho dos números" })).toBeNull();
-    await expect(canvas.queryByText(/aplicado a/)).toBeNull();
+    // Still shown after a tab switch; it closes with its button, or by itself after 5 s.
+    await userEvent.click(body.getByRole("button", { name: "Fechar aviso" }));
+    await expect(body.queryByText(/aplicado a/)).toBeNull();
+    await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Aplicar a todas as partes: Tamanho da pauta" }));
+    await expect(body.getByText("Tamanho da pauta aplicado a 2 outras partes.")).toBeVisible();
+    await waitFor(() => expect(body.queryByText(/aplicado a/)).toBeNull(), { timeout: 6000 });
   },
 };
 
