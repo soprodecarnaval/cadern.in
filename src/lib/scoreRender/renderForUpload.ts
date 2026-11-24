@@ -2,6 +2,7 @@
 // uploadScore accept (ticket 010): open → prepare parts → clean-up, tuba
 // notation and fingerings per part → fitted pages → MIDI → identity, with the
 // formatting profile and renderer recorded in the v2 .metajson.
+import type { ScoreMetadata } from "../../../types/docs";
 import type { FormattingProfile } from "../../../types/formattingProfile";
 import type { Instrument } from "../../../types/instrument";
 import { METAJSON_VERSION, type Metajson } from "../../../types/metajson";
@@ -43,6 +44,8 @@ export type RenderProgress = { step: "open" | "parts" | "render" | "midi" | "don
 
 export type RenderOptions = {
   signal?: AbortSignal;
+  /** Metadata the user checked (send screen); without it the file's tags are used. */
+  metadata?: ScoreMetadata;
   onProgress?: (progress: RenderProgress) => void;
   /** A library created with `libraryOptionsFor(profile)`; created (and disposed) here when absent. */
   library?: ScoreLibrary;
@@ -143,7 +146,7 @@ export async function renderForUpload(
 
       const tags = session.importInfo.metaTags;
       const stem = fileName.replace(/\.(mscz|mscx)$/i, "");
-      const title = safeFilename(tags.workTitle?.trim() || stem);
+      const title = safeFilename((options.metadata ? options.metadata.title : tags.workTitle)?.trim() || stem);
       const basenames = buildPartBasenames(
         title,
         chosen.map(({ part, instrument }) => ({ id: part.id, instrument })),
@@ -195,7 +198,9 @@ export async function renderForUpload(
       const archive = fileName.toLowerCase().endsWith(".mscx") ? packageMscx(bytes) : bytes;
       fileMap.set("mscz", new File([archive], `${title}.mscz`, { type: "application/octet-stream" }));
       const source = readMsczIdentityBytes(archive);
-      const fields = metajsonFields(tags);
+      const fields = options.metadata
+        ? { composer: options.metadata.composer, previousSource: options.metadata.sub, poet: options.metadata.tags.join(", ") }
+        : metajsonFields(tags);
       const metajson: Metajson = {
         version: METAJSON_VERSION,
         ...(source ? { source } : {}),
@@ -216,7 +221,7 @@ export async function renderForUpload(
           composer: fields.composer,
           sub: fields.previousSource,
           // As parseUploadedFiles reads the .metajson.
-          tags: fields.poet.split(",").map((tag) => tag.trim()),
+          tags: options.metadata ? [...options.metadata.tags] : fields.poet.split(",").map((tag) => tag.trim()),
           parts,
           fileMap,
           warnings,

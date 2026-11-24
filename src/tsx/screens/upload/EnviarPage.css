@@ -39,6 +39,12 @@
 .enviar-drop input { margin-top: var(--ds-space-2); }
 .enviar-hint { color: var(--ds-text-secondary); font-size: var(--ds-caption); }
 
+.enviar-data { display: flex; flex-direction: column; gap: var(--ds-space-4); max-width: 36rem; }
+.enviar-field { display: flex; flex-direction: column; gap: var(--ds-space-1); }
+.enviar-field label { font-weight: var(--ds-weight-heading); }
+.enviar-field .enviar-hint { margin: 0; }
+.enviar-field-error { color: var(--ds-invalid); margin: 0; }
+
 .enviar-parts td, .enviar-parts th { vertical-align: middle; }
 
 .enviar-actions {
@@ -100,19 +106,8 @@
 .enviar-number input { width: 6rem; }
 
 .enviar-previews { display: grid; gap: var(--ds-space-3); }
-.enviar-preview { border: 1px solid var(--ds-muted); border-radius: var(--ds-radius-surface); padding: var(--ds-space-2); }
-.enviar-sheet-header {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: var(--ds-space-2);
-  align-items: baseline;
-  border-bottom: 1px solid var(--ds-muted);
-  padding-bottom: 0.25rem;
-  margin-bottom: 0.25rem;
-}
-.enviar-sheet-number { font-weight: var(--ds-weight-heading); }
-.enviar-sheet-title { font-weight: var(--ds-weight-heading); text-transform: uppercase; }
-.enviar-sheet-instrument { color: var(--ds-text-secondary); }
+/* Only the page and the frame of the space it gets in the PDF. */
+.enviar-preview { padding: 1px; }
 .enviar-sheet {
   position: relative;
   width: 100%;

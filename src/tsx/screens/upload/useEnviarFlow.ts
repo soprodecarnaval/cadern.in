@@ -15,8 +15,9 @@ import { caderninhoPartTransform } from "../../../lib/scoreRender/partTransform"
 import { libraryOptionsFor, resolvePartFormatting, sheetLayoutFor } from "../../../lib/scoreRender/profile";
 import { profileWithChoices, renderForUpload } from "../../../lib/scoreRender/renderForUpload";
 import { commitUpload, prepareUpload, type UploadContext, type UploadFlowServices } from "../../../lib/uploadFlow";
-import { MAX_SCORE_BYTES, choicesFrom, initialState, partRows, rowsFromStored, type EnviarState, type PartRow, type Step, type StoredPart } from "./enviarState";
+import { MAX_SCORE_BYTES, choicesFrom, initialState, metadataFromTags, partRows, rowsFromStored, type EnviarState, type PartRow, type Step, type StoredPart } from "./enviarState";
 import { zMetajson } from "../../../../types/metajson";
+import type { ScoreMetadata } from "../../../../types/docs";
 
 export { initialState, MAX_SCORE_BYTES, type EnviarState } from "./enviarState";
 export type { Preview, Status } from "./enviarState";
@@ -117,7 +118,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
   const openBytes = useCallback(async (
     read: (signal: AbortSignal) => Promise<Uint8Array>,
     fileName: string,
-    stored?: { profile: FormattingProfile; parts: readonly StoredPart[]; title: string },
+    stored?: { profile: FormattingProfile; parts: readonly StoredPart[]; metadata: ScoreMetadata },
   ) => {
     controller.current.abort();
     controller.current = new AbortController();
@@ -146,7 +147,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
       update({
         step: "partes",
         status: { kind: "idle" },
-        title: stored?.title ?? safeFilename(tags.workTitle?.trim() || fileName.replace(/\.(mscz|mscx)$/i, "")),
+        metadata: stored?.metadata ?? metadataFromTags(tags, fileName),
         rows: stored ? rowsFromStored(rows, stored.parts, stored.profile) : rows,
         ...(stored ? { profile: stored.profile } : {}),
         previews: {},
@@ -182,7 +183,11 @@ export function useEnviarFlow(deps: EnviarDeps) {
             return new Uint8Array(await response.arrayBuffer());
           }),
           `${safeFilename(title)}.mscz`,
-          { profile: manifest?.formatting ?? DEFAULT_FORMATTING_PROFILE, parts: manifest?.parts ?? [], title: safeFilename(title) },
+          {
+            profile: manifest?.formatting ?? DEFAULT_FORMATTING_PROFILE,
+            parts: manifest?.parts ?? [],
+            metadata: { title: safeFilename(title), composer: revision.metadata?.composer ?? "", sub: revision.metadata?.sub ?? "", tags: revision.metadata?.tags ?? [] },
+          },
         );
       } catch (error) {
         fail(error);
@@ -297,7 +302,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
           ? packageMscx(bytes.current)
           : bytes.current;
         const source = archive ? readMsczIdentityBytes(archive) : null;
-        const prepared = await prepareUpload(context, { title: state.title, ...(source ? { source } : {}) }, user.uid, services);
+        const prepared = await prepareUpload(context, { title: state.metadata.title, ...(source ? { source } : {}) }, user.uid, services);
         if (signal.aborted) {return;}
         if (!prepared.ok) {
           update({ status: { kind: "error", message: prepared.reason } });
@@ -310,7 +315,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
       return;
     }
     update({ step, status: { kind: "idle" } });
-  }, [fail, openSession, state.fileName, state.title, update]);
+  }, [fail, openSession, state.fileName, state.metadata.title, update]);
 
   const send = useCallback(async () => {
     const { context, user, services, upload } = depsRef.current;
@@ -324,6 +329,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
       const open = session.current!;
       const { parsed } = await renderForUpload(bytes.current, fileName, state.profile, choicesFrom(state.rows), {
         signal,
+        metadata: state.metadata,
         openSession: {
           session: open,
           catalog: catalogRef.current!,
@@ -359,7 +365,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
     } catch (error) {
       if (!signal.aborted) {fail(error);}
     }
-  }, [fail, openSession, state.fileName, state.profile, state.rows, state.target, update]);
+  }, [fail, openSession, state.fileName, state.metadata, state.profile, state.rows, state.target, update]);
 
   const listen = useCallback(async (ordinal: number) => {
     const open = session.current;
@@ -399,6 +405,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
     listen,
     setRows: (rows: PartRow[]) => update({ rows }),
     setProfile: (profile: FormattingProfile) => update({ profile }),
+    setMetadata: (metadata: ScoreMetadata) => update({ metadata }),
     setEditing: (editing: number | null) => update({ editing }),
     dismissError: () => update({ status: { kind: "idle" } }),
     reset: () => {

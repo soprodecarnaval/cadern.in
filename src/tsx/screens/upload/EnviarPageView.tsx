@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { zInstrument, type Instrument } from "../../../../types/instrument";
 import type { FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
 import { SONGBOOK_FIT_AREA } from "../../../../types/formattingProfile";
@@ -9,10 +9,13 @@ import { Select } from "../../atoms/Select";
 import { PartTabs } from "../../components/scores/PartTabs";
 import { projectPath, ROUTE_PATTERNS } from "../../../lib/routes";
 import type { UploadContext } from "../../../../types/exportDeepLink";
+import type { ScoreMetadata } from "../../../../types/docs";
 import {
   STEPS,
   formattingOf,
   hasOverride,
+  metadataProblem,
+  tagsFromText,
   warningText,
   withFingerings,
   withFormatting,
@@ -36,6 +39,7 @@ export type EnviarPageViewProps = {
   onStep: (step: Step) => void;
   onRows: (rows: PartRow[]) => void;
   onProfile: (profile: FormattingProfile) => void;
+  onMetadata: (metadata: ScoreMetadata) => void;
   onEditing: (ordinal: number | null) => void;
   onListen: (ordinal: number) => void;
   onSend: () => void;
@@ -199,10 +203,49 @@ function PartsStep({ state, context, onRows, onStep }: Pick<EnviarPageViewProps,
       </div>
       <div className="enviar-actions">
         {context.mode !== "reformat" && <Button variant="secondary" onClick={() => onStep("arquivo")}>Trocar arquivo</Button>}
-        <Button disabled={!included} onClick={() => onStep("formatacao")}>
-          Formatar {included} {included === 1 ? "parte" : "partes"}
-        </Button>
+        <Button disabled={!included} onClick={() => onStep("dados")}>Continuar</Button>
       </div>
+    </section>
+  );
+}
+
+function DataStep({ state, onMetadata, onStep }: Pick<EnviarPageViewProps, "state" | "onMetadata" | "onStep">) {
+  const { metadata } = state;
+  // Tags are typed as one comma-separated line; the text is kept as typed.
+  const [tagsText, setTagsText] = useState(metadata.tags.join(", "));
+  const included = state.rows.filter((row) => row.include && row.instrument).length;
+  const problem = metadataProblem(metadata);
+  const field = (key: "title" | "composer" | "sub", label: string, hint?: string) => (
+    <div className="enviar-field">
+      <label htmlFor={`enviar-${key}`}>{label}</label>
+      <Input id={`enviar-${key}`} value={metadata[key]} required={key === "title"}
+        aria-describedby={hint ? `enviar-${key}-hint` : undefined}
+        onChange={(event) => onMetadata({ ...metadata, [key]: event.target.value })} />
+      {hint && <p id={`enviar-${key}-hint`} className="enviar-hint">{hint}</p>}
+    </div>
+  );
+  return (
+    <section aria-labelledby="enviar-dados">
+      <h2 id="enviar-dados" tabIndex={-1}>Dados</h2>
+      <p>Confira os dados lidos do arquivo. As correções valem para o que é guardado no cadern.in; o arquivo .mscz vai como você enviou.</p>
+      <form className="enviar-data" onSubmit={(event) => { event.preventDefault(); if (!problem) {onStep("formatacao");} }}>
+        {field("title", "Título")}
+        {field("composer", "Compositor")}
+        {field("sub", "Trecho")}
+        <div className="enviar-field">
+          <label htmlFor="enviar-tags">Tags</label>
+          <Input id="enviar-tags" value={tagsText} aria-describedby="enviar-tags-hint"
+            onChange={(event) => { setTagsText(event.target.value); onMetadata({ ...metadata, tags: tagsFromText(event.target.value) }); }} />
+          <p id="enviar-tags-hint" className="enviar-hint">Separe as tags com vírgulas.</p>
+        </div>
+        {problem && <p className="enviar-field-error" role="alert">{problem}</p>}
+        <div className="enviar-actions">
+          <Button variant="secondary" type="button" onClick={() => onStep("partes")}>Voltar às partes</Button>
+          <Button type="submit" disabled={!!problem || !included}>
+            Formatar {included} {included === 1 ? "parte" : "partes"}
+          </Button>
+        </div>
+      </form>
     </section>
   );
 }
@@ -372,19 +415,14 @@ function FingeringAndCleanupControls({ settings, onChange, showFingering, showTr
   );
 }
 
-function PreviewCard({ row, preview, title, midi, onListen, MidiPlayer }: {
-  row: PartRow; preview: Preview | undefined; title: string; midi: string | undefined;
+function PreviewCard({ row, preview, midi, onListen, MidiPlayer }: {
+  row: PartRow; preview: Preview | undefined; midi: string | undefined;
   onListen: (ordinal: number) => void; MidiPlayer: ComponentType<{ src: string }>;
 }) {
   const warnings = (preview?.warnings ?? []).map(warningText).filter((text): text is string => !!text);
   if (preview && preview.pages > 1 && !warnings.some((text) => text.startsWith("Não coube"))) {warnings.unshift("Não coube em uma página.");}
   return (
     <article className="enviar-preview" aria-busy={preview?.rendering ?? true} aria-label={`Prévia de ${row.name}`}>
-      <header className="enviar-sheet-header">
-        <span className="enviar-sheet-number">00</span>
-        <span className="enviar-sheet-title">{title}</span>
-        <span className="enviar-sheet-instrument">{row.name}</span>
-      </header>
       <div className="enviar-sheet" style={{ aspectRatio: `${SONGBOOK_FIT_AREA.widthMm} / ${SONGBOOK_FIT_AREA.heightMm}` }}>
         {preview?.svg ? (
           <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(preview.svg)}`} alt={`Página de ${row.name}`} />
@@ -434,14 +472,14 @@ function FormatStep(props: EnviarPageViewProps) {
                 return { key: String(row.ordinal), label: row.name, note: preview?.rendering ? "…" : warned ? "⚠" : undefined };
               })}
             >
-              <PreviewCard row={shownRow} preview={shownPreview} title={state.title}
+              <PreviewCard row={shownRow} preview={shownPreview}
                 midi={state.midi[shownRow.ordinal]} onListen={onListen} MidiPlayer={components.MidiPlayer} />
             </PartTabs>
           )}
         </div>
       </div>
       <div className="enviar-actions">
-        <Button variant="secondary" onClick={() => onStep("partes")}>Voltar às partes</Button>
+        <Button variant="secondary" onClick={() => onStep("dados")}>Voltar aos dados</Button>
         {rendering && <Button variant="text" onClick={props.onCancel}>Parar prévias</Button>}
         <Button onClick={() => onStep("enviar")}>Continuar</Button>
       </div>
@@ -455,7 +493,7 @@ function SendStep({ state, onStep, onSend }: Pick<EnviarPageViewProps, "state" |
   const destination = !target
     ? null
     : target.kind === "new"
-      ? `Partitura nova: “${state.title}”`
+      ? `Partitura nova: “${state.metadata.title}”`
       : target.kind === "version"
         ? `Nova versão de “${target.title}”`
         : `Cópia de “${target.sourceTitle}”, do projeto ${target.sourceProjectTitle}, neste projeto`;
@@ -523,7 +561,7 @@ export function EnviarPageView(props: EnviarPageViewProps) {
   const reformat = props.context.mode === "reformat";
   return (
     <Page className="enviar-page">
-      <h1>{reformat ? `Reformatar ${state.title || "partitura"}` : "Enviar partitura"}</h1>
+      <h1>{reformat ? `Reformatar ${state.metadata.title || "partitura"}` : "Enviar partitura"}</h1>
       {reformat && (
         <p>A música fica como está; só a formatação muda. O resultado é salvo como uma nova versão da partitura.</p>
       )}
@@ -544,6 +582,7 @@ export function EnviarPageView(props: EnviarPageViewProps) {
       <div ref={main}>
         {state.step === "arquivo" && !reformat && <FileStep {...props} />}
         {state.step === "partes" && <PartsStep {...props} />}
+        {state.step === "dados" && <DataStep {...props} />}
         {state.step === "formatacao" && <FormatStep {...props} />}
         {state.step === "enviar" && <SendStep {...props} />}
         {state.step === "feito" && state.result && <DoneStep {...props} />}

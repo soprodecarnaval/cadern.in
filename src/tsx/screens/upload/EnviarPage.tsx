@@ -29,6 +29,7 @@ export function EnviarPage() {
       onStep={(step) => void flow.goTo(step)}
       onRows={flow.setRows}
       onProfile={flow.setProfile}
+      onMetadata={flow.setMetadata}
       onEditing={flow.setEditing}
       onListen={(ordinal) => void flow.listen(ordinal)}
       onSend={() => void flow.send()}

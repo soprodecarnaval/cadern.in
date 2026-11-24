@@ -18,7 +18,7 @@ const preview = (ordinal: number, extra = {}, fingeringScale = 0.9) => ({
   ordinal, svg: sheet, pages: 1, layout: { staffSpaceMm: 1.45, systems: 3, fillRatio: 0.82, fingeringScale },
   automaticFingeringSize: fingeringScale, warnings: [], rendering: false, ...extra,
 });
-const base: EnviarState = { ...initialState(), fileName: "Cilada.mscz", title: "CILADA", rows };
+const base: EnviarState = { ...initialState(), fileName: "Cilada.mscz", metadata: { title: "CILADA", composer: "Tim Maia", sub: "", tags: ["marcha"] }, rows };
 const state = (change: Partial<EnviarState>): EnviarState => ({ ...base, ...change });
 
 const meta = {
@@ -29,7 +29,7 @@ const meta = {
     context: { projectId: "bloco-exemplo" },
     signedIn: true,
     components: { MidiPlayer: ({ src }: { src: string }) => <p>MIDI: {src}</p> },
-    onFile: fn(), onStep: fn(), onRows: fn(), onProfile: fn(), onEditing: fn(), onListen: fn(),
+    onFile: fn(), onStep: fn(), onRows: fn(), onProfile: fn(), onMetadata: fn(), onEditing: fn(), onListen: fn(),
     onSend: fn(), onCancel: fn(), onDismissError: fn(), onReset: fn(),
   },
 } satisfies Meta<typeof EnviarPageView>;
@@ -57,7 +57,31 @@ export const Parts: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByLabelText("Instrumento de Pete")).toHaveValue("trompete pirata");
     await expect(canvas.getByLabelText("Enviar Órgão")).toBeDisabled();
-    await expect(canvas.getByRole("button", { name: "Formatar 3 partes" })).toBeEnabled();
+    await expect(canvas.getByRole("button", { name: "Continuar" })).toBeEnabled();
+  },
+};
+
+export const Data: Story = {
+  args: { state: state({ step: "dados" }) },
+  render: function Render(args) {
+    const [metadata, setMetadata] = useState(args.state.metadata);
+    return <EnviarPageView {...args} state={{ ...args.state, metadata }} onMetadata={(next) => { setMetadata(next); args.onMetadata(next); }} />;
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("listitem", { current: "step" })).toHaveTextContent("Dados");
+    await expect(canvas.getByLabelText("Título")).toHaveValue("CILADA");
+    await expect(canvas.getByLabelText("Compositor")).toHaveValue("Tim Maia");
+    await expect(canvas.getByLabelText("Tags")).toHaveValue("marcha");
+    await userEvent.type(canvas.getByLabelText("Tags"), ", frevo,");
+    await expect(canvas.getByLabelText("Tags")).toHaveValue("marcha, frevo,");
+    await expect(args.onMetadata).toHaveBeenLastCalledWith(expect.objectContaining({ tags: ["marcha", "frevo"] }));
+    await userEvent.clear(canvas.getByLabelText("Título"));
+    await expect(canvas.getByRole("alert")).toHaveTextContent("Dê um título à partitura.");
+    await expect(canvas.getByRole("button", { name: "Formatar 3 partes" })).toBeDisabled();
+    await userEvent.type(canvas.getByLabelText("Título"), "Cilada");
+    await userEvent.click(canvas.getByRole("button", { name: "Formatar 3 partes" }));
+    await expect(args.onStep).toHaveBeenLastCalledWith("formatacao");
   },
 };
 

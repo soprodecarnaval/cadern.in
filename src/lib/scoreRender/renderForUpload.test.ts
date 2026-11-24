@@ -3,6 +3,7 @@ import type { ScoreSession } from "../browserScore/types";
 import { zFormattingProfile, type FormattingProfile } from "../../../types/formattingProfile";
 import { resolvePartFormatting, sheetLayoutFor } from "./profile";
 import { profileWithChoices, renderForUpload } from "./renderForUpload";
+import { packageMscx } from "../msczIdentity";
 
 describe("profileWithChoices", () => {
   const parts = [{ ordinal: 1, name: "Trompete" }, { ordinal: 2, name: "Tuba" }];
@@ -71,5 +72,34 @@ describe("renderForUpload with the preview session", () => {
     expect(calls).not.toContain("dispose");
     expect(used!.parts?.Trompete?.fingering?.enabled).toBe(false);
     expect(parsed.parts.map((p) => p.instrument)).toEqual(["trompete"]);
+  });
+
+  it("stores the metadata the user checked instead of the file's tags", async () => {
+    const part = { id: "p1", ordinal: 1, name: "Trompete", origin: "existing" as const, instrumentNames: [], staffCount: null,
+      instruments: [{ id: "bb-trumpet", soundId: null, longName: "Trompete", shortName: "Tpt." }], instrumentIds: ["bb-trumpet"] };
+    const session = {
+      importInfo: { metaTags: { workTitle: "Eva", composer: "Anon", source: "Bloco", lyricist: "a, b" } },
+      getPages: () => Promise.resolve({ revision: 1, pageCount: 1 }),
+      renderPage: () => Promise.resolve({ svg: "<svg/>", warnings: [] }),
+      exportMidi: () => Promise.resolve({ midi: new Uint8Array([1]), warnings: [] }),
+      dispose: () => Promise.resolve(),
+    } as unknown as ScoreSession;
+    const mscx = new TextEncoder().encode('<museScore version="4.20"><Score/></museScore>');
+    const { parsed } = await renderForUpload(mscx, "Eva.mscx", zFormattingProfile.parse({ profileVersion: 1 }),
+      [{ ordinal: 1, instrument: "trompete", fingerings: false }], {
+        metadata: { title: "Eva (Rádio Táxi)", composer: "Michael Sullivan", sub: "Refrão", tags: ["axé", "frevo"] },
+        openSession: {
+          session,
+          catalog: { revision: 1, parts: [part], coverage: "complete", warnings: [] },
+          renderer: { library: "l", engine: "e", renderer: "r", manifestSha256: "0".repeat(64), fonts: [] },
+          useProfile: () => undefined,
+        },
+      });
+    expect([parsed.title, parsed.composer, parsed.sub, parsed.tags]).toEqual(["Eva (Rádio Táxi)", "Michael Sullivan", "Refrão", ["axé", "frevo"]]);
+    const metajson = JSON.parse(await parsed.fileMap.get("metajson")!.text()) as Record<string, unknown>;
+    expect([metajson.composer, metajson.previousSource, metajson.poet]).toEqual(["Michael Sullivan", "Refrão", "axé, frevo"]);
+    expect(parsed.fileMap.get("mscz")!.name).toBe("Eva (Rádio Táxi).mscz");
+    // The file itself is sent as it came.
+    expect(new Uint8Array(await parsed.fileMap.get("mscz")!.arrayBuffer())).toEqual(packageMscx(mscx));
   });
 });

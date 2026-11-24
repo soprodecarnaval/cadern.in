@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { zFormattingProfile } from "../../../../types/formattingProfile";
-import { choicesFrom, formattingOf, hasOverride, partRows, rowsFromStored, withFingerings, withFormatting, withInstrument, withoutOverride } from "./enviarState";
+import { choicesFrom, formattingOf, hasOverride, metadataFromTags, metadataProblem, partRows, tagsFromText, rowsFromStored, withFingerings, withFormatting, withInstrument, withoutOverride } from "./enviarState";
 
 const part = (ordinal: number, name: string, id: string, soundId: string | null = null, longName = name) =>
   ({ ordinal, name, instruments: id || soundId ? [{ id, soundId, longName, shortName: "" }] : [] });
@@ -88,5 +88,20 @@ describe("rowsFromStored", () => {
 
   it("keeps the mapped rows for revisions without a parts list", () => {
     expect(rowsFromStored(rows, [], zFormattingProfile.parse({ profileVersion: 1 }))).toEqual(rows);
+  });
+});
+
+describe("metadataFromTags", () => {
+  it("reads title, composer, source as Trecho and lyricist as tags", () => {
+    expect(metadataFromTags({ workTitle: " Cilada ", composer: "Tim Maia", source: "Refrão", lyricist: "marcha, , frevo" }, "x.mscz"))
+      .toEqual({ title: "Cilada", composer: "Tim Maia", sub: "Refrão", tags: ["marcha", "frevo"] });
+  });
+  it("falls back to the file name, with empty fields", () => {
+    expect(metadataFromTags({}, "Eva.mscz")).toEqual({ title: "Eva", composer: "", sub: "", tags: [] });
+  });
+  it("splits typed tags and needs a title", () => {
+    expect(tagsFromText(" a,b ,, ")).toEqual(["a", "b"]);
+    expect(metadataProblem({ title: "  ", composer: "", sub: "", tags: [] })).toBe("Dê um título à partitura.");
+    expect(metadataProblem({ title: "Eva", composer: "", sub: "", tags: [] })).toBeNull();
   });
 });

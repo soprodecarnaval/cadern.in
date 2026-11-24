@@ -9,15 +9,18 @@ import type { SheetLayoutResult, Warning } from "../../../lib/browserScore/types
 import type { RenderProgress } from "../../../lib/scoreRender/renderForUpload";
 import type { PartChoice } from "../../../lib/scoreRender/renderForUpload";
 import type { ScoreIdentity } from "../../../../types/metajson";
+import type { ScoreMetadata } from "../../../../types/docs";
+import { safeFilename } from "../../../lib/partFiles";
 import { DEFAULT_FORMATTING_PROFILE } from "../../../../types/formattingProfile";
 import type { RepinOutcome, UploadChecks } from "../../../lib/uploadFlow";
 import type { UploadProgress } from "../../../lib/uploadScore";
 import type { UploadTarget } from "../../../lib/uploadTarget";
 
-export type Step = "arquivo" | "partes" | "formatacao" | "enviar" | "feito";
+export type Step = "arquivo" | "partes" | "dados" | "formatacao" | "enviar" | "feito";
 export const STEPS: readonly { step: Exclude<Step, "feito">; label: string }[] = [
   { step: "arquivo", label: "Arquivo" },
   { step: "partes", label: "Partes" },
+  { step: "dados", label: "Dados" },
   { step: "formatacao", label: "Formatação" },
   { step: "enviar", label: "Enviar" },
 ];
@@ -167,7 +170,8 @@ export type EnviarState = {
   step: Step;
   status: Status;
   fileName: string | null;
-  title: string;
+  /** What is stored as the score's uploaded metadata; starts from the file's tags. */
+  metadata: ScoreMetadata;
   rows: PartRow[];
   profile: FormattingProfile;
   /** The part whose settings the formatting controls edit; null for the whole score. */
@@ -184,7 +188,7 @@ export const initialState = (): EnviarState => ({
   step: "arquivo",
   status: { kind: "idle" },
   fileName: null,
-  title: "",
+  metadata: { title: "", composer: "", sub: "", tags: [] },
   rows: [],
   profile: DEFAULT_FORMATTING_PROFILE,
   editing: null,
@@ -214,4 +218,25 @@ export function rowsFromStored(rows: readonly PartRow[], stored: readonly Stored
     const fingerings = row.fingeringsAvailable && (piratas ? part.instrument.endsWith(" pirata") : (enabled ?? row.fingerings));
     return { ...row, instrument: pirataInstrument(part.instrument, fingerings), fingerings, include: true, guessed: false };
   });
+}
+
+/**
+ * The metadata a MuseScore file carries, as the plugin reads it: work title (or
+ * the file name), composer, source as the excerpt ("Trecho"), and the lyricist
+ * field as comma-separated tags.
+ */
+export function metadataFromTags(tags: Readonly<Record<string, string>>, fileName: string): ScoreMetadata {
+  return {
+    title: safeFilename(tags.workTitle?.trim() || fileName.replace(/\.(mscz|mscx)$/i, "")),
+    composer: tags.composer?.trim() ?? "",
+    sub: tags.source?.trim() ?? "",
+    tags: tagsFromText(tags.lyricist ?? ""),
+  };
+}
+
+export const tagsFromText = (text: string): string[] => text.split(",").map((tag) => tag.trim()).filter(Boolean);
+
+/** Why the metadata cannot be sent yet, or null. */
+export function metadataProblem(metadata: ScoreMetadata): string | null {
+  return metadata.title.trim() ? null : "Dê um título à partitura.";
 }

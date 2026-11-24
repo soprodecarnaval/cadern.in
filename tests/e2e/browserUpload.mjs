@@ -76,9 +76,20 @@ async function signedInPage(path) {
     return page;
 }
 
-async function sendThroughScreen(page, { file, tweak = false } = {}) {
+async function sendThroughScreen(page, { file, tweak = false, metadata = null } = {}) {
     if (file) await page.locator('input[type=file]').setInputFiles(file);
     await page.getByRole('heading', { name: 'Partes', exact: true }).waitFor({ timeout: 180000 });
+    await page.getByRole('button', { name: 'Continuar' }).click();
+    await page.getByRole('heading', { name: 'Dados', exact: true }).waitFor();
+    assert((await page.getByLabel('Título').inputValue()).trim(), 'title read from the file');
+    if (metadata?.composer !== undefined) {
+        await page.getByLabel('Compositor').fill(metadata.composer);
+        await page.getByLabel('Tags').fill(metadata.tags);
+    }
+    if (metadata?.expect) {
+        assert.equal(await page.getByLabel('Compositor').inputValue(), metadata.expect.composer);
+        assert.equal(await page.getByLabel('Tags').inputValue(), metadata.expect.tags);
+    }
     await page.getByRole('button', { name: /^Formatar/ }).click();
     await page.waitForFunction(() => document.querySelectorAll('.enviar-preview img').length > 0 && !document.querySelector('.enviar-preview[aria-busy=true]'), null, { timeout: 300000 });
     if (tweak) {
@@ -89,7 +100,7 @@ async function sendThroughScreen(page, { file, tweak = false } = {}) {
             await page.getByRole('tab', { name }).first().click();
             await preview.waitFor();
             await page.locator('.enviar-preview[aria-busy=false]').waitFor();
-            return page.locator('.enviar-sheet-instrument').innerText();
+            return (await page.locator('#enviar-parte').innerText()).replace(/^Parte: /, '');
         };
         const original = new Map();
         for (const [name] of sizedParts) {
@@ -134,7 +145,7 @@ let sentScoreId = null;
 try {
     await step('sends all-instruments.mscz from the browser', async () => {
         const page = await signedInPage('/acervo-dev/enviar');
-        await sendThroughScreen(page, { file: SCORE, tweak: true });
+        await sendThroughScreen(page, { file: SCORE, tweak: true, metadata: { composer: 'Compositora E2E', tags: 'marcha, frevo' } });
         assert.equal(await page.locator('[role=alert]').count(), 0, 'no error');
         assert.match(await page.locator('.enviar-summary').innerText(), /Partitura nova/);
         const sendStarted = Date.now();
@@ -154,6 +165,10 @@ try {
         const data = await doc(`scores/${scoreId}/scoreRevisions/${revision}`);
         const parts = data.parts.arrayValue.values.map(v => v.mapValue.fields);
         assert.equal(parts.length, 19);
+        // Dados: the corrections are the stored metadata.
+        const stored = data.metadata.mapValue.fields;
+        assert.equal(str(stored.composer), 'Compositora E2E');
+        assert.deepEqual(stored.tags.arrayValue.values.map(str), ['marcha', 'frevo']);
         assert(parts.some(p => str(p.instrument) === 'trompete pirata'), 'fingered trumpets are piratas');
         // Storage: every file the revision lists exists, under the exporter's keys.
         const files = [data.mscz, data.metajson, data.midi, ...parts.flatMap(p => [p.midi, ...p.svg.arrayValue.values])].map(v => v.mapValue.fields);
@@ -196,7 +211,7 @@ try {
         assert(revisionId, 'needs the first case');
         const scoreId = sentScoreId;
         const page = await signedInPage(`/acervo-dev/enviar?partitura=${scoreId}&versao=${revisionId}&base=${revisionId}&modo=reformatar`);
-        await sendThroughScreen(page);
+        await sendThroughScreen(page, { metadata: { expect: { composer: 'Compositora E2E', tags: 'marcha, frevo' } } });
         assert.match(await page.locator('.enviar-summary').innerText(), /Nova versão/);
         await page.getByRole('button', { name: 'Enviar partitura' }).click();
         await page.locator('#enviar-feito').waitFor({ timeout: 300000 });
