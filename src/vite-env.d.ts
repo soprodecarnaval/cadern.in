@@ -23,7 +23,6 @@ interface ImportMetaEnv {
   readonly VITE_FIRESTORE_DATABASE_ID: string;
   readonly VITE_CADERNIN_UID: string | undefined;
   readonly VITE_FEATURE_FLAG_COLLAB_FLOW: string | undefined;
-  readonly VITE_FEATURE_FLAG_BROWSER_UPLOAD: string | undefined;
   readonly VITE_USE_EMULATORS: string | undefined;
 }
 

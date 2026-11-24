@@ -58,10 +58,6 @@ describe("mapInstrumentId", () => {
     expect(mapInstrumentId("brass.tuba", "Tuba E♭ (clave G)")).toBe("tuba eb");
   });
 
-  it("accepts tenor-trombone", () => {
-    expect(mapInstrumentId("tenor-trombone", "Trombone")).toBe("trombone");
-  });
-
   it("returns undefined for instruments cadern.in does not support", () => {
     expect(mapInstrumentId("pipe-organ", "Órgão")).toBeUndefined();
   });

@@ -12,24 +12,6 @@
 
 ## Como contribuir com partituras
 
-### Enviando pelo navegador (em teste)
-
-Com o envio pelo navegador ligado (`VITE_FEATURE_FLAG_BROWSER_UPLOAD`), o
-MuseScore serve só para **editar** a música:
-
-1. Edite a partitura no MuseScore 4 e salve o `.mscz`. Não precisa do plugin,
-   nem de formatar, nem do programa de exportação.
-2. Na página do projeto, clique em **Enviar partitura** (ou em **Enviar nova
-   versão** na página da música no caderninho).
-3. Envie o arquivo, confira o instrumento de cada parte e ajuste a formatação
-   na prévia (tamanho da pauta, piratas em posições ou pistos, limpeza).
-4. Clique em **Enviar partitura**. Para mudar só a formatação depois, use
-   **Reformatar** na página da partitura.
-
-Veja o texto de ajuda em [docs/help/enviar-partitura.md](docs/help/enviar-partitura.md).
-Enquanto o envio pelo navegador não for o padrão, o fluxo com o plugin abaixo
-continua valendo.
-
 ### 1. Formatando a partitura
 - Baixe a última versão do plugin [aqui](cadern.in/plugin).
 - Habilite o plugin e abra a partitura.
@@ -134,28 +116,3 @@ continua valendo.
 ## Desenvolvimento Local
 - Execute o app e faça uma verificação rápida de sanidade.
 - Se possível, execute `npm run lint` e `npm run build` antes de abrir o PR.
-
-### Motor de partituras no navegador (browser-score)
-
-O envio pelo navegador usa a biblioteca `src/lib/browserScore` (webmscore e
-Verovio num worker). Os arquivos do motor ficam em `public/browser-score/`
-(fora do git) e são gerados automaticamente antes de `npm run dev` e
-`npm run build`.
-
-- `npm run browser-score:assets`: gera os arquivos do motor e o manifesto.
-- `npm run browser-score:example`: página de exemplo para abrir uma partitura,
-  ver as partes, exportar MusicXML e MIDI.
-- `PART_PAGES_INPUT=a.mscz npm run browser-score:parts`: desenha todas as
-  partes em Chrome headless e confere notas, pausas, tamanho da página e
-  marcações. Com `PART_PAGES_PROFILE=perfil.json` usa a formatação do
-  caderninho; com `PART_PAGES_REFERENCE=pasta` mostra lado a lado as páginas
-  formatadas pelo plugin.
-- `MIDI_INPUT=a.mscz node scripts/browserScore/midi.mjs`: exporta e compara os MIDI.
-- `UPLOAD_INPUT=a.mscz node scripts/browserScore/upload.mjs`: confere o
-  `ParsedScore` do envio (válido, igual ao de uma pasta do exportador, determinístico).
-- `npx tsx scripts/browserScore/rerender.ts --score <id>`: redesenha versões
-  guardadas (teste por padrão; `--write` grava como reformatação).
-- `npm run test:e2e`: teste ponta a ponta do envio contra os emuladores.
-
-Decisões e evidências: [docs/tasks/015-browser-score-upload/TASK.md](docs/tasks/015-browser-score-upload/TASK.md).
-

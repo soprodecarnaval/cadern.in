@@ -29,29 +29,6 @@ const parsed: ParsedScore = {
 };
 
 describe("project-scoped score uploads", () => {
-  it("stores matched audio and timing with the part revision", async () => {
-    const playback = { midi: "playback/trompete-playback.midi", timing: "playback/trompete-timing.json" };
-    const arrangement = { svg: ["arrangement/arrangement-1.svg"], playback: { midi: "arrangement/full-playback.midi", timing: "arrangement/full-timing.json" } };
-    const assets = [...Object.values(playback), ...arrangement.svg, ...Object.values(arrangement.playback)];
-    const score: ParsedScore = {
-      ...parsed,
-      parts: [{ ...parsed.parts[0], playback }],
-      arrangement,
-      fileMap: new Map([...parsed.fileMap, ...assets.map(key => [key, new File(["x"], key)] as const)]),
-    };
-    const identity = await uploadScore(score, "destination", { kind: "new", scoreId: "new-score" }, user);
-    const revision = vi.mocked(commitScoreRevision).mock.calls[0][2];
-    const stored = revision.parts[0];
-    const base = `projects/destination/scores/new-score/${identity.revisionId}`;
-    expect(stored.playback).toEqual({
-      midi: { path: `${base}/${playback.midi}`, url: "https://example.com/asset" },
-      timing: { path: `${base}/${playback.timing}`, url: "https://example.com/asset" },
-    });
-    expect(revision.arrangement?.svg[0].path).toBe(`${base}/arrangement/arrangement-1.svg`);
-    expect(revision.arrangement?.playback?.timing.path).toBe(`${base}/arrangement/full-timing.json`);
-    expect(stored.midi.path).toBe(`${base}/parts/trompete.midi`);
-  });
-
   it.each<UploadTarget>([
     { kind: "new", scoreId: "new-score" },
     { kind: "version", scoreId: "legacy-score-id", title: "Abre Alas" },

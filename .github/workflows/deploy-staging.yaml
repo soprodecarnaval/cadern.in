@@ -27,7 +27,6 @@ jobs:
       VITE_CADERNIN_UID: ${{ vars.CADERNIN_UID }}
       VITE_APP_TITLE: ${{ vars.APP_TITLE}}
       VITE_FEATURE_FLAG_COLLAB_FLOW: ${{ vars.FEATURE_FLAG_COLLAB_FLOW}}
-      VITE_FEATURE_FLAG_BROWSER_UPLOAD: ${{ vars.FEATURE_FLAG_BROWSER_UPLOAD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

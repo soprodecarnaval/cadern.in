@@ -28,12 +28,7 @@ async function main(): Promise<void> {
       revision.mscz.path,
       revision.metajson.path,
       revision.midi.path,
-      ...(revision.arrangement?.svg.map((file) => file.path) ?? []),
-      ...(revision.arrangement?.playback ? [revision.arrangement.playback.midi.path, revision.arrangement.playback.timing.path] : []),
-      ...revision.parts.flatMap((p) => [
-        ...p.svg.map((f) => f.path), p.midi.path,
-        ...(p.playback ? [p.playback.midi.path, p.playback.timing.path] : []),
-      ]),
+      ...revision.parts.flatMap((p) => [...p.svg.map((f) => f.path), p.midi.path]),
     ];
 
     const results = await Promise.all(

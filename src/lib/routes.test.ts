@@ -82,7 +82,6 @@ describe("reserved slugs", () => {
       "biblioteca",
       "plugin",
       "assets",
-      "browser-score",
       "projects",
       "project",
       "score",
@@ -98,9 +97,8 @@ describe("reserved slugs", () => {
     expect(isReservedProjectSlug("20260")).toBe(false);
   });
 
-  it("reserves config and enviar as songbook slugs", () => {
+  it("reserves config as a songbook slug", () => {
     expect(isReservedSongbookSlug("config")).toBe(true);
-    expect(isReservedSongbookSlug("enviar")).toBe(true);
     expect(isReservedSongbookSlug("carnaval")).toBe(false);
   });
 });

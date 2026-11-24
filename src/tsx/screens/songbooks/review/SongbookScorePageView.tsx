@@ -10,10 +10,8 @@ import { isEditor } from "../../../../lib/roles";
 import { resolveScoreMetadata } from "../../../../lib/scoreMetadata";
 import { publicSongbookPath, songbookPath } from "../../../../lib/routes";
 import { buildExportDeepLink } from "../../../../../types/exportDeepLink";
-import { BROWSER_UPLOAD_MODE, FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
-import { uploadPath } from "../../../../lib/uploadPath";
 
-import type { ScoreDisplayArrangement, ScoreDisplayPart, ScorePin } from "../../../components/scores/detail/ScoreDisplay";
+import type { ScoreDisplayPart, ScorePin } from "../../../components/scores/detail/ScoreDisplay";
 
 interface LoadedScoreThread {
   songbookId: string;
@@ -28,17 +26,12 @@ interface LoadedScoreThread {
   // the score itself is not (unaffected by this page, which has no such
   // controls).
   foreign: boolean;
-  // The revision this songbook pins, which may be older than the latest.
   revisionId: string;
-  // The score's latest revision: what an upload or a reformat from here
-  // expects to replace, so a pin to an older version doesn't read as stale.
-  latestRevisionId: string;
   title: string;
   composer: string;
   sub: string;
   tags: string[];
   arrangementMidiUrl: string | null;
-  arrangement?: ScoreDisplayArrangement;
   parts: ScoreDisplayPart[];
 }
 
@@ -73,25 +66,13 @@ async function load(
     songbookRevisionId: songbook.currentRevisionId,
     foreign: score.projectId !== songbook.projectId,
     revisionId,
-    latestRevisionId: score.latestRevisionId,
     ...resolveScoreMetadata(score),
     arrangementMidiUrl: scoreRevision.midi.url || null,
-    arrangement: scoreRevision.arrangement && {
-      svgUrls: scoreRevision.arrangement.svg.map(({ url }) => url),
-      playback: scoreRevision.arrangement.playback && {
-        midiUrl: scoreRevision.arrangement.playback.midi.url,
-        timingUrl: scoreRevision.arrangement.playback.timing.url,
-      },
-    },
     parts: scoreRevision.parts.map((part) => ({
       name: part.name,
       instrument: part.instrument,
       svgUrls: part.svg.map((f) => f.url),
       midiUrl: part.midi.url || null,
-      playback: part.playback && {
-        midiUrl: part.playback.midi.url,
-        timingUrl: part.playback.timing.url,
-      },
     })),
   };
 }
@@ -252,13 +233,6 @@ export function SongbookScorePageView({
     );
   }
 
-  const uploadContext = {
-    projectId: loaded.songbookProjectId,
-    scoreId,
-    expectedScoreRevisionId: loaded.latestRevisionId,
-    songbookId: loaded.songbookId,
-    expectedSongbookRevisionId: loaded.songbookRevisionId,
-  };
   return (
     <Page className="mt-4">
       <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
@@ -267,26 +241,15 @@ export function SongbookScorePageView({
           {loaded.foreign && <Badge bg="warning">de outro projeto</Badge>}
         </div>
         {isEditor(role) && (
-          <div className="d-flex flex-wrap gap-2">
-            {FEATURE_FLAG_BROWSER_UPLOAD && (
-              <Link className="btn btn-outline-secondary ds-button btn-sm" to={uploadPath(uploadContext)}>
-                Enviar nova versão pelo navegador
-              </Link>
-            )}
-            {BROWSER_UPLOAD_MODE !== "default" && (
-              <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink(uploadContext)}>
-                Enviar nova versão pelo MuseScore
-              </a>
-            )}
-            {FEATURE_FLAG_BROWSER_UPLOAD && (
-              <Link
-                className="btn btn-outline-secondary ds-button btn-sm"
-                to={uploadPath({ ...uploadContext, baseRevisionId: loaded.revisionId, mode: "reformat" })}
-              >
-                Reformatar
-              </Link>
-            )}
-          </div>
+          <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink({
+              projectId: loaded.songbookProjectId,
+              scoreId,
+              expectedScoreRevisionId: loaded.revisionId,
+              songbookId: loaded.songbookId,
+              expectedSongbookRevisionId: loaded.songbookRevisionId,
+            })}>
+            Enviar nova versão
+          </a>
         )}
       </div>
       <p className="text-muted mb-3">
@@ -303,7 +266,6 @@ export function SongbookScorePageView({
             sub={loaded.sub}
             tags={loaded.tags}
             arrangementMidiUrl={loaded.arrangementMidiUrl}
-            arrangement={loaded.arrangement}
             parts={loaded.parts}
             pinsProps={{
               pins,

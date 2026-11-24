@@ -114,33 +114,6 @@ describe("score upload asset types", () => {
   });
 });
 
-describe("browser upload file set", () => {
-  // What renderForUpload produces (ticket 010): the exporter's keys, with the
-  // instrument (spaces and "pirata" included) in each part's basename, and the
-  // content types the browser sets.
-  const files: [string, string][] = [
-    ["score.mscz", "application/octet-stream"],
-    ["score.metajson", "application/json"],
-    ["score.midi", "audio/midi"],
-    ["parts/CILADA-sax alto-1.svg", "image/svg+xml"],
-    ["parts/CILADA-sax alto.midi", "audio/midi"],
-    ["parts/CILADA-trompete pirata-a-1.svg", "image/svg+xml"],
-    ["parts/CILADA-trompete pirata-a-2.svg", "image/svg+xml"],
-    ["parts/CILADA-trompete pirata-a.midi", "audio/midi"],
-  ];
-
-  it("lets editors write a whole browser-rendered revision, and nobody else", async () => {
-    await seedProject(testEnv());
-    for (const [asset, contentType] of files) {
-      const path = `projects/${PROJECT}/scores/${PROJECT}-cilada/rev-1/${asset}`;
-      await assertSucceeds(uploadBytes(ref(as(EDITOR), path), BYTES, { contentType }));
-      for (const uid of [REVIEWER, OUTSIDER, null]) {
-        await assertFails(uploadBytes(ref(as(uid), path), BYTES, { contentType }));
-      }
-    }
-  });
-});
-
 describe("legacy asset paths", () => {
   for (const path of [`scores/${SCORE}/1/score.mscz`, `songbooks/${SB}/r1/covers/trompete.png`]) {
     it(`preserves reads and denies all client writes: ${path}`, async () => {

@@ -51,14 +51,6 @@ O Cadern.in resolve esse problema conectando músicos para permitir o intercâmb
 
 Veja [CONTRIBUTING.md](CONTRIBUTING.md) para instruções detalhadas sobre como contribuir com o projeto.
 
-### Enviando partituras pelo navegador
-
-Membros de um projeto enviam o `.mscz` salvo no MuseScore direto pelo site
-(`/:projeto/enviar`). A formatação do caderninho (limpeza, escrita da tuba,
-piratas, uma página por parte) é feita no navegador, e o PDF do caderninho
-usa essas páginas. Veja [CONTRIBUTING.md](CONTRIBUTING.md) e o
-[plano](docs/milestones/browser-score-upload/PLAN.md).
-
 ### Contribuindo com Músicas
 
 1. Abra uma [Issue de Solicitação de Música](.github/ISSUE_TEMPLATE/song_request.md)

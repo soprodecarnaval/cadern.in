@@ -1,15 +1,8 @@
-import { comparePartsByInstrument, partInstrumentLabels } from "../../../../lib/preferredInstrument";
 import { Button } from "../../../atoms/Button";
-import { useScoreSvg } from "../../../../lib/useSvgUrl";
-import { PartTabs } from "../PartTabs";
-import { useEffect, useId, useRef, useState } from "react";
-import { Badge, Card, Modal, Placeholder } from "react-bootstrap";
+import { useState } from "react";
+import { Badge, Card, Placeholder } from "react-bootstrap";
 import { SiMidi } from "react-icons/si";
 import type { CommentAnchor } from "../../../../../types/docs";
-import { zScorePlaybackTiming, type PlaybackFrame } from "../../../../../types/scorePlayback";
-import { notesAtTime } from "../../../../lib/browserScore/playbackNotes";
-import type { MidiPlayerProps } from "../../audio/MidiPlayer";
-import { ScoreSvgFrame } from "../ScoreSvgFrame";
 
 /** A numbered comment pin on one page of one part. */
 export interface ScorePin {
@@ -31,25 +24,15 @@ export interface ScorePinsProps {
 function SvgImage({
   url,
   partName,
-  partLabel,
   page,
   pinsProps,
-  activeNotes,
-  onPageReady,
 }: {
   url: string;
   partName: string;
-  partLabel: string;
   page: number;
   pinsProps?: ScorePinsProps;
-  activeNotes?: readonly string[];
-  onPageReady?: (doc: Document, page: HTMLDivElement) => void;
 }) {
-  const container = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
-  const shown = useScoreSvg(url, !!activeNotes);
-  const [readyMarkup, setReadyMarkup] = useState<string | undefined>();
-  const frameReady = !!shown.markup && readyMarkup === shown.markup;
   const picking = pinsProps?.picking ?? false;
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -73,12 +56,8 @@ function SvgImage({
 
   return (
     <div
-      ref={container}
       style={{
         position: "relative",
-        // A definite width: in the flex column, the page would otherwise be measured at its natural
-        // size (a library page is 171.7 mm wide) and the scaled image would overflow the card.
-        width: "100%",
         cursor: picking ? "crosshair" : undefined,
       }}
       onClick={handleClick}
@@ -118,39 +97,16 @@ function SvgImage({
         </Placeholder>
       )}
       <img
-        src={shown.url}
-        alt={`${partLabel} · Página ${page}`}
+        src={url}
+        alt=""
         onLoad={() => setLoaded(true)}
         style={{
           width: "100%",
           border: "var(--ds-border) solid var(--ds-ink)",
           background: "var(--ds-paper)",
           display: loaded ? "block" : "none",
-          visibility: frameReady ? "hidden" : undefined,
         }}
       />
-      {loaded && shown.markup && (
-        <ScoreSvgFrame
-          svg={shown.markup}
-          label={`${partLabel} · Página ${page}`}
-          activeNotes={activeNotes}
-          tabIndex={-1}
-          onReady={(doc) => {
-            setReadyMarkup(shown.markup);
-            if (container.current) {onPageReady?.(doc, container.current);}
-          }}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            border: "var(--ds-border) solid var(--ds-ink)",
-            background: "var(--ds-paper)",
-            pointerEvents: "none",
-            visibility: frameReady ? "visible" : "hidden",
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -160,135 +116,18 @@ export interface ScoreDisplayPart {
   instrument: string;
   svgUrls: string[];
   midiUrl: string | null;
-  playback?: { midiUrl: string; timingUrl: string };
   warnings?: string[];
 }
 
-export type ScoreDisplayArrangement = Pick<ScoreDisplayPart, "svgUrls" | "playback">;
-
 interface Props {
-  MidiPlayer: import("react").ComponentType<MidiPlayerProps>;
+  MidiPlayer: import("react").ComponentType<{ src: string }>;
   title: string;
   composer: string;
   sub: string;
   tags: string[];
   arrangementMidiUrl?: string | null;
-  arrangement?: ScoreDisplayArrangement;
   parts: ScoreDisplayPart[];
   pinsProps?: ScorePinsProps;
-}
-
-function PartPages({ part, partLabel = part.name, MidiPlayer, pinsProps, followPages = false }: {
-  part: Pick<ScoreDisplayPart, "name" | "svgUrls" | "midiUrl" | "playback">;
-  partLabel?: string;
-  followPages?: boolean;
-  MidiPlayer: Props["MidiPlayer"];
-  pinsProps?: ScorePinsProps;
-}) {
-  const timingUrl = part.playback?.midiUrl ? part.playback.timingUrl : undefined;
-  const [frames, setFrames] = useState<readonly PlaybackFrame[] | null | undefined>(timingUrl ? null : undefined);
-  const [notes, setNotes] = useState<readonly string[]>([]);
-  const pageByNote = useRef(new Map<string, HTMLDivElement>());
-  const followedPage = useRef<HTMLDivElement | null>(null);
-  const registerPage = (doc: Document, page: HTMLDivElement) => {
-    for (const note of doc.querySelectorAll("g.note[id]")) {
-      pageByNote.current.set(note.id, page);
-    }
-  };
-  const follow = (active: readonly string[]) => {
-    const page = active.map((id) => pageByNote.current.get(id)).find((element) => element?.isConnected);
-    if (!page || page === followedPage.current) {return;}
-    followedPage.current = page;
-    page.scrollIntoView({ block: "nearest" });
-  };
-  useEffect(() => {
-    if (!timingUrl) {return;}
-    const controller = new AbortController();
-    void (async () => {
-      try {
-        const response = await fetch(timingUrl, { signal: controller.signal });
-        if (!response.ok) {throw new Error(`Timing HTTP ${response.status}`);}
-        const timing = zScorePlaybackTiming.parse(await response.json());
-        if (!controller.signal.aborted) {setFrames(timing.frames);}
-      } catch {
-        if (!controller.signal.aborted) {setFrames(undefined);}
-      }
-    })();
-    return () => controller.abort();
-  }, [timingUrl]);
-
-  const playerUrl = frames ? part.playback?.midiUrl : part.midiUrl;
-  return (
-    <>
-      {frames === null ? <p role="status">Carregando áudio…</p> : playerUrl && (
-        <MidiPlayer
-          key={playerUrl}
-          src={playerUrl}
-          onPlaybackTime={frames ? (seconds) => {
-            const active = notesAtTime(frames, seconds);
-            setNotes(active);
-            if (followPages && seconds !== null) {follow(active);}
-            if (seconds === null) {followedPage.current = null;}
-          } : undefined}
-        />
-      )}
-      <div className="d-flex flex-column gap-2">
-        {part.svgUrls.map((url, i) => (
-          <SvgImage key={`${i}:${url}`} url={url} partName={part.name} partLabel={partLabel} page={i + 1}
-            pinsProps={pinsProps} activeNotes={timingUrl ? notes : undefined} onPageReady={followPages ? registerPage : undefined} />
-        ))}
-      </div>
-    </>
-  );
-}
-
-function ArrangementPanel({ arrangement, midiUrl, title, MidiPlayer }: {
-  arrangement?: ScoreDisplayArrangement;
-  midiUrl: string | null;
-  title: string;
-  MidiPlayer: Props["MidiPlayer"];
-}) {
-  const [open, setOpen] = useState(false);
-  const headingId = useId();
-  const [printing, setPrinting] = useState(false);
-  const [printError, setPrintError] = useState(false);
-  const print = async () => {
-    if (!arrangement || printing) {return;}
-    setPrinting(true);
-    setPrintError(false);
-    try {
-      const { createArrangementPdf } = await import("../../../../createSongBook");
-      await createArrangementPdf(arrangement.svgUrls, title);
-    } catch {
-      setPrintError(true);
-    } finally {
-      setPrinting(false);
-    }
-  };
-
-  return (
-    <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>Arranjo completo</Button>
-      <Modal show={open} onHide={() => setOpen(false)} fullscreen scrollable aria-labelledby={headingId}>
-        <Modal.Header closeButton closeLabel="Fechar arranjo">
-          <Modal.Title id={headingId}>Arranjo completo</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {arrangement ? <>
-            <Button variant="secondary" className="mb-3" disabled={printing} onClick={() => void print()}>
-              {printing ? "Gerando PDF…" : "Imprimir arranjo"}
-            </Button>
-            {printError && <p role="alert">Não foi possível gerar o PDF do arranjo. Tente novamente.</p>}
-            <PartPages key={JSON.stringify(arrangement.svgUrls)} part={{ name: "Arranjo", midiUrl, ...arrangement }}
-              MidiPlayer={MidiPlayer} followPages />
-          </> : <>
-            <p>Esta versão ainda não tem a grade do arranjo. A grade fica disponível em uma nova versão reformatada.</p>
-            {midiUrl && <MidiPlayer src={midiUrl} />}
-          </>}
-        </Modal.Body>
-      </Modal>
-    </>
-  );
 }
 
 export function ScoreDisplayView({
@@ -298,66 +137,50 @@ export function ScoreDisplayView({
   sub,
   tags,
   arrangementMidiUrl,
-  arrangement,
   parts,
   pinsProps,
 }: Props) {
-  // One part at a time, in tabs; a selected comment pin shows its part.
-  const [shownName, setShownName] = useState<string | null>(null);
-  const selectedPinPart = pinsProps?.pins.find((pin) => pin.id === pinsProps.selectedPinId)?.anchor.partName;
-  useEffect(() => {
-    if (selectedPinPart) {setShownName(selectedPinPart);}
-  }, [pinsProps?.selectedPinId, selectedPinPart]);
-  const orderedParts = [...parts].sort(comparePartsByInstrument);
-  const part = orderedParts.find((candidate) => candidate.name === shownName) ?? orderedParts[0];
-  const labels = partInstrumentLabels(parts);
-  const partLabel = part ? labels.get(part) ?? "" : "";
   return (
     <>
       <Card className="mb-3">
         <Card.Body>
-          <div className="row g-3 align-items-start">
-            <div className="col-sm">
-              <p>
-                <strong>Título:</strong> {title || <em>não detectado</em>}
-              </p>
-              <p>
-                <strong>Compositor:</strong> {composer || <em>não detectado</em>}
-              </p>
-              <p>
-                <strong>Sub:</strong> {sub || <em>não detectado</em>}
-              </p>
-              <p className="mb-0">
-                <strong>Tags:</strong>{" "}
-                {tags.length > 0 ? tags.join(", ") : <em>nenhuma</em>}
-              </p>
-            </div>
-            {(arrangement || arrangementMidiUrl) && (
-              <div className="col-sm-auto d-flex justify-content-end">
-                <ArrangementPanel arrangement={arrangement} midiUrl={arrangementMidiUrl ?? null} title={title} MidiPlayer={MidiPlayer} />
-              </div>
-            )}
-          </div>
+          <p>
+            <strong>Título:</strong> {title || <em>não detectado</em>}
+          </p>
+          <p>
+            <strong>Compositor:</strong> {composer || <em>não detectado</em>}
+          </p>
+          <p>
+            <strong>Sub:</strong> {sub || <em>não detectado</em>}
+          </p>
+          <p className="mb-0">
+            <strong>Tags:</strong>{" "}
+            {tags.length > 0 ? tags.join(", ") : <em>nenhuma</em>}
+          </p>
         </Card.Body>
       </Card>
+
+      {arrangementMidiUrl && (
+        <Card className="mb-3">
+          <Card.Body>
+            <Card.Title>Arranjo completo</Card.Title>
+            <MidiPlayer src={arrangementMidiUrl} />
+          </Card.Body>
+        </Card>
+      )}
 
       {parts.length > 0 && (
         <Card className="mb-3">
           <Card.Body>
             <Card.Title>Partes</Card.Title>
-            <PartTabs
-              label="Partes"
-              active={part?.name ?? ""}
-              onChange={setShownName}
-              tabs={orderedParts.map((part) => ({ key: part.name, label: labels.get(part) ?? "", note: part.midiUrl ? undefined : "⚠" }))}
-            >
-              {part && (
-              <div className="mb-3">
+            {parts.map((part) => (
+              <div key={part.name} className="mb-3">
                 <div className="d-flex align-items-center gap-2 mb-1">
-                  <strong>{partLabel}</strong>
+                  <strong>{part.name}</strong>
+                  <span className="text-muted">— {part.instrument}</span>
                   {!part.midiUrl && <Badge bg="danger">sem MIDI</Badge>}
                   {part.midiUrl && (
-                    <a href={part.midiUrl} target="_blank" rel="noreferrer" aria-label={`Baixar MIDI de ${partLabel}`}>
+                    <a href={part.midiUrl} target="_blank" rel="noreferrer" aria-label={`Baixar MIDI de ${part.name}`}>
                       <SiMidi />
                     </a>
                   )}
@@ -367,11 +190,20 @@ export function ScoreDisplayView({
                     </Badge>
                   ))}
                 </div>
-                <PartPages key={JSON.stringify([part.name, part.midiUrl, part.playback?.timingUrl])}
-                  part={part} partLabel={partLabel} MidiPlayer={MidiPlayer} pinsProps={pinsProps} />
+                {part.midiUrl && <MidiPlayer src={part.midiUrl} />}
+                <div className="d-flex flex-column gap-2">
+                  {part.svgUrls.map((url, i) => (
+                    <SvgImage
+                      key={i}
+                      url={url}
+                      partName={part.name}
+                      page={i + 1}
+                      pinsProps={pinsProps}
+                    />
+                  ))}
+                </div>
               </div>
-              )}
-            </PartTabs>
+            ))}
           </Card.Body>
         </Card>
       )}

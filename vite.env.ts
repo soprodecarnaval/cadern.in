@@ -20,7 +20,7 @@ const OPTIONAL_DEFAULTS: Record<string, string> = {
   VITE_FIRESTORE_DATABASE_ID: "(default)",
 };
 
-const FEATURE_FLAG_KEYS = ["VITE_FEATURE_FLAG_COLLAB_FLOW", "VITE_FEATURE_FLAG_BROWSER_UPLOAD"] as const;
+const FEATURE_FLAG_KEYS = ["VITE_FEATURE_FLAG_COLLAB_FLOW"] as const;
 
 // `npm run dev:emulators` (VITE_USE_EMULATORS=true): the app talks to the local
 // emulators under a `demo-` project, which can never reach a real one, so no

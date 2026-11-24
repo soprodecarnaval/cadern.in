@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within, waitFor } from "@storybook/test";
 import { PublicProjectPageView } from "./PublicProjectPageView";
-import { pending, score, services, user, songbook } from "../../../../../.storybook/fixtures/screens";
+import { pending, services, user, songbook } from "../../../../../.storybook/fixtures/screens";
 
 const projectServices = {
   ...services,
@@ -25,18 +25,12 @@ export default meta;
 type Story = StoryObj<typeof PublicProjectPageView>;
 
 export const Owner: Story = {
-  args: { services: { ...projectServices, setSongbookPublished: fn(() => Promise.resolve()) } },
-  play: async ({ args, canvasElement }) => {
+  play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("button", { name: "+ Novo caderninho" })).toBeVisible();
     await expect(await canvas.findByText("Ensaios 2027")).toBeVisible();
     await expect(projectServices.getProjectSongbooks).toHaveBeenCalledWith("bloco-exemplo", { publishedOnly: false });
     await expect(canvas.getByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/bloco-exemplo/carnaval/gerenciar");
-    await expect(canvas.getByRole("link", { name: "Editar Ensaios 2027" })).toHaveAttribute("href", "/bloco-exemplo/ensaios/gerenciar?detalhes&editar");
-    await expect(canvas.queryByRole("button", { name: "Publicar Carnaval 2026" })).toBeNull();
-    await userEvent.click(canvas.getByRole("button", { name: "Publicar Ensaios 2027" }));
-    await expect(args.services.setSongbookPublished).toHaveBeenCalledWith("draft", true);
-    await waitFor(() => expect(canvas.queryByRole("button", { name: "Publicar Ensaios 2027" })).toBeNull());
   },
 };
 export const Public: Story = {
@@ -48,38 +42,6 @@ export const Public: Story = {
     await expect(canvas.queryByText("Ensaios 2027")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Partituras")).not.toBeInTheDocument();
     await expect(canvas.queryByRole("button", { name: "+ Novo caderninho" })).not.toBeInTheDocument();
-  },
-};
-export const PrintOptions: Story = {
-  args: {
-    role: undefined,
-    currentUser: null,
-    services: {
-      ...projectServices,
-      loadPinnedScores: () => Promise.resolve(new Map([[score.id, {
-        score: { ...score, latestRevision: { ...score.latestRevision, arrangementSvg: ["/arrangement.svg"] } },
-        latestRevisionId: score.latestRevision.id,
-        deleted: false,
-      }]])),
-    },
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "Imprimir Carnaval 2026" }));
-    const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: "Imprimir Carnaval 2026" }));
-    const allParts = await dialog.findByRole("checkbox", { name: "Todas as partes" });
-    const arrangements = dialog.getByRole("checkbox", { name: "Arranjos (A4 horizontal)" });
-    const download = dialog.getByRole("button", { name: "Baixar PDFs" });
-    await expect(download).toBeDisabled();
-    await userEvent.click(allParts);
-    const parts = dialog.getAllByRole("checkbox").filter((checkbox) => checkbox !== allParts && checkbox !== arrangements);
-    for (const part of parts) {await expect(part).toBeChecked();}
-    await expect(arrangements).not.toBeChecked();
-    await userEvent.click(arrangements);
-    await userEvent.click(allParts);
-    for (const part of parts) {await expect(part).not.toBeChecked();}
-    await expect(arrangements).toBeChecked();
-    await expect(download).toBeEnabled();
   },
 };
 export const Reviewer: Story = {
@@ -108,14 +70,7 @@ export const Empty: Story = {
   },
 };
 
-export const Admin: Story = {
-  args: { role: "admin" },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("link", { name: "Editar Ensaios 2027" })).toBeVisible();
-    await expect(canvas.queryByRole("button", { name: "Publicar Ensaios 2027" })).toBeNull();
-  },
-};
+export const Admin: Story = { args: { role: "admin" } };
 export const Editor: Story = { args: { role: "editor" } };
 export const PermissionsLoading: Story = { args: { role: "loading" } };
 export const SongbooksLoading: Story = { args: { services: { ...services, getProjectSongbooks: () => pending() } } };

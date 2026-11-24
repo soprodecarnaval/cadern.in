@@ -96,7 +96,6 @@ export function ScoreRevisionListView({
                 {counts.get(rev.id) === 1 ? "" : "s"}
               </Badge>
             )}
-            {rev.kind === "reformat" && <Badge bg="light" text="dark">reformatação</Badge>}
             {rev.id === latestRevisionId && <Badge bg="secondary">atual</Badge>}
           </span>
         </List.Item>

@@ -10,7 +10,6 @@ import {
 import { copyMsczWithMeta, type MetadataTags } from "./msczMeta";
 import { assertSupportedMscz } from "./msczArchive";
 import { readMsczIdentity } from "./msczIdentity";
-import { buildPartBasenames, safeFilename } from "../../src/lib/partFiles";
 import { ExportError } from "./exportError";
 import {
   METAJSON_VERSION,
@@ -82,7 +81,42 @@ const splitScoreParts = (mscorePath: string, msczPath: string): SplitParts => {
   return result;
 };
 
-export { buildPartBasenames, safeFilename } from "../../src/lib/partFiles";
+export const safeFilename = (value: string): string => {
+  const withoutControlCharacters = Array.from(value, (character) =>
+    character.charCodeAt(0) < 32 ? "-" : character,
+  ).join("");
+  const safe = withoutControlCharacters
+    .replace(/[<>:"/\\|?*]/g, "-")
+    .replace(/[ .]+$/g, "")
+    .trim();
+  return safe || "partitura";
+};
+
+export const buildPartBasenames = (
+  title: string,
+  parts: SelectedPart[],
+): Map<string, string> => {
+  const totals = new Map<Instrument, number>();
+  const seen = new Map<Instrument, number>();
+  for (const part of parts) {
+    totals.set(part.instrument, (totals.get(part.instrument) ?? 0) + 1);
+  }
+
+  return new Map(
+    parts.map((part) => {
+      const occurrence = (seen.get(part.instrument) ?? 0) + 1;
+      seen.set(part.instrument, occurrence);
+      const suffix =
+        (totals.get(part.instrument) ?? 0) > 1
+          ? `-${String.fromCharCode(96 + occurrence)}`
+          : "";
+      return [
+        part.id,
+        `${safeFilename(title)}-${safeFilename(part.instrument)}${suffix}`,
+      ];
+    }),
+  );
+};
 
 const runConversionJob = (
   mscorePath: string,

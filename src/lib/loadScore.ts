@@ -8,7 +8,7 @@ import { FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { isReviewer } from "./roles";
 import { resolveScoreMetadata, uploadedScoreMetadata } from "./scoreMetadata";
 import type { ScoreData, ScoreMetadata } from "../../types/docs";
-import type { ScoreDisplayArrangement, ScoreDisplayPart } from "../tsx/components/scores/detail/ScoreDisplay";
+import type { ScoreDisplayPart } from "../tsx/components/scores/detail/ScoreDisplay";
 
 export interface LoadedScore extends ScoreMetadata {
   scoreId: string;
@@ -22,7 +22,6 @@ export interface LoadedScore extends ScoreMetadata {
   projectTitle: string;
   msczUrl: string;
   arrangementMidiUrl: string | null;
-  arrangement?: ScoreDisplayArrangement;
   parts: ScoreDisplayPart[];
 }
 
@@ -71,19 +70,11 @@ export async function loadScore(
     projectTitle,
     msczUrl: rev.mscz.url,
     arrangementMidiUrl: rev.midi.url || null,
-    arrangement: rev.arrangement && {
-      svgUrls: rev.arrangement.svg.map(({ url }) => url),
-      playback: rev.arrangement.playback && { midiUrl: rev.arrangement.playback.midi.url, timingUrl: rev.arrangement.playback.timing.url },
-    },
     parts: rev.parts.map((part) => ({
       name: part.name,
       instrument: part.instrument,
       svgUrls: part.svg.map((f) => f.url),
       midiUrl: part.midi.url || null,
-      playback: part.playback && {
-        midiUrl: part.playback.midi.url,
-        timingUrl: part.playback.timing.url,
-      },
     })),
   };
 }
