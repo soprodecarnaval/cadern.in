@@ -28,7 +28,11 @@ interface LoadedScoreThread {
   // the score itself is not (unaffected by this page, which has no such
   // controls).
   foreign: boolean;
+  // The revision this songbook pins, which may be older than the latest.
   revisionId: string;
+  // The score's latest revision: what an upload or a reformat from here
+  // expects to replace, so a pin to an older version doesn't read as stale.
+  latestRevisionId: string;
   title: string;
   composer: string;
   sub: string;
@@ -68,6 +72,7 @@ async function load(
     songbookRevisionId: songbook.currentRevisionId,
     foreign: score.projectId !== songbook.projectId,
     revisionId,
+    latestRevisionId: score.latestRevisionId,
     ...resolveScoreMetadata(score),
     arrangementMidiUrl: scoreRevision.midi.url || null,
     parts: scoreRevision.parts.map((part) => ({
@@ -238,7 +243,7 @@ export function SongbookScorePageView({
   const uploadContext = {
     projectId: loaded.songbookProjectId,
     scoreId,
-    expectedScoreRevisionId: loaded.revisionId,
+    expectedScoreRevisionId: loaded.latestRevisionId,
     songbookId: loaded.songbookId,
     expectedSongbookRevisionId: loaded.songbookRevisionId,
   };
