@@ -1,5 +1,6 @@
 import "html-midi-player";
 import { useEffect, useRef } from "react";
+import "./MidiPlayer.css";
 
 export type SoundFont = "chrono_trigger" | "sgm_plus";
 
@@ -74,5 +75,11 @@ export function MidiPlayer({ src, soundFont = "sgm_plus", onPlaybackTime }: Midi
     };
   }, [src, trackPlayback]);
 
+  if (!src) {
+    return <div className="midi-player-pending" role="status">
+      <button type="button" aria-label="Reproduzir" disabled>▶</button>
+      <span>Carregando áudio…</span>
+    </div>;
+  }
   return <midi-player ref={ref} src={src} sound-font={SOUNDFONT_URLS[soundFont]} />;
 }

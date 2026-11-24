@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { ScoreSvgFrame } from "../../components/scores/ScoreSvgFrame";
-import { MOVABLE_MARKING, VOLTA_BRACKET, translatedTransform, type MarkingMove, type MarkingTarget } from "./collisionSvg";
+import { MOVABLE_MARKING, VOLTA_BRACKET, translatedTransform, type MarkingMove, type MarkingTarget } from "../../../lib/scoreRender/collisionSvg";
 
 type Drag = {
   pointer: number;
@@ -24,6 +24,13 @@ const editorCss = `
   body { touch-action: none; user-select: none; }
   :is(${MOVABLE_MARKING}) { cursor: grab; }
   [data-dragging] { cursor: grabbing; }
+  [data-volta-hit-target] {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 12px;
+    vector-effect: non-scaling-stroke;
+    pointer-events: stroke;
+  }
   :is(${MOVABLE_MARKING}):hover, [data-dragging] { filter: drop-shadow(0 0 1px #2868d9); }`;
 
 export function CollisionPage({ svg, label, onMove, activeNotes }: {
@@ -37,6 +44,16 @@ export function CollisionPage({ svg, label, onMove, activeNotes }: {
 
   return <ScoreSvgFrame svg={svg} label={label} activeNotes={activeNotes} className="enviar-collision-page" css={editorCss}
     onReady={(doc) => {
+      const brackets = Array.from(doc.querySelectorAll<SVGGElement>(VOLTA_BRACKET));
+      // Give the thin printed lines a wider target in the editor only.
+      for (const bracket of brackets) {
+        for (const path of bracket.querySelectorAll("path")) {
+          const hit = path.cloneNode(false) as SVGPathElement;
+          hit.removeAttribute("id");
+          hit.setAttribute("data-volta-hit-target", "");
+          path.before(hit);
+        }
+      }
       let drag: Drag | undefined;
       doc.onpointerdown = (pointer) => {
         if (drag || pointer.button !== 0 || !pointer.isPrimary) {return;}
@@ -46,7 +63,7 @@ export function CollisionPage({ svg, label, onMove, activeNotes }: {
         const start = point(parent, pointer);
         if (!start) {return;}
         const target = marking.matches(VOLTA_BRACKET)
-          ? { voltaIndex: Array.from(doc.querySelectorAll(VOLTA_BRACKET)).indexOf(marking) }
+          ? { voltaIndex: brackets.indexOf(marking) }
           : { id: marking.id };
         pointer.preventDefault();
         marking.setPointerCapture(pointer.pointerId);

@@ -63,6 +63,7 @@ import { buildSongbookSections } from "../../../../lib/pdfGeneration";
 // The songbook's table, PDF generation and member tools live under ?detalhes;
 // the reader is the landing view.
 const DETAILS_PARAM = "detalhes";
+const EDIT_PARAM = "editar";
 
 interface Loaded {
   songbook: WithId<SongbookDoc>;
@@ -138,11 +139,10 @@ export function SongbookManagePageView({
     slug: string;
     songbookSlug: string;
   }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const revisionParam = searchParams.get("versao");
   const navigate = useNavigate();
   const [loaded, setLoaded] = useState<Loaded | null | "loading">("loading");
-  const [editing, setEditing] = useState<"contents" | null>(null);
   const [reloads, setReloads] = useState(0);
   const [forks, setForks] = useState<Map<string, string>>(new Map());
 
@@ -216,13 +216,20 @@ export function SongbookManagePageView({
   }
 
   const { songbook, revision, items } = loaded;
+  const setEditing = (on: boolean) => {
+    const next = new URLSearchParams(searchParams);
+    if (on) {next.set(EDIT_PARAM, "");}
+    else {next.delete(EDIT_PARAM);}
+    setSearchParams(next, { replace: !on });
+  };
   const handleEditDone = (saved: boolean) => {
-    setEditing(null);
+    setEditing(false);
     if (saved) {
       setReloads((n) => n + 1);
     }
   };
   const isCurrent = revision.id === songbook.currentRevisionId;
+  const editing = isCurrent && canEditSongbook(role) && searchParams.has(EDIT_PARAM);
   const stale = items.filter(
     (i): i is NumberedSongbookScoreViewModel =>
       !isSongbookSection(i) && hasNewerVersion(i),
@@ -255,6 +262,7 @@ export function SongbookManagePageView({
   const withDetails = (on: boolean) => {
     const next = new URLSearchParams(searchParams);
     next.delete("musica");
+    next.delete(EDIT_PARAM);
     if (on) {
       next.set(DETAILS_PARAM, "");
     } else {
@@ -309,7 +317,7 @@ export function SongbookManagePageView({
         {revision.note && <> · {revision.note}</>}
       </p>
 
-      {editing === "contents" ? (
+      {editing ? (
         <SongbookEditor
           services={services}
           currentUser={currentUser}
@@ -321,13 +329,13 @@ export function SongbookManagePageView({
         />
       ) : (
         <>
-          {isCurrent && editing === null && (
+          {isCurrent && (
             <div className="d-flex gap-2 mb-3">
               {canEditSongbook(role) && (
                 <Button
                   size="sm"
                   variant="secondary"
-                  onClick={() => setEditing("contents")}
+                  onClick={() => setEditing(true)}
                 >
                   Editar
                 </Button>

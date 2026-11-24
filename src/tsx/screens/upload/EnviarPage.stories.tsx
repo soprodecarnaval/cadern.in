@@ -89,6 +89,34 @@ export const Data: Story = {
   },
 };
 
+export const StepFooter: Story = {
+  args: { state: state({ step: "partes" }) },
+  render: function Render(args) {
+    const [step, setStep] = useState(args.state.step);
+    return <EnviarPageView {...args} state={{ ...args.state, step }} onStep={setStep} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const footerFollows = async (name: string, button: HTMLElement) => {
+      const section = await canvas.findByRole("region", { name });
+      const footer = canvasElement.querySelector(".enviar-step-actions")!;
+      const bounds = section.getBoundingClientRect();
+      await expect(footer.getBoundingClientRect().top).toBeGreaterThanOrEqual(bounds.bottom);
+      await expect(button.getBoundingClientRect().right).toEqual(bounds.right);
+    };
+    const first = canvas.getByRole("button", { name: "Continuar" });
+    await footerFollows("Partes", first);
+    await userEvent.click(first);
+    const data = await canvas.findByRole("button", { name: "Formatar 3 partes" });
+    await footerFollows("Dados", data);
+    await userEvent.click(data);
+    const format = await canvas.findByRole("button", { name: "Continuar" });
+    await footerFollows("Formatação", format);
+    await userEvent.click(format);
+    await footerFollows("Enviar", await canvas.findByRole("button", { name: "Enviar partitura" }));
+  },
+};
+
 export const Formatting: Story = {
   args: {
     state: state({
@@ -110,15 +138,23 @@ export const Formatting: Story = {
     await expect(canvas.queryByRole("region", { name: "Toda a partitura" })).toBeNull();
     // One part at a time, in tabs; the tuba's tab is marked for its warning.
     await expect(canvas.getAllByRole("tab")).toHaveLength(3);
+    await expect(canvas.getAllByRole("tab")[0]).toHaveTextContent("Trompete");
+    await userEvent.click(canvas.getByRole("tab", { name: "Flauta" }));
     await expect(canvas.getByRole("tab", { name: "Flauta" })).toHaveAttribute("aria-selected", "true");
     const part = within(canvas.getByRole("region", { name: "Parte: Flauta" }));
+    await expect(part.getAllByRole("group")[0]).toHaveAccessibleName("Espaçamento");
+    await expect(part.getByRole("checkbox", { name: "Espaçamento uniforme de notas e pausas" })).toBeChecked();
     await expect(part.getByRole("spinbutton", { name: "Tamanho da pauta (mm)" })).toHaveValue("1,45");
-    await expect(canvas.getAllByText(/Pauta de 1,45 mm/)).toHaveLength(1);
+    const positioning = within(part.getByRole("group", { name: "Posicionamento" }));
+    await expect(positioning.getByRole("button", { name: "Desfazer último movimento" })).toBeDisabled();
+    await expect(positioning.getByRole("button", { name: "Restaurar posições" })).toBeDisabled();
+    await expect(canvas.queryByRole("button", { name: "Ouvir" })).toBeNull();
+    await expect(canvas.queryByText(/Pauta de 1,45 mm/)).toBeNull();
     await userEvent.click(canvas.getByRole("tab", { name: /Tuba/ }));
     await expect(canvas.getByRole("region", { name: "Parte: Tuba" })).toBeVisible();
     await expect(canvas.getByText(/Não coube em uma página/)).toBeVisible();
-    await userEvent.click(canvas.getByRole("tab", { name: /Pete/ }));
-    await expect(within(canvas.getByRole("region", { name: "Parte: Pete" })).getByRole("radio", { name: "Posições (1–7)" })).toBeChecked();
+    await userEvent.click(canvas.getByRole("tab", { name: /Trompete/ }));
+    await expect(within(canvas.getByRole("region", { name: "Parte: Trompete" })).getByRole("radio", { name: "Posições (1–7)" })).toBeChecked();
     await expect(canvas.getByText("Atualizando…")).toBeVisible();
   },
 };
@@ -142,7 +178,7 @@ export const FingeringSize: Story = {
     const adjust = (direction: "Aumentar" | "Diminuir") => canvas.getByRole("button", { name: `${direction}: Tamanho dos números` });
 
     await expect(canvas.queryByRole("spinbutton", { name: "Tamanho dos números" })).toBeNull();
-    await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
+    await userEvent.click(canvas.getByRole("tab", { name: "Trompete" }));
     await expect(mode("Automático")).toBeChecked();
     await expect(size()).toHaveValue("0,75");
     await userEvent.click(adjust("Aumentar"));
@@ -155,7 +191,7 @@ export const FingeringSize: Story = {
     await userEvent.click(adjust("Diminuir"));
     await expect(size()).toHaveValue("0,85");
 
-    await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
+    await userEvent.click(canvas.getByRole("tab", { name: "Trompete" }));
     await expect(size()).toHaveValue("0,80");
     await userEvent.click(mode("Automático"));
     await expect(size()).toHaveValue("0,75");
@@ -203,7 +239,7 @@ export const ApplyToAllParts: Story = {
     const canvas = within(canvasElement);
     const field = (name: string) => canvas.getByRole("spinbutton", { name });
     const fixed = (group: string) => within(canvas.getByRole("group", { name: group })).getByRole("radio", { name: "Fixo" });
-    await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
+    await userEvent.click(canvas.getByRole("tab", { name: "Trompete" }));
     await userEvent.clear(field("Tamanho da pauta (mm)"));
     await userEvent.type(field("Tamanho da pauta (mm)"), "2,5");
     await userEvent.click(canvas.getByRole("button", { name: "Aumentar: Tamanho dos números" }));
@@ -228,7 +264,7 @@ export const ApplyToAllParts: Story = {
     // Still shown after a tab switch; it closes with its button, or by itself after 5 s.
     await userEvent.click(body.getByRole("button", { name: "Fechar aviso" }));
     await expect(body.queryByText(/aplicado a/)).toBeNull();
-    await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
+    await userEvent.click(canvas.getByRole("tab", { name: "Trompete" }));
     await userEvent.click(canvas.getByRole("button", { name: "Aplicar a todas as partes: Tamanho da pauta" }));
     await expect(body.getByText("Tamanho da pauta aplicado a 2 outras partes.")).toBeVisible();
     await waitFor(() => expect(body.queryByText(/aplicado a/)).toBeNull(), { timeout: 6000 });
@@ -245,7 +281,7 @@ export const ApplyToAllParts: Story = {
     await userEvent.click(piratas("Pistos"));
     await expect(canvas.getByRole("group", { name: "Tamanho dos números" })).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "Aplicar a todas as partes: Piratas" }));
-    await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
+    await userEvent.click(canvas.getByRole("tab", { name: "Trompete" }));
     await expect(piratas("Pistos")).toBeChecked();
     await userEvent.click(canvas.getByRole("tab", { name: "Flauta" }));
     await expect(canvas.queryByRole("group", { name: "Piratas" })).toBeNull();
@@ -263,7 +299,7 @@ export const ChosenInstrument: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByRole("tab", { name: "Flauta" })).toHaveAttribute("aria-selected", "true");
+    await expect(canvas.getByRole("tab", { name: "Trompete 1" })).toHaveAttribute("aria-selected", "true");
     await expect(within(canvas.getByRole("group", { name: "Piratas" })).getByRole("radio", { name: "Posições (1–7)" })).toBeChecked();
     await expect(canvas.getByRole("group", { name: "Tamanho dos números" })).toBeVisible();
   },

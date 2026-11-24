@@ -1,9 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ScoreSession } from "../browserScore/types";
 import { zFormattingProfile, type FormattingProfile } from "../../../types/formattingProfile";
 import { resolvePartFormatting, sheetLayoutFor } from "./profile";
 import { profileWithChoices, renderForUpload } from "./renderForUpload";
 import { packageMscx } from "../msczIdentity";
+
+afterEach(() => {vi.unstubAllGlobals();});
 
 describe("profileWithChoices", () => {
   const parts = [{ ordinal: 1, name: "Trompete" }, { ordinal: 2, name: "Tuba" }];
@@ -74,11 +77,15 @@ describe("renderForUpload with the preview session", () => {
     expect(parsed.parts.map((p) => p.instrument)).toEqual(["trompete"]);
   });
 
-  it("uses the edited SVG only for its matching page and rejects a stale original", async () => {
+  it("recovers manual edits from old SVGs and saves and reapplies them on reformat", async () => {
+    vi.stubGlobal("DOMParser", DOMParser);
+    vi.stubGlobal("XMLSerializer", XMLSerializer);
     const part = { id: "p1", ordinal: 1, name: "Trompete", origin: "existing" as const, instrumentNames: [], staffCount: null,
       instruments: [{ id: "bb-trumpet", soundId: null, longName: "Trompete", shortName: "Tpt." }], instrumentIds: ["bb-trumpet"] };
-    const pages = ['<svg id="first"/>', '<svg id="second"/>'];
-    const edited = '<svg id="first"><g id="note" class="note"/><g class="fing" transform="translate(1 -2)"/></svg>';
+    const pages = ['<svg xmlns="http://www.w3.org/2000/svg" id="first"><g id="mark" class="fing"><text>1</text></g></svg>', '<svg id="second"/>'];
+    const edited = pages[0].replace('class="fing"', 'class="fing" transform="translate(1 -2)"');
+    const signedSvg = vi.fn(() => Promise.resolve(new Response(edited)));
+    vi.stubGlobal("fetch", signedSvg);
     const frames = [{ timeMs: 0, notes: ["note"] }, { timeMs: 500, notes: [] }];
     const previewMidi = new Uint8Array([77, 84, 104, 100]);
     const renderArrangement = vi.fn(() => Promise.resolve({ pages: [pages[0]], playback: { midi: previewMidi, frames } }));
@@ -91,11 +98,12 @@ describe("renderForUpload with the preview session", () => {
       exportMidi: () => Promise.resolve({ midi: new Uint8Array([1]), warnings: [] }),
     } as unknown as ScoreSession;
     const mscx = new TextEncoder().encode('<museScore version="4.20"><Score/></museScore>');
-    const render = (original: string) => renderForUpload(mscx, "Eva.mscx", zFormattingProfile.parse({
+    const format = zFormattingProfile.parse({
       profileVersion: 1, arrangementMarginMm: 12, arrangementStaffSizeMm: 2.8, arrangementStaffSpacing: 12,
-    }),
+    });
+    const render = (profile = format) => renderForUpload(mscx, "Eva.mscx", profile,
       [{ ordinal: 1, instrument: "trompete" }], {
-        editedPages: [{ ordinal: 1, page: 1, original, svg: edited }],
+        legacyPartPages: new Map([["Trompete", "https://example.test/legacy.svg"]]),
         openSession: {
           session,
           catalog: { revision: 1, parts: [part], coverage: "complete", warnings: [] },
@@ -104,7 +112,7 @@ describe("renderForUpload with the preview session", () => {
         },
       });
 
-    const { parsed } = await render(pages[0]);
+    const { parsed } = await render();
     const [first, second] = parsed.parts[0].svg;
     expect(await parsed.fileMap.get(first)?.text()).toBe(edited);
     expect(await parsed.fileMap.get(second)?.text()).toBe(pages[1]);
@@ -116,7 +124,13 @@ describe("renderForUpload with the preview session", () => {
     expect(parsed.arrangement?.svg).toEqual(["arrangement/arrangement-1.svg"]);
     expect(await parsed.fileMap.get(parsed.arrangement!.svg[0])?.text()).toBe(pages[0]);
     expect(parsed.arrangement?.playback).toEqual({ midi: "arrangement/full-playback.midi", timing: "arrangement/full-timing.json" });
-    await expect(render('<svg id="stale"/>')).rejects.toThrow("A página foi redesenhada");
+    const manifest = JSON.parse(await parsed.fileMap.get("metajson")!.text()) as { formatting: unknown };
+    const profile = zFormattingProfile.parse(manifest.formatting);
+    expect(profile.manualOffsets?.["1"]?.[0]).toMatchObject({ x: 1, y: -2, target: { id: "mark" } });
+
+    const reformat = await render(profile);
+    expect(await reformat.parsed.fileMap.get(first)?.text()).toBe(edited);
+    expect(signedSvg).toHaveBeenCalledOnce();
   });
 
   it("stores the metadata the user checked instead of the file's tags", async () => {

@@ -1,7 +1,8 @@
+import { partInstrumentLabels } from "../preferredInstrument";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
-import type { Instrument } from "../../../types/instrument";
+import { compareInstrumentOrder, type Instrument } from "../../../types/instrument";
 import { inspect } from "../browserScore/input";
 import { excerptInstruments } from "../browserScore/partInstruments";
 import {
@@ -93,6 +94,22 @@ const PLUGIN_PARTS: (PluginPart | null)[] = [
   { shortName: "E♭" },
   { partName: "Eb" },
 ];
+
+it("labels parts by their selected Cadernin instrument and numbers duplicates", () => {
+  const parts = [
+    { name: "PETE", instrument: "trompete pirata" },
+    { name: "Flauta", instrument: "trompete" },
+    { name: "Contrabaixo", instrument: "tuba eb" },
+  ];
+  expect([...partInstrumentLabels(parts).values()]).toEqual(["Trompete 1", "Trompete 2", "Tuba Eb"]);
+});
+
+it("orders part families and keeps their variants together", () => {
+  const instruments = ["tuba eb", "flauta", "sax tenor", "trombone", "bombardino", "trompete pirata", "clarinete", "tuba", null, "trompete"];
+  expect(instruments.sort(compareInstrumentOrder)).toEqual([
+    "trompete", "trompete pirata", "trombone", "sax tenor", "flauta", "bombardino", "tuba", "tuba eb", "clarinete", null,
+  ]);
+});
 
 describe("mapInstrumentId", () => {
   it.each(FIXTURE_PARTS)("maps %s (%s)", (instrumentId, name, expected) => {

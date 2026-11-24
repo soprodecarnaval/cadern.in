@@ -154,7 +154,8 @@ function chordMembers(svg, notes) {
 /**
  * Moves each fingering of a drawn page from Verovio's common row into a band above the staff: never
  * inside the staff, higher for higher notes, as the plugin did, so the numbers trace the melody; and
- * always above its own note (the top of its chord, its articulations) when that is above the staff.
+ * always above its own note when that is above the staff. Repeated pitches on the same staff
+ * share one baseline. Collision corrections for nearby markings are manual.
  * Each staff in a system has its own pitch range. The biggest step between notes limits the
  * contour's slope, and a larger inter-system gap gives the numbers more breathing room.
  * Text-only: the worker has no DOM.
@@ -193,7 +194,7 @@ export function withNoteHeightFingerings(svg, unit, fontMultiplier = 1) {
             continue;
         }
         if (staffTop === null) continue;
-        const note = { id: match[2], x: Number(match[3]), y: Number(match[4]), staffTop, system };
+        const note = { id: match[2], y: Number(match[4]), staffTop, system };
         notes.set(note.id, note);
         const edges = staffBottoms[system];
         edges.set(staffTop, Math.max(edges.get(staffTop), note.y + space));
@@ -201,24 +202,27 @@ export function withNoteHeightFingerings(svg, unit, fontMultiplier = 1) {
     }
     const chords = chordMembers(svg, notes);
     const anchors = new Map(), staffBands = new Map();
-    for (const match of svg.matchAll(/class="fing"[^>]*data-startid="#([^"]+)"/g)) {
-        const note = notes.get(match[1]);
+    const numbers = /(<g [^>]*class="fing"[^>]*data-startid="#([^"]+)"[^>]*>\s*<text [^>]*?\by=")(-?[\d.]+)("[\s\S]*?<tspan font-size="([1-9][\d.]*)px")/g;
+    for (const [, , id, , , fontSize] of svg.matchAll(numbers)) {
+        const note = notes.get(id);
         if (!note) continue;
         const chord = chords.get(note.id) ?? [note];
-        const top = chord.reduce((high, other) => (other.y < high.y ? other : high), note);
+        const chordTop = chord.reduce((high, other) => Math.min(high, other.y), note.y);
         // Verovio emits a staff group per measure. Group those on the same line
         // across the system while keeping multiple staves in a system separate.
-        const key = `${top.system}:${top.staffTop}`;
-        const band = staffBands.get(key) ?? { system: top.system, top: top.staffTop, anchors: [] };
+        const key = `${note.system}:${note.staffTop}`;
+        const band = staffBands.get(key) ?? {
+            system: note.system, top: note.staffTop, pitches: [], clearance: new Map(), pageTop: -Infinity,
+        };
         staffBands.set(key, band);
-        const anchor = { x: note.x, y: top.y, pitchY: note.y, staffTop: top.staffTop, count: chord.length, band };
-        anchors.set(match[1], anchor);
-        band.anchors.push(anchor);
+        anchors.set(id, { pitch: note.y, band });
+        band.pitches.push(note.y);
+        band.pageTop = Math.max(band.pageTop, Number(fontSize) * 0.72 - space * FINGERING_ROOM);
+        // Apply the tightest notehead/chord clearance to every occurrence of a pitch.
+        const overNote = chordTop - space * (0.5 + (chord.length - 1) * CHORD_STEP);
+        band.clearance.set(note.y, Math.min(band.clearance.get(note.y) ?? Infinity, overNote));
     }
     if (!anchors.size) return svg;
-    // Articulations (staccato dots, accents) above a note: the number goes above them.
-    const articulations = [...svg.matchAll(/class="artic"[^>]*>\s*(?:<[^>]*>\s*)*?<use [^>]*transform="translate\(([\d.]+), ([\d.]+)\)/g)]
-        .map(match => ({ x: Number(match[1]), y: Number(match[2]) }));
     for (const band of staffBands.values()) {
         let previousBottom = systemBottoms[band.system - 1];
         for (const [top, bottom] of staffBottoms[band.system]) {
@@ -228,11 +232,11 @@ export function withNoteHeightFingerings(svg, unit, fontMultiplier = 1) {
         let lowest = -Infinity, highest = Infinity, maxStep = 0;
         let previousY;
         // The renderer emits fingerings in score order, across measure groups.
-        for (const anchor of band.anchors) {
-            lowest = Math.max(lowest, anchor.pitchY);
-            highest = Math.min(highest, anchor.pitchY);
-            if (previousY !== undefined) maxStep = Math.max(maxStep, Math.abs(anchor.pitchY - previousY));
-            previousY = anchor.pitchY;
+        for (const pitch of band.pitches) {
+            lowest = Math.max(lowest, pitch);
+            highest = Math.min(highest, pitch);
+            if (previousY !== undefined) maxStep = Math.max(maxStep, Math.abs(pitch - previousY));
+            previousY = pitch;
         }
         band.gap = Math.max(FINGERING_GAP * space, Math.min(COMFORTABLE_GAP * space, room / 3));
         band.lowest = lowest;
@@ -240,39 +244,14 @@ export function withNoteHeightFingerings(svg, unit, fontMultiplier = 1) {
         band.slope = range > 0 ? Math.min(MAX_PITCH_RISE * space / range,
             Math.max(space, room - band.gap) / range, MAX_FINGERING_STEP * space / maxStep) : 0;
     }
-    // Volta brackets: numbers under one stay below its hooks and its ending number.
-    const brackets = [...svg.matchAll(/class="ending[^"]*"[^>]*>[\s\S]*?<\/g>/g)].flatMap(group => {
-        const line = /<path d="M([\d.]+) ([\d.]+) L([\d.]+) \2"/.exec(group[0]);
-        if (!line) return [];
-        const ys = [...group[0].matchAll(/<path d="M[\d.]+ ([\d.]+) L[\d.]+ ([\d.]+)"/g), ...group[0].matchAll(/<text [^>]*\by="([\d.]+)"/g)]
-            .flatMap(m => m.slice(1).filter(Boolean).map(Number));
-        return [{ from: Number(line[1]), to: Number(line[3]), y: Math.max(...ys) }];
-    });
-    const repeatSigns = [...svg.matchAll(/class="repeatMark"[^>]*>\s*<use [^>]*transform="translate\(([\d.]+), ([\d.]+)\)/g)]
-        .map(match => ({ from: Number(match[1]) - 1.2 * space, to: Number(match[1]) + 1.2 * space, y: Number(match[2]) + space }));
-    const markingsAbove = [...brackets, ...repeatSigns];
-    return svg.replace(/(<g [^>]*class="fing"[^>]*data-startid="#([^"]+)"[^>]*>\s*<text [^>]*?\by=")([\d.]+)("[\s\S]*?<tspan font-size="([1-9][\d.]*)px")/g, (whole, head, id, _y, tail, fontSize) => {
+    return svg.replace(numbers, (whole, head, id, _y, tail) => {
         const anchor = anchors.get(id);
         if (!anchor) return whole;
-        const { gap, lowest, slope } = anchor.band;
-        // Above the notehead (half a space above its centre), then the plugin's offsets.
-        const above = articulations
-            .filter(artic => Math.abs(artic.x - anchor.x) <= space && artic.y < anchor.y && artic.y > anchor.y - space * 3)
-            .reduce((top, artic) => Math.min(top, artic.y - space * 0.6), anchor.y);
-        // In the band above the staff, by pitch; and clear of the note itself when it is higher.
-        const band = anchor.staffTop - gap - (lowest - anchor.pitchY) * slope;
-        const overNote = Math.min(above, anchor.y) - space * (0.5 + (anchor.count - 1) * CHORD_STEP);
-        let wanted = Math.min(band, overNote - gap);
-        // Under a volta bracket or repeat sign, use the smaller clearance if needed.
-        const bottom = Math.min(anchor.staffTop, overNote) - space * FINGERING_GAP;
-        for (const marking of markingsAbove) {
-            if (anchor.x < marking.from || anchor.x > marking.to || marking.y > bottom) continue;
-            wanted = Math.min(bottom, Math.max(wanted, marking.y + Number(fontSize) * 0.72 + space * 0.3));
-        }
-        // Verovio's original baseline varies with local collisions. Clamping
-        // against it can put unrelated pitches on the same line or reverse them.
-        const pageTop = Number(fontSize) * 0.72 - space * FINGERING_ROOM;
-        return head + Math.round(Math.max(pageTop, wanted)) + tail;
+        const { band, pitch } = anchor;
+        const contour = band.top - band.gap - (band.lowest - pitch) * band.slope;
+        const overNote = band.clearance.get(pitch) - band.gap;
+        const y = Math.round(Math.max(band.pageTop, Math.min(contour, overNote)));
+        return head + y + tail;
     });
 }
 
@@ -375,7 +354,7 @@ function largestFitting(units, fit) {
  * @param {string} musicXml single-part MusicXML without <print> elements.
  * @param {{ widthMm: number, heightMm: number }} area
  * @param {number[]} widths relative content width of each measure, in order.
- * @param {{ unit?: number, systems?: number, spacingLinear?: number, spacingNonLinear?: number, spacingSystem?: number, fingeringScale?: number }} [layout]
+ * @param {{ unit?: number, systems?: number, spacingLinear?: number, spacingNonLinear?: number, spacingSystem?: number, evenNoteSpacing?: boolean, fingeringScale?: number }} [layout]
  * @returns {Promise<{ pages: string[], staffSpaceMm: number, systems: number, contentHeightMm: number } | { error: 'load' }>}
  */
 export async function renderSheet(musicXml, area, widths, layout = {}, includePlayback = false) {
@@ -409,6 +388,7 @@ export async function renderSheet(musicXml, area, widths, layout = {}, includePl
         unit: verovioUnit, scale: Math.round(zoom * 100), adjustPageHeight: natural, justifyVertically: !natural, minLastJustification: 0,
         breaks: starts ? 'line' : 'auto', header: 'none', footer: 'none',
         ...spacing,
+        evenNoteSpacing: layout.evenNoteSpacing === true,
         fingeringScale: Math.min(spacing.fingeringScale, VEROVIO_FINGERING_MAX),
         spacingSystem: spacing.spacingSystem + fingeringRoom(),
         svgViewBox: true, mmOutput: true, fontTextLiberation: true, svgRemoveXlink: false, xmlIdSeed: 1,

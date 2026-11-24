@@ -41,6 +41,7 @@ describe("FormattingProfile", () => {
     expect(sheetLayoutFor(part)).toEqual({
       spacingLinear: 0.21,
       spacingNonLinear: 0.6,
+      evenNoteSpacing: true,
       spacingSystem: 4,
     });
     expect(libraryOptionsFor(DEFAULT_FORMATTING_PROFILE)).toEqual({
@@ -48,6 +49,17 @@ describe("FormattingProfile", () => {
       textFonts: "shared",
       fitArea: { widthMm: 171.7, heightMm: 98.2 },
     });
+  });
+
+  it("round-trips even note spacing with an explicit off override", () => {
+    const profile = zFormattingProfile.parse(JSON.parse(JSON.stringify({
+      profileVersion: 1,
+      spacing: { evenNoteSpacing: true },
+      parts: { Tuba: { spacing: { evenNoteSpacing: false } } },
+    })));
+    expect(sheetLayoutFor(resolvePartFormatting(profile, "Flauta")).evenNoteSpacing).toBe(true);
+    expect(resolvePartFormatting(profile, "Tuba").spacing.evenNoteSpacing).toBe(false);
+    expect(sheetLayoutFor(resolvePartFormatting(profile, "Tuba")).evenNoteSpacing).toBe(false);
   });
 
   it("applies part overrides over score settings", () => {
@@ -66,6 +78,7 @@ describe("FormattingProfile", () => {
       systems: 3,
       spacingLinear: 0.2,
       spacingNonLinear: 0.6,
+      evenNoteSpacing: true,
       spacingSystem: 6,
     });
     expect(tuba.fingering).toMatchObject({ notation: "valves", dynamicTrombone: true });

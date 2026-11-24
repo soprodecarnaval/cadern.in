@@ -145,12 +145,12 @@ export function withoutOverride(profile: FormattingProfile, partName: string): F
 
 // Engine warnings worth showing, in pt-BR. Informational ones (fidelity notes) are left out.
 const WARNINGS: Record<string, string> = {
+  MANUAL_OFFSETS_UNMATCHED: "Algumas correções manuais não puderam ser aplicadas nesta prévia.",
   SHEET_OVERFLOW: "Não coube em uma página: a parte continua em outra folha.",
   SHEET_STAFF_REDUCED: "A pauta ficou bem pequena para caber em uma página.",
   FINGERINGS_REDUCED: "Os números dos piratas foram diminuídos para caber em uma página.",
   FINGERING_OUT_OF_RANGE: "Algumas notas estão fora da tabela de piratas do instrumento e ficaram sem número.",
   TUBA_NOTATION_SKIPPED: "A parte troca de instrumento, então a escrita de tuba ficou como está no arquivo.",
-  SYSTEM_MARKINGS_COPIED: "Andamento, ensaios e saltos foram copiados da primeira parte da partitura.",
   MIDI_FROM_FULL_SCORE: "O áudio desta parte vem da partitura completa.",
 };
 

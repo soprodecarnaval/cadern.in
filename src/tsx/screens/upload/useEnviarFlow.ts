@@ -6,7 +6,7 @@
 import type { User } from "firebase/auth";
 import { fontFaceCss, loadTextFonts, withTextFonts } from "../../../lib/sharedFonts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { FormattingProfile } from "../../../../types/formattingProfile";
+import type { FormattingProfile, ManualOffset } from "../../../../types/formattingProfile";
 import { DEFAULT_FORMATTING_PROFILE } from "../../../../types/formattingProfile";
 import type { Part, PartCatalog, ScoreLibrary, ScoreSession } from "../../../lib/browserScore/types";
 import { packageMscx, readMsczIdentityBytes, stampMsczIdentityBytes } from "../../../lib/msczIdentity";
@@ -18,7 +18,7 @@ import { commitUpload, prepareUpload, type UploadContext, type UploadFlowService
 import { MAX_SCORE_BYTES, choicesFrom, initialState, metadataFromTags, partRows, rowsFromStored, type EnviarState, type PartRow, type Step, type StoredPart } from "./enviarState";
 import { zMetajson } from "../../../../types/metajson";
 import type { ScoreMetadata } from "../../../../types/docs";
-import { moveMarking, type MarkingMove } from "./collisionSvg";
+import { applyManualOffsets, manualOffsetsFor, moveMarking, readManualOffsets, recoverManualOffsets, type MarkingMove } from "../../../lib/scoreRender/collisionSvg";
 import type { Instrument } from "../../../../types/instrument";
 
 export { initialState, MAX_SCORE_BYTES, type EnviarState } from "./enviarState";
@@ -67,6 +67,8 @@ export function useEnviarFlow(deps: EnviarDeps) {
   const controller = useRef(new AbortController());
   const effective = useRef<FormattingProfile>(DEFAULT_FORMATTING_PROFILE);
   const rendered = useRef(new Map<number, string>());
+  const legacyPartPages = useRef<ReadonlyMap<string, string>>(new Map());
+  const recoveredOffsets = useRef(new Map<number, ManualOffset[]>());
   const depsRef = useRef(deps);
   depsRef.current = deps;
   // The instrument each part is filed under: it, not the file's instrument, drives the formatting.
@@ -127,12 +129,14 @@ export function useEnviarFlow(deps: EnviarDeps) {
   const openBytes = useCallback(async (
     read: (signal: AbortSignal) => Promise<Uint8Array>,
     fileName: string,
-    stored?: { profile: FormattingProfile; parts: readonly StoredPart[]; metadata: ScoreMetadata },
+    stored?: { profile: FormattingProfile; parts: readonly StoredPart[]; metadata: ScoreMetadata; partPages: ReadonlyMap<string, string> },
   ) => {
     controller.current.abort();
     controller.current = new AbortController();
     const signal = controller.current.signal;
     clearMidi();
+    legacyPartPages.current = stored?.partPages ?? new Map();
+    recoveredOffsets.current.clear();
     update({ fileName, midi: {}, previews: {}, collisions: {}, status: { kind: "opening" } });
     await closeSession();
     try {
@@ -158,7 +162,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
         status: { kind: "idle" },
         metadata: stored?.metadata ?? metadataFromTags(tags, fileName),
         rows: stored ? rowsFromStored(rows, stored.parts, stored.profile) : rows,
-        ...(stored ? { profile: stored.profile } : {}),
+        profile: stored?.profile ?? DEFAULT_FORMATTING_PROFILE,
         previews: {},
         target: null,
         checks: null,
@@ -195,6 +199,10 @@ export function useEnviarFlow(deps: EnviarDeps) {
           {
             profile: manifest?.formatting ?? DEFAULT_FORMATTING_PROFILE,
             parts: manifest?.parts ?? [],
+            partPages: new Map(revision.parts.flatMap((part) =>
+              part.svg[0]?.url && revision.parts.filter(({ name }) => name === part.name).length === 1
+                ? [[part.name, part.svg[0].url] as const] : [],
+            )),
             metadata: { title: safeFilename(title), composer: revision.metadata?.composer ?? "", sub: revision.metadata?.sub ?? "", tags: revision.metadata?.tags ?? [] },
           },
         );
@@ -266,15 +274,36 @@ export function useEnviarFlow(deps: EnviarDeps) {
             const view = { kind: "part" as const, partId: part.id };
             const { revision, pageCount } = await open.getPages(view, { signal });
             const page = await open.renderPage(view, 1, { expectedRevision: revision, signal });
+            const storedOffsets = manualOffsetsFor(signatures.profile, ordinal) ?? recoveredOffsets.current.get(ordinal);
+            const offsets = storedOffsets ?? await recoverManualOffsets(page.svg, legacyPartPages.current.get(part.name), signal);
+            const corrected = applyManualOffsets(page.svg, offsets, pageCount === 1);
             // Pages name their shared text fonts; a preview shown as an image needs them embedded (014).
             const fontCss = page.portability === "shared-fonts" ? await textFontCss() : "";
             const svg = fontCss ? withTextFonts(page.svg, fontCss) : page.svg;
             if (signal.aborted || session.current !== open || superseded) {return;}
+            if (!storedOffsets && offsets.length) {recoveredOffsets.current.set(ordinal, offsets);}
             rendered.current.set(ordinal, signature);
             const automaticFingeringSize = resolvePartFormatting(signatures.profile, part.name).fingering.size === "auto"
               ? page.layout?.fingeringScale
               : undefined;
-            update((current) => ({ previews: { ...current.previews, [ordinal]: { ordinal, svg, pageSvg: page.svg, fontCss, signature, pages: pageCount, layout: page.layout ?? null, automaticFingeringSize, warnings: page.warnings, rendering: false } } }));
+            update((current) => {
+              const collisions = { ...current.collisions };
+              const draft = collisions[ordinal];
+              if (draft?.original !== page.svg || draft.signature !== signature) {
+                if (corrected.svg !== page.svg) {
+                  collisions[ordinal] = { original: page.svg, signature, history: [corrected.svg] };
+                } else {
+                  delete collisions[ordinal];
+                }
+              }
+              const warnings = corrected.unmatched.length
+                ? [...page.warnings, { code: "MANUAL_OFFSETS_UNMATCHED", message: "Manual offsets could not be matched to this page." }]
+                : page.warnings;
+              return { collisions, previews: { ...current.previews, [ordinal]: {
+                ordinal, svg, pageSvg: page.svg, fontCss, signature, pages: pageCount,
+                layout: page.layout ?? null, automaticFingeringSize, warnings, rendering: false,
+              } } };
+            });
           } catch (error) {
             const text = message(error);
             if (text && !signal.aborted && !superseded) {update((current) => ({ previews: { ...current.previews, [ordinal]: { ...current.previews[ordinal], ordinal, rendering: false, error: text } } }));}
@@ -338,19 +367,15 @@ export function useEnviarFlow(deps: EnviarDeps) {
       const fileName = state.fileName ?? "partitura.mscz";
       if (!session.current || !catalogRef.current) {await openSession(fileName, signal);}
       const open = session.current!;
-      const { parsed } = await renderForUpload(bytes.current, fileName, state.profile, choicesFrom(state.rows), {
+      const profile = recoveredOffsets.current.size ? {
+        ...state.profile,
+        manualOffsets: { ...Object.fromEntries(recoveredOffsets.current), ...state.profile.manualOffsets },
+      } : state.profile;
+      const { parsed } = await renderForUpload(bytes.current, fileName, profile, choicesFrom(state.rows), {
         signal,
         metadata: state.metadata,
         arrangementRows: state.rows,
-        editedPages: Object.entries(state.collisions).flatMap(([key, draft]) => {
-          const ordinal = Number(key);
-          const svg = draft.history.at(-1);
-          if (!svg) {return [];}
-          if (draft.signature !== signatures.parts[ordinal]) {
-            throw new Error("A formatação mudou. Confira as correções manuais antes de enviar.");
-          }
-          return [{ ordinal, page: 1, original: draft.original, svg }];
-        }),
+        legacyPartPages: legacyPartPages.current,
         openSession: {
           session: open,
           catalog: catalogRef.current!,
@@ -386,7 +411,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
     } catch (error) {
       if (!signal.aborted) {fail(error);}
     }
-  }, [signatures.parts, fail, openSession, state.collisions, state.fileName, state.metadata, state.profile, state.rows, state.target, update]);
+  }, [fail, openSession, state.fileName, state.metadata, state.profile, state.rows, state.target, update]);
 
   const previewArrangement = useCallback(async (signal: AbortSignal) => {
     const open = session.current;
@@ -451,8 +476,6 @@ export function useEnviarFlow(deps: EnviarDeps) {
       return draft && part && draft.signature === pageSignature(nextProfile, part.name, choice.instrument)
         ? [[choice.ordinal, draft] as const] : [];
     }));
-    if (Object.keys(nextCollisions).length !== Object.keys(state.collisions).length &&
-        !window.confirm("Esta alteração apaga as correções manuais nas partes afetadas. Continuar?")) {return false;}
     update({ rows, profile, collisions: nextCollisions });
     return true;
   };
@@ -475,7 +498,16 @@ export function useEnviarFlow(deps: EnviarDeps) {
       const collisions = { ...current.collisions };
       if (history.length) {collisions[ordinal] = { ...draft, history };}
       else {delete collisions[ordinal];}
-      return { collisions };
+      const saved = manualOffsetsFor(current.profile, ordinal) ?? recoveredOffsets.current.get(ordinal) ?? [];
+      const unmatched = action === "reset" ? [] : applyManualOffsets(preview.pageSvg, saved, preview.pages === 1).unmatched;
+      const offsets = history.length ? readManualOffsets(preview.pageSvg, history[history.length - 1]) : [];
+      return {
+        collisions,
+        profile: { ...current.profile, manualOffsets: { ...current.profile.manualOffsets, [ordinal]: [...offsets, ...unmatched] } },
+        previews: { ...current.previews, [ordinal]: {
+          ...preview, warnings: action === "reset" ? preview.warnings.filter(({ code }) => code !== "MANUAL_OFFSETS_UNMATCHED") : preview.warnings,
+        } },
+      };
     });
   };
 

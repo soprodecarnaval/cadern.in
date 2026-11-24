@@ -1,3 +1,4 @@
+import { partInstrumentLabel } from "./lib/preferredInstrument";
 import { safeFilename } from "./lib/partFiles";
 import SVGtoPDF from "svg-to-pdfkit";
 import { loadTextFonts, pdfFontName, textFontCallback } from "./lib/sharedFonts";
@@ -137,9 +138,7 @@ export const createSongBook = async (opts: CreateSongBookOptions) => {
 
         for (let partIdx = 0; partIdx < partsForInstrument.length; partIdx++) {
           const part = partsForInstrument[partIdx];
-          // Rendered verbatim: MuseScore part names already carry the
-          // instrument, and pre-v2 revisions were backfilled to match.
-          const partLabel = isMultiPart ? part.name : undefined;
+          const partLabel = isMultiPart ? `${partInstrumentLabel(part.instrument)} ${partIdx + 1}` : undefined;
           const displayNumber = isMultiPart
             ? `${songPageIndex}.${partIdx + 1}`
             : `${songPageIndex}`;
@@ -226,12 +225,13 @@ const drawSvg = async (doc: PDFKit.PDFDocument, url: string, page: number): Prom
     const resp = await fetch(url);
     const svg = await resp.text();
     doc.switchToPage(page);
-    const width = 17.17 * cm2pt;
+    // Saved part SVGs can run to the right edge of their viewport.
+    const width = (17.17 - 0.15) * cm2pt;
     const height = 9.82 * cm2pt;
     SVGtoPDF(doc, svg, 0.44 * cm2pt, 2.55 * cm2pt, {
       width: width,
       height: height,
-      preserveAspectRatio: `${width}x${height}`,
+      preserveAspectRatio: "xMinYMin meet",
       fontCallback: textFontCallback(sharedFonts.get(doc) ?? new Set()),
     });
   } catch (e) {
@@ -316,23 +316,74 @@ const registerSharedTextFonts = async (doc: PDFKit.PDFDocument) => {
 };
 
 
-/** Download only the stored full-score pages, one SVG per A4 landscape page. */
-export async function createArrangementPdf(urls: readonly string[], title: string): Promise<void> {
-  if (!urls.length) {throw new Error("O arranjo ainda não tem páginas.");}
-  const pages = await Promise.all(urls.map(async (url) => {
+const loadArrangementPages = (urls: readonly string[]) =>
+  Promise.all(urls.map(async (url) => {
     const response = await fetch(url);
     if (!response.ok) {throw new Error("Não foi possível carregar todas as páginas do arranjo.");}
     return response.text();
   }));
+
+/** Download only the stored full-score pages, one SVG per A4 landscape page. */
+export function createArrangementPdf(urls: readonly string[], title: string): Promise<void> {
+  return downloadArrangements([{ title, urls }], title, false);
+}
+
+export type ArrangementPdfEntry = { title: string; urls: readonly string[] };
+
+export function createArrangementSongbookPdf(entries: readonly ArrangementPdfEntry[], title: string): Promise<void> {
+  return downloadArrangements(entries, title, true);
+}
+
+async function downloadArrangements(entries: readonly ArrangementPdfEntry[], title: string, withIndex: boolean) {
+  const arrangements = await Promise.all(entries.filter(({ urls }) => urls.length).map(async (entry) => ({
+    title: entry.title,
+    pages: await loadArrangementPages(entry.urls),
+  })));
+  if (!arrangements.length) {throw new Error("O arranjo ainda não tem páginas.");}
+
   const doc = new window.PDFDocument({ size: "A4", layout: "landscape", margin: 0, autoFirstPage: false });
   await registerSharedTextFonts(doc);
-  for (const svg of pages) {
+  const margin = 28;
+  const rowsPerPage = 25;
+  const indexPageCount = withIndex ? Math.ceil(arrangements.length / rowsPerPage) : 0;
+  const pageWidth = () => doc.page.width - 2 * margin;
+  const addTitledPage = (subtitle: string, pageNumber: number) => {
     doc.addPage();
-    SVGtoPDF(doc, svg, 0, 0, {
-      width: doc.page.width,
-      height: doc.page.height,
-      fontCallback: textFontCallback(sharedFonts.get(doc) ?? new Set()),
+    doc.font("Helvetica-Bold").fontSize(18)
+      .text(title, margin, 19, { width: pageWidth(), height: 23, ellipsis: true });
+    doc.font("Helvetica").fontSize(12)
+      .text(subtitle, margin, 43, { width: pageWidth(), height: 17, ellipsis: true })
+      .text(String(pageNumber), margin, doc.page.height - 23, { width: pageWidth(), align: "right" });
+  };
+
+  if (withIndex) {
+    let firstScorePage = indexPageCount + 1;
+    arrangements.forEach((arrangement, index) => {
+      const row = index % rowsPerPage;
+      if (row === 0) {addTitledPage("Índice de arranjos", Math.floor(index / rowsPerPage) + 1);}
+      const y = 76 + row * 19;
+      doc.fontSize(12)
+        .text(arrangement.title, margin, y, { width: pageWidth() - 48, height: 17, ellipsis: true })
+        .text(String(firstScorePage), doc.page.width - margin - 40, y, { width: 40, align: "right" });
+      firstScorePage += arrangement.pages.length;
     });
+  }
+
+  let pageNumber = indexPageCount;
+  for (const arrangement of arrangements) {
+    for (const svg of arrangement.pages) {
+      if (withIndex) {
+        addTitledPage(arrangement.title, ++pageNumber);
+      } else {
+        doc.addPage();
+      }
+      const scoreTop = withIndex ? 65 : 0;
+      SVGtoPDF(doc, svg, 0, scoreTop, {
+        width: doc.page.width,
+        height: doc.page.height - scoreTop - (withIndex ? 28 : 0),
+        fontCallback: textFontCallback(sharedFonts.get(doc) ?? new Set()),
+      });
+    }
   }
   await download(doc, `${safeFilename(title || "Partitura")}-arranjo.pdf`);
 }

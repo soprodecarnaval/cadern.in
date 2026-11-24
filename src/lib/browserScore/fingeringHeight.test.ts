@@ -25,13 +25,13 @@ describe("withNoteHeightFingerings", () => {
     expect(y.f3).toBeLessThan(y.f2);
   });
 
-  it("stays above notes over the staff, and below volta brackets", () => {
+  it("stays above ledger notes and leaves volta collisions for manual editing", () => {
     const ledger = ys(withNoteHeightFingerings(page().replace("translate(100, 950)", "translate(100, 600)"), 5));
     expect(ledger.f1).toBe(600 - 100 * (0.5 + 1.45));
     const bracket = '<g class="ending"><g class="voltaBracket"><text x="1050" y="780" font-size="0px"><tspan font-size="200px">1</tspan></text>'
       + '<path d="M1000 600 L1300 600"/><path d="M1000 600 L1000 800"/></g></g>';
     const under = ys(withNoteHeightFingerings(page(bracket), 5));
-    expect(under.f3).toBe(940);
+    expect(under).toEqual(ys(withNoteHeightFingerings(page(), 5)));
   });
 
   it("uses each system's pitch range and the gap above that system", () => {
@@ -51,11 +51,17 @@ describe("withNoteHeightFingerings", () => {
     expect(roomy.f1).toBe(tight.f1);
   });
 
-  it("leaves room below a repeat sign in the same column", () => {
+  it("uses the same height for repeated pitches next to a coda or jump direction", () => {
     const sign = '<g class="repeatMark"><use transform="translate(600, 550) scale(0.64)"/></g>';
-    const withSign = ys(withNoteHeightFingerings(page(sign), 5));
-    expect(withSign.f2).toBe(889);
-    expect(withSign.f1).toBe(655);
+    const jump = '<g class="dir fine"><text x="1100" y="850">D.C. al Fine</text></g>';
+    const repeated = page(sign + jump).replace("translate(1100, 1200)", "translate(1100, 1500)");
+    const svg = withNoteHeightFingerings(repeated, 5);
+    const result = ys(svg);
+    expect(result.f2).toBe(result.f3);
+    expect(result.f2).toBe(855);
+    expect(result.f1).toBeLessThan(result.f2);
+    expect(svg).toContain(sign);
+    expect(svg).toContain(jump);
   });
 
   it("follows pitch even when Verovio placed numbers on a common high row", () => {

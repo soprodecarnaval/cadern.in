@@ -1,16 +1,17 @@
 import { Writable } from "node:stream";
 import PDFDocument from "pdfkit";
 import { afterEach, expect, it, vi } from "vitest";
-import { createArrangementPdf } from "./createSongBook";
+import { createArrangementPdf, createArrangementSongbookPdf } from "./createSongBook";
 
 vi.mock("./lib/sharedFonts", async (importOriginal) => ({
   ...await importOriginal<typeof import("./lib/sharedFonts")>(),
   loadTextFonts: () => Promise.resolve([]),
 }));
 
-afterEach(() => {vi.unstubAllGlobals();});
+afterEach(() => {vi.restoreAllMocks(); vi.unstubAllGlobals();});
 
-it("downloads exactly the saved arrangement pages as A4 landscape", async () => {
+it.each([false, true])("downloads A4 landscape arrangement pages (with index: %s)", async (withIndex) => {
+  const text = vi.spyOn(PDFDocument.prototype, "text");
   const data: Buffer[] = [];
   const stream = new Writable({
     write(chunk: Buffer, _encoding, done) {
@@ -31,12 +32,29 @@ it("downloads exactly the saved arrangement pages as A4 landscape", async () => 
   )));
   vi.stubGlobal("fetch", fetchPage);
 
-  await createArrangementPdf(pages, "Abre Alas");
+  if (withIndex) {
+    await createArrangementSongbookPdf([
+      { title: "Primeira música", urls: pages },
+      { title: "Segunda música", urls: [pages[0]] },
+    ], "Abre Alas");
+  } else {
+    await createArrangementPdf(pages, "Abre Alas");
+  }
 
-  expect(fetchPage.mock.calls).toEqual(pages.map((page) => [page]));
+  expect(fetchPage.mock.calls).toEqual((withIndex ? [...pages, pages[0]] : pages).map((page) => [page]));
   expect(link.download).toBe("Abre Alas-arranjo.pdf");
   expect(link.click).toHaveBeenCalledOnce();
   const pdf = Buffer.concat(data).toString("latin1");
   expect([...pdf.matchAll(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/g)].map((match) => match.slice(1)))
-    .toEqual([["841.89", "595.28"], ["841.89", "595.28"]]);
+    .toEqual(Array.from({ length: withIndex ? 4 : 2 }, () => ["841.89", "595.28"]));
+  if (withIndex) {
+    const labels = text.mock.calls.map(([label]) => label);
+    expect(labels).toEqual([
+      "Abre Alas", "Índice de arranjos", "1",
+      "Primeira música", "2", "Segunda música", "4",
+      "Abre Alas", "Primeira música", "2",
+      "Abre Alas", "Primeira música", "3",
+      "Abre Alas", "Segunda música", "4",
+    ]);
+  }
 });

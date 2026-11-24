@@ -4,7 +4,7 @@
 
 export type PageGeometry = { widthMm: number; heightMm: number; marginsMm: [number, number, number, number]; staffSpaceMm: number };
 export type PartXml = {
-    musicXml: string; geometry: PageGeometry; geometryFromScore: boolean; copiedMarkings: number;
+    musicXml: string; geometry: PageGeometry; geometryFromScore: boolean;
     /** Relative content width of each measure of the first kept part, for balancing systems. */
     measureWeights: number[];
     /** Title and creators written in the MusicXML. */
@@ -75,10 +75,10 @@ function timeline(measure: Element, divisions: number) {
 }
 
 /** Copy system-wide directions of the top part into `target` at the same musical position. */
-function copySystemMarkings(source: Element, target: Element): number {
+function copySystemMarkings(source: Element, target: Element): void {
     const sourceMeasures = children(source, 'measure'), targetMeasures = children(target, 'measure');
-    if (sourceMeasures.length !== targetMeasures.length) {return 0;}
-    let copied = 0, sourceDivisions = 1, targetDivisions = 1;
+    if (sourceMeasures.length !== targetMeasures.length) {return;}
+    let sourceDivisions = 1, targetDivisions = 1;
     sourceMeasures.forEach((measure, index) => {
         const from = timeline(measure, sourceDivisions);
         const into = targetMeasures[index];
@@ -109,12 +109,10 @@ function copySystemMarkings(source: Element, target: Element): number {
                 types[types.length - 1].after(element);
             }
             into.insertBefore(clone, at?.before ?? null);
-            copied++;
         }
         sourceDivisions = from.divisions;
         targetDivisions = to.divisions;
     });
-    return copied;
 }
 
 /** The score geometry moved onto another paper: margins scale with the page width unless given, staff space is kept. */
@@ -218,8 +216,7 @@ export function partMusicXml(fullScore: string, partIds: readonly string[], page
     const top = bodies[0];
     const kept = bodies.filter(part => keep.has(part.getAttribute('id') ?? ''));
     if (!list || !kept.length || kept.length !== keep.size) {throw new Error('Part not in MusicXML');}
-    let copiedMarkings = 0;
-    if (!keep.has(top.getAttribute('id') ?? '')) {copiedMarkings = copySystemMarkings(top, kept[0]);}
+    if (!keep.has(top.getAttribute('id') ?? '')) {copySystemMarkings(top, kept[0]);}
     for (const e of Array.from(list.children)) {if (e.localName === 'part-group' || (e.localName === 'score-part' && !keep.has(e.getAttribute('id') ?? ''))) {e.remove();}}
     for (const part of bodies) {if (!keep.has(part.getAttribute('id') ?? '')) {part.remove();}}
     const { geometry: score, fromScore } = geometry(root);
@@ -239,5 +236,5 @@ export function partMusicXml(fullScore: string, partIds: readonly string[], page
     const identification = child(root, 'identification');
     const creator = (type: string) => text(identification ? children(identification, 'creator').find(c => c.getAttribute('type') === type) ?? null : null);
     const credits = { title: text(child(child(root, 'work'), 'work-title')) || text(child(root, 'movement-title')), composer: creator('composer'), lyricist: creator('lyricist') };
-    return { musicXml: new XMLSerializer().serializeToString(doc), geometry: page, geometryFromScore: fromScore, copiedMarkings, measureWeights, credits };
+    return { musicXml: new XMLSerializer().serializeToString(doc), geometry: page, geometryFromScore: fromScore, measureWeights, credits };
 }

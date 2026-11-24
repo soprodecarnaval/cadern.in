@@ -17,6 +17,7 @@ export type ScoreRevisionViewModel = {
   metajson: string;
   midi: string;
   parts: PartViewModel[];
+  arrangementSvg?: string[];
   notes: string;
 };
 

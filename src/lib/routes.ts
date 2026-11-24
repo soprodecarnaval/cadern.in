@@ -104,6 +104,9 @@ export const publicSongbookPath = (projectSlug: string, songbookSlug: string) =>
 export const songbookPath = (projectSlug: string, songbookSlug: string) =>
   `${publicSongbookPath(projectSlug, songbookSlug)}/gerenciar`;
 
+export const songbookEditPath = (projectSlug: string, songbookSlug: string) =>
+  `${songbookPath(projectSlug, songbookSlug)}?detalhes&editar`;
+
 /** Review for one entry's pinned revision, scoped to this songbook (009). */
 export const songbookScorePath = (
   projectSlug: string,

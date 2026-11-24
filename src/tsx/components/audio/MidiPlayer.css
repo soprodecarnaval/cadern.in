@@ -1,0 +1,67 @@
+@import "../../../styles/tokens.css";
+
+midi-player,
+.midi-player-pending {
+  display: block;
+  width: min(100%, 28rem);
+  margin: var(--ds-space-2) 0;
+  color: var(--ds-ink);
+  font: var(--ds-weight-action) var(--ds-caption) / 1.25 var(--ds-font);
+}
+
+midi-player::part(control-panel),
+.midi-player-pending {
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-2);
+  border: 1px solid var(--ds-muted);
+  border-radius: var(--ds-radius-surface);
+  background: var(--ds-paper);
+}
+
+.midi-player-pending {
+  display: flex;
+  align-items: center;
+  color: var(--ds-text-secondary);
+}
+
+midi-player::part(play-button),
+.midi-player-pending button {
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
+  color: var(--ds-ink);
+  background: var(--ds-yellow);
+  border: 1px solid var(--ds-ink);
+  border-radius: var(--ds-radius-button);
+}
+
+midi-player::part(play-button):not(:disabled):hover,
+midi-player::part(play-button):not(:disabled):active {
+  color: var(--ds-yellow);
+  background: var(--ds-ink);
+}
+
+midi-player::part(play-button):disabled,
+.midi-player-pending button:disabled {
+  color: var(--ds-text-secondary);
+  background: var(--ds-surface-disabled);
+  border-color: var(--ds-muted);
+}
+
+midi-player::part(time) {
+  margin: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+midi-player::part(seek-bar) {
+  margin: 0;
+  accent-color: var(--ds-ink);
+}
+
+midi-player::part(play-button):focus-visible,
+midi-player::part(seek-bar):focus-visible {
+  outline: 2px solid var(--ds-ink);
+  outline-offset: 2px;
+}

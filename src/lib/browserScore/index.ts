@@ -541,9 +541,10 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     if (fitted && partLayout) {
                         try { layout = partLayout({ ...part }) ?? {}; } catch { throw new ScoreError('INVALID_INPUT', 'getPages', 'The part layout failed'); }
                     }
-                    const sheetLayout = Object.fromEntries(Object.entries({ unit: layout.staffSpaceMm === undefined ? undefined : layout.staffSpaceMm * 5,
+                    const sheetLayout = { ...Object.fromEntries(Object.entries({ unit: layout.staffSpaceMm === undefined ? undefined : layout.staffSpaceMm * 5,
                         systems: layout.systems, spacingLinear: layout.spacingLinear, spacingNonLinear: layout.spacingNonLinear, spacingSystem: layout.spacingSystem, fingeringScale: layout.fingeringScale })
-                        .filter(([, value]) => typeof value === 'number' && Number.isFinite(value)));
+                        .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))),
+                        evenNoteSpacing: layout.evenNoteSpacing === true };
                     const output = await (fitted
                         ? call('renderSheet', [built.musicXml, area, built.measureWeights, sheetLayout, options.partPlayback ?? false], signal)
                         : call('renderMusicXml', [built.musicXml, built.geometry, options.partPlayback ?? false], signal)) as { pages?: unknown; staffSpaceMm?: unknown; systems?: unknown; contentHeightMm?: unknown; fingeringScale?: unknown; spacingTightened?: unknown; playback?: { midi: string; frames: PlaybackFrame[] } };
@@ -568,7 +569,6 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                         { code: 'PART_RENDERED_FROM_MUSICXML', message: 'Drawn by Verovio 6.4.0 from the full-score MusicXML. Spacing, system breaks and engraving differ from MuseScore.' },
                         { code: 'PART_FIDELITY_UNVERIFIED', message: 'Imported notation and layout fidelity are not established for this file.' }];
                     if (origin === 'existing') {warnings.push({ code: 'MUSICXML_FROM_FULL_SCORE', message: 'This saved part is drawn from the full score; part-only content and part layout are not included.' });}
-                    if (built.copiedMarkings) {warnings.push({ code: 'SYSTEM_MARKINGS_COPIED', message: `${built.copiedMarkings} tempo, jump and rehearsal markings were copied from the top part of the score.` });}
                     warnings.push(...sheetWarnings);
                     warnings.push(...transformWarnings);
                     if (!fitted && !built.geometryFromScore) {warnings.push({ code: 'PAGE_SIZE_DEFAULTED', message: partPageSize === 'score' ? 'The score has no usable page layout; A4 pages were used.' : 'The score has no usable page layout; default margins and staff size were used.' });}

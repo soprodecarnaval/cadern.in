@@ -78,11 +78,16 @@ async function signedInPage(path) {
 
 async function correctFingering(page) {
     await page.getByRole('tab', { name: /^Trompete/ }).first().click();
-    const partName = (await page.locator('#enviar-parte').innerText()).replace(/^Parte: /, '');
+    const partLabel = (await page.locator('#enviar-parte').innerText()).replace(/^Parte: /, '');
+    const partName = await page.locator('.enviar-preview').getAttribute('data-part-name');
+    await page.locator('.enviar-preview midi-player[src^="blob:"]').waitFor();
     const fingering = page.frameLocator('.enviar-collision-page').locator('g.fing[id]').first();
     const id = await fingering.getAttribute('id');
     const original = await fingering.getAttribute('transform');
-    const undo = page.getByRole('button', { name: 'Desfazer movimento' });
+    const positioning = page.getByRole('group', { name: 'Posicionamento' });
+    const undo = positioning.getByRole('button', { name: 'Desfazer último movimento' });
+    assert.equal(await undo.isEnabled(), false, 'undo is disabled before a manual edit');
+    assert.equal(await positioning.getByRole('button', { name: 'Restaurar posições' }).isEnabled(), false);
     const waitForOriginal = () => page.waitForFunction(({ id, original }) => {
         const marking = document.querySelector('.enviar-collision-page')?.contentDocument?.getElementById(id);
         return marking && marking.getAttribute('transform') === original;
@@ -109,19 +114,16 @@ async function correctFingering(page) {
     await waitForOriginal();
     await page.setViewportSize({ width: 1050, height: 1000 });
     await drag();
-    await page.locator('.enviar-controls').getByRole('button', { name: 'Restaurar posições' }).click();
+    await positioning.getByRole('button', { name: 'Restaurar posições' }).click();
     await waitForOriginal();
     await page.setViewportSize({ width: 1400, height: 1000 });
     const transform = await drag();
     const preview = page.locator('.enviar-preview iframe');
     const corrected = await preview.getAttribute('srcdoc');
-    page.once('dialog', (dialog) => dialog.dismiss());
-    await page.getByRole('button', { name: 'Aumentar: Tamanho da pauta' }).click();
-    assert.equal(await preview.getAttribute('srcdoc'), corrected, 'cancelling a layout change preserves the correction');
     await page.getByRole('tab', { name: /^Tuba/ }).first().click();
     await page.getByRole('tab', { name: /^Trompete/ }).first().click();
     assert.equal(await preview.getAttribute('srcdoc'), corrected, 'switching parts preserves the correction');
-    return { partName, id, transform, corrected };
+    return { partName, partLabel, id, transform, corrected };
 }
 
 async function sendThroughScreen(page, { file, tweak = false, metadata = null } = {}) {
@@ -149,7 +151,7 @@ async function sendThroughScreen(page, { file, tweak = false, metadata = null } 
             await page.getByRole('tab', { name }).first().click();
             await preview.waitFor();
             await page.locator('.enviar-preview[aria-busy=false]').waitFor();
-            return (await page.locator('#enviar-parte').innerText()).replace(/^Parte: /, '');
+            return page.locator('.enviar-preview').getAttribute('data-part-name');
         };
         const original = new Map();
         for (const [name] of sizedParts) {
@@ -183,7 +185,6 @@ async function sendThroughScreen(page, { file, tweak = false, metadata = null } 
         }, { previous: before }, { timeout: 120000 });
         assert(await staff.getByRole('radio', { name: 'Fixo' }).isChecked());
         assert.equal(Number((await staffInput.inputValue()).replace(',', '.')), Number((automatic - 0.05).toFixed(2)));
-        assert.match(await page.locator('.enviar-preview-info').innerText(), new RegExp(`Pauta de ${(automatic - 0.05).toFixed(2).replace('.', ',')} mm`));
         correction = await correctFingering(page);
     }
     await page.getByRole('button', { name: 'Continuar' }).click();
@@ -200,10 +201,12 @@ async function sendThroughScreen(page, { file, tweak = false, metadata = null } 
 let revisionId = null;
 let sentScoreId = null;
 let correctedPart = null;
+let savedCorrection = null;
 try {
     await step('sends all-instruments.mscz from the browser', async () => {
         const page = await signedInPage('/acervo-dev/enviar');
         const correction = await sendThroughScreen(page, { file: SCORE, tweak: true, metadata: { composer: 'Compositora E2E', tags: 'marcha, frevo' } });
+        savedCorrection = correction;
         assert.equal(await page.locator('[role=alert]').count(), 0, 'no error');
         assert.match(await page.locator('.enviar-summary').innerText(), /Partitura nova/);
         const sendStarted = Date.now();
@@ -271,7 +274,7 @@ try {
         assert(noteId, 'the timing map refers to notes on the saved, corrected SVG');
         // The reader loads the saved pages and matched playback without entering reformat.
         await page.goto(BASE + href);
-        await page.getByRole('tab', { name: correction.partName, exact: true }).click();
+        await page.getByRole('tab', { name: correction.partLabel, exact: true }).click();
         await page.waitForFunction(url => [...document.querySelectorAll('midi-player')].some(
             player => player.getAttribute('src') === url,
         ), listeningUrl, { timeout: 60000 });
@@ -284,9 +287,10 @@ try {
         assert.equal(arrangementPages.length, 1, 'the full score fits on one A4 page');
         const fullSvg = await (await fetch(str(arrangementPages[0].mapValue.fields.url))).text();
         assert(!/class="fing"/.test(fullSvg), 'the full score omits fingering on all staves');
-        const panel = page.locator('details').filter({ hasText: 'Arranjo completo' });
-        assert.equal(await panel.locator('iframe').count(), 0, 'the arrangement starts collapsed');
-        await panel.locator('summary').click();
+        const panel = page.getByRole('dialog', { name: 'Arranjo completo' });
+        assert.equal(await panel.count(), 0, 'the arrangement dialog starts closed');
+        await page.getByRole('button', { name: 'Arranjo completo' }).click();
+        await panel.waitFor();
         const arrangementMidiUrl = str(arrangement.playback.mapValue.fields.midi.mapValue.fields.url);
         await panel.locator('midi-player').waitFor();
         assert.equal(await panel.locator('midi-player').getAttribute('src'), arrangementMidiUrl);
@@ -330,6 +334,14 @@ try {
         const data = await doc(`scores/${scoreId}/scoreRevisions/${latest}`);
         assert.equal(str(data.kind), 'reformat');
         assert.equal(str(data.prevRevisionId), revisionId);
+        const reformatted = data.parts.arrayValue.values.map(v => v.mapValue.fields)
+            .find(part => str(part.name) === savedCorrection.partName);
+        const latestSvg = await (await fetch(str(reformatted.svg.arrayValue.values[0].mapValue.fields.url))).text();
+        const transform = await page.evaluate(({ markup, id }) => {
+            const doc = new DOMParser().parseFromString(markup, 'image/svg+xml');
+            return doc.getElementById(id)?.getAttribute('transform');
+        }, { markup: latestSvg, id: savedCorrection.id });
+        assert.equal(transform, savedCorrection.transform, 'reformat preserves the manual offset on the new revision');
         // The songbook can still print the corrected revision with its shared fonts.
         assert(correctedPart, 'needs the corrected part from the first case');
         const svg = correctedPart.svg.arrayValue.values.map(v => str(v.mapValue.fields.url));

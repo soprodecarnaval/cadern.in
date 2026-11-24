@@ -38,6 +38,7 @@ import "./SongbookReader.css";
 import searchIcon from "../../../../assets/brand/search.svg";
 import {
   instrumentLabel,
+  partInstrumentLabel,
   readPreferredInstrument,
   storePreferredInstrument,
 } from "../../../../lib/preferredInstrument";
@@ -601,7 +602,7 @@ export function SongbookReader({
             url={url}
             alt={
               i === 0
-                ? `Partitura de ${song.title}, ${part.name}`
+                ? `Partitura de ${song.title}, ${partInstrumentLabel(part.instrument)}`
                 : `${song.title}, página ${i + 1}`
             }
           />

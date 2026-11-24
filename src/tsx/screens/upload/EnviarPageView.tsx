@@ -1,3 +1,5 @@
+import { DEFAULT_SPACING } from "../../../lib/scoreRender/profile";
+import { comparePartsByInstrument, partInstrumentLabels } from "../../../lib/preferredInstrument";
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { zInstrument, type Instrument } from "../../../../types/instrument";
@@ -37,7 +39,7 @@ import type { MidiPlayerProps } from "../../components/audio/MidiPlayer";
 import { notesAtTime } from "../../../lib/browserScore/playbackNotes";
 import { withTextFonts } from "../../../lib/sharedFonts";
 import { CollisionPage } from "./CollisionPage";
-import type { MarkingMove } from "./collisionSvg";
+import { manualOffsetsFor, type MarkingMove } from "../../../lib/scoreRender/collisionSvg";
 import { FINGERING_SIZE, STAFF_SIZE, stepSize, type SizeRange } from "./fingeringSize";
 
 import "./EnviarPage.css";
@@ -146,10 +148,10 @@ function FileStep({ state, onFile }: Pick<EnviarPageViewProps, "state" | "onFile
   );
 }
 
-function PartsStep({ state, context, onRows, onStep }: Pick<EnviarPageViewProps, "state" | "context" | "onRows" | "onStep">) {
+function PartsStep({ state, onRows }: Pick<EnviarPageViewProps, "state" | "onRows">) {
   const set = (ordinal: number, change: (row: PartRow) => PartRow) =>
     onRows(state.rows.map((row) => (row.ordinal === ordinal ? change(row) : row)));
-  const included = state.rows.filter((row) => row.include && row.instrument).length;
+  const rows = [...state.rows].sort(comparePartsByInstrument);
   return (
     <section aria-labelledby="enviar-partes">
       <h2 id="enviar-partes" tabIndex={-1}>Partes</h2>
@@ -168,7 +170,7 @@ function PartsStep({ state, context, onRows, onStep }: Pick<EnviarPageViewProps,
             </tr>
           </thead>
           <tbody>
-            {state.rows.map((row) => (
+            {rows.map((row) => (
               <tr key={row.ordinal}>
                 <td>
                   <input
@@ -203,10 +205,6 @@ function PartsStep({ state, context, onRows, onStep }: Pick<EnviarPageViewProps,
           </tbody>
         </table>
       </div>
-      <div className="enviar-actions">
-        {context.mode !== "reformat" && <Button variant="secondary" onClick={() => onStep("arquivo")}>Trocar arquivo</Button>}
-        <Button disabled={!included} onClick={() => onStep("dados")}>Continuar</Button>
-      </div>
     </section>
   );
 }
@@ -215,7 +213,6 @@ function DataStep({ state, onMetadata, onStep }: Pick<EnviarPageViewProps, "stat
   const { metadata } = state;
   // Tags are typed as one comma-separated line; the text is kept as typed.
   const [tagsText, setTagsText] = useState(metadata.tags.join(", "));
-  const included = state.rows.filter((row) => row.include && row.instrument).length;
   const problem = metadataProblem(metadata);
   const field = (key: "title" | "composer" | "sub", label: string, hint?: string) => (
     <div className="enviar-field">
@@ -230,7 +227,7 @@ function DataStep({ state, onMetadata, onStep }: Pick<EnviarPageViewProps, "stat
     <section aria-labelledby="enviar-dados">
       <h2 id="enviar-dados" tabIndex={-1}>Dados</h2>
       <p>Confira os dados lidos do arquivo. As correções valem para o que é guardado no cadern.in; o arquivo .mscz vai como você enviou.</p>
-      <form className="enviar-data" onSubmit={(event) => { event.preventDefault(); if (!problem) {onStep("formatacao");} }}>
+      <form id="enviar-data-form" className="enviar-data" onSubmit={(event) => { event.preventDefault(); if (!problem) {onStep("formatacao");} }}>
         {field("title", "Título")}
         {field("composer", "Compositor")}
         {field("sub", "Trecho")}
@@ -241,12 +238,6 @@ function DataStep({ state, onMetadata, onStep }: Pick<EnviarPageViewProps, "stat
           <p id="enviar-tags-hint" className="enviar-hint">Separe as tags com vírgulas.</p>
         </div>
         {problem && <p className="enviar-field-error" role="alert">{problem}</p>}
-        <div className="enviar-actions">
-          <Button variant="secondary" type="button" onClick={() => onStep("partes")}>Voltar às partes</Button>
-          <Button type="submit" disabled={!!problem || !included}>
-            Formatar {included} {included === 1 ? "parte" : "partes"}
-          </Button>
-        </div>
       </form>
     </section>
   );
@@ -361,8 +352,8 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
   );
 }
 
-function Controls({ state, onProfile, onRows, onCollision, shownRow, shownPreview }: Pick<EnviarPageViewProps, "state" | "onProfile" | "onRows" | "onCollision"> & {
-  shownRow: PartRow | undefined; shownPreview: Preview | undefined;
+function Controls({ state, onProfile, onRows, onCollision, shownRow, shownPreview, shownLabel }: Pick<EnviarPageViewProps, "state" | "onProfile" | "onRows" | "onCollision"> & {
+  shownRow: PartRow | undefined; shownPreview: Preview | undefined; shownLabel: string;
 }) {
   const ready = !!shownPreview && !shownPreview.rendering && !shownPreview.error;
   // Confirmations float over the page, so the column never shifts; kept here so a tab switch keeps them.
@@ -373,18 +364,44 @@ function Controls({ state, onProfile, onRows, onCollision, shownRow, shownPrevie
       {shownRow && (
         <section className="enviar-controls-section" aria-labelledby="enviar-parte">
           <header>
-            <h3 id="enviar-parte">Parte: {shownRow.name}</h3>
+            <h3 id="enviar-parte">Parte: {shownLabel}</h3>
             <p>Vale só para a parte aberta na prévia; escolha outra nas abas.</p>
           </header>
-          <PartControls key={shownRow.ordinal} state={state} onProfile={onProfile} onRows={onRows} row={shownRow}
+          <PartControls key={shownRow.ordinal} state={state} onProfile={onProfile} onRows={onRows} row={shownRow} label={shownLabel}
             onApplied={(text) => setNotice((current) => ({ id: (current?.id ?? 0) + 1, text }))}
             automaticStaff={ready ? shownPreview.layout?.staffSpaceMm : undefined}
             automaticFingering={ready ? shownPreview.automaticFingeringSize : undefined} />
-          <Button size="sm" variant="secondary" disabled={!ready || !state.collisions[shownRow.ordinal]}
-            onClick={() => onCollision(shownRow.ordinal, "reset")}>Restaurar posições</Button>
+          <PositioningControls state={state} row={shownRow} preview={shownPreview} onCollision={onCollision} />
         </section>
       )}
     </form>
+  );
+}
+
+function PositioningControls({ state, row, preview, onCollision }: {
+  state: EnviarState;
+  row: PartRow;
+  preview: Preview | undefined;
+  onCollision: EnviarPageViewProps["onCollision"];
+}) {
+  const ready = !!preview?.pageSvg && !preview.rendering && !preview.error;
+  const draft = state.collisions[row.ordinal];
+  const canUndo = !!draft?.history.length && draft.original === preview?.pageSvg && draft.signature === preview?.signature;
+  const canReset = canUndo || !!manualOffsetsFor(state.profile, row.ordinal)?.length;
+  const warnings = (preview?.warnings ?? []).map(warningText).filter((text): text is string => !!text);
+  if (preview && preview.pages > 1 && !warnings.some((text) => text.startsWith("Não coube"))) {warnings.unshift("Não coube em uma página.");}
+  return (
+    <fieldset className="enviar-choice">
+      <legend>Posicionamento</legend>
+      <p className="enviar-hint">Arraste números dos piratas, indicações de texto ou marcas de repetição na prévia.</p>
+      <div className="enviar-position-actions">
+        <Button size="sm" variant="secondary" disabled={!ready || !canUndo}
+          onClick={() => onCollision(row.ordinal, "undo")}>Desfazer último movimento</Button>
+        <Button size="sm" variant="secondary" disabled={!ready || !canReset}
+          onClick={() => onCollision(row.ordinal, "reset")}>Restaurar posições</Button>
+      </div>
+      {warnings.length > 0 && <ul className="enviar-warnings">{warnings.map((text) => <li key={text}>{text}</li>)}</ul>}
+    </fieldset>
   );
 }
 
@@ -417,11 +434,12 @@ function Toast({ notice, onClose }: { notice: { id: number; text: string } | nul
   );
 }
 
-function PartControls({ state, onProfile, onRows, row, automaticStaff, automaticFingering, onApplied }: Pick<EnviarPageViewProps, "state" | "onProfile" | "onRows"> & {
-  row: PartRow; automaticStaff: number | undefined; automaticFingering: number | undefined;
+function PartControls({ state, onProfile, onRows, row, label, automaticStaff, automaticFingering, onApplied }: Pick<EnviarPageViewProps, "state" | "onProfile" | "onRows"> & {
+  row: PartRow; label: string; automaticStaff: number | undefined; automaticFingering: number | undefined;
   onApplied: (text: string) => void;
 }) {
   const settings = formattingOf(state.profile, row.name);
+  const evenNoteSpacing = settings.spacing?.evenNoteSpacing ?? DEFAULT_SPACING.evenNoteSpacing;
   const change = (patch: PartFormatting) => onProfile(withFormatting(state.profile, row.name, patch));
   const included = state.rows.filter((candidate) => candidate.include && candidate.instrument);
   // This part's choice (a fixed size, or automatic) made the choice of every other part.
@@ -452,14 +470,21 @@ function PartControls({ state, onProfile, onRows, row, automaticStaff, automatic
   const fingeredOthers = others.filter((candidate) => candidate.fingeringsAvailable);
   return (
     <>
+      <fieldset className="enviar-choice">
+        <legend>Espaçamento</legend>
+        <label className="form-check">
+          <input type="checkbox" className="form-check-input" checked={evenNoteSpacing}
+            onChange={(event) => change({ spacing: { evenNoteSpacing: event.target.checked } })} />
+          <span className="form-check-label">Espaçamento uniforme de notas e pausas</span>
+        </label>
+        {applyLink("Espaçamento uniforme", others, { spacing: { evenNoteSpacing } })}
+      </fieldset>
       <AutoNumber label="Tamanho da pauta" name="part-staff-size" unit="mm" value={settings.staffSize}
         min={STAFF_SIZE.min} max={STAFF_SIZE.max} step={STAFF_SIZE.step}
         stepper={{ range: STAFF_SIZE, automatic: automaticStaff }}
         onChange={(staffSize) => change({ staffSize })}>
         {applyLink("Tamanho da pauta", others, { staffSize: settings.staffSize ?? "auto" })}
       </AutoNumber>
-      <AutoNumber label="Sistemas na página" name="part-systems" value={settings.systemsPerPage} min={1} max={12} step={1}
-        onChange={(systemsPerPage) => change({ systemsPerPage })} />
       {row.fingerings && (
         <AutoNumber label="Tamanho dos números" name="fingering-size" value={settings.fingering?.size}
           min={FINGERING_SIZE.min} max={FINGERING_SIZE.max} step={FINGERING_SIZE.step}
@@ -482,7 +507,7 @@ function PartControls({ state, onProfile, onRows, row, automaticStaff, automatic
         showTrombone={row.fingerings && notation === "positions" && row.family === "trombone"} />
       {hasOverride(state.profile, row.name) && (
         <Button variant="text" onClick={() => onProfile(withoutOverride(state.profile, row.name))}>
-          Voltar {row.name} ao padrão
+          Voltar {label} ao padrão
         </Button>
       )}
     </>
@@ -517,13 +542,19 @@ function FingeringAndCleanupControls({ settings, onChange, showTrombone }: {
   );
 }
 
-function PreviewCard({ row, preview, draft, midi, onListen, onCollision, MidiPlayer }: {
-  row: PartRow; preview: Preview | undefined; draft: CollisionDraft | undefined; midi: PreviewAudio | undefined;
+function PreviewCard({ row, label, preview, draft, midi, onListen, onCollision, MidiPlayer }: {
+  row: PartRow; label: string; preview: Preview | undefined; draft: CollisionDraft | undefined; midi: PreviewAudio | undefined;
   onListen: (ordinal: number) => void; onCollision: EnviarPageViewProps["onCollision"];
   MidiPlayer: ComponentType<MidiPlayerProps>;
 }) {
   const ready = !!preview?.pageSvg && !preview.rendering && !preview.error;
-  const audio = ready && midi?.pageSvg === preview?.pageSvg ? midi : undefined;
+  const pageSvg = ready ? preview.pageSvg : undefined;
+  const audio = pageSvg && midi?.pageSvg === pageSvg ? midi : undefined;
+  const loadAudio = useRef(onListen);
+  loadAudio.current = onListen;
+  useEffect(() => {
+    if (pageSvg) {loadAudio.current(row.ordinal);}
+  }, [pageSvg, row.ordinal]);
   const [playing, setPlaying] = useState<{ url: string; notes: readonly string[] } | null>(null);
   const onPlaybackTime = (seconds: number | null) => {
     if (!audio) {return;}
@@ -535,36 +566,19 @@ function PreviewCard({ row, preview, draft, midi, onListen, onCollision, MidiPla
   const svg = corrected
     ? (preview?.fontCss ? withTextFonts(corrected, preview.fontCss) : corrected)
     : preview?.svg;
-  const warnings = (preview?.warnings ?? []).map(warningText).filter((text): text is string => !!text);
-  if (preview && preview.pages > 1 && !warnings.some((text) => text.startsWith("Não coube"))) {warnings.unshift("Não coube em uma página.");}
   return (
-    <article className="enviar-preview" aria-busy={preview?.rendering ?? true} aria-label={`Prévia de ${row.name}`}>
+    <article className="enviar-preview" aria-busy={preview?.rendering ?? true} aria-label={`Prévia de ${label}`} data-part-name={row.name}>
       <div className="enviar-sheet" style={{ aspectRatio: `${SONGBOOK_FIT_AREA.widthMm} / ${SONGBOOK_FIT_AREA.heightMm}` }}>
         {ready && svg ? (
-          <CollisionPage svg={svg} label={`Página de ${row.name}`} activeNotes={playing?.url === audio?.url ? playing?.notes : undefined} onMove={(move) => onCollision(row.ordinal, move)} />
+          <CollisionPage svg={svg} label={`Página de ${label}`} activeNotes={playing?.url === audio?.url ? playing?.notes : undefined} onMove={(move) => onCollision(row.ordinal, move)} />
         ) : svg ? (
-          <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`} alt={`Página de ${row.name}`} />
+          <img src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`} alt={`Página de ${label}`} />
         ) : (
           <span className="enviar-sheet-placeholder">{preview?.error ?? "Desenhando…"}</span>
         )}
         {preview?.rendering && preview.svg && <span className="enviar-sheet-updating">Atualizando…</span>}
       </div>
-      <p className="enviar-preview-info">
-        {preview?.layout
-          ? `Pauta de ${decimal(preview.layout.staffSpaceMm)} mm · ${preview.layout.systems} ${preview.layout.systems === 1 ? "sistema" : "sistemas"} · ocupa ${Math.round(preview.layout.fillRatio * 100)}% da altura`
-          : " "}
-      </p>
-      {warnings.length > 0 && (
-        <ul className="enviar-warnings">{warnings.map((text) => <li key={text}>{text}</li>)}</ul>
-      )}
-      <div className="enviar-preview-actions">
-        <Button size="sm" variant="text" disabled={!ready} onClick={() => onListen(row.ordinal)}>Ouvir</Button>
-        {ready && <Button size="sm" variant="text" disabled={!corrected} onClick={() => onCollision(row.ordinal, "undo")}>
-          Desfazer movimento
-        </Button>}
-      </div>
-      {ready && <p className="enviar-preview-info">Arraste números dos piratas, indicações de texto ou marcas de repetição.</p>}
-      {audio && <MidiPlayer key={audio.url} src={audio.url} onPlaybackTime={onPlaybackTime} />}
+      <MidiPlayer key={audio?.url ?? "pending"} src={audio?.url ?? ""} onPlaybackTime={audio ? onPlaybackTime : undefined} />
     </article>
   );
 }
@@ -631,18 +645,20 @@ function ArrangementFormatting({ state, onProfile, onArrangementPreview }: Pick<
 }
 
 function FormatStep(props: EnviarPageViewProps) {
-  const { state, onStep, onEditing, onListen, components } = props;
-  const included = state.rows.filter((row) => row.include && row.instrument);
-  const rendering = included.some((row) => state.previews[row.ordinal]?.rendering);
+  const { state, onEditing, onListen, components } = props;
+  const included = state.rows.filter((row) => row.include && row.instrument)
+    .sort(comparePartsByInstrument);
   // One part at a time: the active tab is also the part the "Parte" settings change.
   const shownRow = included.find((row) => row.ordinal === state.editing) ?? included[0];
   const shownPreview = shownRow && state.previews[shownRow.ordinal];
+  const labels = partInstrumentLabels(state.rows.filter((row) => row.include && row.instrument));
+  const shownLabel = shownRow ? labels.get(shownRow) ?? "" : "";
   return (
     <section aria-labelledby="enviar-formatacao">
       <h2 id="enviar-formatacao" tabIndex={-1}>Formatação</h2>
       <p>As prévias mostram cada parte no tamanho em que sai no caderninho ({decimal(SONGBOOK_FIT_AREA.widthMm, 1)} × {decimal(SONGBOOK_FIT_AREA.heightMm, 1)} mm).</p>
       <div className="enviar-format">
-        <Controls {...props} shownRow={shownRow} shownPreview={shownPreview} />
+        <Controls {...props} shownRow={shownRow} shownPreview={shownPreview} shownLabel={shownLabel} />
         <div className="enviar-previews">
           {shownRow && (
             <PartTabs
@@ -652,10 +668,10 @@ function FormatStep(props: EnviarPageViewProps) {
               tabs={included.map((row) => {
                 const preview = state.previews[row.ordinal];
                 const warned = !!preview && (preview.pages > 1 || preview.warnings.some((warning) => warningText(warning)) || !!preview.error);
-                return { key: String(row.ordinal), label: row.name, note: preview?.rendering ? "…" : warned ? "⚠" : undefined };
+                return { key: String(row.ordinal), label: labels.get(row) ?? "", note: !preview?.rendering && warned ? "⚠" : undefined };
               })}
             >
-              <PreviewCard key={`${shownRow.ordinal}:${shownPreview?.signature ?? ""}`} row={shownRow} preview={shownPreview}
+              <PreviewCard key={`${shownRow.ordinal}:${shownPreview?.signature ?? ""}`} row={shownRow} label={shownLabel} preview={shownPreview}
                 draft={state.collisions[shownRow.ordinal]} onCollision={props.onCollision}
                 midi={state.midi[shownRow.ordinal]} onListen={onListen} MidiPlayer={components.MidiPlayer} />
             </PartTabs>
@@ -663,16 +679,11 @@ function FormatStep(props: EnviarPageViewProps) {
         </div>
       </div>
       <ArrangementFormatting {...props} />
-      <div className="enviar-actions">
-        <Button variant="secondary" onClick={() => onStep("dados")}>Voltar aos dados</Button>
-        {rendering && <Button variant="text" onClick={props.onCancel}>Parar prévias</Button>}
-        <Button onClick={() => onStep("enviar")}>Continuar</Button>
-      </div>
     </section>
   );
 }
 
-function SendStep({ state, onStep, onSend }: Pick<EnviarPageViewProps, "state" | "onStep" | "onSend">) {
+function SendStep({ state }: Pick<EnviarPageViewProps, "state">) {
   const target = state.target;
   const count = state.rows.filter((row) => row.include && row.instrument).length;
   const destination = !target
@@ -682,7 +693,6 @@ function SendStep({ state, onStep, onSend }: Pick<EnviarPageViewProps, "state" |
       : target.kind === "version"
         ? `Nova versão de “${target.title}”`
         : `Cópia de “${target.sourceTitle}”, do projeto ${target.sourceProjectTitle}, neste projeto`;
-  const sending = state.status.kind === "rendering" || state.status.kind === "uploading";
   return (
     <section aria-labelledby="enviar-enviar">
       <h2 id="enviar-enviar" tabIndex={-1}>Enviar</h2>
@@ -696,10 +706,6 @@ function SendStep({ state, onStep, onSend }: Pick<EnviarPageViewProps, "state" |
         </dl>
       )}
       {state.checks?.targetMismatch && <div className="alert alert-warning">{state.checks.targetMismatch}</div>}
-      <div className="enviar-actions">
-        <Button variant="secondary" disabled={busy(state)} onClick={() => onStep("formatacao")}>Voltar à formatação</Button>
-        <Button disabled={!target || sending} onClick={onSend}>{sending ? "Enviando…" : "Enviar partitura"}</Button>
-      </div>
     </section>
   );
 }
@@ -730,6 +736,44 @@ function DoneStep({ state, context, onReset }: Pick<EnviarPageViewProps, "state"
   );
 }
 
+function StepActions({ state, context, onStep, onSend, onCancel }: Pick<EnviarPageViewProps, "state" | "context" | "onStep" | "onSend" | "onCancel">) {
+  const included = state.rows.filter((row) => row.include && row.instrument);
+  let secondary: ReactNode;
+  let primary: ReactNode;
+  switch (state.step) {
+    case "partes":
+      secondary = context.mode !== "reformat" && <Button variant="secondary" onClick={() => onStep("arquivo")}>Trocar arquivo</Button>;
+      primary = <Button disabled={!included.length} onClick={() => onStep("dados")}>Continuar</Button>;
+      break;
+    case "dados":
+      secondary = <Button variant="secondary" onClick={() => onStep("partes")}>Voltar às partes</Button>;
+      primary = <Button form="enviar-data-form" type="submit" disabled={!!metadataProblem(state.metadata) || !included.length}>
+        Formatar {included.length} {included.length === 1 ? "parte" : "partes"}
+      </Button>;
+      break;
+    case "formatacao":
+      secondary = <>
+        <Button variant="secondary" onClick={() => onStep("dados")}>Voltar aos dados</Button>
+        {included.some((row) => state.previews[row.ordinal]?.rendering) &&
+          <Button variant="text" onClick={onCancel}>Parar prévias</Button>}
+      </>;
+      primary = <Button onClick={() => onStep("enviar")}>Continuar</Button>;
+      break;
+    case "enviar": {
+      const sending = state.status.kind === "rendering" || state.status.kind === "uploading";
+      secondary = <Button variant="secondary" disabled={busy(state)} onClick={() => onStep("formatacao")}>Voltar à formatação</Button>;
+      primary = <Button disabled={!state.target || sending} onClick={onSend}>{sending ? "Enviando…" : "Enviar partitura"}</Button>;
+      break;
+    }
+    default:
+      return null;
+  }
+  return <div className="enviar-step-actions">
+    <div className="enviar-step-secondary">{secondary}</div>
+    {primary}
+  </div>;
+}
+
 export function EnviarPageView(props: EnviarPageViewProps) {
   const { state, signedIn } = props;
   const main = useRef<HTMLDivElement>(null);
@@ -748,7 +792,7 @@ export function EnviarPageView(props: EnviarPageViewProps) {
     <Page className="enviar-page">
       <h1>{reformat ? `Reformatar ${state.metadata.title || "partitura"}` : "Enviar partitura"}</h1>
       {reformat && (
-        <p>As posições das indicações são recalculadas na nova versão. Refaça as correções manuais de posição que quiser manter.</p>
+        <p>As correções manuais são reaplicadas quando as indicações são reconhecidas na nova versão.</p>
       )}
       <Stepper step={state.step} />
       <p className="enviar-status" role="status" aria-live="polite">
@@ -772,6 +816,7 @@ export function EnviarPageView(props: EnviarPageViewProps) {
         {state.step === "enviar" && <SendStep {...props} />}
         {state.step === "feito" && state.result && <DoneStep {...props} />}
       </div>
+      <StepActions {...props} />
     </Page>
   );
 }

@@ -69,12 +69,14 @@ export const Arrangement: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const summary = await canvas.findByText("Arranjo completo");
-    await expect(canvas.queryByRole("button", { name: "Imprimir arranjo" })).not.toBeInTheDocument();
-    await userEvent.click(summary);
-    await expect(await canvas.findByRole("button", { name: "Imprimir arranjo" })).toBeVisible();
-    await userEvent.click(summary);
-    await waitFor(() => expect(canvas.queryByRole("button", { name: "Imprimir arranjo" })).not.toBeInTheDocument());
+    const body = within(canvasElement.ownerDocument.body);
+    const trigger = await canvas.findByRole("button", { name: "Arranjo completo" });
+    await expect(body.queryByRole("dialog", { name: "Arranjo completo" })).not.toBeInTheDocument();
+    await userEvent.click(trigger);
+    const dialog = await body.findByRole("dialog", { name: "Arranjo completo" });
+    await expect(within(dialog).getByRole("button", { name: "Imprimir arranjo" })).toBeVisible();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Fechar arranjo" }));
+    await waitFor(() => expect(body.queryByRole("dialog", { name: "Arranjo completo" })).not.toBeInTheDocument());
   },
 };
 

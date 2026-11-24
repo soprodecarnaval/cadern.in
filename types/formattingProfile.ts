@@ -30,6 +30,8 @@ export const zCleanup = z.object({
 });
 
 export const zSpacing = z.object({
+  /** Verovio evenNoteSpacing: space notes and rests without weighting duration. */
+  evenNoteSpacing: z.boolean().optional(),
   /** Verovio spacingLinear: horizontal space that grows with duration. */
   linear: z.number().min(0).max(1).optional(),
   /** Verovio spacingNonLinear: how much longer notes get more room. */
@@ -49,6 +51,14 @@ export const zPartFormatting = z.object({
   cleanup: zCleanup.optional(),
 });
 
+const zManualOffset = z.object({
+  target: z.union([z.object({ id: z.string() }), z.object({ voltaIndex: z.number().int().nonnegative() })]),
+  identity: z.string(),
+  x: z.number().finite(),
+  y: z.number().finite(),
+});
+export type ManualOffset = z.infer<typeof zManualOffset>;
+
 export const zFormattingProfile = zPartFormatting.extend({
   profileVersion: z.literal(FORMATTING_PROFILE_VERSION),
   fitArea: z
@@ -57,6 +67,7 @@ export const zFormattingProfile = zPartFormatting.extend({
       heightMm: z.number().min(20).max(1000),
     })
     .optional(),
+  manualOffsets: z.record(z.string(), z.array(zManualOffset)).optional(),
   arrangementMarginMm: z.number().min(5).max(20).optional(),
   arrangementStaffSizeMm: z.number().min(0.8).max(8).optional(),
   arrangementStaffSpacing: z.number().int().min(0).max(48).optional(),

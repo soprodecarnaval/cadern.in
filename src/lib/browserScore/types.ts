@@ -63,6 +63,7 @@ export type SvgPage = { view: View; revision: Revision; pageNumber: number; page
  * Verovio's spacing (`spacingLinear`, `spacingNonLinear`, `spacingSystem`) and fingering size.
  */
 export type SheetLayout = { staffSpaceMm?: number; systems?: number; spacingLinear?: number; spacingNonLinear?: number; spacingSystem?: number;
+    evenNoteSpacing?: boolean;
     /** Verovio fingeringScale: fingering text size relative to the staff (default 0.9). */
     fingeringScale?: number };
 export const capabilities = [

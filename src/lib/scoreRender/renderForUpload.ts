@@ -1,7 +1,9 @@
+import { comparePartsByInstrument, partInstrumentLabel, partInstrumentLabels } from "../preferredInstrument";
 // One call from a raw .mscz to the ParsedScore that resolveUploadTarget and
 // uploadScore accept (ticket 010): open → prepare parts → clean-up, tuba
 // notation and fingerings per part → fitted pages → MIDI → identity, with the
 // formatting profile and renderer recorded in the v2 .metajson.
+import { applyManualOffsets, manualOffsetsFor, recoverManualOffsets } from "./collisionSvg";
 import type { ScoreMetadata } from "../../../types/docs";
 import type { FormattingProfile } from "../../../types/formattingProfile";
 import type { Instrument } from "../../../types/instrument";
@@ -38,20 +40,17 @@ export type PartChoice = {
   fingerings?: boolean;
 };
 
-function arrangementLabel(instrument: Instrument): string {
-  const name = pirataInstrument(instrument, false).replace(/ eb$/, " Eb");
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
-
 export function arrangementOptions(profile: Pick<FormattingProfile, "arrangementMarginMm" | "arrangementStaffSizeMm" | "arrangementStaffSpacing">, rows: readonly { ordinal: number; instrument: Instrument | null }[]) {
+  const mapped = rows.filter(({ instrument }) => !!instrument);
+  const labels = partInstrumentLabels(mapped);
   return {
     marginMm: profile.arrangementMarginMm,
     staffSizeMm: profile.arrangementStaffSizeMm,
     staffSpacing: profile.arrangementStaffSpacing,
-    labels: Object.fromEntries(rows.flatMap(({ ordinal, instrument }) => instrument ? [[ordinal, arrangementLabel(instrument)]] : [])),
+    labels: Object.fromEntries(mapped.map((row) => [row.ordinal, labels.get(row) ?? ""])),
     fallbackLabel: (names: readonly string[]) => {
       const instrument = guessInstrument([...names]);
-      return instrument ? arrangementLabel(instrument) : undefined;
+      return instrument ? partInstrumentLabel(instrument) : undefined;
     },
   };
 }
@@ -77,8 +76,7 @@ export type RenderOptions = {
   /** Metadata the user checked (send screen); without it the file's tags are used. */
   metadata?: ScoreMetadata;
   onProgress?: (progress: RenderProgress) => void;
-  /** Final markup from the send draft, bound to the original rendered page. */
-  editedPages?: readonly { ordinal: number; page: number; original: string; svg: string }[];
+  legacyPartPages?: ReadonlyMap<string, string>;
   /** A library created with `libraryOptionsFor(profile)`; created (and disposed) here when absent. */
   library?: ScoreLibrary;
   /** Creates the library when none is given (the app passes loadScoreLibrary). */
@@ -175,7 +173,8 @@ export async function renderForUpload(
             !!settings?.fingering &&
             (formatting.fingering.enabled === "byInstrument" || formatting.fingering.enabled);
           return { part, choice, instrument: pirataInstrument(choice.instrument, fingered) };
-        });
+        })
+        .sort(comparePartsByInstrument);
 
       const tags = session.importInfo.metaTags;
       const stem = fileName.replace(/\.(mscz|mscx)$/i, "");
@@ -199,15 +198,22 @@ export async function renderForUpload(
         const svgNames: string[] = [];
         let layout: SheetLayoutResult | null = null;
         let warnings: readonly Warning[] = [];
+        const stored = manualOffsetsFor(effective, part.ordinal);
+        let pendingOffsets = stored ?? [];
         for (let page = 1; page <= pageCount; page++) {
           const rendered = await session.renderPage(view, page, { expectedRevision: catalog.revision, signal });
           const key = `parts/${basename}-${page}.svg`;
           const fileName = `${basename}-${page}.svg`;
-          const edited = options.editedPages?.find((edit) => edit.ordinal === part.ordinal && edit.page === page);
-          if (edited && edited.original !== rendered.svg) {
-            throw new Error("A página foi redesenhada. Volte à formatação e refaça as correções manuais.");
+          if (!stored && page === 1) {
+            const recovered = await recoverManualOffsets(rendered.svg, options.legacyPartPages?.get(part.name), signal);
+            if (recovered.length) {
+              pendingOffsets = recovered;
+              effective = { ...effective, manualOffsets: { ...effective.manualOffsets, [part.ordinal]: recovered } };
+            }
           }
-          fileMap.set(key, new File([edited?.svg ?? rendered.svg], fileName, { type: "image/svg+xml" }));
+          const corrected = applyManualOffsets(rendered.svg, pendingOffsets, pageCount === 1);
+          pendingOffsets = corrected.unmatched;
+          fileMap.set(key, new File([corrected.svg], fileName, { type: "image/svg+xml" }));
           svg.push(key);
           svgNames.push(fileName);
           layout ??= rendered.layout ?? null;

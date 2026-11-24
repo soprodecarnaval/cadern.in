@@ -2,14 +2,16 @@ import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
 import { DOMParser, XMLSerializer } from "@xmldom/xmldom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { moveMarking } from "./collisionSvg";
+import { applyManualOffsets, moveMarking, readManualOffsets } from "./collisionSvg";
 
 const page = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 90">
   <g id="note" class="note"><path d="M0 0h1"/></g>
   <g id="pirata" class="fing" transform="scale(2)"><text>1</text></g>
   <g id="segno" class="repeatMark"><path d="M10 0h1"/></g>
   <g id="jump" class="dir dacapo"><text>D.C.</text></g>
-  <g class="ending systemMilestone" id="ending-start"/>
+  <g class="ending systemMilestone" id="ending-start">
+    <g class="voltaBracket"><text>1</text><path d="M10 10h5"/></g>
+  </g>
   <g id="repeat-barline" class="barLine"><path d="M15 0v5"/></g>
   <g class="ending id-ending-start spanning"><g class="voltaBracket"><path d="M16 0h5"/></g></g>
   <g class="ending id-ending-start spanning"><g class="voltaBracket"><path d="M26 0h5"/></g></g>
@@ -42,12 +44,34 @@ describe("manual score corrections", () => {
     const jump = moveMarking(segno, { id: "jump", x: 0, y: 1 })!;
     expect(transform(jump, "jump")).toBe("translate(0 1)");
 
-    const ending = moveMarking(jump, { voltaIndex: 1, x: 0, y: -2 })!;
+    const opening = moveMarking(jump, { voltaIndex: 0, x: 0, y: -3 })!;
+    const ending = moveMarking(opening, { voltaIndex: 2, x: 0, y: -2 })!;
     const groups = Array.from(new DOMParser().parseFromString(ending, "image/svg+xml")!.getElementsByTagName("g"));
     const brackets = groups.filter((group) => group.getAttribute("class") === "voltaBracket");
-    expect(brackets.map((group) => group.getAttribute("transform") || null)).toEqual([null, "translate(0 -2)"]);
+    expect(brackets.map((group) => group.getAttribute("transform") || null)).toEqual(["translate(0 -3)", null, "translate(0 -2)"]);
     expect(transform(ending, "ending-start")).toBeNull();
     expect(moveMarking(ending, { id: "repeat-barline", x: 1, y: 0 })).toBeNull();
+  });
+
+  it("recovers old SVG edits and reapplies their cumulative offsets after engraving", () => {
+    const first = moveMarking(page, { id: "pirata", x: 2, y: -4 })!;
+    const moved = moveMarking(first, { id: "pirata", x: 3, y: 1 })!;
+    const bracket = moveMarking(moved, { voltaIndex: 0, x: 0, y: -6 })!;
+    const offsets = readManualOffsets(page, bracket);
+    expect(offsets.map(({ x, y }) => [x, y])).toEqual([[5, -3], [0, -6]]);
+
+    const regenerated = page.replace('id="pirata"', 'id="pirata-new"').replace("scale(2)", "scale(3)");
+    const result = applyManualOffsets(regenerated, offsets);
+    expect(result.unmatched).toEqual([]);
+    expect(transform(result.svg, "pirata-new")).toBe("translate(5 -3) scale(3)");
+    expect(result.svg).toContain('transform="translate(0 -6)"');
+  });
+
+  it("leaves moved offsets pending if the regenerated marking no longer matches", () => {
+    const moved = moveMarking(page, { id: "pirata", x: 1, y: -1 })!;
+    const offsets = readManualOffsets(page, moved);
+    const regenerated = page.replace("<text>1</text>", "<text>3</text>");
+    expect(applyManualOffsets(regenerated, offsets)).toEqual({ svg: regenerated, unmatched: offsets });
   });
 
   it("prints the manual translation through the songbook SVG renderer", async () => {
