@@ -182,6 +182,44 @@ export const FingeringSize: Story = {
   },
 };
 
+export const ApplyToAllParts: Story = {
+  args: {
+    state: state({
+      step: "formatacao",
+      previews: { 1: preview(1), 2: preview(2, {}, 0.75), 3: preview(3, {}, 0.9) },
+    }),
+  },
+  render: function Render(args) {
+    const [profile, setProfile] = useState(args.state.profile);
+    const [editing, setEditing] = useState(args.state.editing);
+    return <EnviarPageView {...args} state={{ ...args.state, profile, editing }} onProfile={setProfile} onEditing={setEditing} />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const field = (name: string) => canvas.getByRole("spinbutton", { name });
+    const fixed = (group: string) => within(canvas.getByRole("group", { name: group })).getByRole("radio", { name: "Fixo" });
+    await userEvent.click(canvas.getByRole("tab", { name: "Pete" }));
+    await userEvent.clear(field("Tamanho da pauta (mm)"));
+    await userEvent.type(field("Tamanho da pauta (mm)"), "2,5");
+    await userEvent.click(canvas.getByRole("button", { name: "Aumentar: Tamanho dos números" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Aplicar a todas as partes: Tamanho da pauta" }));
+    await expect(canvas.getByText("Tamanho da pauta aplicado a 2 outras partes.")).toHaveAttribute("role", "status");
+    // Fingering size goes only to the other parts with fingerings (the tuba, not the flute).
+    await userEvent.click(canvas.getByRole("button", { name: "Aplicar a todas as partes: Tamanho dos números" }));
+    await expect(canvas.getByText("Tamanho dos números aplicado a 1 outra parte.")).toBeVisible();
+
+    await userEvent.click(canvas.getByRole("tab", { name: "Tuba" }));
+    await expect(fixed("Tamanho da pauta")).toBeChecked();
+    await expect(field("Tamanho da pauta (mm)")).toHaveValue("2,50");
+    await expect(fixed("Tamanho dos números")).toBeChecked();
+    await expect(field("Tamanho dos números")).toHaveValue("0,80");
+    await userEvent.click(canvas.getByRole("tab", { name: "Flauta" }));
+    await expect(field("Tamanho da pauta (mm)")).toHaveValue("2,50");
+    await expect(canvas.queryByRole("group", { name: "Tamanho dos números" })).toBeNull();
+    await expect(canvas.queryByText(/aplicado a/)).toBeNull();
+  },
+};
+
 export const Uploading: Story = {
   args: {
     state: state({

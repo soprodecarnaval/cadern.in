@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { zFormattingProfile } from "../../../../types/formattingProfile";
-import { choicesFrom, formattingOf, hasOverride, metadataFromTags, metadataProblem, partRows, tagsFromText, rowsFromStored, withFingerings, withFormatting, withInstrument, withoutOverride } from "./enviarState";
+import { choicesFrom, formattingOf, hasOverride, metadataFromTags, metadataProblem, partRows, tagsFromText, rowsFromStored, withFingerings, withFormatting, withFormattingForAll, withInstrument, withoutOverride } from "./enviarState";
 
 const part = (ordinal: number, name: string, id: string, soundId: string | null = null, longName = name) =>
   ({ ordinal, name, instruments: id || soundId ? [{ id, soundId, longName, shortName: "" }] : [] });
@@ -103,5 +103,14 @@ describe("metadataFromTags", () => {
     expect(tagsFromText(" a,b ,, ")).toEqual(["a", "b"]);
     expect(metadataProblem({ title: "  ", composer: "", sub: "", tags: [] })).toBe("Dê um título à partitura.");
     expect(metadataProblem({ title: "Eva", composer: "", sub: "", tags: [] })).toBeNull();
+  });
+});
+
+describe("withFormattingForAll", () => {
+  it("makes the same change to each named part, keeping their other settings", () => {
+    const profile = zFormattingProfile.parse({ profileVersion: 1, parts: { Pete: { systemsPerPage: 2, fingering: { notation: "valves" } } } });
+    const next = withFormattingForAll(profile, ["Pete", "Tuba"], { fingering: { size: 0.8 } });
+    expect(next.parts).toEqual({ Pete: { systemsPerPage: 2, fingering: { notation: "valves", size: 0.8 } }, Tuba: { fingering: { size: 0.8 } } });
+    expect(withFormattingForAll(profile, ["Pete", "Tuba"], { staffSize: "auto" }).parts?.Tuba).toEqual({ staffSize: "auto" });
   });
 });

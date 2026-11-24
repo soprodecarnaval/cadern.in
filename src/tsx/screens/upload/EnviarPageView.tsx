@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { zInstrument, type Instrument } from "../../../../types/instrument";
 import type { FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
 import { SONGBOOK_FIT_AREA } from "../../../../types/formattingProfile";
@@ -19,6 +19,7 @@ import {
   warningText,
   withFingerings,
   withFormatting,
+  withFormattingForAll,
   withInstrument,
   withoutOverride,
   MAX_SCORE_BYTES,
@@ -273,8 +274,10 @@ function Choice({ label, value, options, onChange, name }: {
   );
 }
 
-function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChange }: {
+function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChange, children }: {
   label: string; name: string; value: "auto" | number | undefined; min: number; max: number; step: number; unit?: string;
+  /** Shown under the field, e.g. a link to apply the value elsewhere. */
+  children?: ReactNode;
   /** −/+ buttons, and the value the automatic fit chose shown (and used as the start) while automatic. */
   stepper?: { automatic: number | undefined; range: SizeRange };
   onChange: (value: "auto" | number) => void;
@@ -348,6 +351,7 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
           Use um valor de {decimal(min, step < 1 ? 2 : 0)} a {decimal(max, step < 1 ? 2 : 0)}{unit ? ` ${unit}` : ""}.
         </p>
       )}
+      {children}
     </fieldset>
   );
 }
@@ -378,21 +382,40 @@ function PartControls({ state, onProfile, row, automaticStaff, automaticFingerin
   row: PartRow; automaticStaff: number | undefined; automaticFingering: number | undefined;
 }) {
   const settings = formattingOf(state.profile, row.name);
-  const change = (patch: PartFormatting) => onProfile(withFormatting(state.profile, row.name, patch));
+  const [applied, setApplied] = useState<string | null>(null);
+  const change = (patch: PartFormatting) => { setApplied(null); onProfile(withFormatting(state.profile, row.name, patch)); };
+  const included = state.rows.filter((candidate) => candidate.include && candidate.instrument);
+  // This part's choice (a fixed size, or automatic) made the choice of every other part.
+  const applyToAll = (field: string, targets: readonly PartRow[], patch: PartFormatting) => {
+    onProfile(withFormattingForAll(state.profile, [...new Set([row.name, ...targets.map((target) => target.name)])], patch));
+    setApplied(`${field} aplicado a ${targets.length} ${targets.length === 1 ? "outra parte" : "outras partes"}.`);
+  };
+  const applyLink = (field: string, targets: readonly PartRow[], patch: PartFormatting) => targets.length > 0 && (
+    <Button variant="text" size="sm" className="enviar-apply-all" aria-label={`Aplicar a todas as partes: ${field}`}
+      onClick={() => applyToAll(field, targets, patch)}>
+      Aplicar a todas as partes
+    </Button>
+  );
+  const others = included.filter((candidate) => candidate.ordinal !== row.ordinal);
   return (
     <>
       <AutoNumber label="Tamanho da pauta" name="part-staff-size" unit="mm" value={settings.staffSize}
         min={STAFF_SIZE.min} max={STAFF_SIZE.max} step={STAFF_SIZE.step}
         stepper={{ range: STAFF_SIZE, automatic: automaticStaff }}
-        onChange={(staffSize) => change({ staffSize })} />
+        onChange={(staffSize) => change({ staffSize })}>
+        {applyLink("Tamanho da pauta", others, { staffSize: settings.staffSize ?? "auto" })}
+      </AutoNumber>
       <AutoNumber label="Sistemas na página" name="part-systems" value={settings.systemsPerPage} min={1} max={12} step={1}
         onChange={(systemsPerPage) => change({ systemsPerPage })} />
       {row.fingerings && (
         <AutoNumber label="Tamanho dos números" name="fingering-size" value={settings.fingering?.size}
           min={FINGERING_SIZE.min} max={FINGERING_SIZE.max} step={FINGERING_SIZE.step}
           stepper={{ range: FINGERING_SIZE, automatic: automaticFingering }}
-          onChange={(size) => change({ fingering: { size } })} />
+          onChange={(size) => change({ fingering: { size } })}>
+          {applyLink("Tamanho dos números", others.filter((candidate) => candidate.fingerings), { fingering: { size: settings.fingering?.size ?? "auto" } })}
+        </AutoNumber>
       )}
+      <p className="enviar-applied" role="status">{applied}</p>
       <FingeringAndCleanupControls settings={settings} onChange={change}
         showFingering={row.fingerings} showTrombone={row.family === "trombone"} />
       {hasOverride(state.profile, row.name) && (

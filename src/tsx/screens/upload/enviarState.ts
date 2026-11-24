@@ -120,6 +120,11 @@ export function withFormatting(profile: FormattingProfile, partName: string | nu
   return { ...profile, parts: { ...profile.parts, [partName]: merge(profile.parts?.[partName] ?? {}) } };
 }
 
+/** The profile with the same change made to each of the named parts. */
+export function withFormattingForAll(profile: FormattingProfile, partNames: readonly string[], change: PartFormatting): FormattingProfile {
+  return partNames.reduce((current, name) => withFormatting(current, name, change), profile);
+}
+
 /** Whether a part has settings of its own. */
 export const hasOverride = (profile: FormattingProfile, partName: string) =>
   Object.keys(profile.parts?.[partName] ?? {}).length > 0;
