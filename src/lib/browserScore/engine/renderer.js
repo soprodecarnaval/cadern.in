@@ -193,6 +193,26 @@ const SHEET_SPACING = { spacingLinear: 0.21, spacingNonLinear: 0.6, spacingSyste
 const TIGHTER_SPACING = [{ spacingLinear: 0.15, spacingNonLinear: 0.55 }, { spacingLinear: 0.1, spacingNonLinear: 0.5 }];
 
 /**
+ * Index of the largest staff size (units, largest first) at which `fit` reports 'fits', or null.
+ * A smaller staff never needs more pages, so the sizes that fit are a tail of the list: a binary
+ * search finds its first entry in about 5 layouts instead of trying every size from the largest.
+ * Deterministic for a given input, like the linear search it replaces.
+ */
+function largestFitting(units, fit) {
+    const last = fit(units[units.length - 1]);
+    if (last?.error) return last;
+    if (last !== 'fits') return null;
+    let low = 0, high = units.length - 1; // units[high] fits
+    while (low < high) {
+        const middle = (low + high) >> 1;
+        const outcome = fit(units[middle]);
+        if (outcome?.error) return outcome;
+        if (outcome === 'fits') high = middle; else low = middle + 1;
+    }
+    return high;
+}
+
+/**
  * Draw one part as a songbook sheet: the music only, sized to fit `area` on a
  * single page when possible, at the largest staff size, with systems balanced.
  * `layout` fixes what the caller does not want searched: the staff size
@@ -285,15 +305,18 @@ export async function renderSheet(musicXml, area, widths, layout = {}) {
     // before smaller fingerings; the plugin's MuseScore spacing was tighter for such music.
     const given = { spacingLinear: spacing.spacingLinear, spacingNonLinear: spacing.spacingNonLinear };
     const spacings = [given, ...TIGHTER_SPACING.filter(tight => tight.spacingLinear < given.spacingLinear)];
+    const units = fixedUnit ? [fixedUnit] : SHEET_UNITS;
     for (const scale of fingeringScales) {
         spacing.fingeringScale = scale;
         for (const variant of spacings) {
             Object.assign(spacing, variant);
-            for (const unit of fixedUnit ? [fixedUnit] : SHEET_UNITS) {
-                const outcome = fit(unit);
-                if (outcome?.error) return outcome;
-                if (outcome === 'fits') return { ...result(), spacingTightened: variant !== given };
-            }
+            const found = largestFitting(units, fit);
+            if (found?.error) return found;
+            if (found === null) continue;
+            // The search may have drawn other sizes last: draw the chosen one again.
+            const outcome = fit(units[found]);
+            if (outcome?.error) return outcome;
+            return { ...result(), spacingTightened: variant !== given };
         }
     }
     Object.assign(spacing, given);
