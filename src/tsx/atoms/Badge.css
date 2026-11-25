@@ -1,0 +1,65 @@
+@import "../../styles/tokens.css";
+
+/* Badges: short labels for a state or a role, in the site's colors only.
+   Inter Medium 14px, 1px border, 6px corners (round for a pill or count). */
+
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 2px var(--ds-space-2);
+  border: 1px solid var(--ds-ink);
+  border-radius: 6px;
+  background: var(--ds-paper);
+  color: var(--ds-ink);
+  font: var(--ds-weight-action) 14px / 1.3 var(--ds-font);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Neutral: white with a black border (atual, reformatação). */
+
+/* Accent: yellow, for what is live or most important (publicada, Dono). */
+.ds-badge.is-accent {
+  background: var(--ds-yellow);
+  border-color: var(--ds-yellow);
+}
+
+/* Strong: black with white text, for roles. */
+.ds-badge.is-strong {
+  background: var(--ds-ink);
+  color: var(--ds-paper);
+}
+
+/* Muted: grey, for what is not live yet or set aside (não publicado). */
+.ds-badge.is-muted {
+  background: var(--ds-surface-disabled);
+  border-color: var(--ds-surface-disabled);
+  color: var(--ds-text-secondary);
+}
+
+/* Danger: red text and border, for something missing (sem MIDI). */
+.ds-badge.is-danger {
+  border-color: var(--ds-invalid);
+  color: var(--ds-invalid);
+}
+
+/* Pill: fully round, for tags and instruments. */
+.ds-badge.is-pill {
+  border-radius: 999px;
+  padding-inline: 10px;
+}
+
+/* Count: a small black circle with a yellow number, as on the filter tool. */
+.ds-badge.is-count {
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--ds-ink);
+  color: var(--ds-yellow);
+  font-size: 12px;
+  line-height: 20px;
+}

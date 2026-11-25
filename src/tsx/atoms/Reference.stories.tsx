@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { Badge } from "./Badge";
 import { Button } from "./Button";
 import { Checkbox, ChoiceGroup, Radio } from "./Choice";
 import { Input } from "./Input";
@@ -125,6 +126,36 @@ function ReferencePage() {
             <ChoiceGroup legend="Direitos" error="Confirme para enviar a partitura.">
               <Checkbox label="Tenho os direitos desta partitura" aria-invalid="true" />
             </ChoiceGroup>
+          </div>
+        </section>
+        <section aria-labelledby="badges-title">
+          <h2 id="badges-title">Etiquetas</h2>
+          <p>Estados, papéis e marcações curtas, só com as cores do sistema: Inter Medium 14 px, contorno de 1 px e cantos de 6 px.</p>
+          <div className="ds-reference-badges">
+            <div>
+              <p className="ds-reference-caption">Neutra · estado comum</p>
+              <div className="ds-reference-row"><Badge>atual</Badge><Badge>reformatação</Badge></div>
+            </div>
+            <div>
+              <p className="ds-reference-caption">Destaque · o que está no ar ou importa mais</p>
+              <div className="ds-reference-row"><Badge variant="accent">publicada</Badge><Badge variant="accent">versão antiga</Badge></div>
+            </div>
+            <div>
+              <p className="ds-reference-caption">Forte · papéis no projeto</p>
+              <div className="ds-reference-row"><Badge variant="strong">Dono</Badge><Badge variant="strong">Admin</Badge><Badge variant="strong">Editor</Badge><Badge variant="strong">Revisor</Badge></div>
+            </div>
+            <div>
+              <p className="ds-reference-caption">Apagada · ainda não está no ar</p>
+              <div className="ds-reference-row"><Badge variant="muted">não publicado</Badge><Badge variant="muted">de outro projeto</Badge></div>
+            </div>
+            <div>
+              <p className="ds-reference-caption">Erro · algo falta</p>
+              <div className="ds-reference-row"><Badge variant="danger">sem MIDI</Badge></div>
+            </div>
+            <div>
+              <p className="ds-reference-caption">Pílula · tags e instrumentos; contador</p>
+              <div className="ds-reference-row"><Badge pill>Trompete</Badge><Badge pill>Sax alto</Badge><Badge pill>marcha</Badge><Badge variant="count" aria-label="3 filtros">3</Badge></div>
+            </div>
           </div>
         </section>
       </div>
