@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { Alert, Form, Modal } from "react-bootstrap";
+import { Alert, Modal } from "react-bootstrap";
 import type { SongbookDoc, SongbookRevisionDoc } from "../../../../../types/docs";
 import { zInstrument, type Instrument } from "../../../../../types/instrument";
 import type { WithId } from "../../../../lib/db";
@@ -7,6 +7,7 @@ import { buildSongbookSections, type Section } from "../../../../lib/pdfGenerati
 import { instrumentLabel } from "../../../../lib/preferredInstrument";
 import { fromSongbookRevision } from "../../../../lib/songbook";
 import { Button } from "../../../atoms/Button";
+import { Checkbox } from "../../../atoms/Choice";
 import type { ArrangementPdfEntry } from "../../../../createSongBook";
 
 export type SongbookPrintServices = Pick<typeof import("../../../../lib/db"), "getSongbookRevision"> & {
@@ -105,13 +106,14 @@ export function SongbookPrintDialog({ songbook, services, onHide }: {
           <fieldset disabled={printing}>
             <legend className="fs-6 fw-bold">Partes</legend>
             {book.instruments.length > 0 ? <>
-              <Form.Check id={`${heading}-all`} label="Todas as partes" checked={allPartsSelected} onChange={(event) => {
+              <Checkbox className="is-block mb-2" id={`${heading}-all`} label="Todas as partes" checked={allPartsSelected}
+                indeterminate={selectedParts.length > 0 && !allPartsSelected} onChange={(event) => {
                 setSelectedParts(event.target.checked ? book.instruments : []);
                 setError(null);
               }} />
-              <div className="ms-3 mb-3">
+              <div className="ms-4 mb-3 d-flex flex-column gap-2">
                 {book.instruments.map((instrument) => (
-                  <Form.Check key={instrument} id={`${heading}-${instrument.replace(/ /g, "-")}`}
+                  <Checkbox key={instrument} id={`${heading}-${instrument.replace(/ /g, "-")}`}
                     label={instrumentLabel(instrument)} checked={selectedParts.includes(instrument)} onChange={(event) => {
                       setSelectedParts(event.target.checked
                         ? [...selectedParts, instrument]
@@ -122,7 +124,7 @@ export function SongbookPrintDialog({ songbook, services, onHide }: {
               </div>
             </> : <p className="text-muted">Nenhuma parte disponível.</p>}
           </fieldset>
-          <Form.Check id={`${heading}-arrangements`} label="Arranjos (A4 horizontal)"
+          <Checkbox className="is-block" id={`${heading}-arrangements`} label="Arranjos (A4 horizontal)"
             checked={includeArrangements} disabled={printing || !book.arrangements.length} onChange={(event) => {
               setIncludeArrangements(event.target.checked);
               setError(null);
