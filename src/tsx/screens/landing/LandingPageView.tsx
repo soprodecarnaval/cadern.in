@@ -162,20 +162,6 @@ export function LandingPageView({
             }
             alwaysOpen
           >
-            <Accordion.Item eventKey="exporter" id={EXPORTER_ANCHOR}>
-              <Accordion.Header>
-                Baixe o Exportador cadern.in para desktop
-              </Accordion.Header>
-              <Accordion.Body>
-                <p>
-                  E faça upload de novas partituras para seus projetos no
-                  cadern.in. Disponível para Windows, Mac e Linux.
-                </p>
-                <Button className="landing-cta" disabled>
-                  Em breve
-                </Button>
-              </Accordion.Body>
-            </Accordion.Item>
             <Accordion.Item eventKey="plugin">
               <Accordion.Header>
                 Baixe a Extensão cadern.in para Musescore
@@ -188,6 +174,20 @@ export function LandingPageView({
                 <a className="btn btn-primary ds-button landing-cta" href={STATIC.plugin}>
                   Baixar
                 </a>
+              </Accordion.Body>
+            </Accordion.Item>
+            <Accordion.Item eventKey="exporter" id={EXPORTER_ANCHOR}>
+              <Accordion.Header>
+                Baixe o Exportador cadern.in para desktop
+              </Accordion.Header>
+              <Accordion.Body>
+                <p>
+                  E faça upload de novas partituras para seus projetos no
+                  cadern.in. Disponível para Windows, Mac e Linux.
+                </p>
+                <Button className="landing-cta" disabled>
+                  Em breve
+                </Button>
               </Accordion.Body>
             </Accordion.Item>
           </Accordion>
