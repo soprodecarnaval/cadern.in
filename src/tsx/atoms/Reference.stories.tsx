@@ -1,10 +1,13 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Button } from "./Button";
+import { Checkbox, ChoiceGroup, Radio } from "./Choice";
 import { Input } from "./Input";
 import { Modal } from "./Modal";
-import { expect, userEvent, within, waitFor } from "@storybook/test";
+import { expect, fireEvent, userEvent, within, waitFor } from "@storybook/test";
 import "./Reference.css";
+
+const parts = ["Trompete", "Trombone", "Sax alto"];
 
 const colors = [
   ["Amarelo", "#fcee21"], ["Tinta", "#000000"],
@@ -15,6 +18,10 @@ const colors = [
 function ReferencePage() {
   const [show, setShow] = useState(false);
   const [email, setEmail] = useState("");
+  const [chosenParts, setChosenParts] = useState<string[]>(["Trompete"]);
+  const [staff, setStaff] = useState("auto");
+  const allParts = chosenParts.length === parts.length;
+  const someParts = chosenParts.length > 0 && !allParts;
   return (
     <main className="ds-reference">
       <header>
@@ -79,6 +86,47 @@ function ReferencePage() {
           <div className="alert alert-danger mt-3">Email ou senha inválidos. Confira os dados e tente novamente.</div>
           <div className="alert alert-success">Alterações salvas.</div>
         </section>
+        <section aria-labelledby="choices-title">
+          <h2 id="choices-title">Seleção</h2>
+          <p>Caixas de seleção e opções: contorno preto de 3 px, preenchidas de amarelo quando marcadas, amarelas no hover. Com Tab, sobem 3 px com sombra preta, como os campos.</p>
+          <div className="ds-reference-fields">
+            <ChoiceGroup legend="Partes" hint="Marque as partes que quer imprimir.">
+              <Checkbox
+                label="Todas as partes"
+                checked={allParts}
+                indeterminate={someParts}
+                onChange={() => setChosenParts(allParts ? [] : parts)}
+              />
+              {parts.map((part) => (
+                <Checkbox
+                  key={part}
+                  label={part}
+                  checked={chosenParts.includes(part)}
+                  onChange={(event) =>
+                    setChosenParts(
+                      event.target.checked
+                        ? [...chosenParts, part]
+                        : chosenParts.filter((chosen) => chosen !== part),
+                    )
+                  }
+                />
+              ))}
+            </ChoiceGroup>
+            <ChoiceGroup legend="Tamanho da pauta" inline>
+              <Radio name="ds-staff" value="auto" label="Automático" checked={staff === "auto"} onChange={() => setStaff("auto")} />
+              <Radio name="ds-staff" value="fixed" label="Fixo" checked={staff === "fixed"} onChange={() => setStaff("fixed")} />
+              <Radio name="ds-staff" value="custom" label="Personalizado" disabled />
+            </ChoiceGroup>
+            <ChoiceGroup legend="Estados">
+              <Checkbox label="Desabilitada" disabled />
+              <Checkbox label="Marcada e desabilitada" defaultChecked disabled />
+              <Radio name="ds-disabled" label="Opção desabilitada" defaultChecked disabled />
+            </ChoiceGroup>
+            <ChoiceGroup legend="Direitos" error="Confirme para enviar a partitura.">
+              <Checkbox label="Tenho os direitos desta partitura" aria-invalid="true" />
+            </ChoiceGroup>
+          </div>
+        </section>
       </div>
       <section aria-labelledby="compositions-title">
         <h2 id="compositions-title">Composição</h2>
@@ -123,10 +171,21 @@ export const Overview: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const email = canvas.getByRole("textbox", { name: "Email" });
-    await userEvent.type(email, "designer@example.test");
+    // userEvent.type's keystrokes on an email input change the text without
+    // React seeing them, so the field's state stays empty; set it directly.
+    await userEvent.click(email);
+    await fireEvent.change(email, { target: { value: "designer@example.test" } });
     await expect(email).toHaveValue("designer@example.test");
     await userEvent.click(canvas.getByRole("button", { name: "Limpar campo" }));
     await expect(email).toHaveValue("");
+    const all = canvas.getByRole("checkbox", { name: "Todas as partes" });
+    await expect(all).toHaveProperty("indeterminate", true);
+    await userEvent.click(all);
+    await expect(all).toBeChecked();
+    await expect(canvas.getByRole("checkbox", { name: "Sax alto" })).toBeChecked();
+    await userEvent.click(canvas.getByRole("radio", { name: "Fixo" }));
+    await expect(canvas.getByRole("radio", { name: "Fixo" })).toBeChecked();
+    await expect(canvas.getByRole("radio", { name: "Automático" })).not.toBeChecked();
     await userEvent.click(canvas.getByRole("button", { name: "Abrir exemplo" }));
     const dialog = await within(document.body).findByRole("dialog");
     await waitFor(() => expect(dialog).toBeVisible());
