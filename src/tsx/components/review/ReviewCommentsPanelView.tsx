@@ -3,7 +3,8 @@ import { Input } from "../../atoms/Input";
 import { Button } from "../../atoms/Button";
 import type { User } from "firebase/auth";
 import { useEffect, useRef, useState } from "react";
-import { Badge, CloseButton, Form, Spinner } from "react-bootstrap";
+import { CloseButton, Form, Spinner } from "react-bootstrap";
+import { Badge } from "../../atoms/Badge";
 import type { CommentAnchor, ReviewCommentDoc } from "../../../../types/docs";
 import { type CommentThread } from "../../../lib/comments";
 import type { WithId } from "../../../lib/db";
@@ -105,7 +106,7 @@ export function ReviewCommentsPanelView({
         />
         {pendingAnchor && (
           <div className="mt-1">
-            <Badge bg="warning" text="dark" className="d-inline-flex gap-1">
+            <Badge variant="accent">
               📍 {anchorLabel(pendingAnchor)}
               <CloseButton
                 aria-label="Remover ponto"
@@ -156,11 +157,11 @@ export function ReviewCommentsPanelView({
             user={user}
             label={
               thread.pinNumber !== null && thread.root.anchor ? (
-                <Badge bg="warning" text="dark">
+                <Badge variant="accent">
                   {thread.pinNumber} · {anchorLabel(thread.root.anchor)}
                 </Badge>
               ) : (
-                <Badge bg="light" text="dark">
+                <Badge>
                   geral
                 </Badge>
               )

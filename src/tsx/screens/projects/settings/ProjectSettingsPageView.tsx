@@ -2,13 +2,8 @@ import { Button } from "../../../atoms/Button";
 import { Page } from "../../../atoms/Page";
 import { Input } from "../../../atoms/Input";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Badge,
-  Form,
-  Spinner,
-  Table,
-} from "react-bootstrap";
+import { Alert, Form, Spinner, Table } from "react-bootstrap";
+import { Badge } from "../../../atoms/Badge";
 import { useNavigate, useParams } from "react-router-dom";
 import { projectPath, projectsPath } from "../../../../lib/routes";
 
@@ -37,13 +32,6 @@ const ROLE_LABELS: Record<UserProjectRole, string> = {
   admin: "Admin",
   editor: "Editor",
   reviewer: "Revisor",
-};
-
-const ROLE_BADGE_VARIANTS: Record<UserProjectRole, string> = {
-  owner: "primary",
-  admin: "warning",
-  editor: "info",
-  reviewer: "secondary",
 };
 
 function formatDate(timestamp: unknown): string {
@@ -322,7 +310,7 @@ export function ProjectSettingsPageView({
                         ))}
                       </Form.Select>
                     ) : (
-                      <Badge bg={ROLE_BADGE_VARIANTS[role]}>
+                      <Badge variant="strong">
                         {ROLE_LABELS[role]}
                       </Badge>
                     )}
@@ -422,7 +410,7 @@ export function ProjectSettingsPageView({
                 <tr key={inv.toUserId}>
                   <td>{inv.toDisplayName}</td>
                   <td>
-                    <Badge bg={ROLE_BADGE_VARIANTS[inv.role]}>
+                    <Badge variant="strong">
                       {ROLE_LABELS[inv.role]}
                     </Badge>
                   </td>

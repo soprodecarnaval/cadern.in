@@ -1,7 +1,8 @@
 import { Page } from "../../atoms/Page";
 import { Button } from "../../atoms/Button";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Badge, Col, Row, Spinner } from "react-bootstrap";
+import { Alert, Col, Row, Spinner } from "react-bootstrap";
+import { Badge } from "../../atoms/Badge";
 
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { WithId } from "../../../lib/db";
@@ -133,7 +134,7 @@ export function ScorePageView({
         <h2 className="mb-0">{score.title}</h2>
         <span className="text-muted">versão #{score.revisionNumber}</span>
         {collabEnabled && score.revisionId === score.publishedRevisionId && (
-          <Badge bg="success">publicada</Badge>
+          <Badge variant="accent">publicada</Badge>
         )}
       </div>
       <div className="d-flex align-items-center justify-content-between mb-3">
