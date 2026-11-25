@@ -172,7 +172,9 @@ const SongBookTableView = forwardRef<
             {rows.filter(isSongbookSection).length} seções e{" "}
             {rows.filter((r) => !isSongbookSection(r)).length} músicas
           </p>
-          <Button onClick={handleClear}>Limpar tudo</Button>
+          <Button className="songbook-clear" onClick={handleClear}>
+            Limpar tudo
+          </Button>
         </div>
         {showSectionsByStyle && (
           <Button className="mt-3" onClick={() => setRows(generateSectionsByStyle(rows))}>
