@@ -165,7 +165,7 @@ function PartsStep({ state, onRows }: Pick<EnviarPageViewProps, "state" | "onRow
             <tr>
               <th scope="col">Enviar</th>
               <th scope="col">Parte</th>
-              <th scope="col">No MuseScore</th>
+              <th scope="col" className="enviar-parts-file">No MuseScore</th>
               <th scope="col">Instrumento</th>
             </tr>
           </thead>
@@ -182,8 +182,11 @@ function PartsStep({ state, onRows }: Pick<EnviarPageViewProps, "state" | "onRow
                     onChange={(event) => set(row.ordinal, (current) => ({ ...current, include: event.target.checked }))}
                   />
                 </td>
-                <th scope="row">{row.name}</th>
-                <td className="text-muted">{row.museScoreInstrument}</td>
+                <th scope="row">
+                  {row.name}
+                  <span className="enviar-parts-file-inline">{row.museScoreInstrument}</span>
+                </th>
+                <td className="enviar-parts-file">{row.museScoreInstrument}</td>
                 <td>
                   <Select
                     aria-label={`Instrumento de ${row.name}`}
@@ -197,9 +200,9 @@ function PartsStep({ state, onRows }: Pick<EnviarPageViewProps, "state" | "onRow
                       <option key={instrument} value={instrument}>{instrument}</option>
                     ))}
                   </Select>
-                  {row.guessed && <small className="text-muted d-block">Adivinhado pelo nome; confira.</small>}
-                  {row.idInstrument && <small className="text-muted d-block">No MuseScore: {pirataInstrument(row.idInstrument, false)}. Usando o nome da parte; confira.</small>}
-                  {!row.instrument && <small className="text-danger d-block">Sem instrumento: fica de fora.</small>}
+                  {row.guessed && <small className="enviar-part-note">Adivinhado pelo nome; confira.</small>}
+                  {row.idInstrument && <small className="enviar-part-note">No MuseScore: {pirataInstrument(row.idInstrument, false)}. Usando o nome da parte; confira.</small>}
+                  {!row.instrument && <small className="enviar-part-note is-error">Sem instrumento: fica de fora.</small>}
                 </td>
               </tr>
             ))}

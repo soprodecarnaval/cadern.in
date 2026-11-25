@@ -74,7 +74,8 @@ export const Arrangement: Story = {
     await expect(body.queryByRole("dialog", { name: "Arranjo completo" })).not.toBeInTheDocument();
     await userEvent.click(trigger);
     const dialog = await body.findByRole("dialog", { name: "Arranjo completo" });
-    await expect(within(dialog).getByRole("button", { name: "Imprimir arranjo" })).toBeVisible();
+    // The modal fades in: wait until it is shown.
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Imprimir arranjo" })).toBeVisible());
     await userEvent.click(within(dialog).getByRole("button", { name: "Fechar arranjo" }));
     await waitFor(() => expect(body.queryByRole("dialog", { name: "Arranjo completo" })).not.toBeInTheDocument());
   },
@@ -111,5 +112,20 @@ export const PickingComment: Story = {
     await expect(
       canvas.getByRole("button", { name: "Clique na partitura…" }),
     ).toBeVisible();
+  },
+};
+// A revision sent from the browser stores the MusicXML with the corrected instruments (025).
+export const WithMusicXml: Story = {
+  args: {
+    currentUser: null,
+    services: {
+      ...services,
+      loadScore: () =>
+        Promise.resolve({ ...metadata, ...loadedScore, musicXmlUrl: "/fixtures/score.musicxml" }),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const link = await within(canvasElement).findByRole("link", { name: "Baixar MusicXML" });
+    await expect(link).toHaveAttribute("download", `${loadedScore.title}.musicxml`);
   },
 };

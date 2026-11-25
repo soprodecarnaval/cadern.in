@@ -46,6 +46,20 @@
 .enviar-field-error { color: var(--ds-invalid); margin: 0; }
 
 .enviar-parts td, .enviar-parts th { vertical-align: middle; }
+.enviar-parts .enviar-parts-file { color: var(--ds-text-secondary); }
+.enviar-parts-file-inline { display: none; }
+.enviar-part-note { display: block; margin-top: var(--ds-space-1); color: var(--ds-text-secondary); font-size: var(--ds-caption); }
+.enviar-part-note.is-error { color: var(--ds-invalid); }
+/* Phones: the MuseScore instrument goes under the part name, so the table fits without scrolling. */
+@media (max-width: 576px) {
+  .enviar-parts .enviar-parts-file { display: none; }
+  .enviar-parts-file-inline {
+    display: block;
+    color: var(--ds-text-secondary);
+    font-size: var(--ds-caption);
+    font-weight: var(--ds-weight-body);
+  }
+}
 
 .enviar-actions {
   display: flex;

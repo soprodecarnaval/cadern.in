@@ -30,3 +30,10 @@
 .ds-page .form-control { max-width: 100%; }
 
 .ds-page a { color: var(--ds-ink); }
+
+/* Checkboxes and radios in black, as in the modals: no Bootstrap blue. */
+.ds-page .form-check-input { border-color: var(--ds-ink); }
+.ds-page .form-check-input:checked { background-color: var(--ds-ink); border-color: var(--ds-ink); }
+.ds-page .form-check-input:focus { box-shadow: none; border-color: var(--ds-ink); }
+.ds-page .form-check-input:focus-visible { outline: var(--ds-border) solid var(--ds-ink); outline-offset: 2px; }
+.ds-page .form-check-input:disabled { border-color: var(--ds-muted); }

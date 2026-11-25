@@ -17,7 +17,7 @@ import {
 } from "../../../../../.storybook/fixtures/components";
 
 // The reader remembers the chosen instrument in localStorage; stories start
-// from the songbook's first instrument (Flauta) instead.
+// from the songbook's first instrument in instrument order (Trompete) instead.
 import { INSTRUMENT_KEY } from "../../../../lib/preferredInstrument";
 
 // The score opens from `?musica=<number>`. Canvases at least 900px wide (and
@@ -185,7 +185,7 @@ export const PdfGenerating: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: /Baixar PDF/ }));
-    await expect(args.onDownloadPdf).toHaveBeenCalledWith("flauta");
+    await expect(args.onDownloadPdf).toHaveBeenCalledWith("trompete");
     await expect(canvas.getByText(/Gerando/)).toBeInTheDocument();
   },
 };
