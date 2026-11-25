@@ -6,6 +6,8 @@ import {
 } from "../../../types/formattingProfile";
 import {
   DEFAULT_SPACING,
+  keyedByOrdinal,
+  partKey,
   libraryOptionsFor,
   resolvePartFormatting,
   sheetLayoutFor,
@@ -25,7 +27,7 @@ describe("FormattingProfile", () => {
   });
 
   it("defaults to automatic layout, positions and every clean-up rule", () => {
-    const part = resolvePartFormatting(DEFAULT_FORMATTING_PROFILE, "Trompete");
+    const part = resolvePartFormatting(DEFAULT_FORMATTING_PROFILE, { ordinal: 1, name: "Trompete" });
     expect(part).toEqual({
       staffSize: "auto",
       systemsPerPage: "auto",
@@ -57,9 +59,9 @@ describe("FormattingProfile", () => {
       spacing: { evenNoteSpacing: true },
       parts: { Tuba: { spacing: { evenNoteSpacing: false } } },
     })));
-    expect(sheetLayoutFor(resolvePartFormatting(profile, "Flauta")).evenNoteSpacing).toBe(true);
-    expect(resolvePartFormatting(profile, "Tuba").spacing.evenNoteSpacing).toBe(false);
-    expect(sheetLayoutFor(resolvePartFormatting(profile, "Tuba")).evenNoteSpacing).toBe(false);
+    expect(sheetLayoutFor(resolvePartFormatting(profile, { ordinal: 3, name: "Flauta" })).evenNoteSpacing).toBe(true);
+    expect(resolvePartFormatting(profile, { ordinal: 2, name: "Tuba" }).spacing.evenNoteSpacing).toBe(false);
+    expect(sheetLayoutFor(resolvePartFormatting(profile, { ordinal: 2, name: "Tuba" })).evenNoteSpacing).toBe(false);
   });
 
   it("applies part overrides over score settings", () => {
@@ -72,7 +74,7 @@ describe("FormattingProfile", () => {
         Tuba: { systemsPerPage: 3, spacing: { system: 6 }, fingering: { dynamicTrombone: true } },
       },
     });
-    const tuba = resolvePartFormatting(profile, "Tuba");
+    const tuba = resolvePartFormatting(profile, { ordinal: 2, name: "Tuba" });
     expect(sheetLayoutFor(tuba)).toEqual({
       staffSpaceMm: 1.6,
       systems: 3,
@@ -82,6 +84,13 @@ describe("FormattingProfile", () => {
       spacingSystem: 6,
     });
     expect(tuba.fingering).toMatchObject({ notation: "valves", dynamicTrombone: true });
-    expect(resolvePartFormatting(profile, "Flauta").fingering.dynamicTrombone).toBe(false);
+    expect(resolvePartFormatting(profile, { ordinal: 3, name: "Flauta" }).fingering.dynamicTrombone).toBe(false);
+  });
+
+  it("moves settings stored by part name to the ordinal of every part with that name (023)", () => {
+    const stored = zFormattingProfile.parse({ profileVersion: 1, parts: { Trompete: { staffSize: 2 }, Gone: { staffSize: 3 } } });
+    const keyed = keyedByOrdinal(stored, [{ ordinal: 1, name: "Trompete" }, { ordinal: 3, name: "Trompete" }, { ordinal: 2, name: "Tuba" }]);
+    expect(keyed.parts).toEqual({ Gone: { staffSize: 3 }, "#1": { staffSize: 2 }, "#3": { staffSize: 2 } });
+    expect(partKey({ ordinal: 3 })).toBe("#3");
   });
 });

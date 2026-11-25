@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import type { PartInstrument } from './types';
 import type { ScorePartInfo } from './input';
-
-type NativePart = { instrumentName: string; name: string; instrumentId?: string };
+import type { NativePart } from './excerptLinks';
 
 /**
- * The MSCX instruments of one engine excerpt. Saved parts are matched by the score part ids in
+ * The MSCX instruments of one engine excerpt. The main-score parts the file links the excerpt to
+ * (`masterParts`, see excerptLinks) decide first. Saved parts are matched by the score part ids in
  * their own file; otherwise each engine part is matched to the score part with the same track
  * name or instrument long name, and finally by position when every excerpt is a single score
  * part in score order (generated parts). Engine parts left unmatched fall back to the engine's
@@ -15,8 +15,11 @@ export function excerptInstruments(
     excerpt: { title: string; parts: readonly NativePart[] },
     index: number,
     excerptCount: number,
-    info: { savedPartIds: Readonly<Record<string, readonly string[]>>; scoreParts: readonly ScorePartInfo[] }
+    info: { savedPartIds: Readonly<Record<string, readonly string[]>>; scoreParts: readonly ScorePartInfo[] },
+    masterParts?: readonly number[] | null
 ): PartInstrument[] {
+    const linked = masterParts?.map(at => info.scoreParts[at]);
+    if (linked?.length && linked.every(Boolean)) {return linked.flatMap(part => part.instruments);}
     const saved = info.savedPartIds[excerpt.title];
     if (saved?.length) {
         const parts = saved.map(id => info.scoreParts.find(part => part.partId === id));

@@ -198,6 +198,7 @@ function PartsStep({ state, onRows }: Pick<EnviarPageViewProps, "state" | "onRow
                     ))}
                   </Select>
                   {row.guessed && <small className="text-muted d-block">Adivinhado pelo nome; confira.</small>}
+                  {row.idInstrument && <small className="text-muted d-block">No MuseScore: {pirataInstrument(row.idInstrument, false)}. Usando o nome da parte; confira.</small>}
                   {!row.instrument && <small className="text-danger d-block">Sem instrumento: fica de fora.</small>}
                 </td>
               </tr>
@@ -438,12 +439,12 @@ function PartControls({ state, onProfile, onRows, row, label, automaticStaff, au
   row: PartRow; label: string; automaticStaff: number | undefined; automaticFingering: number | undefined;
   onApplied: (text: string) => void;
 }) {
-  const settings = formattingOf(state.profile, row.name);
+  const settings = formattingOf(state.profile, row);
   const evenNoteSpacing = settings.spacing?.evenNoteSpacing ?? DEFAULT_SPACING.evenNoteSpacing;
-  const change = (patch: PartFormatting) => onProfile(withFormatting(state.profile, row.name, patch));
+  const change = (patch: PartFormatting) => onProfile(withFormatting(state.profile, row, patch));
   const included = state.rows.filter((candidate) => candidate.include && candidate.instrument);
   // This part's choice (a fixed size, or automatic) made the choice of every other part.
-  const names = (targets: readonly PartRow[]) => [...new Set([row.name, ...targets.map((target) => target.name)])];
+  const names = (targets: readonly PartRow[]) => [row, ...targets.filter((target) => target.ordinal !== row.ordinal)];
   const countText = (count: number) => `${count} ${count === 1 ? "outra parte" : "outras partes"}`;
   const applyToAll = (field: string, targets: readonly PartRow[], patch: PartFormatting) => {
     if (onProfile(withFormattingForAll(state.profile, names(targets), patch)) === false) {return;}
@@ -505,8 +506,8 @@ function PartControls({ state, onProfile, onRows, row, label, automaticStaff, au
       )}
       <FingeringAndCleanupControls settings={settings} onChange={change}
         showTrombone={row.fingerings && notation === "positions" && row.family === "trombone"} />
-      {hasOverride(state.profile, row.name) && (
-        <Button variant="text" onClick={() => onProfile(withoutOverride(state.profile, row.name))}>
+      {hasOverride(state.profile, row) && (
+        <Button variant="text" onClick={() => onProfile(withoutOverride(state.profile, row))}>
           Voltar {label} ao padrão
         </Button>
       )}
@@ -567,7 +568,7 @@ function PreviewCard({ row, label, preview, draft, midi, onListen, onCollision, 
     ? (preview?.fontCss ? withTextFonts(corrected, preview.fontCss) : corrected)
     : preview?.svg;
   return (
-    <article className="enviar-preview" aria-busy={preview?.rendering ?? true} aria-label={`Prévia de ${label}`} data-part-name={row.name}>
+    <article className="enviar-preview" aria-busy={preview?.rendering ?? true} aria-label={`Prévia de ${label}`} data-part-name={row.name} data-part-ordinal={row.ordinal}>
       <div className="enviar-sheet" style={{ aspectRatio: `${SONGBOOK_FIT_AREA.widthMm} / ${SONGBOOK_FIT_AREA.heightMm}` }}>
         {ready && svg ? (
           <CollisionPage svg={svg} label={`Página de ${label}`} activeNotes={playing?.url === audio?.url ? playing?.notes : undefined} onMove={(move) => onCollision(row.ordinal, move)} />

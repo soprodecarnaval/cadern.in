@@ -199,6 +199,7 @@ export const loadedScore: LoadedScore = {
   projectId: project.id,
   projectTitle: project.title,
   msczUrl: revisionDoc.mscz.url,
+  musicXmlUrl: null,
   arrangementMidiUrl: null,
   parts: [
     {

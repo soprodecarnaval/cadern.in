@@ -176,6 +176,12 @@ export function ScorePageView({
             download={`${score.title}.mscz`}>
             Baixar .mscz
           </a>
+          {score.musicXmlUrl && (
+            <a className="btn btn-outline-secondary ds-button btn-sm" href={score.musicXmlUrl}
+              download={`${score.title}.musicxml`}>
+              Baixar MusicXML
+            </a>
+          )}
         </div>
       </div>
       {collabEnabled && (

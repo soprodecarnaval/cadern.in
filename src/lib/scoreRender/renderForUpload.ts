@@ -9,13 +9,14 @@ import type { FormattingProfile } from "../../../types/formattingProfile";
 import type { Instrument } from "../../../types/instrument";
 import { METAJSON_VERSION, type Metajson } from "../../../types/metajson";
 import type { Warning as AppWarning } from "../../result";
-import type { Part, PartCatalog, RendererInfo, PartPlayback, ScoreLibrary, ScoreSession, SheetLayoutResult, Warning } from "../browserScore/types";
+import type { MusicXmlExport, Part, PartCatalog, RendererInfo, PartPlayback, ScoreLibrary, ScoreSession, SheetLayoutResult, Warning } from "../browserScore/types";
 import { guessInstrument, pirataInstrument } from "../instruments";
 import { packageMscx, readMsczIdentityBytes } from "../msczIdentity";
 import { buildPartBasenames, safeFilename } from "../partFiles";
 import type { ParsedArrangement, ParsedPart, ParsedPlayback, ParsedScore } from "../parseUploadedFiles";
 import { caderninhoPartTransform, partSettings, type PartTransformReport } from "./partTransform";
-import { libraryOptionsFor, resolvePartFormatting, sheetLayoutFor } from "./profile";
+import { libraryOptionsFor, partKey, partOverride, resolvePartFormatting, sheetLayoutFor } from "./profile";
+import { refiledInstrument, rewritePartInstrument } from "./instrumentXml";
 
 function savePlayback(files: Map<string, File>, stem: string, playback: PartPlayback | null | undefined, folder = "playback"): ParsedPlayback | undefined {
   if (!playback?.frames.length) {return;}
@@ -26,6 +27,26 @@ function savePlayback(files: Map<string, File>, stem: string, playback: PartPlay
   files.set(midi, new File([playback.midi], midiName, { type: "audio/midi" }));
   files.set(timing, new File([JSON.stringify({ version: 1, frames: playback.frames })], timingName, { type: "application/json" }));
   return { midi, timing };
+}
+
+/**
+ * The full-score MusicXML with the parts filed under another instrument rewritten as it (025).
+ * Each catalog part is found by the export's part mapping; the rest of the file is the engine's.
+ */
+export function correctedMusicXml(
+  exported: Pick<MusicXmlExport, "musicXml" | "parts">,
+  refiled: readonly { partId: string; instrument: Instrument | null }[],
+  codec = { parse: (text: string) => new DOMParser().parseFromString(text, "application/xml"), serialize: (document: Document) => new XMLSerializer().serializeToString(document) },
+): string {
+  const changes = refiled.filter((entry): entry is { partId: string; instrument: Instrument } => !!entry.instrument);
+  if (!changes.length) {return exported.musicXml;}
+  const document = codec.parse(exported.musicXml);
+  for (const { partId, instrument } of changes) {
+    for (const part of exported.parts.filter((candidate) => candidate.catalogPart?.id === partId)) {
+      rewritePartInstrument(document, part.id, instrument);
+    }
+  }
+  return codec.serialize(document);
 }
 
 /** What the user chose for one part of the score; parts not listed are not uploaded. */
@@ -112,8 +133,9 @@ export function profileWithChoices(
   for (const choice of choices) {
     const part = parts.find((candidate) => candidate.ordinal === choice.ordinal);
     if (!part || choice.fingerings === undefined) {continue;}
-    const current = overrides[part.name] ?? {};
-    overrides[part.name] = { ...current, fingering: { ...current.fingering, enabled: choice.fingerings } };
+    const current = partOverride(profile, part);
+    delete overrides[part.name];
+    overrides[partKey(part)] = { ...current, fingering: { ...current.fingering, enabled: choice.fingerings } };
   }
   return Object.keys(overrides).length ? { ...profile, parts: overrides } : { ...profile };
 }
@@ -151,7 +173,7 @@ export async function renderForUpload(
             partTransform: (input) =>
               caderninhoPartTransform(effective, (report) => transforms.set(input.part.id, report),
                 (part) => choices.find((choice) => choice.ordinal === part.ordinal)?.instrument)(input),
-            partLayout: (part) => sheetLayoutFor(resolvePartFormatting(effective, part.name)),
+            partLayout: (part) => sheetLayoutFor(resolvePartFormatting(effective, part)),
           },
         );
     try {
@@ -167,7 +189,7 @@ export async function renderForUpload(
         .map((choice) => {
           const part = catalog.parts.find((candidate) => candidate.ordinal === choice.ordinal);
           if (!part) {throw new Error(`Part ${choice.ordinal} is not in the score`);}
-          const formatting = resolvePartFormatting(effective, part.name);
+          const formatting = resolvePartFormatting(effective, part);
           const { settings } = partSettings(part, choice.instrument);
           const fingered =
             !!settings?.fingering &&
@@ -220,10 +242,15 @@ export async function renderForUpload(
           if (page === 1) {warnings = rendered.warnings;}
         }
         onProgress?.({ step: "midi", done: index, total: chosen.length, part: name });
-        const midi = await session.exportMidi(view, { expectedRevision: catalog.revision, signal });
+        const playback = await session.getPartPlayback?.(part.id, { expectedRevision: catalog.revision, signal });
+        // A part filed under another instrument than its staff's plays as that instrument: its MIDI
+        // is the playback's, made from the rewritten part MusicXML; the engine's plays the staff's (025).
+        const refiled = refiledInstrument(part, choice.instrument) && playback?.midi.length ? playback : null;
+        const midi = refiled
+          ? { midi: refiled.midi, warnings: [{ code: "MIDI_FROM_PART_MUSICXML", message: "This part's MIDI was made from its MusicXML, filed under the chosen instrument." }] }
+          : await session.exportMidi(view, { expectedRevision: catalog.revision, signal });
         fileMap.set(`parts/${basename}.midi`, new File([midi.midi], `${basename}.midi`, { type: "audio/midi" }));
         const uploadedPart: ParsedPart = { name, basename, instrument, svg, midi: `parts/${basename}.midi` };
-        const playback = await session.getPartPlayback?.(part.id, { expectedRevision: catalog.revision, signal });
         uploadedPart.playback = savePlayback(fileMap, basename, playback);
         parts.push(uploadedPart);
         metajsonParts.push({ name, instrument, svg: svgNames, midi: `${basename}.midi` });
@@ -241,6 +268,10 @@ export async function renderForUpload(
 
       const scoreMidi = await session.exportMidi({ kind: "score" }, { expectedRevision: catalog.revision, signal });
       fileMap.set("midi", new File([scoreMidi.midi], `${title}.midi`, { type: "audio/midi" }));
+      // The full score as MusicXML, with each part filed under another instrument rewritten as it (025).
+      const exported = await session.exportMusicXml({ expectedRevision: catalog.revision, signal });
+      const musicXml = correctedMusicXml(exported, chosen.map(({ part, choice }) => ({ partId: part.id, instrument: refiledInstrument(part, choice.instrument) })));
+      fileMap.set("musicxml", new File([musicXml], `${title}.musicxml`, { type: "application/vnd.recordare.musicxml+xml" }));
       const arrangementRender = await session.renderArrangement?.({ ...arrangementOptions(effective, options.arrangementRows ?? choices), expectedRevision: catalog.revision, signal });
       let arrangement: ParsedArrangement | undefined;
       if (arrangementRender) {

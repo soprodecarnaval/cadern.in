@@ -17,14 +17,19 @@ export interface MidiPlayerProps {
   onPlaybackTime?: (seconds: number | null) => void;
 }
 
-type MidiElement = HTMLElement & { stop?: () => void; currentTime: number; seeking?: boolean };
+type MidiElement = HTMLElement & {
+  stop?: () => void;
+  currentTime: number;
+  duration: number;
+  seeking?: boolean;
+  seekBar?: HTMLInputElement;
+  displayCurrentTime?: (seconds: number) => void;
+};
 
 export function MidiPlayer({ src, soundFont = "sgm_plus", onPlaybackTime }: MidiPlayerProps) {
   const ref = useRef<MidiElement>(null);
   const report = useRef(onPlaybackTime);
   report.current = onPlaybackTime;
-  const trackPlayback = !!onPlaybackTime;
-
   useEffect(() => {
     const el = ref.current;
     return () => { el?.stop?.(); };
@@ -32,7 +37,7 @@ export function MidiPlayer({ src, soundFont = "sgm_plus", onPlaybackTime }: Midi
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || !trackPlayback) {return;}
+    if (!el) {return;}
     let animation = 0;
     let position = 0;
     let began = 0;
@@ -43,10 +48,17 @@ export function MidiPlayer({ src, soundFont = "sgm_plus", onPlaybackTime }: Midi
       began = performance.now();
     };
     const tick = (now: number) => {
-      // html-midi-player updates currentTime on note onsets and seeks.
-      // Interpolate between them so note-offs and rests clear the highlight.
+      // html-midi-player moves its seek bar and time label only on note onsets and seeks, so they
+      // freeze through rests and breaks. Interpolate between them, for the clock and the highlight.
       if (el.currentTime !== observed || el.seeking) {sync(el.currentTime);}
-      report.current?.(el.seeking ? null : position + Math.max(0, now - began) / 1000);
+      const seconds = Math.min(position + Math.max(0, now - began) / 1000, el.duration || Infinity);
+      if (!el.seeking && el.seekBar && el.displayCurrentTime) {
+        // Written to the bar directly: the currentTime setter would seek.
+        el.seekBar.value = String(seconds);
+        el.displayCurrentTime(seconds);
+        observed = el.currentTime;
+      }
+      report.current?.(el.seeking ? null : seconds);
       animation = requestAnimationFrame(tick);
     };
     const start = () => {
@@ -73,7 +85,7 @@ export function MidiPlayer({ src, soundFont = "sgm_plus", onPlaybackTime }: Midi
       el.removeEventListener("note", note);
       el.removeEventListener("stop", stop);
     };
-  }, [src, trackPlayback]);
+  }, [src]);
 
   if (!src) {
     return <div className="midi-player-pending" role="status">

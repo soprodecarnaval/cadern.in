@@ -25,15 +25,17 @@ const withoutPlaceholders = svg => svg.replace(/(<g\b[^>]*\bclass="[^"]*\bplaceh
 const systems = svg => (svg.match(/class="system"/g) || []).length;
 
 // Expanded IDs distinguish repeat passes. Each pass highlights the same
-// notated SVG note, while its own on/off events delimit the sounding interval.
+// notated SVG note or rest, while its own on/off events delimit its interval.
 function partPlayback(tk) {
     try {
         const active = new Map(), notated = new Map();
         const frames = [];
-        for (const event of tk.renderToTimemap()) {
-            if (!event.on?.length && !event.off?.length) continue;
-            for (const id of event.off ?? []) active.delete(id);
-            for (const id of event.on ?? []) {
+        for (const event of tk.renderToTimemap({ includeRests: true })) {
+            const off = [...(event.off ?? []), ...(event.restsOff ?? [])];
+            const on = [...(event.on ?? []), ...(event.restsOn ?? [])];
+            if (!on.length && !off.length) continue;
+            for (const id of off) active.delete(id);
+            for (const id of on) {
                 if (!notated.has(id)) notated.set(id, tk.getNotatedIdForElement(id) || id);
                 active.set(id, notated.get(id));
             }

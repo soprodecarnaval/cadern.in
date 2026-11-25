@@ -21,12 +21,39 @@ export type ResolvedPartFormatting = {
   cleanup: CleanupOptions;
 };
 
+/** A part of the score, as per-part settings identify it. */
+export type PartRef = { ordinal: number; name: string };
+
+/**
+ * The key of a part's own settings in `profile.parts`: its ordinal, so parts with the same name
+ * (two "Trompete" parts) keep their own settings (023). Revisions stored before used the part
+ * name, which `partOverride` still reads.
+ */
+export const partKey = (part: Pick<PartRef, "ordinal">) => `#${part.ordinal}`;
+
+/** A part's own settings: by ordinal, else by name (revisions stored before 023). */
+export function partOverride(profile: FormattingProfile, part: PartRef): PartFormatting {
+  return profile.parts?.[partKey(part)] ?? profile.parts?.[part.name] ?? {};
+}
+
+/** The profile with name-keyed part settings moved to the ordinal of every part with that name. */
+export function keyedByOrdinal(profile: FormattingProfile, parts: readonly PartRef[]): FormattingProfile {
+  if (!profile.parts) {return profile;}
+  const named = new Set(parts.map((part) => part.name));
+  const keyed = Object.fromEntries(Object.entries(profile.parts).filter(([key]) => !named.has(key) || key.startsWith("#")));
+  for (const part of parts) {
+    const own = profile.parts[partKey(part)] ?? profile.parts[part.name];
+    if (own) {keyed[partKey(part)] = own;}
+  }
+  return { ...profile, parts: keyed };
+}
+
 /** The profile with the part's overrides applied over the score's settings and the defaults. */
 export function resolvePartFormatting(
   profile: FormattingProfile,
-  partName: string,
+  partRef: PartRef,
 ): ResolvedPartFormatting {
-  const part = profile.parts?.[partName] ?? {};
+  const part = partOverride(profile, partRef);
   return {
     staffSize: part.staffSize ?? profile.staffSize ?? "auto",
     systemsPerPage: part.systemsPerPage ?? profile.systemsPerPage ?? "auto",

@@ -12,7 +12,7 @@ import type { Part, PartCatalog, ScoreLibrary, ScoreSession } from "../../../lib
 import { packageMscx, readMsczIdentityBytes, stampMsczIdentityBytes } from "../../../lib/msczIdentity";
 import { safeFilename } from "../../../lib/partFiles";
 import { caderninhoPartTransform } from "../../../lib/scoreRender/partTransform";
-import { libraryOptionsFor, resolvePartFormatting, sheetLayoutFor } from "../../../lib/scoreRender/profile";
+import { keyedByOrdinal, libraryOptionsFor, resolvePartFormatting, sheetLayoutFor, type PartRef } from "../../../lib/scoreRender/profile";
 import { arrangementOptions, profileWithChoices, renderForUpload } from "../../../lib/scoreRender/renderForUpload";
 import { commitUpload, prepareUpload, type UploadContext, type UploadFlowServices } from "../../../lib/uploadFlow";
 import { MAX_SCORE_BYTES, choicesFrom, initialState, metadataFromTags, partRows, rowsFromStored, type EnviarState, type PartRow, type Step, type StoredPart } from "./enviarState";
@@ -48,13 +48,15 @@ const message = (error: unknown) => {
     if (code === "INVALID_INPUT" || code === "UNSUPPORTED_FORMAT") {return "Não foi possível ler este arquivo. Envie o .mscz salvo no MuseScore.";}
     if (code === "ASSET_LOAD_FAILED" || code === "ASSET_MISMATCH") {return "Não foi possível carregar o motor de partituras. Recarregue a página e tente de novo.";}
     if (code === "ENGINE_FATAL") {return "O motor de partituras parou. Recarregue a página e tente de novo.";}
+    // A part that cannot be drawn (e.g. not matched to the full score) blocks only itself (022).
+    if (code === "UNSUPPORTED_CAPABILITY") {return "Não foi possível desenhar esta parte. Desmarque-a em Partes para enviar as outras.";}
   }
   return error instanceof Error ? error.message : String(error);
 };
 
 /** What a part's pages depend on: its resolved settings and the instrument it is filed under. */
-const pageSignature = (profile: FormattingProfile, partName: string, instrument: Instrument | undefined) =>
-  JSON.stringify([instrument ?? null, resolvePartFormatting(profile, partName)]);
+const pageSignature = (profile: FormattingProfile, part: PartRef, instrument: Instrument | undefined) =>
+  JSON.stringify([instrument ?? null, resolvePartFormatting(profile, part)]);
 
 export function useEnviarFlow(deps: EnviarDeps) {
   const [state, setState] = useState<EnviarState>(initialState);
@@ -97,7 +99,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
         signal,
         compatibility: "allowUnverified",
         partTransform: (input) => caderninhoPartTransform(effective.current, undefined, (part) => instruments.current.get(part.ordinal))(input),
-        partLayout: (part) => sheetLayoutFor(resolvePartFormatting(effective.current, part.name)),
+        partLayout: (part) => sheetLayoutFor(resolvePartFormatting(effective.current, part)),
       },
     );
     if (signal.aborted) {
@@ -162,7 +164,8 @@ export function useEnviarFlow(deps: EnviarDeps) {
         status: { kind: "idle" },
         metadata: stored?.metadata ?? metadataFromTags(tags, fileName),
         rows: stored ? rowsFromStored(rows, stored.parts, stored.profile) : rows,
-        profile: stored?.profile ?? DEFAULT_FORMATTING_PROFILE,
+        // Part settings stored by name move to each part's ordinal (023).
+        profile: stored ? keyedByOrdinal(stored.profile, catalog.parts) : DEFAULT_FORMATTING_PROFILE,
         previews: {},
         target: null,
         checks: null,
@@ -232,7 +235,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
       profile,
       parts: Object.fromEntries(choices.map((choice) => {
         const part = parts.current.find((candidate) => candidate.ordinal === choice.ordinal);
-        return [choice.ordinal, part ? pageSignature(profile, part.name, choice.instrument) : ""];
+        return [choice.ordinal, part ? pageSignature(profile, part, choice.instrument) : ""];
       })),
     };
   }, [state.profile, state.rows]);
@@ -283,7 +286,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
             if (signal.aborted || session.current !== open || superseded) {return;}
             if (!storedOffsets && offsets.length) {recoveredOffsets.current.set(ordinal, offsets);}
             rendered.current.set(ordinal, signature);
-            const automaticFingeringSize = resolvePartFormatting(signatures.profile, part.name).fingering.size === "auto"
+            const automaticFingeringSize = resolvePartFormatting(signatures.profile, part).fingering.size === "auto"
               ? page.layout?.fingeringScale
               : undefined;
             update((current) => {
@@ -383,7 +386,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
           useProfile: (profile) => {
             effective.current = profile;
             for (const part of catalogRef.current?.parts ?? []) {
-              const signature = pageSignature(profile, part.name, instruments.current.get(part.ordinal));
+              const signature = pageSignature(profile, part, instruments.current.get(part.ordinal));
               if (rendered.current.get(part.ordinal) !== signature) {
                 open.invalidate({ kind: "part", partId: part.id });
                 rendered.current.delete(part.ordinal);
@@ -473,7 +476,7 @@ export function useEnviarFlow(deps: EnviarDeps) {
     const nextCollisions = Object.fromEntries(choices.flatMap((choice) => {
       const draft = state.collisions[choice.ordinal];
       const part = parts.current.find((candidate) => candidate.ordinal === choice.ordinal);
-      return draft && part && draft.signature === pageSignature(nextProfile, part.name, choice.instrument)
+      return draft && part && draft.signature === pageSignature(nextProfile, part, choice.instrument)
         ? [[choice.ordinal, draft] as const] : [];
     }));
     update({ rows, profile, collisions: nextCollisions });

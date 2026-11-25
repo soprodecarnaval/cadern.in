@@ -75,6 +75,8 @@ export async function uploadScore(
         storagePath = `${storageBase}/score.metajson`;
       } else if (key === "midi") {
         storagePath = `${storageBase}/score.midi`;
+      } else if (key === "musicxml") {
+        storagePath = `${storageBase}/score.musicxml`;
       } else {
         storagePath = `${storageBase}/${key}`;
       }
@@ -132,6 +134,7 @@ export async function uploadScore(
       mscz: storageFiles.get("mscz") ?? missing("mscz"),
       metajson: storageFiles.get("metajson") ?? missing("metajson"),
       midi: storageFiles.get("midi") ?? missing("midi"),
+      ...(storageFiles.has("musicxml") ? { musicxml: storageFiles.get("musicxml")! } : {}),
       parts: revisionParts,
       ...(parsed.arrangement ? {
         arrangement: {
