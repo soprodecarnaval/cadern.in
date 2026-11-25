@@ -568,7 +568,7 @@ function PreviewCard({ row, label, preview, draft, midi, onListen, onCollision, 
     ? (preview?.fontCss ? withTextFonts(corrected, preview.fontCss) : corrected)
     : preview?.svg;
   return (
-    <article className="enviar-preview" aria-busy={preview?.rendering ?? true} aria-label={`Prévia de ${label}`} data-part-name={row.name}>
+    <article className="enviar-preview" aria-busy={preview?.rendering ?? true} aria-label={`Prévia de ${label}`} data-part-name={row.name} data-part-ordinal={row.ordinal}>
       <div className="enviar-sheet" style={{ aspectRatio: `${SONGBOOK_FIT_AREA.widthMm} / ${SONGBOOK_FIT_AREA.heightMm}` }}>
         {ready && svg ? (
           <CollisionPage svg={svg} label={`Página de ${label}`} activeNotes={playing?.url === audio?.url ? playing?.notes : undefined} onMove={(move) => onCollision(row.ordinal, move)} />
