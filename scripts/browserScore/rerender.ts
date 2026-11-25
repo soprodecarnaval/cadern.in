@@ -170,7 +170,8 @@ try {
         const base = scoreRevisionStoragePath(score.projectId, scoreId, newId);
         const stored: Record<string, { path: string; url: string }> = {};
         for (const file of rendered.files) {
-          const path = file.key === "mscz" ? `${base}/score.mscz` : file.key === "metajson" ? `${base}/score.metajson` : file.key === "midi" ? `${base}/score.midi` : `${base}/${file.key}`;
+          const named: Record<string, string> = { mscz: "score.mscz", metajson: "score.metajson", midi: "score.midi", musicxml: "score.musicxml" };
+          const path = `${base}/${named[file.key] ?? file.key}`;
           const bytes = file.key === "mscz" ? stampMsczIdentityBytes(new Uint8Array(file.bytes), { scoreId, revisionId: newId }) : new Uint8Array(file.bytes);
           const object = bucket.file(path);
           await object.save(Buffer.from(bytes), { contentType: file.type || "application/octet-stream" });
@@ -186,6 +187,7 @@ try {
             revisionNumber: previous.revisionNumber + 1, prevRevisionId: revisionId, uploadedBy: CADERNIN_UID, slug, metadata,
             origin: { type: "upload" }, kind: "reformat", notes: "",
             mscz: stored.mscz ?? missing("mscz"), metajson: stored.metajson ?? missing("metajson"), midi: stored.midi ?? missing("midi"),
+            ...(stored.musicxml ? { musicxml: stored.musicxml } : {}),
             ...(rendered.arrangement ? {
               arrangement: {
                 svg: rendered.arrangement.svg.map((key) => stored[key]),

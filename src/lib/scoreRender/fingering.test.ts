@@ -68,8 +68,8 @@ describe("fingerPart", () => {
 });
 
 describe("transformPartMusicXml", () => {
-  const trumpet = { name: "Trompete", instruments: [{ id: "bb-trumpet", soundId: "brass.trumpet.bflat", longName: "Trompete", shortName: "Tpt." }] };
-  const flute = { name: "Flauta", instruments: [{ id: "flute", soundId: "wind.flutes.flute", longName: "Flauta", shortName: "Fl." }] };
+  const trumpet = { ordinal: 1, name: "Trompete", instruments: [{ id: "bb-trumpet", soundId: "brass.trumpet.bflat", longName: "Trompete", shortName: "Tpt." }] };
+  const flute = { ordinal: 2, name: "Flauta", instruments: [{ id: "flute", soundId: "wind.flutes.flute", longName: "Flauta", shortName: "Fl." }] };
 
   it("gives pirata parts positions by default, and others nothing", () => {
     const { musicXml, report } = transformPartMusicXml(PART, trumpet, DEFAULT_FORMATTING_PROFILE, codec);

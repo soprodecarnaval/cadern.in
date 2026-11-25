@@ -3,13 +3,14 @@
 import type { FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
 import type { Instrument } from "../../../../types/instrument";
 import type { Part, PlaybackFrame } from "../../../lib/browserScore/types";
-import { chosenFamily, guessInstrument, mapInstrumentId, pirataInstrument } from "../../../lib/instruments";
+import { chosenFamily, guessInstrument, mapInstrumentId, pirataInstrument, sameInstrumentFamily } from "../../../lib/instruments";
 import type { SheetLayoutResult, Warning } from "../../../lib/browserScore/types";
 import type { RenderProgress } from "../../../lib/scoreRender/renderForUpload";
 import type { PartChoice } from "../../../lib/scoreRender/renderForUpload";
 import type { ScoreIdentity } from "../../../../types/metajson";
 import type { ScoreMetadata } from "../../../../types/docs";
 import { safeFilename } from "../../../lib/partFiles";
+import { partKey, partOverride, type PartRef } from "../../../lib/scoreRender/profile";
 import { DEFAULT_FORMATTING_PROFILE } from "../../../../types/formattingProfile";
 import type { RepinOutcome, UploadChecks } from "../../../lib/uploadFlow";
 import type { UploadProgress } from "../../../lib/uploadScore";
@@ -33,6 +34,11 @@ export type PartRow = {
   instrument: Instrument | null;
   /** True when the instrument came from a name guess, not the MuseScore id. */
   guessed: boolean;
+  /**
+   * The instrument the MuseScore id gives, when the part's own name names another one and the
+   * name won (024): arrangers often reuse a staff (e.g. a tenor sax part on a trumpet staff).
+   */
+  idInstrument?: Instrument;
   /** The chosen instrument has fingering tables (trumpet, trombone, tuba, bombardino), whatever the file declares. */
   fingeringsAvailable: boolean;
   fingerings: boolean;
@@ -40,14 +46,21 @@ export type PartRow = {
   include: boolean;
 };
 
-/** A row per part, with the instrument mapped from the MuseScore id (or the sound id), else guessed from the names. */
+/**
+ * A row per part, with the instrument mapped from the MuseScore id (or the sound id), else guessed
+ * from the names. When the part's own name names an instrument of another family than the id's,
+ * the name wins (024): the file reuses another instrument's staff.
+ */
 export function partRows(parts: readonly Pick<Part, "ordinal" | "name" | "instruments">[]): PartRow[] {
   return parts.map((part) => {
     const first = part.instruments[0];
     const names = [part.name, first?.longName, first?.shortName];
     const byId = first ? (mapInstrumentId(first.id, names) ?? (first.soundId ? mapInstrumentId(first.soundId, names) : null)) : null;
+    // Only the part's own name: the instrument names are the reused staff's.
+    const byName = guessInstrument([part.name]);
+    const overridden = !!byId && !!byName && !sameInstrumentFamily(byId, byName);
     const guess = byId ? null : guessInstrument(names);
-    const base = byId ?? guess;
+    const base = overridden ? byName : (byId ?? guess);
     const family = base ? chosenFamily(base) : null;
     const fingeringsAvailable = !!family;
     return {
@@ -56,6 +69,7 @@ export function partRows(parts: readonly Pick<Part, "ordinal" | "name" | "instru
       museScoreInstrument: first ? [first.longName, first.id || first.soundId].filter(Boolean).join(" · ") : "—",
       instrument: base ? pirataInstrument(base, fingeringsAvailable) : null,
       guessed: !byId && !!guess,
+      ...(overridden ? { idInstrument: byId } : {}),
       fingeringsAvailable,
       fingerings: fingeringsAvailable,
       family,
@@ -86,6 +100,7 @@ export function withInstrument(row: PartRow, instrument: Instrument | null): Par
     instrument: instrument ? pirataInstrument(instrument, fingerings) : null,
     include: instrument ? row.include || row.instrument === null : false,
     guessed: false,
+    idInstrument: undefined,
   };
 }
 
@@ -96,7 +111,7 @@ export const choicesFrom = (rows: readonly PartRow[]): PartChoice[] =>
     .map((row) => ({ ordinal: row.ordinal, instrument: row.instrument, name: row.name, fingerings: row.fingerings }));
 
 /** The settings the formatting controls show: the score's, or one part's override over them. */
-export function formattingOf(profile: FormattingProfile, partName: string | null): PartFormatting {
+export function formattingOf(profile: FormattingProfile, part: PartRef | null): PartFormatting {
   const score: PartFormatting = {
     staffSize: profile.staffSize,
     systemsPerPage: profile.systemsPerPage,
@@ -104,19 +119,25 @@ export function formattingOf(profile: FormattingProfile, partName: string | null
     fingering: profile.fingering,
     cleanup: profile.cleanup,
   };
-  if (partName === null) {return score;}
-  const part = profile.parts?.[partName] ?? {};
+  if (part === null) {return score;}
+  const own = partOverride(profile, part);
   return {
-    staffSize: part.staffSize ?? score.staffSize,
-    systemsPerPage: part.systemsPerPage ?? score.systemsPerPage,
-    spacing: { ...score.spacing, ...part.spacing },
-    fingering: { ...score.fingering, ...part.fingering },
-    cleanup: { ...score.cleanup, ...part.cleanup },
+    staffSize: own.staffSize ?? score.staffSize,
+    systemsPerPage: own.systemsPerPage ?? score.systemsPerPage,
+    spacing: { ...score.spacing, ...own.spacing },
+    fingering: { ...score.fingering, ...own.fingering },
+    cleanup: { ...score.cleanup, ...own.cleanup },
   };
 }
 
-/** The profile with a change to the score's settings, or to one part's override. */
-export function withFormatting(profile: FormattingProfile, partName: string | null, change: PartFormatting): FormattingProfile {
+/** The profile without the part's own settings, under either key. */
+const withoutPart = (profile: FormattingProfile, part: PartRef) => {
+  const { [partKey(part)]: _byOrdinal, [part.name]: _byName, ...rest } = profile.parts ?? {};
+  return rest;
+};
+
+/** The profile with a change to the score's settings, or to one part's override (keyed by ordinal, 023). */
+export function withFormatting(profile: FormattingProfile, part: PartRef | null, change: PartFormatting): FormattingProfile {
   const merge = (base: PartFormatting): PartFormatting => ({
     ...base,
     ...change,
@@ -124,23 +145,22 @@ export function withFormatting(profile: FormattingProfile, partName: string | nu
     ...(change.cleanup ? { cleanup: { ...base.cleanup, ...change.cleanup } } : {}),
     ...(change.spacing ? { spacing: { ...base.spacing, ...change.spacing } } : {}),
   });
-  if (partName === null) {return { ...profile, ...merge(profile) } as FormattingProfile;}
-  return { ...profile, parts: { ...profile.parts, [partName]: merge(profile.parts?.[partName] ?? {}) } };
+  if (part === null) {return { ...profile, ...merge(profile) } as FormattingProfile;}
+  return { ...profile, parts: { ...withoutPart(profile, part), [partKey(part)]: merge(partOverride(profile, part)) } };
 }
 
-/** The profile with the same change made to each of the named parts. */
-export function withFormattingForAll(profile: FormattingProfile, partNames: readonly string[], change: PartFormatting): FormattingProfile {
-  return partNames.reduce((current, name) => withFormatting(current, name, change), profile);
+/** The profile with the same change made to each of the given parts. */
+export function withFormattingForAll(profile: FormattingProfile, parts: readonly PartRef[], change: PartFormatting): FormattingProfile {
+  return parts.reduce((current, part) => withFormatting(current, part, change), profile);
 }
 
 /** Whether a part has settings of its own. */
-export const hasOverride = (profile: FormattingProfile, partName: string) =>
-  Object.keys(profile.parts?.[partName] ?? {}).length > 0;
+export const hasOverride = (profile: FormattingProfile, part: PartRef) =>
+  Object.keys(partOverride(profile, part)).length > 0;
 
 /** The profile without a part's own settings (back to the score's). */
-export function withoutOverride(profile: FormattingProfile, partName: string): FormattingProfile {
-  const { [partName]: _removed, ...rest } = profile.parts ?? {};
-  return { ...profile, parts: rest };
+export function withoutOverride(profile: FormattingProfile, part: PartRef): FormattingProfile {
+  return { ...profile, parts: withoutPart(profile, part) };
 }
 
 // Engine warnings worth showing, in pt-BR. Informational ones (fidelity notes) are left out.
@@ -236,7 +256,7 @@ export function rowsFromStored(rows: readonly PartRow[], stored: readonly Stored
   return rows.map((row) => {
     const part = stored.find((candidate) => candidate.name === row.name);
     if (!part) {return { ...row, include: false };}
-    const enabled = profile.parts?.[row.name]?.fingering?.enabled ?? profile.fingering?.enabled;
+    const enabled = partOverride(profile, row).fingering?.enabled ?? profile.fingering?.enabled;
     // Trumpet and trombone say it in the instrument; tuba and bombardino only in the profile.
     const piratas = part.instrument === "trompete" || part.instrument === "trombone" || part.instrument.endsWith(" pirata");
     const fingerings = row.fingeringsAvailable && (piratas ? part.instrument.endsWith(" pirata") : (enabled ?? row.fingerings));

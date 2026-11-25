@@ -17,9 +17,10 @@ describe("profileWithChoices", () => {
       { ordinal: 1, instrument: "trompete", fingerings: false },
       { ordinal: 2, instrument: "tuba", fingerings: true },
     ]);
+    // Keyed by ordinal (023); the Tuba settings stored by name move to its ordinal.
     expect(result.parts).toEqual({
-      Trompete: { fingering: { enabled: false } },
-      Tuba: { staffSize: 1.5, fingering: { size: 1.1, enabled: true } },
+      "#1": { fingering: { enabled: false } },
+      "#2": { staffSize: 1.5, fingering: { size: 1.1, enabled: true } },
     });
     expect(profile.parts?.Trompete).toBeUndefined();
   });
@@ -35,8 +36,8 @@ describe("profileWithChoices", () => {
     ]);
     const restored = zFormattingProfile.parse(JSON.parse(JSON.stringify(effective)));
     expect(restored.fingering?.size).toBeUndefined();
-    expect(sheetLayoutFor(resolvePartFormatting(restored, "Trompete")).fingeringScale).toBe(1.25);
-    expect(sheetLayoutFor(resolvePartFormatting(restored, "Tuba")).fingeringScale).toBe(0.65);
+    expect(sheetLayoutFor(resolvePartFormatting(restored, { ordinal: 1, name: "Trompete" })).fingeringScale).toBe(1.25);
+    expect(sheetLayoutFor(resolvePartFormatting(restored, { ordinal: 2, name: "Tuba" })).fingeringScale).toBe(0.65);
   });
 
   it("leaves the profile alone when no choice sets fingerings", () => {
@@ -55,6 +56,7 @@ describe("renderForUpload with the preview session", () => {
       getPages: () => { calls.push("getPages"); return Promise.resolve({ revision: 1, pageCount: 1 }); },
       renderPage: () => { calls.push("renderPage"); return Promise.resolve({ svg: "<svg/>", warnings: [] }); },
       exportMidi: () => { calls.push("exportMidi"); return Promise.resolve({ midi: new Uint8Array([1]), warnings: [] }); },
+      exportMusicXml: () => Promise.resolve({ musicXml: "<score-partwise/>", parts: [] }),
       dispose: () => { calls.push("dispose"); return Promise.resolve(); },
     } as unknown as ScoreSession;
     const createLibrary = vi.fn();
@@ -73,7 +75,7 @@ describe("renderForUpload with the preview session", () => {
     expect(createLibrary).not.toHaveBeenCalled();
     expect(calls[0]).toBe("useProfile");
     expect(calls).not.toContain("dispose");
-    expect(used!.parts?.Trompete?.fingering?.enabled).toBe(false);
+    expect(used!.parts?.["#1"]?.fingering?.enabled).toBe(false);
     expect(parsed.parts.map((p) => p.instrument)).toEqual(["trompete"]);
   });
 
@@ -96,6 +98,7 @@ describe("renderForUpload with the preview session", () => {
       renderArrangement,
       getPartPlayback: () => Promise.resolve({ midi: previewMidi, frames }),
       exportMidi: () => Promise.resolve({ midi: new Uint8Array([1]), warnings: [] }),
+      exportMusicXml: () => Promise.resolve({ musicXml: "<score-partwise/>", parts: [] }),
     } as unknown as ScoreSession;
     const mscx = new TextEncoder().encode('<museScore version="4.20"><Score/></museScore>');
     const format = zFormattingProfile.parse({
@@ -120,6 +123,7 @@ describe("renderForUpload with the preview session", () => {
     expect(new Uint8Array(await parsed.fileMap.get(playback.midi)!.arrayBuffer())).toEqual(previewMidi);
     expect(JSON.parse(await parsed.fileMap.get(playback.timing)!.text())).toEqual({ version: 1, frames });
     expect(new Uint8Array(await parsed.fileMap.get(parsed.parts[0].midi)!.arrayBuffer())).toEqual(new Uint8Array([1]));
+    expect(await parsed.fileMap.get("musicxml")?.text()).toBe("<score-partwise/>");
     expect(renderArrangement).toHaveBeenCalledWith(expect.objectContaining({ marginMm: 12, staffSizeMm: 2.8, staffSpacing: 12 }));
     expect(parsed.arrangement?.svg).toEqual(["arrangement/arrangement-1.svg"]);
     expect(await parsed.fileMap.get(parsed.arrangement!.svg[0])?.text()).toBe(pages[0]);
@@ -141,6 +145,7 @@ describe("renderForUpload with the preview session", () => {
       getPages: () => Promise.resolve({ revision: 1, pageCount: 1 }),
       renderPage: () => Promise.resolve({ svg: "<svg/>", warnings: [] }),
       exportMidi: () => Promise.resolve({ midi: new Uint8Array([1]), warnings: [] }),
+      exportMusicXml: () => Promise.resolve({ musicXml: "<score-partwise/>", parts: [] }),
       dispose: () => Promise.resolve(),
     } as unknown as ScoreSession;
     const mscx = new TextEncoder().encode('<museScore version="4.20"><Score/></museScore>');
@@ -160,5 +165,41 @@ describe("renderForUpload with the preview session", () => {
     expect(parsed.fileMap.get("mscz")!.name).toBe("Eva (Rádio Táxi).mscz");
     // The file itself is sent as it came.
     expect(new Uint8Array(await parsed.fileMap.get("mscz")!.arrayBuffer())).toEqual(packageMscx(mscx));
+  });
+
+  it("files a part on another instrument's staff as the chosen instrument (025)", async () => {
+    vi.stubGlobal("DOMParser", DOMParser);
+    vi.stubGlobal("XMLSerializer", XMLSerializer);
+    // A tenor sax part on a trumpet staff, sent as sax tenor.
+    const part = { id: "p1", ordinal: 1, name: "SAX TENOR", origin: "existing" as const, instrumentNames: [], staffCount: null,
+      instruments: [{ id: "", soundId: "brass.trumpet", longName: "Bb", shortName: "" }], instrumentIds: ["brass.trumpet"] };
+    const playbackMidi = new Uint8Array([77, 84, 104, 100, 9]);
+    const exportMidi = vi.fn(() => Promise.resolve({ midi: new Uint8Array([1]), warnings: [] }));
+    const musicXml = '<score-partwise><part-list><score-part id="P1"><part-name>Bb</part-name></score-part></part-list>'
+      + '<part id="P1"><measure number="1"><attributes><clef><sign>G</sign></clef></attributes></measure></part></score-partwise>';
+    const session = {
+      importInfo: { metaTags: { workTitle: "Abre alas" } },
+      getPages: () => Promise.resolve({ revision: 1, pageCount: 1 }),
+      renderPage: () => Promise.resolve({ svg: "<svg/>", warnings: [] }),
+      getPartPlayback: () => Promise.resolve({ midi: playbackMidi, frames: [{ timeMs: 0, notes: ["n"] }] }),
+      exportMidi,
+      exportMusicXml: () => Promise.resolve({ musicXml, parts: [{ id: "P1", name: "Bb", instrumentNames: [], transposeChromatic: -2, catalogPart: { id: "p1", name: "SAX TENOR", origin: "existing" } }] }),
+    } as unknown as ScoreSession;
+    const mscx = new TextEncoder().encode('<museScore version="3.02"><Score/></museScore>');
+    const { parsed, report } = await renderForUpload(mscx, "Abre alas.mscx", zFormattingProfile.parse({ profileVersion: 1 }),
+      [{ ordinal: 1, instrument: "sax tenor" }], {
+        openSession: {
+          session,
+          catalog: { revision: 1, parts: [part], coverage: "complete", warnings: [] },
+          renderer: { library: "l", engine: "e", renderer: "r", manifestSha256: "0".repeat(64), fonts: [] },
+          useProfile: () => undefined,
+        },
+      });
+    expect(new Uint8Array(await parsed.fileMap.get(parsed.parts[0].midi)!.arrayBuffer())).toEqual(playbackMidi);
+    expect(exportMidi).toHaveBeenCalledTimes(1); // the score MIDI only
+    expect(report.parts[0].warnings.map((w) => w.code)).toContain("MIDI_FROM_PART_MUSICXML");
+    const stored = await parsed.fileMap.get("musicxml")!.text();
+    expect(stored).toContain("<part-name>Sax tenor</part-name>");
+    expect(stored).toContain("<octave-change>-1</octave-change>");
   });
 });

@@ -6,6 +6,7 @@ import { strToU8, zipSync } from 'fflate';
 import { ScoreError, hasOwn, capabilities, type Warning, type PartId, type LibraryOptions, type ScoreLibrary, type ScoreSession, type SongbookInfo, type Part, type PartCatalog, type Operation, type View, type MusicXmlPart, type MusicXmlExport, type MidiExport, type ArrangementRender, type PlaybackFrame, type RendererInfo, type PartTransform, type SheetLayout, type SheetLayoutResult } from './types';
 import { arrangementMusicXml, partMusicXml } from './parts';
 import { excerptInstruments, instrumentIdsOf } from './partInstruments';
+import { excerptMasterParts, musicXmlTargets as matchMusicXmlTargets, type NativePart } from './excerptLinks';
 import { extractTracks, midiNoteCount, midiTrackCount } from './midi';
 import { composeSheet, MUSIC_AREA, SHEET, type SheetFonts } from './sheet';
 export { inspect } from './input';
@@ -87,7 +88,6 @@ async function validatePortableSvg(doc: Document, sharedFamilies: ReadonlySet<st
 }
 
 type NativeScore = { destroy(): void; metadata(): Promise<Metadata>; generateExcerpts(): Promise<void>; setExcerptId(id: number): Promise<void>; npages(): Promise<number>; saveSvg(page: number, background: boolean): Promise<string>; saveXml(): Promise<string>; saveMidi(expandRepeats: boolean, exportRPNs: boolean): Promise<Uint8Array> };
-type NativePart = { instrumentName: string; name: string; instrumentId?: string };
 type Metadata = { excerpts: { title: string; parts: NativePart[] }[]; parts: (NativePart & { isVisible: string })[] };
 
 /**
@@ -451,7 +451,7 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                 const catalog = (metadata: Metadata): PartCatalog => {
                     if (parts.length !== metadata.excerpts.length) {
                         parts = metadata.excerpts.map((excerpt, index) => {
-                            const instruments = excerptInstruments(excerpt, index, metadata.excerpts.length, info);
+                            const instruments = excerptInstruments(excerpt, index, metadata.excerpts.length, info, excerptMasterParts(metadata, index, info));
                             return {
                                 id: crypto.randomUUID(), name: info.savedPartNames[excerpt.title] || excerpt.title?.trim() || `Part ${index + 1}`,
                                 ordinal: index + 1, origin,
@@ -488,19 +488,8 @@ export async function createScoreLibrary(options: LibraryOptions): Promise<Score
                     }
                     return scoreXml;
                 };
-                // MusicXML part ids for each catalog part, matched by engine identity
-                // against the master parts (which MusicXML lists in score order).
-                const key = (part: NativePart) => [part.name, part.instrumentName, part.instrumentId ?? ''].join('\u0000');
-                const musicXmlTargets = (metadata: Metadata, ids: readonly string[]) => {
-                    const masterKeys = metadata.parts.length === ids.length ? metadata.parts.map(key) : [];
-                    return metadata.excerpts.map(excerpt => {
-                        const targets = (excerpt.parts ?? []).map(part => {
-                            const at = masterKeys.indexOf(key(part));
-                            return at >= 0 && masterKeys.lastIndexOf(key(part)) === at ? ids[at] : null;
-                        });
-                        return targets.length && targets.every(Boolean) && new Set(targets).size === targets.length ? targets as string[] : null;
-                    });
-                };
+                // MusicXML part ids for each catalog part: by the file's staff links, else by engine identity (022).
+                const musicXmlTargets = (metadata: Metadata, ids: readonly string[]) => matchMusicXmlTargets(metadata, ids, info);
                 // Songbook header: caller values first, then the score's meta tags (booklet convention), then the MusicXML.
                 const sheetHeader = (credits: { title: string; composer: string; lyricist: string }, part: Part) => {
                     const tag = (name: string) => info.metaTags[name] ?? '';
