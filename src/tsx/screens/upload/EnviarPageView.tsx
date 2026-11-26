@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 
 import { createPortal } from "react-dom";
 import { zInstrument, type Instrument } from "../../../../types/instrument";
 import { pirataInstrument } from "../../../lib/instruments";
-import type { FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
+import type { FingeringSettings, FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
 import { SONGBOOK_FIT_AREA } from "../../../../types/formattingProfile";
 import { Button } from "../../atoms/Button";
 import { Input } from "../../atoms/Input";
@@ -43,6 +43,8 @@ import { manualOffsetsFor, type MarkingMove } from "../../../lib/scoreRender/col
 import { FINGERING_SIZE, STAFF_SIZE, stepSize, type SizeRange } from "./fingeringSize";
 
 import "./EnviarPage.css";
+
+type FingeringNotation = NonNullable<FingeringSettings["notation"]>;
 
 export type EnviarPageViewProps = {
   state: EnviarState;
@@ -461,14 +463,15 @@ function PartControls({ state, onProfile, onRows, row, label, automaticStaff, au
   const applyLink = (field: string, targets: readonly PartRow[], patch: PartFormatting) =>
     link(field, targets, () => applyToAll(field, targets, patch));
   const others = included.filter((candidate) => candidate.ordinal !== row.ordinal);
-  // Piratas: off (the part goes without numbers, and is filed under its plain instrument), or on in a notation.
+  // Piratas: off (the part goes without numbers, and is filed under its plain instrument), or on in a
+  // notation: generated positions or valves, or the fingerings the file already has.
   const notation = settings.fingering?.notation ?? "positions";
-  const piratas: "off" | "positions" | "valves" = row.fingerings ? notation : "off";
+  const piratas: "off" | FingeringNotation = row.fingerings ? notation : "off";
   const setPiratas = (targets: readonly PartRow[], value: string) => {
     const on = value !== "off";
     const affected = new Set([row.ordinal, ...targets.map((target) => target.ordinal)]);
     const rows = state.rows.map((candidate) => affected.has(candidate.ordinal) ? withFingerings(candidate, on) : candidate);
-    const profile = on ? withFormattingForAll(state.profile, names(targets), { fingering: { notation: value as "positions" | "valves" } }) : state.profile;
+    const profile = on ? withFormattingForAll(state.profile, names(targets), { fingering: { notation: value as FingeringNotation } }) : state.profile;
     onRows(rows, profile);
   };
   const fingeredOthers = others.filter((candidate) => candidate.fingeringsAvailable);
@@ -499,7 +502,7 @@ function PartControls({ state, onProfile, onRows, row, label, automaticStaff, au
       )}
       {row.fingeringsAvailable && (
         <Choice label="Piratas" name="part-notation" value={piratas}
-          options={[["positions", "Posições (1–7)"], ["valves", "Pistos"], ["off", "Desligado"]]}
+          options={[["positions", "Posições (1–7)"], ["valves", "Pistos"], ["file", "Do arquivo"], ["off", "Desligado"]]}
           onChange={(value) => setPiratas([], value)}>
           {link("Piratas", fingeredOthers, () => {
             setPiratas(fingeredOthers, piratas);
@@ -534,7 +537,7 @@ function FingeringAndCleanupControls({ settings, onChange, showTrombone }: {
       )}
       <fieldset className="enviar-choice">
         <legend>Limpeza</legend>
-        {([["credits", "Tirar título e textos de cabeçalho"], ["fingerings", "Tirar dedilhados do arquivo"], ["staffText", "Tirar textos de pauta"]] as const).map(([key, text]) => (
+        {([["credits", "Tirar título e textos de cabeçalho"], ["staffText", "Tirar textos de pauta"]] as const).map(([key, text]) => (
           <label key={key} className="form-check">
             <input type="checkbox" className="form-check-input" checked={settings.cleanup?.[key] ?? true}
               onChange={(event) => onChange({ cleanup: { [key]: event.target.checked } })} />

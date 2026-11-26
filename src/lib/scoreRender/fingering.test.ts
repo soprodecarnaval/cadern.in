@@ -89,6 +89,18 @@ describe("transformPartMusicXml", () => {
     expect(off.report.fingerings).toEqual([]);
   });
 
+  it("keeps the file's own fingerings and generates none with the file notation", () => {
+    // The arranger wrote "5" over the first note.
+    const written = PART.replace(note("C", 4), note("C", 4, "<notations><technical><fingering>5</fingering></technical></notations>"));
+    const generated = transformPartMusicXml(written, trumpet, DEFAULT_FORMATTING_PROFILE, codec);
+    expect(fingeringsOf(codec.parse(generated.musicXml))[0]).toBe("1");
+    const profile = zFormattingProfile.parse({ profileVersion: 1, parts: { "#1": { fingering: { notation: "file" } } } });
+    const file = transformPartMusicXml(written, trumpet, profile, codec);
+    expect(fingeringsOf(codec.parse(file.musicXml))).toEqual(["5", null, null, null, null, null, null, null, null]);
+    expect(file.report.fingerings).toEqual([]);
+    expect(file.report.cleanup.parts.map((part) => part.fingerings)).toEqual([0]);
+  });
+
   it("formats a part as the instrument it is filed under, whatever the file declares", () => {
     const asTrumpet = transformPartMusicXml(PART, flute, DEFAULT_FORMATTING_PROFILE, codec, "trompete pirata");
     expect(fingeringsOf(codec.parse(asTrumpet.musicXml))).toEqual(["1", null, "1", "6", null, null, null, null, "3"]);
