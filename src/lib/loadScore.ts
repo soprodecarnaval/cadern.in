@@ -21,6 +21,8 @@ export interface LoadedScore extends ScoreMetadata {
   projectId: string;
   projectTitle: string;
   msczUrl: string;
+  /** Full-score MusicXML with the corrected instruments (025); revisions sent before have none. */
+  musicXmlUrl: string | null;
   arrangementMidiUrl: string | null;
   arrangement?: ScoreDisplayArrangement;
   parts: ScoreDisplayPart[];
@@ -70,6 +72,7 @@ export async function loadScore(
     projectId: song.projectId,
     projectTitle,
     msczUrl: rev.mscz.url,
+    musicXmlUrl: rev.musicxml?.url || null,
     arrangementMidiUrl: rev.midi.url || null,
     arrangement: rev.arrangement && {
       svgUrls: rev.arrangement.svg.map(({ url }) => url),

@@ -133,6 +133,8 @@ export const zScoreRevisionData = z.object({
   mscz: zStorageFile,
   metajson: zStorageFile,
   midi: zStorageFile,
+  /** Full-score MusicXML, parts filed under their chosen instruments (025); browser uploads only. */
+  musicxml: zStorageFile.optional(),
   parts: z.array(zPartData),
   arrangement: z.object({ svg: z.array(zStorageFile).min(1), playback: zPlaybackFiles.optional() }).optional(),
   notes: z.string(),

@@ -21,6 +21,8 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const FIRESTORE = `http://${process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080'}/v1/projects/${PROJECT}/databases/(default)/documents/`;
 const AUTH = `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST ?? '127.0.0.1:9099'}/identitytoolkit.googleapis.com/v1/projects/${PROJECT}`;
 const ADMIN = { Authorization: 'Bearer owner' };
+// The ordinal of each part selected in Formatação, by name.
+const partOrdinals = new Map();
 const sizedParts = [[/^Trompete/, "1.25"], [/^Tuba/, "0.65"]];
 const SCORE = resolve('test-scores/all-instruments.mscz');
 
@@ -151,7 +153,9 @@ async function sendThroughScreen(page, { file, tweak = false, metadata = null } 
             await page.getByRole('tab', { name }).first().click();
             await preview.waitFor();
             await page.locator('.enviar-preview[aria-busy=false]').waitFor();
-            return page.locator('.enviar-preview').getAttribute('data-part-name');
+            const article = page.locator('.enviar-preview');
+            partOrdinals.set(await article.getAttribute('data-part-name'), await article.getAttribute('data-part-ordinal'));
+            return article.getAttribute('data-part-name');
         };
         const original = new Map();
         for (const [name] of sizedParts) {
@@ -244,7 +248,10 @@ try {
         for (const [pattern, size] of sizedParts) {
             const name = parts.map(part => str(part.name)).find(name => pattern.test(name));
             assert(name, `saved part for ${pattern}`);
-            assert.equal(metajson.formatting.parts[name].fingering.size, Number(size));
+            // Part settings are keyed by ordinal (023), so parts with the same name keep their own.
+            const ordinal = partOrdinals.get(name);
+            assert(ordinal, `ordinal of ${name}`);
+            assert.equal(metajson.formatting.parts[`#${ordinal}`].fingering.size, Number(size));
         }
         assert.match(metajson.renderer?.manifestSha256 ?? '', /^[0-9a-f]{64}$/);
         const svg = await (await fetch(str(parts[0].svg.arrayValue.values[0].mapValue.fields.url))).text();

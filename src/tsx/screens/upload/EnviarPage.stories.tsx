@@ -177,7 +177,6 @@ export const FingeringSize: Story = {
     const mode = (name: string) => within(canvas.getByRole("group", { name: "Tamanho dos números" })).getByRole("radio", { name });
     const adjust = (direction: "Aumentar" | "Diminuir") => canvas.getByRole("button", { name: `${direction}: Tamanho dos números` });
 
-    await expect(canvas.queryByRole("spinbutton", { name: "Tamanho dos números" })).toBeNull();
     await userEvent.click(canvas.getByRole("tab", { name: "Trompete" }));
     await expect(mode("Automático")).toBeChecked();
     await expect(size()).toHaveValue("0,75");
@@ -344,5 +343,63 @@ export const Error: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole("alert")).toHaveTextContent("atualizada por outra pessoa");
+  },
+};
+
+// A tenor sax part on a trumpet staff, as the Carnaval 2026 template has it: the part name wins (024).
+const misfiled = partRows([
+  { ordinal: 1, name: "SAX TENOR", instruments: [{ id: "bb-trumpet", soundId: "brass.trumpet.bflat", longName: "Trompete B♭", shortName: "Tpt." }] },
+  { ordinal: 2, name: "PETE", instruments: [{ id: "bb-trumpet", soundId: "brass.trumpet.bflat", longName: "Trompete B♭", shortName: "Tpt." }] },
+]);
+export const PartNameOverInstrument: Story = {
+  args: { state: state({ step: "partes", rows: misfiled }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByLabelText("Instrumento de SAX TENOR")).toHaveValue("sax tenor");
+    await expect(canvas.getByText(/No MuseScore: trompete\. Usando o nome da parte; confira\./)).toBeVisible();
+    await expect(canvas.getByLabelText("Instrumento de PETE")).toHaveValue("trompete");
+  },
+};
+
+// Two parts with the same name (023): each keeps its own row, tab and settings.
+const repeated = partRows([
+  { ordinal: 1, name: "PETE", instruments: [{ id: "bb-trumpet", soundId: "brass.trumpet.bflat", longName: "Trompete B♭", shortName: "Tpt." }] },
+  { ordinal: 2, name: "PETE", instruments: [{ id: "bb-trumpet", soundId: "brass.trumpet.bflat", longName: "Trompete B♭", shortName: "Tpt." }] },
+  { ordinal: 3, name: "TUBA", instruments: [{ id: "bb-tuba", soundId: "brass.tuba", longName: "Tuba B♭", shortName: "Tba." }] },
+]);
+export const RepeatedParts: Story = {
+  args: {
+    state: state({
+      step: "formatacao",
+      rows: repeated,
+      previews: { 1: preview(1), 2: preview(2, {}, 1.2), 3: preview(3) },
+      profile: { ...DEFAULT_FORMATTING_PROFILE, parts: { "#2": { fingering: { size: 1.2 } } } },
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const tabs = canvas.getAllByRole("tab");
+    await expect(tabs).toHaveLength(3);
+    await expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+  },
+};
+
+// The engine could not draw one part: the tab warns and the preview says how to send the others.
+export const PartCannotBeDrawn: Story = {
+  args: {
+    state: state({
+      step: "formatacao",
+      previews: {
+        1: preview(1),
+        2: { ...preview(2), svg: "", pageSvg: "", error: "Não foi possível desenhar esta parte. Desmarque-a em Partes para enviar as outras." },
+        3: preview(3),
+      },
+      editing: 2,
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText(/Não foi possível desenhar esta parte/)).toBeVisible();
+    await expect(canvas.getByRole("tab", { name: /⚠/ })).toBeVisible();
   },
 };

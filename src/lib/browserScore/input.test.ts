@@ -87,3 +87,19 @@ test('read saved part names from 4.x excerpt meta tags', () => {
     const result = inspect(archive({ 'Excerpts/0_Flute/0_Flute.mscx': part, 'Excerpts/1_Oboe/1_Oboe.mscx': nameless }), 'mscz');
     assert.deepEqual({ ...result.savedPartNames }, { '0_Flute': 'FLAUTA' });
 });
+test('3.x inline excerpts: title and the main-score parts their staves link to', () => {
+    // Modeled on chuva_suor_cerveja (identical trumpet parts) and ta rocheda (<name> over partName).
+    const part = (staff: number, name: string) => `<Part><Staff id="${staff}"/><trackName>${name}</trackName><Instrument><longName>${name}</longName></Instrument></Part>`;
+    const excerpt = (tag: string, links: number[], name = '') => `<Score><metaTag name="partName">${tag}</metaTag>`
+        + links.map(link => `<Part><Staff id="1"><linkedTo>${link}</linkedTo></Staff><trackName>x</trackName></Part>`).join('')
+        + (name ? `<name>${name}</name>` : '') + '</Score>';
+    const score = `<museScore version="3.02"><Score>${part(1, 'Flauta')}${part(2, 'Trompete em B♭')}${part(3, 'Trompete em B♭')}`
+        + excerpt('PETE_SEM_PIRATA', [2]) + excerpt('PETE_COM_PIRATA', [3]) + excerpt('Trombone 2', [1, 3], 'BONE')
+        + '<Score><metaTag name="partName">Unlinked</metaTag><Part><Staff id="1"/></Part></Score></Score></museScore>';
+    assert.deepEqual(inspect(strToU8(score), 'mscx').inlineExcerpts, [
+        { title: 'PETE_SEM_PIRATA', masterParts: [1] },
+        { title: 'PETE_COM_PIRATA', masterParts: [2] },
+        { title: 'BONE', masterParts: [0, 2] },
+        { title: 'Unlinked', masterParts: [] }
+    ]);
+});

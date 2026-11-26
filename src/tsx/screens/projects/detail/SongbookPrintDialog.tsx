@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { Alert, Modal } from "react-bootstrap";
+import { Alert } from "react-bootstrap";
 import type { SongbookDoc, SongbookRevisionDoc } from "../../../../../types/docs";
 import { zInstrument, type Instrument } from "../../../../../types/instrument";
 import type { WithId } from "../../../../lib/db";
@@ -8,6 +8,7 @@ import { instrumentLabel } from "../../../../lib/preferredInstrument";
 import { fromSongbookRevision } from "../../../../lib/songbook";
 import { Button } from "../../../atoms/Button";
 import { Checkbox } from "../../../atoms/Choice";
+import { Modal } from "../../../atoms/Modal";
 import type { ArrangementPdfEntry } from "../../../../createSongBook";
 
 export type SongbookPrintServices = Pick<typeof import("../../../../lib/db"), "getSongbookRevision"> & {

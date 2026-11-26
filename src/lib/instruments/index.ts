@@ -141,6 +141,8 @@ const NAME_ALIASES: readonly (readonly [string, Instrument])[] = [
   ["flute", "flauta"],
   ["sousaphone", "tuba"],
   ["tuba", "tuba"],
+  // Last: a bare "tenor" part (e.g. "TENOR") is the tenor sax; "Tenor Trombone" matched above.
+  ["tenor", "sax tenor"],
 ];
 
 /**
@@ -258,6 +260,16 @@ export const instrumentSettings = (
   }
 };
 /** The fingering family a cadern.in instrument plays in, or null (no fingerings). */
+/** The instrument without " pirata": the instrument a pirata part is written for. */
+export const baseInstrument = (instrument: Instrument): Instrument =>
+  instrument.replace(/ pirata$/, "") as Instrument;
+
+/** Same instrument family: the same instrument (pirata or not), or a tuba in another key. */
+export function sameInstrumentFamily(a: Instrument, b: Instrument): boolean {
+  const [x, y] = [baseInstrument(a), baseInstrument(b)];
+  return x === y || (x.startsWith("tuba") && y.startsWith("tuba"));
+}
+
 export function chosenFamily(instrument: Instrument): FingeringTables["family"] | null {
   switch (instrument.replace(/ pirata$/, "")) {
     case "trompete": return "trumpet";

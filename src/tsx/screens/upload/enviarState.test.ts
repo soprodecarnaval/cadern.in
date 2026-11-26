@@ -50,16 +50,33 @@ describe("formatting controls", () => {
   const profile = zFormattingProfile.parse({ profileVersion: 1, staffSize: 1.5, fingering: { notation: "valves" } });
 
   it("edits the score's settings or one part's, which inherits the rest", () => {
-    const tuba = withFormatting(profile, "Tuba", { fingering: { dynamicTrombone: true } });
-    expect(formattingOf(tuba, "Tuba").fingering).toEqual({ notation: "valves", dynamicTrombone: true });
-    expect(formattingOf(tuba, "Tuba").staffSize).toBe(1.5);
+    const part = { ordinal: 5, name: "Tuba" };
+    const tuba = withFormatting(profile, part, { fingering: { dynamicTrombone: true } });
+    expect(tuba.parts).toEqual({ "#5": { fingering: { dynamicTrombone: true } } });
+    expect(formattingOf(tuba, part).fingering).toEqual({ notation: "valves", dynamicTrombone: true });
+    expect(formattingOf(tuba, part).staffSize).toBe(1.5);
     expect(formattingOf(tuba, null).fingering).toEqual({ notation: "valves" });
-    expect(hasOverride(tuba, "Tuba")).toBe(true);
+    expect(hasOverride(tuba, part)).toBe(true);
     const score = withFormatting(tuba, null, { staffSize: "auto", cleanup: { staffText: false } });
     expect(score.staffSize).toBe("auto");
     expect(score.cleanup).toEqual({ staffText: false });
     expect(zFormattingProfile.safeParse(score).success).toBe(true);
-    expect(hasOverride(withoutOverride(tuba, "Tuba"), "Tuba")).toBe(false);
+    expect(hasOverride(withoutOverride(tuba, part), part)).toBe(false);
+  });
+
+  it("keeps the settings of two parts with the same name apart (023)", () => {
+    const first = { ordinal: 1, name: "Trompete" }, second = { ordinal: 2, name: "Trompete" };
+    const next = withFormatting(profile, first, { staffSize: 2 });
+    expect(formattingOf(next, first).staffSize).toBe(2);
+    expect(formattingOf(next, second).staffSize).toBe(1.5);
+  });
+
+  it("reads and replaces settings stored by part name", () => {
+    const stored = zFormattingProfile.parse({ profileVersion: 1, parts: { Tuba: { systemsPerPage: 3 } } });
+    const part = { ordinal: 4, name: "Tuba" };
+    expect(formattingOf(stored, part).systemsPerPage).toBe(3);
+    expect(withFormatting(stored, part, { staffSize: 2 }).parts).toEqual({ "#4": { systemsPerPage: 3, staffSize: 2 } });
+    expect(withoutOverride(stored, part).parts).toEqual({});
   });
 });
 
@@ -107,11 +124,12 @@ describe("metadataFromTags", () => {
 });
 
 describe("withFormattingForAll", () => {
-  it("makes the same change to each named part, keeping their other settings", () => {
+  it("makes the same change to each part, keeping their other settings", () => {
     const profile = zFormattingProfile.parse({ profileVersion: 1, parts: { Pete: { systemsPerPage: 2, fingering: { notation: "valves" } } } });
-    const next = withFormattingForAll(profile, ["Pete", "Tuba"], { fingering: { size: 0.8 } });
-    expect(next.parts).toEqual({ Pete: { systemsPerPage: 2, fingering: { notation: "valves", size: 0.8 } }, Tuba: { fingering: { size: 0.8 } } });
-    expect(withFormattingForAll(profile, ["Pete", "Tuba"], { staffSize: "auto" }).parts?.Tuba).toEqual({ staffSize: "auto" });
+    const parts = [{ ordinal: 1, name: "Pete" }, { ordinal: 2, name: "Tuba" }];
+    const next = withFormattingForAll(profile, parts, { fingering: { size: 0.8 } });
+    expect(next.parts).toEqual({ "#1": { systemsPerPage: 2, fingering: { notation: "valves", size: 0.8 } }, "#2": { fingering: { size: 0.8 } } });
+    expect(withFormattingForAll(profile, parts, { staffSize: "auto" }).parts?.["#2"]).toEqual({ staffSize: "auto" });
   });
 });
 
@@ -129,5 +147,40 @@ describe("withInstrument", () => {
   it("keeps piratas off when switching between instruments that have them", () => {
     const off = withFingerings(trumpet, false);
     expect(withInstrument(off, "trombone")).toMatchObject({ instrument: "trombone", fingerings: false, family: "trombone" });
+  });
+});
+
+describe("partRows: the part name over a contradicting instrument (024)", () => {
+  // From the 2026 scores: staves reused for another instrument.
+  const rows = partRows([
+    part(1, "SAX TENOR", "", "brass.trumpet", "Bb"),
+    part(2, "TENOR", "", "brass.trumpet", "Saxofone Tenor"),
+    part(3, "BONE PIRATA", "bb-trumpet"),
+    part(4, "TUBA", "euphonium", null, "Bombardino"),
+    part(5, "TUBA", "eb-tuba", null, "E♭ Tuba"),
+    part(6, "PETE", "bb-trumpet"),
+    part(7, "Bb", "bb-trumpet"),
+  ]);
+
+  it("files the part by its name when the name is another instrument family", () => {
+    expect(rows.slice(0, 4).map((row) => [row.instrument, row.idInstrument, row.fingerings])).toEqual([
+      ["sax tenor", "trompete", false],
+      ["sax tenor", "trompete", false],
+      ["trombone pirata", "trompete", true],
+      ["tuba", "bombardino", true],
+    ]);
+    expect(rows[2].family).toBe("trombone");
+  });
+
+  it("keeps the id for the same family or a name without an instrument", () => {
+    expect(rows.slice(4).map((row) => [row.instrument, row.idInstrument])).toEqual([
+      ["tuba eb", undefined],
+      ["trompete pirata", undefined],
+      ["trompete pirata", undefined],
+    ]);
+  });
+
+  it("drops the note when the instrument is changed by hand", () => {
+    expect(withInstrument(rows[0], "flauta").idInstrument).toBeUndefined();
   });
 });

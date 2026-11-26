@@ -189,6 +189,36 @@ const list = (node: any): any[] => node === undefined || node === null ? [] : Ar
 /** A score part of the MSCX: its id, track name and instruments (`<Instrument id>` and `<instrumentId>`). */
 export type ScorePartInfo = { partId: string; trackName: string; instruments: PartInstrument[] };
 
+/**
+ * A 3.x excerpt saved inside the main score (a `<Score>` in the main `<Score>`): its title
+ * (`<name>`, else the `partName` meta tag) and the index of each main-score part its staves are linked to (`<linkedTo>`, the id
+ * of a main-score `<Staff>`), in order. `masterParts` is empty when a staff has no link.
+ */
+export type InlineExcerpt = { title: string; masterParts: number[] };
+
+function inlineExcerpts(score: any): InlineExcerpt[] {
+    const masterOfStaff = new Map<string, number>();
+    list(score?.Part).forEach((part: any, index: number) => {
+        for (const staff of list(part?.Staff)) {
+            const id = staff?.['@_id'];
+            if (typeof id === 'string' && id) {masterOfStaff.set(id, index);}
+        }
+    });
+    return list(score?.Score).map((excerpt: any) => {
+        // The engine names a 3.x excerpt by its <name>, else by its partName meta tag.
+        const title = textOf(excerpt?.name) || textOf(list(excerpt?.metaTag).find((tag: any) => tag?.['@_name'] === 'partName'));
+        const masterParts: number[] = [];
+        let linked = true;
+        for (const part of list(excerpt?.Part)) {
+            for (const staff of list(part?.Staff)) {
+                const at = masterOfStaff.get(textOf(staff?.linkedTo));
+                if (at === undefined) {linked = false;} else if (!masterParts.includes(at)) {masterParts.push(at);}
+            }
+        }
+        return { title, masterParts: linked ? masterParts : [] };
+    });
+}
+
 function scoreParts(score: any): ScorePartInfo[] {
     return list(score?.Part).map((part: any) => ({
         partId: typeof part?.['@_id'] === 'string' ? part['@_id'] : '',
@@ -297,7 +327,7 @@ function inspectInput(bytes: Uint8Array, format: Format, overrides: Partial<Limi
     warnings.push({ code: 'UNVERIFIED_INPUT', message: 'Version/feature fidelity is unverified; import success does not certify preservation.' });
     warnings.push({ code: 'RESOURCE_DIAGNOSTICS_LIMITED', message: 'Missing image paths are rejected; native font substitution and unknown constructs cannot be exhaustively diagnosed.' });
     return { fileVersion: version, xml, bytes: files ? zipSync(files, { level: 0 }) : bytes, warnings, savedPartNames, savedPartIds,
-        scoreParts: scoreParts(doc.museScore.Score), metaTags, entryName };
+        scoreParts: scoreParts(doc.museScore.Score), inlineExcerpts: inlineExcerpts(doc.museScore.Score), metaTags, entryName };
 }
 
 export function inspect(bytes: Uint8Array, format: Format, overrides: Partial<Limits> = {}) {

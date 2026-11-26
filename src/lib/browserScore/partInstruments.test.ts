@@ -22,3 +22,7 @@ test('an unmatched part keeps only the engine sound id', () => {
     assert.deepEqual(instrumentIdsOf(instruments), ['keyboard.organ']);
     assert.deepEqual(excerptInstruments({ title: 'x', parts: [{ name: 'Órgão', instrumentName: 'Órgão' }] }, 0, 5, info), []);
 });
+test('the file links decide over names', () => {
+    assert.deepEqual(excerptInstruments({ title: 'x', parts: [{ name: 'B♭ Tuba', instrumentName: '' }] }, 0, 5, info, [0]), [trumpet]);
+    assert.deepEqual(excerptInstruments({ title: 'x', parts: [{ name: 'B♭ Tuba', instrumentName: '' }] }, 0, 5, info, [7]), [tuba]);
+});

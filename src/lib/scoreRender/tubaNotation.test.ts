@@ -14,8 +14,8 @@ const codec: XmlCodec = {
   parse: (text) => new DOMParser().parseFromString(text, "application/xml") as unknown as Document,
   serialize: (document) => new XMLSerializer().serializeToString(document as never),
 };
-type Fixture = (typeof tubas)[keyof typeof tubas];
-const fixture = (id: keyof typeof tubas): Fixture => tubas[id];
+type Fixture = (typeof tubas)[keyof typeof tubas] & { ordinal: number };
+const fixture = (id: keyof typeof tubas): Fixture => ({ ...tubas[id], ordinal: 1 });
 const partOf = (xml: string) => codec.parse(xml).getElementsByTagName("part")[0];
 const total = (part: Element) => {
   const t = part.getElementsByTagName("transpose")[0];

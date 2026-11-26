@@ -2,13 +2,16 @@ import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 
 const emptyNotes: readonly string[] = [];
 
+// Verovio classes: notes, rests, whole-measure and multi-measure rests.
+const PLAYABLE = ["note", "rest", "mRest", "multiRest"];
+
 function highlightNotes(doc: Document, previous: readonly string[], active: readonly string[]) {
   for (const id of previous) {
     doc.getElementById(id)?.removeAttribute("data-playing");
   }
   for (const id of active) {
-    const note = doc.getElementById(id);
-    if (note?.classList.contains("note")) {note.setAttribute("data-playing", "");}
+    const element = doc.getElementById(id);
+    if (element && PLAYABLE.some((name) => element.classList.contains(name))) {element.setAttribute("data-playing", "");}
   }
 }
 
@@ -32,7 +35,7 @@ export function ScoreSvgFrame({ svg, label, activeNotes = emptyNotes, css = "", 
 <style>
   html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
   body > svg { display: block; width: 100%; height: 100%; }
-  .note[data-playing] { color: #1659c5; fill: #1659c5; }
+  [data-playing] { color: #1659c5; fill: #1659c5; }
   ${css}
 </style></head><body>${svg}</body></html>`, [css, svg]);
 

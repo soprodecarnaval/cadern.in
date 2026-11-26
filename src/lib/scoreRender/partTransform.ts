@@ -1,6 +1,6 @@
 // The caderninho transform of one part's MusicXML, run by the browser-score
-// library before drawing: clean-up (007), tuba notation (009), fingerings
-// (008), as the FormattingProfile asks.
+// library before drawing: clean-up (007), the instrument the part is filed
+// under (025), tuba notation (009), fingerings (008), as the FormattingProfile asks.
 import type { FormattingProfile } from "../../../types/formattingProfile";
 import type { Part, PartTransform, Warning } from "../browserScore/types";
 import { chosenInstrumentSettings, fingeringFunction, instrumentSettings, type InstrumentSettings } from "../instruments";
@@ -10,6 +10,7 @@ import { fingerPart, type FingeringReport } from "./fingering";
 import { applyTubaNotation, type TubaNotationReport } from "./tubaNotation";
 import { narrowRestMeasures, type RestMeasuresReport } from "./restMeasures";
 import { resolvePartFormatting, type ResolvedPartFormatting } from "./profile";
+import { refiledInstrument, rewritePartInstrument } from "./instrumentXml";
 
 export type XmlCodec = { parse: (text: string) => Document; serialize: (document: Document) => string };
 
@@ -31,6 +32,8 @@ export type PartTransformReport = {
   restMeasures: RestMeasuresReport[];
   /** Empty when the part gets no fingerings. */
   fingerings: FingeringReport[];
+  /** The instrument written into the MusicXML when the part is filed under another family than its staff's (025). */
+  refiledAs?: Instrument;
 };
 
 /** The instrument settings of a library part: its first instrument, by MuseScore id, else sound id. */
@@ -71,20 +74,25 @@ export const fingeringsOn = (
 /** Transform one part's MusicXML text. */
 export function transformPartMusicXml(
   musicXml: string,
-  part: Pick<Part, "instruments" | "name">,
+  part: Pick<Part, "instruments" | "name" | "ordinal">,
   profile: FormattingProfile,
   codec: XmlCodec = browserCodec,
   /** The instrument the part is filed under; its settings win over the file's. */
   chosen?: Instrument | null,
 ): { musicXml: string; report: PartTransformReport } {
-  const formatting = resolvePartFormatting(profile, part.name);
+  const formatting = resolvePartFormatting(profile, part);
   const document = codec.parse(musicXml);
   const cleanup = cleanupMusicXml(document, formatting.cleanup);
   const { instrumentId, settings } = partSettings(part, chosen);
   const parts = Array.from(document.documentElement.childNodes).filter(
     (node): node is Element => node.nodeType === 1 && (node as Element).localName === "part",
   );
-  // Tuba notation first, so fingering placement sees the final clef.
+  // The filed instrument first: tuba notation and fingerings read its transposition.
+  const refiledAs = refiledInstrument(part, chosen);
+  if (refiledAs) {
+    for (const element of parts) {rewritePartInstrument(document, element.getAttribute("id") ?? "", refiledAs);}
+  }
+  // Tuba notation next, so fingering placement sees the final clef.
   const tubaNotation: TubaNotationReport[] = [];
   let tubaNotationSkipped: PartTransformReport["tubaNotationSkipped"];
   if (settings?.tubaPolicy) {
@@ -116,6 +124,7 @@ export function transformPartMusicXml(
       tubaNotation,
       ...(tubaNotationSkipped ? { tubaNotationSkipped } : {}),
       fingerings,
+      ...(refiledAs ? { refiledAs } : {}),
     },
   };
 }
