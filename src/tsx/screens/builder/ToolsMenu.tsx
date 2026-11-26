@@ -109,6 +109,19 @@ export function ToolsMenu({
       <Dropdown.Menu className="songbook-tool-options songbook-tools-menu">
         <ToolItem icon={<UndoIcon />} label="Desfazer" shortcut={UNDO_KEYS} disabled={!canUndo} onClick={run(onUndo)} />
         <ToolItem icon={<UndoIcon mirrored />} label="Refazer" shortcut={REDO_KEYS} disabled={!canRedo} onClick={run(onRedo)} />
+        <ToolItem icon={<AddSectionIcon />} label="Adicionar seção"
+          expanded={open === "add"} onClick={() => setOpen(open === "add" ? null : "add")} />
+        {open === "add" && (
+          <form className="songbook-tools-sub songbook-add-section-form" onSubmit={addSection}>
+            <Input ref={field} type="text" value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              aria-label="Nome da nova seção" placeholder="Nome da seção" />
+            <Button type="submit" className="songbook-add-section-submit"
+              aria-label="Adicionar seção" title="Adicionar seção">
+              <span className="songbook-add-section-plus">+</span>
+            </Button>
+          </form>
+        )}
         <ToolItem icon={<SortIcon />} label="Ordenar por" disabled={!canMakeSections}
           expanded={open === "sort"} onClick={() => setOpen(open === "sort" ? null : "sort")} />
         {open === "sort" && (
@@ -123,19 +136,6 @@ export function ToolsMenu({
               </button>
             ))}
           </div>
-        )}
-        <ToolItem icon={<AddSectionIcon />} label="Adicionar seção"
-          expanded={open === "add"} onClick={() => setOpen(open === "add" ? null : "add")} />
-        {open === "add" && (
-          <form className="songbook-tools-sub songbook-add-section-form" onSubmit={addSection}>
-            <Input ref={field} type="text" value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              aria-label="Nome da nova seção" placeholder="Nome da seção" />
-            <Button type="submit" className="songbook-add-section-submit"
-              aria-label="Adicionar seção" title="Adicionar seção">
-              +
-            </Button>
-          </form>
         )}
         <ToolItem icon={<MakeSectionsIcon />} label="Criar seções por estilo"
           disabled={!canMakeSections} onClick={run(onMakeSections)} />

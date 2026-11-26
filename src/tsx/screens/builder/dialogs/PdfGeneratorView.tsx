@@ -2,6 +2,7 @@ import { List } from "../../../atoms/List";
 import { Modal } from "../../../atoms/Modal";
 import { Input } from "../../../atoms/Input";
 import { Button } from "../../../atoms/Button";
+import { Checkbox } from "../../../atoms/Choice";
 import React, { useMemo, useState } from "react";
 import { Col, Form, OverlayTrigger, Row, Spinner, Tooltip } from "react-bootstrap";
 import type { Instrument } from "../../../../../types/instrument";
@@ -292,14 +293,14 @@ const PDFGeneratorView = ({
                       <span
                         className="me-3"
                         style={{
-                          width: "1.25rem",
+                          width: "1.5rem", // the 24px checkbox
                           display: "inline-flex",
                           justifyContent: "center",
                         }}
                       >
                         {!isGenerating ? (
-                          <Form.Check
-                            type="checkbox"
+                          <Checkbox
+                            aria-label={`Incluir ${instrument}`}
                             checked={isSelected}
                             onChange={() => toggleInstrument(instrument)}
                             onClick={(e) => e.stopPropagation()}
@@ -359,8 +360,7 @@ const PDFGeneratorView = ({
                           borderTop: "none",
                         }}
                       >
-                        <Form.Check
-                          type="checkbox"
+                        <Checkbox
                           id={`fallback-${instrument}`}
                           label={`Usar ${fallback} como fallback (+${countWithFallback - count})`}
                           checked={fallbackEnabled}

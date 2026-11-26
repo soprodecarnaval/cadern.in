@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
+import { useScrollToTopOnNavigate } from "./components/navigation/useScrollToTopOnNavigate";
 import { AuthModal } from "./screens/auth/AuthModal";
 import { ProfileModal } from "./screens/account/ProfileModal";
 import type { ProfileTab } from "./screens/account/ProfileModalView";
@@ -73,6 +74,7 @@ function FallbackRoute() {
 }
 
 function App() {
+  useScrollToTopOnNavigate();
   const [showUserModal, setShowUserModal] = useState(false);
   const [profileTab, setProfileTab] = useState<ProfileTab>("profile");
   const openUserModal = (tab: ProfileTab = "profile") => {

@@ -2,12 +2,8 @@ import { Button } from "../../../atoms/Button";
 import { Page } from "../../../atoms/Page";
 import { Link } from "../../../atoms/Link";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Badge,
-  Spinner,
-  Table,
-} from "react-bootstrap";
+import { Alert, Spinner, Table } from "react-bootstrap";
+import { Badge } from "../../../atoms/Badge";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import type { WithId } from "../../../../lib/db";
 import { canEditSongbook, canPublishSongbook, isAdmin, isEditor, isReviewer } from "../../../../lib/roles";
@@ -37,13 +33,6 @@ const ROLE_LABELS: Record<UserProjectRole, string> = {
   admin: "Admin",
   editor: "Editor",
   reviewer: "Revisor",
-};
-
-const ROLE_BADGE_VARIANTS: Record<UserProjectRole, string> = {
-  owner: "primary",
-  admin: "warning",
-  editor: "info",
-  reviewer: "secondary",
 };
 
 export type PublicProjectPageServices = Pick<
@@ -206,7 +195,7 @@ export function PublicProjectPageView({
         <h2>{project.title}</h2>
         <div className="d-flex gap-2 align-items-center">
           {myRole && (
-            <Badge bg={ROLE_BADGE_VARIANTS[myRole]}>
+            <Badge variant="strong">
               {ROLE_LABELS[myRole]}
             </Badge>
           )}
