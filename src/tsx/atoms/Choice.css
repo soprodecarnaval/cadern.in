@@ -1,0 +1,137 @@
+@import "../../styles/tokens.css";
+
+/* Checkboxes and radios: a 24px box with the fields' 3px black border,
+   filled yellow when chosen, beside a light 18px label. Keyboard focus lifts
+   the box with the hard black shadow, like a focused field. */
+
+.ds-check {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--ds-space-3);
+  margin: 0;
+  color: var(--ds-ink);
+  font: var(--ds-weight-body) var(--ds-text) / 1.4 var(--ds-font);
+  cursor: pointer;
+}
+
+/* On its own line, as in a list of options. */
+.ds-check.is-block {
+  display: flex;
+}
+
+/* A long label wraps beside the box, never under it. */
+.ds-check > span {
+  min-width: 0;
+}
+
+.ds-check-input {
+  appearance: none;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  border: var(--ds-border) solid var(--ds-ink);
+  border-radius: 6px;
+  background: var(--ds-paper) center / 14px no-repeat;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+/* Beside a label, centered on its first line (18px × 1.4). */
+.ds-check > .ds-check-input {
+  margin-top: calc((var(--ds-text) * 1.4 - 24px) / 2);
+}
+
+.ds-check-input[type="radio"] {
+  border-radius: 50%;
+}
+
+.ds-check-input:hover:not(:disabled) {
+  background-color: var(--ds-yellow);
+}
+
+.ds-check-input:checked,
+.ds-check-input:indeterminate {
+  background-color: var(--ds-yellow);
+}
+
+.ds-check-input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M2 7.4l3.2 3.2L12 3.8' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.ds-check-input[type="checkbox"]:indeterminate {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M3 7h8' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+/* A 10px black dot in the yellow circle. */
+.ds-check-input[type="radio"]:checked {
+  background-image: radial-gradient(circle, var(--ds-ink) 0 5px, transparent 5.5px);
+  background-size: auto;
+}
+
+.ds-check-input:focus-visible {
+  outline: none;
+  transform: translateY(var(--ds-lift));
+  box-shadow: var(--ds-shadow-raised);
+}
+
+.ds-check-input[aria-invalid="true"] {
+  border-color: var(--ds-invalid);
+}
+
+.ds-check-input:disabled {
+  border-color: #999;
+  background-color: var(--ds-surface-disabled);
+  cursor: default;
+}
+
+.ds-check-input:disabled:is(:checked, :indeterminate) {
+  background-color: var(--ds-muted);
+}
+
+.ds-check:has(.ds-check-input:disabled) {
+  color: var(--ds-text-secondary);
+  cursor: default;
+}
+
+/* A set of options under a title: a column, or a wrapping row inline. */
+.ds-choice-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Wrapped rows stay together at the top, even when the group is stretched
+   taller (as a grid cell beside a longer group). */
+.ds-choice-group.is-inline {
+  flex-flow: row wrap;
+  align-content: flex-start;
+  gap: var(--ds-space-3) var(--ds-space-6);
+}
+
+.ds-choice-group > legend {
+  float: none;
+  width: 100%;
+  margin-bottom: var(--ds-space-2);
+  padding: 0;
+  font: var(--ds-weight-action) var(--ds-text) / 1.4 var(--ds-font);
+}
+
+.ds-choice-hint {
+  width: 100%;
+  margin: 0;
+  color: var(--ds-text-secondary);
+  font-size: var(--ds-caption);
+}
+
+.ds-choice-group .invalid-feedback {
+  display: block;
+  width: 100%;
+  margin: 0;
+  color: var(--ds-invalid);
+  font-size: var(--ds-caption);
+}

@@ -6,7 +6,8 @@ import { Button } from "../../../atoms/Button";
 import { CardPointerSensor } from "../../../../lib/cardPointerSensor";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Badge, Form, Spinner, Table } from "react-bootstrap";
+import { Alert, Form, Spinner, Table } from "react-bootstrap";
+import { Badge } from "../../../atoms/Badge";
 import {
   Link,
   useNavigate,
@@ -274,8 +275,8 @@ export function SongbookManagePageView({
 
   const badges = (
     <>
-      {!songbook.isPublished && <Badge bg="secondary">não publicado</Badge>}
-      {!isCurrent && <Badge bg="warning">versão antiga</Badge>}
+      {!songbook.isPublished && <Badge variant="muted">não publicado</Badge>}
+      {!isCurrent && <Badge variant="accent">versão antiga</Badge>}
     </>
   );
 
@@ -531,7 +532,7 @@ function SongbookContents({
                       <Link
                         to={scorePath(forks.get(item.score.id)!)}
                       >
-                        <Badge bg="info" text="dark">
+                        <Badge variant="accent">
                           derivação disponível
                         </Badge>
                       </Link>
@@ -552,7 +553,7 @@ function SongbookContents({
                   {showNewerVersions && hasNewerVersion(item) && (
                     <>
                       <Link to={scorePath(item.score.id)}>
-                        <Badge bg="warning" text="dark">
+                        <Badge variant="accent">
                           nova versão
                         </Badge>
                       </Link>

@@ -1,7 +1,8 @@
 import { Modal } from "../../../atoms/Modal";
 import { Button } from "../../../atoms/Button";
 import { useEffect, useState } from "react";
-import { Alert, Badge, Spinner } from "react-bootstrap";
+import { Alert, Spinner } from "react-bootstrap";
+import { Badge } from "../../../atoms/Badge";
 import { Link } from "../../../atoms/Link";
 import { scoreRevisionPath } from "../../../../lib/routes";
 import type { LoadedScore } from "../../../../lib/loadScore";
@@ -69,7 +70,7 @@ export function ScoreDetailModalView({
               <span className="text-muted">versão #{score.revisionNumber}</span>
               {collabEnabled &&
                 score.revisionId === score.publishedRevisionId && (
-                  <Badge bg="success">publicada</Badge>
+                  <Badge variant="accent">publicada</Badge>
                 )}
             </div>
             <p className="text-muted">{score.projectTitle}</p>

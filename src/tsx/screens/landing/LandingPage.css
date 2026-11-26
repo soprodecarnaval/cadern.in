@@ -963,3 +963,9 @@
   outline: none;
   box-shadow: 0 0 0 4px var(--landing-yellow);
 }
+
+/* The search field sits inside its box's own border, so a second black
+   outline would draw a box within the box; the caret shows the focus. */
+.landing .landing-search-box input:focus-visible {
+  outline: none;
+}

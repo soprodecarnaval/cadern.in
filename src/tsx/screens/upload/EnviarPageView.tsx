@@ -7,6 +7,7 @@ import { pirataInstrument } from "../../../lib/instruments";
 import type { FingeringSettings, FormattingProfile, PartFormatting } from "../../../../types/formattingProfile";
 import { SONGBOOK_FIT_AREA } from "../../../../types/formattingProfile";
 import { Button } from "../../atoms/Button";
+import { Checkbox, Radio } from "../../atoms/Choice";
 import { Input } from "../../atoms/Input";
 import { Page } from "../../atoms/Page";
 import { Select } from "../../atoms/Select";
@@ -175,9 +176,7 @@ function PartsStep({ state, onRows }: Pick<EnviarPageViewProps, "state" | "onRow
             {rows.map((row) => (
               <tr key={row.ordinal}>
                 <td>
-                  <input
-                    type="checkbox"
-                    className="form-check-input"
+                  <Checkbox
                     aria-label={`Enviar ${row.name}`}
                     checked={row.include && !!row.instrument}
                     disabled={!row.instrument}
@@ -257,17 +256,15 @@ function Choice({ label, value, options, onChange, name, children }: {
     <fieldset className="enviar-choice">
       <legend>{label}</legend>
       {options.map(([option, text]) => (
-        <label key={option} className="form-check form-check-inline">
-          <input
-            type="radio"
-            className="form-check-input"
-            name={name}
-            value={option}
-            checked={value === option}
-            onChange={() => onChange(option)}
-          />
-          <span className="form-check-label">{text}</span>
-        </label>
+        <Radio
+          key={option}
+          className="me-4"
+          label={text}
+          name={name}
+          value={option}
+          checked={value === option}
+          onChange={() => onChange(option)}
+        />
       ))}
       {children}
     </fieldset>
@@ -295,14 +292,8 @@ function AutoNumber({ label, name, value, min, max, step, unit, stepper, onChang
   return (
     <fieldset className="enviar-choice">
       <legend>{label}</legend>
-      <label className="form-check form-check-inline">
-        <input type="radio" className="form-check-input" name={name} checked={!manual} onChange={() => onChange("auto")} />
-        <span className="form-check-label">Automático</span>
-      </label>
-      <label className="form-check form-check-inline">
-        <input type="radio" className="form-check-input" name={name} checked={manual} onChange={() => onChange(fixedDefault)} />
-        <span className="form-check-label">Fixo</span>
-      </label>
+      <Radio className="me-4" label="Automático" name={name} checked={!manual} onChange={() => onChange("auto")} />
+      <Radio className="me-4" label="Fixo" name={name} checked={manual} onChange={() => onChange(fixedDefault)} />
       {(manual || stepper) && (
         <span className="enviar-number">
           {stepper && (
@@ -479,11 +470,8 @@ function PartControls({ state, onProfile, onRows, row, label, automaticStaff, au
     <>
       <fieldset className="enviar-choice">
         <legend>Espaçamento</legend>
-        <label className="form-check">
-          <input type="checkbox" className="form-check-input" checked={evenNoteSpacing}
-            onChange={(event) => change({ spacing: { evenNoteSpacing: event.target.checked } })} />
-          <span className="form-check-label">Espaçamento uniforme de notas e pausas</span>
-        </label>
+        <Checkbox className="is-block" label="Espaçamento uniforme de notas e pausas" checked={evenNoteSpacing}
+          onChange={(event) => change({ spacing: { evenNoteSpacing: event.target.checked } })} />
         {applyLink("Espaçamento uniforme", others, { spacing: { evenNoteSpacing } })}
       </fieldset>
       <AutoNumber label="Tamanho da pauta" name="part-staff-size" unit="mm" value={settings.staffSize}
@@ -529,20 +517,14 @@ function FingeringAndCleanupControls({ settings, onChange, showTrombone }: {
   return (
     <>
       {showTrombone && (
-        <label className="form-check">
-          <input type="checkbox" className="form-check-input" checked={settings.fingering?.dynamicTrombone ?? false}
-            onChange={(event) => onChange({ fingering: { dynamicTrombone: event.target.checked } })} />
-          <span className="form-check-label">Trombone dinâmico (posições alternativas)</span>
-        </label>
+        <Checkbox className="is-block" label="Trombone dinâmico (posições alternativas)" checked={settings.fingering?.dynamicTrombone ?? false}
+          onChange={(event) => onChange({ fingering: { dynamicTrombone: event.target.checked } })} />
       )}
       <fieldset className="enviar-choice">
         <legend>Limpeza</legend>
         {([["credits", "Tirar título e textos de cabeçalho"], ["staffText", "Tirar textos de pauta"]] as const).map(([key, text]) => (
-          <label key={key} className="form-check">
-            <input type="checkbox" className="form-check-input" checked={settings.cleanup?.[key] ?? true}
-              onChange={(event) => onChange({ cleanup: { [key]: event.target.checked } })} />
-            <span className="form-check-label">{text}</span>
-          </label>
+          <Checkbox key={key} className="is-block mb-2" label={text} checked={settings.cleanup?.[key] ?? true}
+            onChange={(event) => onChange({ cleanup: { [key]: event.target.checked } })} />
         ))}
       </fieldset>
     </>

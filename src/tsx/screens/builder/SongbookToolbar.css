@@ -28,6 +28,7 @@
   color: var(--ds-ink);
   font-size: 1.15rem;
   cursor: pointer;
+  transition: transform 0.15s;
 }
 
 /* Black border kept over the global button:hover blue. */
@@ -42,9 +43,14 @@
   cursor: default;
 }
 
-.songbook-tool:focus-visible {
-  outline: var(--ds-border) solid var(--ds-ink);
-  outline-offset: 2px;
+/* Keyboard focus lifts the tool with a hard black shadow, like a focused
+   text field, instead of an outline ring. The class is doubled to win over
+   the landing pages' outline on every focused button. */
+.songbook-tool.songbook-tool:focus-visible {
+  outline: none;
+  border-color: var(--ds-ink);
+  transform: translateY(var(--ds-lift));
+  box-shadow: var(--ds-shadow-raised);
 }
 
 .songbook-tool-icon {
@@ -97,7 +103,11 @@
 
 /* "Adicionar seção": the name field and a yellow "+" side by side. */
 .songbook-add-section {
-  padding: 0.5rem;
+  /* No stroke around the box; the field and button have their own. */
+  --bs-dropdown-border-width: 0;
+  /* No right padding: the yellow "+" lines up under the tool that opened
+     the box (the menu is aligned to the tool's right edge). */
+  padding: 0.5rem 0 0.5rem 0.5rem;
 }
 
 .songbook-add-section-form {
@@ -106,12 +116,31 @@
   width: 260px;
 }
 
+/* The field takes focus as soon as the menu opens, so it stays still: no
+   lift or hard shadow. The caret shows where you're typing. */
+.songbook-add-section-form .ds-field.form-control:focus {
+  transform: none;
+  box-shadow: none;
+}
+
 .songbook-add-section-submit {
   flex: 0 0 48px;
   height: 48px;
   padding: 0 !important;
-  font-size: 28px;
   line-height: 1;
+}
+
+/* A bigger "+" in the same 48px square; scoped to win over the shared
+   button text size. */
+.songbook-add-section-form .songbook-add-section-submit.ds-button {
+  font-size: 36px;
+  font-weight: 300;
+}
+
+/* A 1px baseline shift: the "+" sits 1px higher in its square. */
+.songbook-add-section-plus {
+  position: relative;
+  top: -1px;
 }
 
 /* "Salvar caderninho": yellow like the main buttons, black with a yellow
@@ -198,12 +227,19 @@
   visibility: visible;
 }
 
+/* The section name form spans the whole row, without the options' indent,
+   kept as far from the Menu's sides as the field is from the "+" (the
+   form's 0.5rem gap, less the Menu's own 0.375rem padding). */
 form.songbook-tools-sub {
   width: auto;
-  padding-right: 0.25rem;
+  padding-left: calc(0.5rem - 0.375rem);
+  padding-right: calc(0.5rem - 0.375rem);
 }
 
+/* In the Menu the "Nome da seção" field stretches across the whole row,
+   up to the yellow "+". */
 .songbook-tools-sub .ds-field {
+  flex: 1 1 auto;
   min-width: 0;
 }
 

@@ -155,10 +155,10 @@
   }
 }
 
-.column-divider-button:focus-visible {
-  outline: 2px solid var(--ds-ink, #000);
-  outline-offset: 2px;
-  border-radius: 6px;
+/* No stroke on keyboard focus: the chevron's slide shows it. The class is
+   doubled to win over the landing pages' outline on every focused button. */
+.column-divider-button.column-divider-button:focus-visible {
+  outline: none;
 }
 
 /* Phones: one column in the old order, everything shown, no divider. */

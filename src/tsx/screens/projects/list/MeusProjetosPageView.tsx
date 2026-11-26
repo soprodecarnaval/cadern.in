@@ -1,14 +1,8 @@
 import { Page } from "../../../atoms/Page";
 import { Link } from "../../../atoms/Link";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  Badge,
-  Card,
-  Col,
-  Row,
-  Spinner,
-} from "react-bootstrap";
+import { Alert, Card, Col, Row, Spinner } from "react-bootstrap";
+import { Badge } from "../../../atoms/Badge";
 
 import type { WithId } from "../../../../lib/db";
 import { isAdmin } from "../../../../lib/roles";
@@ -21,13 +15,6 @@ const ROLE_LABELS: Record<UserProjectRole, string> = {
   admin: "Admin",
   editor: "Editor",
   reviewer: "Revisor",
-};
-
-const ROLE_BADGE_VARIANTS: Record<UserProjectRole, string> = {
-  owner: "primary",
-  admin: "warning",
-  editor: "info",
-  reviewer: "secondary",
 };
 
 function ProjectCard({
@@ -64,7 +51,7 @@ function ProjectCard({
         <div className="d-flex justify-content-between align-items-start mb-2">
           <Card.Title className="mb-0">{project.title}</Card.Title>
           {myRole && myRole !== "loading" && (
-            <Badge bg={ROLE_BADGE_VARIANTS[myRole]}>
+            <Badge variant="strong">
               {ROLE_LABELS[myRole]}
             </Badge>
           )}

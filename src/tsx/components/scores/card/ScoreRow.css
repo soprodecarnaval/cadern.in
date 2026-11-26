@@ -131,4 +131,15 @@
 /* Search matches: no Bootstrap padding, which opened gaps inside words. */
 .score-card mark { padding: 0; background: var(--ds-yellow); color: inherit; }
 .score-add-button { background: var(--ds-yellow); }
-.score-card :is(button, a):focus-visible { outline: var(--ds-border) solid var(--ds-ink); outline-offset: 2px; }
+/* A 1px keyboard focus stroke inside the cards: the 3px one crowded the
+   small icons. The doubled class wins over the landing pages' 3px outline. */
+.score-card.score-card :is(button, a, [tabindex]):focus-visible {
+  outline: 1px solid var(--ds-ink);
+  outline-offset: 2px;
+}
+
+/* The outline follows the element's corners; links (MIDI, MuseScore) have
+   none of their own, so round them like the drag handle. */
+.score-card a {
+  border-radius: 4px;
+}

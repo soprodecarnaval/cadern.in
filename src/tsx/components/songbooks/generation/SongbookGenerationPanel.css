@@ -1,0 +1,12 @@
+/* Each instrument is a score card (ScoreRow.css): the same border, corners,
+   gap and yellow hover, with a row as tall as a song card's. */
+.generation-card-row {
+  min-height: calc(44px + 0.5rem);
+}
+
+/* While generating, the row can't be toggled: no hover or pointer. */
+.generation-card-row.is-static,
+.generation-card-row.is-static:hover {
+  background: none;
+  cursor: default;
+}

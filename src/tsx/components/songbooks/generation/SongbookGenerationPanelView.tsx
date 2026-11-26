@@ -1,5 +1,5 @@
-import { List } from "../../../atoms/List";
 import { Button } from "../../../atoms/Button";
+import { Checkbox } from "../../../atoms/Choice";
 import { useEffect, useMemo, useState } from "react";
 import { Form, OverlayTrigger, Spinner, Tooltip } from "react-bootstrap";
 import type { SongbookDoc, SongbookRevisionDoc } from "../../../../../types/docs";
@@ -16,6 +16,8 @@ import {
   instrumentFallbacks,
 } from "../../../../lib/pdfGeneration";
 import { SongbookCoverModal } from "./SongbookCoverModal";
+import "../../scores/card/ScoreRow.css";
+import "./SongbookGenerationPanel.css";
 import { isSongbookSection } from "../../../../lib/songbook";
 
 const CarnivalModeTooltip = (
@@ -161,7 +163,7 @@ export function SongbookGenerationPanelView({
   return (
     <section className="mt-4">
       <h5>Gerar caderninhos</h5>
-      <List>
+      <div className="score-card-list">
         {instrumentStats.stats.map(
           ({ instrument, count, countWithFallback }) => {
             const isIncluded = included.has(instrument);
@@ -177,26 +179,25 @@ export function SongbookGenerationPanelView({
               fallbackEnabled && countWithFallback ? countWithFallback : count;
 
             return (
-              <div key={instrument}>
-                <List.Item
+              <div
+                key={instrument}
+                className="score-card"
+                style={{ opacity: isGreyedOut ? 0.4 : 1 }}
+              >
+                <div
                   onClick={() => !isGenerating && toggleIncluded(instrument)}
-                  className="d-flex align-items-center"
-                  style={{
-                    cursor: isGenerating ? "default" : "pointer",
-                    opacity: isGreyedOut ? 0.4 : 1,
-                  }}
+                  className={`score-card-row generation-card-row ${isGenerating ? "is-static" : ""}`}
                 >
                   <span
-                    className="me-3"
                     style={{
-                      width: "1.25rem",
+                      width: "1.5rem", // the 24px checkbox
                       display: "inline-flex",
                       justifyContent: "center",
                     }}
                   >
                     {!isGenerating ? (
-                      <Form.Check
-                        type="checkbox"
+                      <Checkbox
+                        aria-label={`Incluir ${instrument}`}
                         checked={isIncluded}
                         onChange={() => toggleIncluded(instrument)}
                         onClick={(e) => e.stopPropagation()}
@@ -213,10 +214,10 @@ export function SongbookGenerationPanelView({
                       ) : null
                     ) : null}
                   </span>
-                  <span className="flex-grow-1">
+                  <span className="score-card-main score-card-title">
                     {instrument.toUpperCase()}
                   </span>
-                  <span className="text-muted me-2">
+                  <span className="text-muted">
                     ({displayCount}/{instrumentStats.totalScores})
                   </span>
                   {!isGenerating && canEditCovers && currentUser && (
@@ -235,14 +236,10 @@ export function SongbookGenerationPanelView({
                   {!isGenerating && !canEditCovers && hasCover && (
                     <span className="text-success small">✓ Capa</span>
                   )}
-                </List.Item>
+                </div>
                 {!isGenerating && isIncluded && hasFallback && (
-                  <List.Item
-                    className="d-flex align-items-center ps-5"
-                    style={{ backgroundColor: "var(--ds-surface-disabled)", borderTop: "none" }}
-                  >
-                    <Form.Check
-                      type="checkbox"
+                  <div className="score-card-details score-card-subline">
+                    <Checkbox
                       id={`fallback-${instrument}`}
                       label={`Usar ${fallback} como fallback (+${countWithFallback - count})`}
                       checked={fallbackEnabled}
@@ -256,13 +253,13 @@ export function SongbookGenerationPanelView({
                         })
                       }
                     />
-                  </List.Item>
+                  </div>
                 )}
               </div>
             );
           },
         )}
-      </List>
+      </div>
       {instrumentStats.stats.length === 0 && (
         <p className="text-muted text-center">
           Nenhum instrumento disponível nas músicas deste caderninho.
