@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { zipSync, strToU8 } from 'fflate';
+import { zipSync, unzipSync, strToU8 } from 'fflate';
 import { inspect } from './input';
 import { ScoreError } from './types';
 
@@ -80,6 +80,26 @@ test('convert 4.1+ key signatures to the written key the 4.0 engine reads', () =
     assert.doesNotMatch(text, /concertKey|actualKey/);
     assert.ok(result.warnings.some(w => w.code === 'KEY_SIGNATURES_CONVERTED' && w.message.startsWith('2 ')));
     assert.ok(!inspect(xml, 'mscx').warnings.some(w => w.code === 'KEY_SIGNATURES_CONVERTED'));
+});
+test('convert 4.6+ part staff links (main staff eids) to the staff numbers the 4.0 engine reads', () => {
+    const main = strToU8('<museScore version="4.70"><Score>'
+        + '<Part id="1"><Staff>\n<eid>AAA</eid><StaffType/></Staff></Part>'
+        + '<Part id="2"><Staff>\n<eid>BBB</eid></Staff><Staff><eid>CCC</eid></Staff></Part>'
+        + '<Staff id="1"/><Staff id="2"/><Staff id="3"/></Score></museScore>');
+    const part = (body: string) => strToU8(`<museScore version="4.70"><Score><Part id="2">${body}</Part><Staff id="1"><Measure><KeySig><linkedTo>XYZ</linkedTo></KeySig></Measure></Staff></Score></museScore>`);
+    const roots = strToU8('<container><rootfiles><rootfile full-path="score.mscx"/></rootfiles></container>');
+    const result = inspect(zipSync({ 'META-INF/container.xml': roots, 'score.mscx': main,
+        'Excerpts/0_A/0_A.mscx': part('<Staff>\n<eid>p1</eid>\n  <linkedTo>BBB</linkedTo>\n<StaffType/></Staff><Staff><eid>p2</eid><linkedTo>CCC</linkedTo></Staff>'),
+        'Excerpts/1_B/1_B.mscx': part('<Staff><eid>p3</eid><linkedTo>gone</linkedTo></Staff>'),
+        'Excerpts/2_C/2_C.mscx': part('<Staff id="1"><linkedTo>1</linkedTo></Staff>') }), 'mscz');
+    const files = unzipSync(result.bytes);
+    const text = (name: string) => new TextDecoder().decode(files[name]);
+    assert.match(text('Excerpts/0_A/0_A.mscx'), /<Part id="2"><Staff id="1">\n<eid>p1<\/eid>\n {2}<linkedTo>2<\/linkedTo>\n<StaffType\/><\/Staff><Staff id="2"><eid>p2<\/eid><linkedTo>3<\/linkedTo><\/Staff>/);
+    assert.match(text('Excerpts/1_B/1_B.mscx'), /<Staff id="1"><eid>p3<\/eid><\/Staff>/);
+    assert.match(text('Excerpts/2_C/2_C.mscx'), /<Staff id="1"><linkedTo>1<\/linkedTo><\/Staff>/);
+    // Element links outside the part's staff list are left to the engine.
+    assert.match(text('Excerpts/0_A/0_A.mscx'), /<KeySig><linkedTo>XYZ<\/linkedTo><\/KeySig>/);
+    assert.ok(result.warnings.some(w => w.code === 'PART_STAFF_LINKS_CONVERTED' && w.message.startsWith('3 ')));
 });
 test('read saved part names from 4.x excerpt meta tags', () => {
     const part = strToU8('<museScore version="4.50"><Score><metaTag name="partName">FLAUTA</metaTag><metaTag name="workTitle">x</metaTag></Score></museScore>');
