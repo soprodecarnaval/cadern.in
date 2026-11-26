@@ -3,6 +3,12 @@
 Reference approved by user; shared foundations and home/auth adoption authorized.
 Further batches require affected screen/wireframe review per TASK.md step 6.
 
+Foundations and the four batches below merged to `main` in
+[PR #444](https://github.com/soprodecarnaval/cadern.in/pull/444) (`b6aa3690`).
+Browser upload screens received design-system styling in
+[PR #457](https://github.com/soprodecarnaval/cadern.in/pull/457) (`ae09ad97`).
+The final component inventory and task sign-off are not recorded here.
+
 | Batch | Surfaces | State |
 |---|---|---|
 | Foundations | Tokens, buttons, fields, modal; Storybook reference | Implemented; focused checks pass |

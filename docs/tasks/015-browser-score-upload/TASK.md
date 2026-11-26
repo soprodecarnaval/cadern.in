@@ -1,11 +1,18 @@
 ---
 title: Format and upload scores in the browser
-status: open
+status: in-progress
 type: feature
 milestone: browser-score-upload
 ---
 
 # 015 — Browser score upload: sign-off and rollout
+
+**On `main`:** The flag-gated implementation merged in
+[PR #451](https://github.com/soprodecarnaval/cadern.in/pull/451), with CI fixes
+in [#454](https://github.com/soprodecarnaval/cadern.in/pull/454), upload and
+playback fixes in [#456](https://github.com/soprodecarnaval/cadern.in/pull/456),
+and upload screen styling in [#457](https://github.com/soprodecarnaval/cadern.in/pull/457).
+Merge does not establish production enablement or rollout sign-off.
 
 ## Objective
 
