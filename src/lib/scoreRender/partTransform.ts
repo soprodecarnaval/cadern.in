@@ -106,9 +106,11 @@ export function transformPartMusicXml(
     }
   }
   const fingerings: FingeringReport[] = [];
-  if (fingeringsOn(formatting, settings)) {
+  const notation = formatting.fingering.notation;
+  // "file": the arranger's own fingerings, kept by the clean-up; none are generated.
+  if (notation !== "file" && fingeringsOn(formatting, settings)) {
     for (const element of parts) {
-      const fingeringFor = fingeringFunction(settings, formatting.fingering);
+      const fingeringFor = fingeringFunction(settings, { ...formatting.fingering, notation });
       if (fingeringFor) {fingerings.push(fingerPart(element, fingeringFor));}
     }
   }

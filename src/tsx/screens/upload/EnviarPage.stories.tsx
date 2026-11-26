@@ -287,6 +287,26 @@ export const ApplyToAllParts: Story = {
   },
 };
 
+// The arranger already wrote the piratas: "Do arquivo" keeps them, and cadern.in adds none.
+export const FileFingerings: Story = {
+  args: ApplyToAllParts.args,
+  render: ApplyToAllParts.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const piratas = (name: string) => within(canvas.getByRole("group", { name: "Piratas" })).getByRole("radio", { name });
+    await userEvent.click(canvas.getByRole("tab", { name: "Trompete" }));
+    await expect(piratas("Posições (1–7)")).toBeChecked();
+    await userEvent.click(piratas("Do arquivo"));
+    await expect(piratas("Do arquivo")).toBeChecked();
+    // Still a pirata part: its numbers keep a size.
+    await expect(canvas.getByRole("group", { name: "Tamanho dos números" })).toBeVisible();
+    // The clean-up no longer has its own switch for the file's fingerings.
+    const cleanup = within(canvas.getByRole("group", { name: "Limpeza" }));
+    await expect(cleanup.queryByRole("checkbox", { name: /dedilhados/ })).toBeNull();
+    await expect(cleanup.getByRole("checkbox", { name: "Tirar textos de pauta" })).toBeChecked();
+  },
+};
+
 export const ChosenInstrument: Story = {
   // The file says flute; the user filed the part as trompete, so it is formatted as one.
   args: {

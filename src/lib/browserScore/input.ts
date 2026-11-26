@@ -55,6 +55,40 @@ function downgradeKeySignatures(text: string): { text: string; changed: number }
     return { text: result, changed };
 }
 
+const partBlocks = /<Part\b[^>]*>[\s\S]*?<\/Part>/g;
+const staffBlocks = /<Staff\b[^>]*>([\s\S]*?)<\/Staff>/g;
+
+/** The `<eid>` of each main-score part staff, in score order (the engine's staff numbering, from 1). */
+export function masterStaffEids(text: string): string[] {
+    const score = /<Score>[\s\S]*/.exec(text)?.[0] ?? '';
+    return (score.match(partBlocks) ?? []).flatMap(part =>
+        [...part.matchAll(staffBlocks)].map(staff => /^\s*<eid>([^<]+)<\/eid>/.exec(staff[1])?.[1] ?? ''));
+}
+
+/**
+ * MuseScore 4.6+ saved parts link each part staff to its main-score staff by the main staff's
+ * `<eid>` (`<Staff><eid>…</eid><linkedTo>6j06q7…</linkedTo>`). The pinned 4.0 reader takes
+ * `<linkedTo>` as a staff number, so it links to staff -1, and a file with two or more such parts
+ * aborts the engine on its first metadata read. Write the staff numbers 4.5 wrote
+ * (`<Staff id="1"><linkedTo>3</linkedTo>`); a link to an unknown staff is dropped.
+ */
+export function downgradeExcerptStaffLinks(text: string, masterEids: readonly string[]): { text: string; changed: number } {
+    let changed = 0;
+    const result = text.replace(partBlocks, part => {
+        let staffId = 0;
+        return part.replace(staffBlocks, (block, body: string) => {
+            staffId++;
+            const link = /([ \t]*)<linkedTo>([^<]*)<\/linkedTo>(\r?\n)?/.exec(body);
+            if (!link || /^\s*\d+\s*$/.test(link[2])) {return block;}
+            changed++;
+            const at = masterEids.indexOf(link[2].trim());
+            const relinked = body.replace(link[0], at >= 0 ? `${link[1]}<linkedTo>${at + 1}</linkedTo>${link[3] ?? ''}` : '');
+            return `<Staff id="${staffId}">${relinked}</Staff>`;
+        });
+    });
+    return { text: result, changed };
+}
+
 function safePath(name: string): boolean {
     return !!name && !/^[/\\]|^[a-z]:|\\|\0|:|[?#]/i.test(name)
         && !name.split('/').some(part => part === '..' || part === '.');
@@ -316,13 +350,25 @@ function inspectInput(bytes: Uint8Array, format: Format, overrides: Partial<Limi
         keySignatures += changed;
         return changed ? encoder.encode(text) : entry;
     };
+    let staffLinks = 0;
     if (files) {
-        for (const name of Object.keys(files)) {if (name.endsWith('.mscx')) {files[name] = convert(files[name]);}}
+        const masterEids = masterStaffEids(decode(xml));
+        for (const name of Object.keys(files)) {
+            if (!name.endsWith('.mscx')) {continue;}
+            files[name] = convert(files[name]);
+            if (!name.startsWith('Excerpts/')) {continue;}
+            const { text, changed } = downgradeExcerptStaffLinks(decode(files[name]), masterEids);
+            staffLinks += changed;
+            if (changed) {files[name] = encoder.encode(text);}
+        }
     } else {
         bytes = convert(bytes);
     }
     if (keySignatures) {
         warnings.push({ code: 'KEY_SIGNATURES_CONVERTED', message: `${keySignatures} key signatures in a newer file format were converted for the MuseScore 4.0 engine.` });
+    }
+    if (staffLinks) {
+        warnings.push({ code: 'PART_STAFF_LINKS_CONVERTED', message: `${staffLinks} part staff links in a newer file format were converted for the MuseScore 4.0 engine.` });
     }
     warnings.push({ code: 'UNVERIFIED_INPUT', message: 'Version/feature fidelity is unverified; import success does not certify preservation.' });
     warnings.push({ code: 'RESOURCE_DIAGNOSTICS_LIMITED', message: 'Missing image paths are rejected; native font substitution and unknown constructs cannot be exhaustively diagnosed.' });

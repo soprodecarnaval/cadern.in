@@ -15,8 +15,11 @@ const zAuto = z.literal("auto");
 export const zFingering = z.object({
   /** Whether the part gets fingerings (piratas). Default: by instrument (008). */
   enabled: z.boolean().optional(),
-  /** Positions 1–7 (default) or valves; valves work for any part, valve trombone included. */
-  notation: z.enum(["positions", "valves"]).optional(),
+  /**
+   * Positions 1–7 (default) or valves; valves work for any part, valve trombone included.
+   * "file": the fingerings the arranger wrote in the file, kept as they are; none are generated.
+   */
+  notation: z.enum(["positions", "valves", "file"]).optional(),
   /** Trombone in positions mode: choose among alternative positions. */
   dynamicTrombone: z.boolean().optional(),
   /** Fingering text size: "auto" fits with the staff, or a Verovio fingering scale. */
