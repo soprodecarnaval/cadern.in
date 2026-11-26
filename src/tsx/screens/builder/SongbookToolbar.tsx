@@ -67,8 +67,8 @@ export function SongbookToolbar(props: SongbookToolsProps) {
         aria-label="Refazer" title="Refazer">
         <UndoIcon mirrored />
       </button>
-      <SortMenuButton value={sortValue} onSort={onSort} disabled={!canMakeSections} />
       <AddSectionMenuButton onAdd={onAddSection} />
+      <SortMenuButton value={sortValue} onSort={onSort} disabled={!canMakeSections} />
       <button type="button" className="songbook-tool" onClick={onMakeSections} disabled={!canMakeSections}
         aria-label="Criar seções por estilo" title="Criar seções por estilo">
         <MakeSectionsIcon />

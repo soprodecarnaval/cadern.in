@@ -38,7 +38,7 @@ export function AddSectionMenuButton({ onAdd }: { onAdd: (title: string) => void
             aria-label="Nome da nova seção" placeholder="Nome da seção" />
           <Button type="submit" className="songbook-add-section-submit"
             aria-label="Adicionar seção" title="Adicionar seção">
-            +
+            <span className="songbook-add-section-plus">+</span>
           </Button>
         </form>
       </Dropdown.Menu>

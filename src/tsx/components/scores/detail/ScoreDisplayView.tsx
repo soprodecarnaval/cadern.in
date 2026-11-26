@@ -3,7 +3,8 @@ import { Button } from "../../../atoms/Button";
 import { useScoreSvg } from "../../../../lib/useSvgUrl";
 import { PartTabs } from "../PartTabs";
 import { useEffect, useId, useRef, useState } from "react";
-import { Badge, Card, Modal, Placeholder } from "react-bootstrap";
+import { Card, Modal, Placeholder } from "react-bootstrap";
+import { Badge } from "../../../atoms/Badge";
 import { SiMidi } from "react-icons/si";
 import type { CommentAnchor } from "../../../../../types/docs";
 import { zScorePlaybackTiming, type PlaybackFrame } from "../../../../../types/scorePlayback";
@@ -123,7 +124,6 @@ function SvgImage({
         onLoad={() => setLoaded(true)}
         style={{
           width: "100%",
-          border: "var(--ds-border) solid var(--ds-ink)",
           background: "var(--ds-paper)",
           display: loaded ? "block" : "none",
           visibility: frameReady ? "hidden" : undefined,
@@ -144,7 +144,8 @@ function SvgImage({
             inset: 0,
             width: "100%",
             height: "100%",
-            border: "var(--ds-border) solid var(--ds-ink)",
+            // No stroke around the page; "none" also drops the iframe's own.
+            border: "none",
             background: "var(--ds-paper)",
             pointerEvents: "none",
             visibility: frameReady ? "visible" : "hidden",
@@ -355,14 +356,14 @@ export function ScoreDisplayView({
               <div className="mb-3">
                 <div className="d-flex align-items-center gap-2 mb-1">
                   <strong>{partLabel}</strong>
-                  {!part.midiUrl && <Badge bg="danger">sem MIDI</Badge>}
+                  {!part.midiUrl && <Badge variant="danger">sem MIDI</Badge>}
                   {part.midiUrl && (
                     <a href={part.midiUrl} target="_blank" rel="noreferrer" aria-label={`Baixar MIDI de ${partLabel}`}>
                       <SiMidi />
                     </a>
                   )}
                   {part.warnings?.map((w, i) => (
-                    <Badge bg="warning" text="dark" key={i}>
+                    <Badge variant="accent" key={i}>
                       {w}
                     </Badge>
                   ))}

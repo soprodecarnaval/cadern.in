@@ -1,6 +1,7 @@
 import { Button } from "../../../atoms/Button";
 import { type ReactNode } from "react";
-import { BsChevronDown, BsChevronRight, BsEye } from "react-icons/bs";
+import { BsChevronDown, BsChevronRight } from "react-icons/bs";
+import { EyeIcon } from "./EyeIcon";
 import { SiMidi, SiMusescore } from "react-icons/si";
 import { PartItemView } from "./PartItemView";
 import { highlightRanges, type HighlightRanges } from "../../../../lib/highlight";
@@ -95,7 +96,7 @@ const ScoreCardView = ({
             aria-label={`Ver detalhes de ${score.title}`}
             onClick={onShowDetail}
           >
-            <BsEye aria-hidden="true" />
+            <EyeIcon />
           </Button>
           {score.latestRevision.midi != "" && (
             <a href={score.latestRevision.midi} target="_blank" rel="noreferrer" aria-label="MIDI">

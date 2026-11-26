@@ -1,5 +1,6 @@
+import { Badge } from "../../../atoms/Badge";
 import type { PartViewModel } from "../../../../../types/viewModels";
 
 export function PartItemView({ part }: { part: PartViewModel }) {
-  return <span className="badge rounded-pill text-bg-light border">{part.instrument}</span>;
+  return <Badge pill>{part.instrument}</Badge>;
 }

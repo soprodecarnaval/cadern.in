@@ -1,6 +1,7 @@
 import { List } from "../../../atoms/List";
 import { useEffect, useState } from "react";
-import { Badge, Spinner } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
+import { Badge } from "../../../atoms/Badge";
 import { Link } from "react-router-dom";
 import { scoreRevisionPath } from "../../../../lib/routes";
 import type { ScoreRevisionDoc } from "../../../../../types/docs";
@@ -91,13 +92,13 @@ export function ScoreRevisionListView({
           </span>
           <span className="d-flex gap-2">
             {showCommentCounts && !!counts.get(rev.id) && (
-              <Badge bg="info">
+              <Badge>
                 {counts.get(rev.id)} comentário
                 {counts.get(rev.id) === 1 ? "" : "s"}
               </Badge>
             )}
-            {rev.kind === "reformat" && <Badge bg="light" text="dark">reformatação</Badge>}
-            {rev.id === latestRevisionId && <Badge bg="secondary">atual</Badge>}
+            {rev.kind === "reformat" && <Badge>reformatação</Badge>}
+            {rev.id === latestRevisionId && <Badge>atual</Badge>}
           </span>
         </List.Item>
       ))}

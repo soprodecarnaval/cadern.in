@@ -158,3 +158,16 @@
 .songbook-row-carried:not(.songbook-row-dragging) > * {
   opacity: 0.55;
 }
+
+/* "Limpar tudo": keyboard focus lifts the button with a hard black shadow,
+   like a focused text field and the Montar toolbar's tools, instead of an
+   outline ring. The class is doubled to win over the shared button focus. */
+.songbook-clear {
+  transition: transform 0.15s;
+}
+
+.songbook-clear.songbook-clear:focus-visible {
+  outline: none;
+  transform: translateY(var(--ds-lift));
+  box-shadow: var(--ds-shadow-raised);
+}

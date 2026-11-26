@@ -1,6 +1,7 @@
 import { Page } from "../../../atoms/Page";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Badge, Col, Row, Spinner } from "react-bootstrap";
+import { Alert, Col, Row, Spinner } from "react-bootstrap";
+import { Badge } from "../../../atoms/Badge";
 import { Link, useParams } from "react-router-dom";
 
 import type { CommentAnchor, ReviewCommentDoc } from "../../../../../types/docs";
@@ -264,7 +265,7 @@ export function SongbookScorePageView({
       <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
         <div className="d-flex align-items-baseline gap-2">
           <h2 className="mb-0">{loaded.title}</h2>
-          {loaded.foreign && <Badge bg="warning">de outro projeto</Badge>}
+          {loaded.foreign && <Badge variant="muted">de outro projeto</Badge>}
         </div>
         {isEditor(role) && (
           <div className="d-flex flex-wrap gap-2">
