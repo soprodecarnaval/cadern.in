@@ -54,6 +54,7 @@ export function resolvePartFormatting(
   partRef: PartRef,
 ): ResolvedPartFormatting {
   const part = partOverride(profile, partRef);
+  const usesFileFingerings = (part.fingering?.notation ?? profile.fingering?.notation) === "file";
   return {
     staffSize: part.staffSize ?? profile.staffSize ?? "auto",
     systemsPerPage: part.systemsPerPage ?? profile.systemsPerPage ?? "auto",
@@ -66,7 +67,8 @@ export function resolvePartFormatting(
       ...profile.fingering,
       ...part.fingering,
     },
-    cleanup: { ...DEFAULT_CLEANUP, ...profile.cleanup, ...part.cleanup },
+    // The file's fingerings stay when the part uses them as its piratas.
+    cleanup: { ...DEFAULT_CLEANUP, ...profile.cleanup, ...part.cleanup, ...(usesFileFingerings ? { fingerings: false } : {}) },
   };
 }
 
