@@ -26,7 +26,7 @@ flowchart TD
     New -->|"After creation"| Settings["Project settings · /:slug/config"]
     Projects --> Project["Project overview · /:slug"]
     Projects --> Settings
-    Project -->|"Open public songbook"| Reader["Public songbook reader · /:slug/:songbookSlug"]
+    Project -->|"Public title link or Ver página pública"| Reader["Public songbook reader · /:slug/:songbookSlug"]
     Project -->|"Manage or create a songbook"| Manage["Manage songbook · /:slug/:songbookSlug/gerenciar"]
     Manage -->|"View public page"| Reader
     Manage -->|"Review a pinned score"| Review["Songbook score review · /:slug/:songbookSlug/gerenciar/partituras/:scoreId"]

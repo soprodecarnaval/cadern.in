@@ -32,6 +32,12 @@ export const Owner: Story = {
     await expect(await canvas.findByText("Ensaios 2027")).toBeVisible();
     await expect(projectServices.getProjectSongbooks).toHaveBeenCalledWith("bloco-exemplo", { publishedOnly: false });
     await expect(canvas.getByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/bloco-exemplo/carnaval/gerenciar");
+    const publicLink = canvas.getByRole("link", { name: "Ver página pública de Carnaval 2026" });
+    await expect(publicLink).toHaveAttribute("href", "/bloco-exemplo/carnaval");
+    await expect(canvas.queryByRole("link", { name: "Ver página pública de Ensaios 2027" })).not.toBeInTheDocument();
+    canvas.getByRole("link", { name: /^Carnaval 2026$/ }).focus();
+    await userEvent.tab();
+    await expect(publicLink).toHaveFocus();
     await expect(canvas.getByRole("link", { name: "Editar Ensaios 2027" })).toHaveAttribute("href", "/bloco-exemplo/ensaios/gerenciar?detalhes&editar");
     await expect(canvas.queryByRole("button", { name: "Publicar Carnaval 2026" })).toBeNull();
     await userEvent.click(canvas.getByRole("button", { name: "Publicar Ensaios 2027" }));
@@ -46,6 +52,7 @@ export const Public: Story = {
     await expect(await canvas.findByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/bloco-exemplo/carnaval");
     await expect(projectServices.getProjectSongbooks).toHaveBeenCalledWith("bloco-exemplo", { publishedOnly: true });
     await expect(canvas.queryByText("Ensaios 2027")).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("link", { name: /Ver página pública/ })).not.toBeInTheDocument();
     await expect(canvas.queryByText("Partituras")).not.toBeInTheDocument();
     await expect(canvas.queryByRole("button", { name: "+ Novo caderninho" })).not.toBeInTheDocument();
   },

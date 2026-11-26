@@ -258,6 +258,11 @@ export function PublicProjectPageView({
                 <td className="text-end">
                   <div className="d-flex flex-wrap align-items-center justify-content-end gap-2">
                     {!sb.isPublished && <small className="text-muted">não publicado</small>}
+                    {isMember && sb.isPublished && (
+                      <Link to={publicSongbookPath(project.id, sb.slug)} size="sm" variant="secondary" aria-label={`Ver página pública de ${sb.title}`}>
+                        Ver página pública
+                      </Link>
+                    )}
                     <Button size="sm" variant="secondary" onClick={() => setPrintBook(sb)} aria-label={`Imprimir ${sb.title}`}>
                       Imprimir
                     </Button>
