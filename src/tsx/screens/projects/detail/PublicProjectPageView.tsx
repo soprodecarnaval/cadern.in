@@ -214,8 +214,8 @@ export function PublicProjectPageView({
       <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
         <h5 className="mb-0">Caderninhos</h5>
         {canManage && currentUser && !creating && songbooks !== null && (
-          <Button variant="secondary" size="sm" onClick={() => setCreating(true)}>
-            + Novo caderninho
+          <Button size="sm" className="project-new-songbook" onClick={() => setCreating(true)}>
+            Novo caderninho
           </Button>
         )}
       </div>

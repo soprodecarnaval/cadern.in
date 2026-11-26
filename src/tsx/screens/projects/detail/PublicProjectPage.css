@@ -7,3 +7,12 @@
   --bs-alert-border-color: var(--ds-surface-disabled);
   --bs-alert-color: var(--ds-ink);
 }
+
+/* As wide as a row's Imprimir and Editar buttons with the gap between them,
+   in line with their right edge (the table cell's 0.5rem padding), and as
+   tall (they have a 3px border, the yellow button 1px). */
+.project-new-songbook.btn {
+  width: 176px;
+  min-height: 38px;
+  margin-right: 0.5rem;
+}
