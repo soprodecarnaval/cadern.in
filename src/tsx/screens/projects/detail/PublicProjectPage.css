@@ -1,0 +1,9 @@
+@import "../../../../styles/tokens.css";
+
+/* "Nenhum caderninho…", "Nenhuma partitura…": the design system's disabled
+   surface grey, not Bootstrap's blue info alert. */
+.alert.project-empty {
+  --bs-alert-bg: var(--ds-surface-disabled);
+  --bs-alert-border-color: var(--ds-surface-disabled);
+  --bs-alert-color: var(--ds-ink);
+}

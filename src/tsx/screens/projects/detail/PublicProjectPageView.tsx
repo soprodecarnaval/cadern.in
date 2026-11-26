@@ -27,6 +27,7 @@ import type {
 import { SongbookPrintDialog, type SongbookPrintServices } from "./SongbookPrintDialog";
 import { CreateSongbookForm } from "./CreateSongbookForm";
 import { resolveScoreMetadata } from "../../../../lib/scoreMetadata";
+import "./PublicProjectPage.css";
 
 const ROLE_LABELS: Record<UserProjectRole, string> = {
   owner: "Dono",
@@ -234,7 +235,7 @@ export function PublicProjectPageView({
       ) : songbooks === null ? (
         <Spinner animation="border" />
       ) : songbooks.length === 0 ? (
-        <Alert variant="info">
+        <Alert variant="info" className="project-empty">
           {isMember
             ? "Nenhum caderninho ainda."
             : "Nenhum caderninho publicado."}
@@ -244,7 +245,7 @@ export function PublicProjectPageView({
           <tbody>
             {songbooks.map((sb) => (
               <tr key={sb.id}>
-                <td>
+                <td className="align-middle">
                   <RouterLink
                     to={
                       isMember
@@ -255,7 +256,7 @@ export function PublicProjectPageView({
                     {sb.title}
                   </RouterLink>
                 </td>
-                <td className="text-end">
+                <td className="text-end align-middle">
                   <div className="d-flex flex-wrap align-items-center justify-content-end gap-2">
                     {!sb.isPublished && <small className="text-muted">não publicado</small>}
                     <Button size="sm" variant="secondary" onClick={() => setPrintBook(sb)} aria-label={`Imprimir ${sb.title}`}>
@@ -306,7 +307,7 @@ export function PublicProjectPageView({
       ) : scoresLoading ? (
         <Spinner animation="border" />
       ) : scores.length === 0 ? (
-        <Alert variant="info">Nenhuma partitura neste projeto.</Alert>
+        <Alert variant="info" className="project-empty">Nenhuma partitura neste projeto.</Alert>
       ) : (
         <Table bordered hover>
           <thead>
