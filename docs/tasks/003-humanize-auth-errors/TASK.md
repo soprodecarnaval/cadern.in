@@ -7,6 +7,9 @@ milestone: auth-improvements
 
 # 003 — Humanize all authentication errors
 
+**On `main`:** [PR #434](https://github.com/soprodecarnaval/cadern.in/pull/434)
+merged as `f70c687e`. Live UI validation is still unrecorded.
+
 ## Objective
 
 All website and exporter auth failures display actionable pt-BR messages instead of Firebase codes.

@@ -7,6 +7,9 @@ milestone: collab-flow
 
 # 007 — Invite project members by email
 
+**On `main`:** [PR #435](https://github.com/soprodecarnaval/cadern.in/pull/435)
+merged as `a8107ea6`. Live UI invitation validation is still unrecorded.
+
 ## Objective
 
 Project invitations use email instead of Firebase displayName.

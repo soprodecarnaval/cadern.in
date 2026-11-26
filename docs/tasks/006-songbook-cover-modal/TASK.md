@@ -103,7 +103,8 @@ removal is a modal draft. Dismissal disabled during Save. Canvas infers the cove
 - No live Firebase upload or revision writes were performed. Persistence failures,
   retries and instrument isolation were checked through mocks/unit tests.
 - Existing protobuf eval/large-bundle build warnings remain.
-- Implementation ready for human acceptance; status remains in-progress.
+- Merged to `main` in [PR #438](https://github.com/soprodecarnaval/cadern.in/pull/438)
+  (`7a7d68d2`). Task acceptance is not recorded here.
 
 ### Initial approved staging set (17 files)
 
