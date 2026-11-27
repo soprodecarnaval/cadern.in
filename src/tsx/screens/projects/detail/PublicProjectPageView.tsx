@@ -191,20 +191,20 @@ export function PublicProjectPageView({
 
   return (
     <Page className="mt-4">
-      <div className="d-flex justify-content-between align-items-start mb-1">
-        <h2>{project.title}</h2>
-        <div className="d-flex gap-2 align-items-center">
+      <div className="d-flex justify-content-between align-items-start mb-1 gap-2 flex-wrap">
+        <div className="d-flex flex-wrap gap-2 align-items-center">
+          <h2 className="mb-0">{project.title}</h2>
           {myRole && (
             <Badge variant="strong">
               {ROLE_LABELS[myRole]}
             </Badge>
           )}
-          {canManage && (
-            <Link to={projectSettingsPath(slug ?? "")} size="sm" variant="secondary">
-                Configurações
-              </Link>
-          )}
         </div>
+        {canManage && (
+          <Link to={projectSettingsPath(slug ?? "")} size="sm" variant="secondary">
+            Configurações
+          </Link>
+        )}
       </div>
       <p className="text-muted mb-4">
         <small>/{project.slug}</small>
