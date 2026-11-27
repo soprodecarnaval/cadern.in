@@ -45,7 +45,7 @@ export function ReviewCommentsPanelView({
 
   scoreId: string;
   revisionId: string;
-  user: User;
+  user: User | null;
   threads: CommentThread[];
   selectedId: string | null;
   picking: boolean;
@@ -69,6 +69,7 @@ export function ReviewCommentsPanelView({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) { return; }
     setPending(true);
     setError("");
     try {
@@ -97,7 +98,7 @@ export function ReviewCommentsPanelView({
   return (
     <div>
       <h5>Comentários ({live})</h5>
-      <Form onSubmit={(e) => void handleSubmit(e)} className="mb-3">
+      {user ? <Form onSubmit={(e) => void handleSubmit(e)} className="mb-3">
         <Form.Control as={TextArea}
           rows={3}
           value={body}
@@ -129,7 +130,7 @@ export function ReviewCommentsPanelView({
           </Button>
         </div>
         {error && <div className="text-danger small mt-1">{error}</div>}
-      </Form>
+      </Form> : <p className="text-muted small">Entre na sua conta para comentar.</p>}
 
       {threads.length === 0 && (
         <p className="text-muted small">Nenhum comentário nesta versão.</p>
@@ -180,14 +181,14 @@ export function ReviewCommentsPanelView({
                 onChanged={onChanged}
               />
             ))}
-            <ReplyForm
+            {user && <ReplyForm
               services={services}
               scoreId={scoreId}
               revisionId={revisionId}
               rootId={thread.root.id}
               user={user}
               onChanged={onChanged}
-            />
+            />}
           </div>
         </div>
       ))}
@@ -210,13 +211,13 @@ function CommentItem({
   scoreId: string;
   revisionId: string;
   comment: Comment;
-  user: User;
+  user: User | null;
   label?: React.ReactNode;
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body);
-  const mine = comment.authorId === user.uid;
+  const mine = comment.authorId === user?.uid;
 
   if (comment.deletedAt) {
     return (

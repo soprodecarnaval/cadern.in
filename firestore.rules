@@ -191,6 +191,12 @@ service cloud.firestore {
       );
     }
 
+    match /projects/{projectId}/scoreReviewRequests/{requestId} {
+      allow read: if isReviewer(projectId);
+      // Mutations are transactional and authorized in the callable.
+      allow write: if false;
+    }
+
     match /scores/{scoreId} {
       allow read: if true;
       // Created before its first revision, so storage rules can resolve the
@@ -252,11 +258,18 @@ service cloud.firestore {
             getAfter(scorePath(scoreId)).data.latestRevisionId == revisionId;
         }
 
-        // Review comments on this version (collab-flow §2.4): members only.
+        // Review comments belong to this score revision, not a songbook.
         // Threads are one level deep; only roots may carry an anchor.
         match /comments/{commentId} {
-          allow read: if isReviewer(get(scorePath(scoreId)).data.projectId);
-          allow create: if isReviewer(get(scorePath(scoreId)).data.projectId) &&
+          function canReadThread() {
+            let score = get(scorePath(scoreId)).data;
+            return score.get('deletedAt', null) == null && alive(score.projectId) &&
+              (score.get('published', null) != null || isReviewer(score.projectId));
+          }
+
+          allow read: if canReadThread();
+          allow create: if request.auth != null && canReadThread() &&
+            exists(/databases/$(database)/documents/scores/$(scoreId)/scoreRevisions/$(revisionId)) &&
             request.resource.data.keys().hasOnly(['authorId', 'authorName',
               'body', 'parentId', 'anchor', 'createdAt', 'updatedAt',
               'deletedAt']) &&
@@ -267,7 +280,7 @@ service cloud.firestore {
           // Authors edit or soft-delete their own; nobody else writes.
           allow update: if request.auth != null &&
             resource.data.authorId == request.auth.uid &&
-            isReviewer(get(scorePath(scoreId)).data.projectId) &&
+            canReadThread() &&
             onlyUpdatingFields(['body', 'updatedAt', 'deletedAt']) &&
             validBody();
           allow delete: if false;

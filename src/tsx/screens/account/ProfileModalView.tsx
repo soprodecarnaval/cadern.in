@@ -11,6 +11,9 @@ import type { WithId } from "../../../lib/db";
 import { displayNameOf, initialsOf } from "../../../lib/displayName";
 import "../../atoms/Modal.css";
 import { resizeImage } from "../../../utils/image";
+import type { ScoreReviewRequest } from "../../../lib/scoreReviewRequests";
+import { scoreRevisionPath } from "../../../lib/routes";
+import { Link } from "../../atoms/Link";
 
 export type ProfileModalServices = Pick<
   typeof import("../../../lib/db"),
@@ -23,17 +26,21 @@ export type ProfileModalServices = Pick<
     "updateDisplayName" | "updateAvatar" | "changePassword" | "logout"
   >;
 
+type InboxServices = ProfileModalServices & {
+  listPendingScoreReviewRequests?: (uid: string) => Promise<ScoreReviewRequest[]>;
+};
+
 export type ProfileTab = "profile" | "inbox" | "password";
 
 interface ProfileModalViewProps {
-  services: ProfileModalServices;
+  services: InboxServices;
   currentUser: import("firebase/auth").User | null;
   show: boolean;
   onHide: () => void;
   /** The tab shown each time the modal opens. Defaults to the profile. */
   initialTab?: ProfileTab;
   inboxCount?: number;
-  onInboxCountChange?: (count: number) => void;
+  onInvitationCountChange?: (count: number) => void;
 }
 
 export function ProfileModalView({
@@ -43,7 +50,7 @@ export function ProfileModalView({
   onHide,
   initialTab = "profile",
   inboxCount,
-  onInboxCountChange,
+  onInvitationCountChange,
 }: ProfileModalViewProps) {
   const [tab, setTab] = useState<string>(initialTab);
 
@@ -58,6 +65,20 @@ export function ProfileModalView({
   >([]);
   const [inboxLoading, setInboxLoading] = useState(false);
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
+  const [reviewRequests, setReviewRequests] = useState<ScoreReviewRequest[] | null>(null);
+  const [reviewError, setReviewError] = useState(false);
+
+  useEffect(() => {
+    setReviewRequests(null);
+    setReviewError(false);
+    if (!show || !currentUser || tab !== "inbox" || !services.listPendingScoreReviewRequests) { return; }
+    let active = true;
+    void services.listPendingScoreReviewRequests(currentUser.uid).then(
+      (reviews) => { if (active) { setReviewRequests(reviews); } },
+      () => { if (active) { setReviewError(true); } },
+    );
+    return () => { active = false; };
+  }, [show, currentUser, tab, services]);
 
   useEffect(() => {
     if (!currentUser || tab !== "inbox") {
@@ -83,7 +104,7 @@ export function ProfileModalView({
       await action(inv);
       const updated = invitations.filter((i) => i.projectId !== inv.projectId);
       setInvitations(updated);
-      onInboxCountChange?.(updated.length);
+      onInvitationCountChange?.(updated.length);
     } finally {
       setRespondingTo(null);
     }
@@ -259,7 +280,7 @@ export function ProfileModalView({
           </Tab>
           <Tab
             eventKey="inbox"
-            title={inboxCount ? `Convites (${inboxCount})` : "Convites"}
+            title={inboxCount ? `Caixa de entrada (${inboxCount})` : "Caixa de entrada"}
           >
             {inboxLoading ? (
               <Spinner animation="border" size="sm" />
@@ -293,6 +314,24 @@ export function ProfileModalView({
                   </div>
                 ))}
               </div>
+            )}
+            {services.listPendingScoreReviewRequests && (
+              <section className="mt-3" aria-label="Solicitações de revisão">
+                <h3 className="h5">Solicitações de revisão</h3>
+                {reviewError ? <p role="alert">Não foi possível carregar as revisões.</p> :
+                  reviewRequests === null ? <p role="status">Carregando revisões…</p> :
+                  reviewRequests.length === 0 ? <p>Nenhuma revisão pendente.</p> : (
+                    <ul>
+                      {reviewRequests.map((request) => (
+                        <li key={`${request.projectId}/${request.id}`}>
+                          <Link size="sm" to={scoreRevisionPath(request.scoreId, request.revisionId)} onClick={onHide}>
+                            Revisar partitura: {request.scoreId}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+              </section>
             )}
           </Tab>
           <Tab eventKey="password" title="Alterar senha">

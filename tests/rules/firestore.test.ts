@@ -1099,7 +1099,25 @@ describe("invitations", () => {
   });
 });
 
+describe("score review requests", () => {
+  it("allows members to query requests, but forbids direct client writes and public reads", async () => {
+    await seedProject(testEnv());
+    const path = ["projects", PROJECT, "scoreReviewRequests"] as const;
+    await seed((db) => setDoc(doc(db, ...path, "request"), {
+      scoreId: SCORE, revisionId: "1", assigneeId: REVIEWER, status: "pending",
+    }));
+    await assertSucceeds(getDocs(query(collection(as(REVIEWER), ...path), where("assigneeId", "==", REVIEWER))));
+    await assertFails(getDoc(doc(as(OUTSIDER), ...path, "request")));
+    await assertFails(getDoc(doc(as(null), ...path, "request")));
+    await assertFails(updateDoc(doc(as(OWNER), ...path, "request"), { status: "dismissed" }));
+  });
+});
+
 describe("review comments", () => {
+  const seedScore = async () => {
+    await seedProject(testEnv());
+    await seed((db) => setDoc(doc(db, "scores", SCORE, "scoreRevisions", "1"), {}));
+  };
   const ref = (db: Firestore, id = "c1") =>
     doc(db, "scores", SCORE, "scoreRevisions", "1", "comments", id);
   const comment = (authorId: string, extra: Record<string, unknown> = {}) => ({
@@ -1115,15 +1133,26 @@ describe("review comments", () => {
     seed((db) => setDoc(ref(db, "root"), comment(REVIEWER)));
 
   it("lets any member comment, pinned or on the whole version", async () => {
-    await seedProject(testEnv());
+    await seedScore();
     await assertSucceeds(setDoc(ref(as(REVIEWER)), comment(REVIEWER)));
     await assertSucceeds(
       setDoc(ref(as(EDITOR), "c2"), comment(EDITOR, { anchor: null })),
     );
   });
 
+  it("denies comments on nonexistent revisions of public scores", async () => {
+    await seedScore();
+    await seed((db) => updateDoc(doc(db, "scores", SCORE), {
+      published: { revisionId: "1" },
+    }));
+    await assertFails(setDoc(
+      doc(as(OUTSIDER), "scores", SCORE, "scoreRevisions", "missing", "comments", "c1"),
+      comment(OUTSIDER),
+    ));
+  });
+
   it("denies outsiders, impersonation and empty or malformed comments", async () => {
-    await seedProject(testEnv());
+    await seedScore();
     await assertFails(setDoc(ref(as(OUTSIDER)), comment(OUTSIDER)));
     await assertFails(setDoc(ref(as(EDITOR)), comment(REVIEWER)));
     await assertFails(setDoc(ref(as(EDITOR)), comment(EDITOR, { body: "" })));
@@ -1149,7 +1178,7 @@ describe("review comments", () => {
   });
 
   it("allows replies to roots only, without an anchor", async () => {
-    await seedProject(testEnv());
+    await seedScore();
     await seedRoot();
     await assertSucceeds(
       setDoc(
@@ -1174,12 +1203,25 @@ describe("review comments", () => {
     );
   });
 
-  it("restricts reading to members", async () => {
+  it("restricts reading private score discussions to members", async () => {
     await seedProject(testEnv());
     await seedRoot();
     await assertSucceeds(getDoc(ref(as(REVIEWER), "root")));
     await assertFails(getDoc(ref(as(OUTSIDER), "root")));
     await assertFails(getDoc(ref(as(null), "root")));
+  });
+
+  it("lets anyone read public score discussions and signed-in outsiders comment", async () => {
+    await seedScore();
+    await seedRoot();
+    await seed((db) => updateDoc(doc(db, "scores", SCORE), {
+      published: { revisionId: "1" },
+    }));
+    await assertSucceeds(getDoc(ref(as(null), "root")));
+    await assertFails(setDoc(ref(as(null)), comment(OUTSIDER)));
+    await assertSucceeds(setDoc(ref(as(OUTSIDER)), comment(OUTSIDER)));
+    await assertSucceeds(updateDoc(ref(as(OUTSIDER)), { body: "Novo comentário" }));
+    await assertFails(updateDoc(ref(as(OUTSIDER), "root"), { body: "Outro autor" }));
   });
 
   it("lets authors edit and soft-delete their own, and nobody else", async () => {

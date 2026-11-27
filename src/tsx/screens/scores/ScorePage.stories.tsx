@@ -31,8 +31,11 @@ export const Review: Story = {};
 export const Public: Story = {
   args: { currentUser: null },
   play: async ({ canvasElement }) => {
-    const link = await within(canvasElement).findByRole("link", { name: loadedScore.projectTitle });
+    const canvas = within(canvasElement);
+    const link = await canvas.findByRole("link", { name: loadedScore.projectTitle });
     await expect(link).toHaveAttribute("href", projectPath(loadedScore.projectId));
+    await expect(await canvas.findByText("Entre na sua conta para comentar.")).toBeVisible();
+    await expect(canvas.queryByRole("textbox")).not.toBeInTheDocument();
   },
 };
 export const Legacy: Story = { args: { collabEnabled: false } };
