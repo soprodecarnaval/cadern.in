@@ -1,6 +1,6 @@
 import { Dropdown } from "react-bootstrap";
 import { BsCheck } from "react-icons/bs";
-import { SORT_OPTIONS } from "../../components/scores/sortOptions";
+import { SORT_OPTIONS } from "../../../scores/sortOptions";
 import "./SongbookToolbar.css";
 import { SortIcon } from "./toolbarIcons";
 

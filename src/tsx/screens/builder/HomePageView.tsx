@@ -1,10 +1,11 @@
 import { Page } from "../../atoms/Page";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ScoreSearchResultsView } from "./search/ScoreSearchResultsView";
 import { SearchBarView } from "./search/SearchBarView";
-import { ColumnDivider, type CollapsedSide } from "./ColumnDivider";
-import { SongbookToolbar } from "./SongbookToolbar";
+import { ColumnDivider, type CollapsedSide } from "../../components/songbooks/editor/ColumnDivider";
+import { SongbookEditorList, SongbookEditorToolbar } from "../../components/songbooks/editor/SongbookEditor";
+import { useSongbookEditor } from "../../components/songbooks/editor/useSongbookEditor";
 import {
   filterOptions,
   filterScores,
@@ -13,29 +14,11 @@ import {
 } from "./search/resultsFilter";
 import "./MontarColumns.css";
 import { SongbookDragProvider } from "../../components/songbooks/editor/SongbookDragProvider";
-import type {
-  SectionsCollapsed,
-  SongbookSortableListHandle,
-} from "../../components/songbooks/editor/SongbookSortableList";
-import { SongBookTableView } from "../../components/songbooks/editor/SongBookTableView";
 
 import { sortByColumn, SortColumn, SortDirection } from "../../../utils/sort";
-import {
-  generateSectionsByStyle,
-  sortSongsWithinSections,
-} from "../../../utils/songBookRows";
-import { parseSortValue } from "../../components/scores/sortOptions";
-import { useUndoableState } from "../../../lib/useUndoableState";
 
-import type {
-  ScoreViewModel,
-  SongbookItemViewModel,
-} from "../../../../types/viewModels";
-import {
-  isSongbookSection,
-  songbookScore,
-  songbookSection,
-} from "../../../lib/songbook";
+import type { ScoreViewModel } from "../../../../types/viewModels";
+import { isSongbookSection } from "../../../lib/songbook";
 
 import "bootstrap/dist/css/bootstrap.css";
 import "../../../styles/app.css";
@@ -69,19 +52,14 @@ export function HomePageView({
     },
     [],
   );
-  // The Caderninho's rows, with undo/redo through the toolbar.
-  const history = useUndoableState<SongbookItemViewModel[]>([]);
-  const { value: items, set: setItems, reset: resetItems } = history;
-  const [sectionsCollapsed, setSectionsCollapsed] = useState<SectionsCollapsed>("none");
-  // The Caderninho's sort last applied from the toolbar; cleared once the
-  // order changes some other way.
-  const [songbookSort, setSongbookSort] = useState("");
+  // The Caderninho, shared with a songbook's edit screen.
+  const editor = useSongbookEditor([]);
+  const { items, history: { reset: resetItems } } = editor;
   const { status, allScores } = collection;
   const [restored, setRestored] = useState(false);
   const [showSave, setShowSave] = useState(false);
   // Resultados (left) or Caderninho (right) hidden by the column divider.
   const [collapsed, setCollapsed] = useState<CollapsedSide>(null);
-  const songbookRef = useRef<SongbookSortableListHandle>(null);
   const [sort, setSort] = useState<{
     column: SortColumn;
     direction: SortDirection;
@@ -118,9 +96,6 @@ export function HomePageView({
     }
   };
 
-  const handleSelectSong = (song: ScoreViewModel, checked: boolean) => {
-    checked ? handleAddScore(song) : handleRemoveScore(song);
-  };
 
   // Resultados' filters, chosen from the styles and arrangements among the
   // songs found (and not yet in the Caderninho).
@@ -137,21 +112,6 @@ export function HomePageView({
     return sort ? sortByColumn(filtered, sort.column, sort.direction) : filtered;
   }, [available, filters, sort]);
 
-  const clearSelected = () => setItems([]);
-
-  const handleAddScore = (score: ScoreViewModel, index?: number) => {
-    setItems((prev) => {
-      const next = [...prev];
-      next.splice(index ?? next.length, 0, songbookScore(score));
-      return next;
-    });
-  };
-
-  const handleRemoveScore = (score: ScoreViewModel) => {
-    setItems(
-      items.filter((r) => isSongbookSection(r) || r.score.id !== score.id),
-    );
-  };
 
   const handleResultsSortBy = (
     column: SortColumn,
@@ -164,9 +124,9 @@ export function HomePageView({
     <>
       <Page>
         <SongbookDragProvider
-          songbookRef={songbookRef}
-          onAddAt={handleAddScore}
-          onRemove={handleRemoveScore}
+          songbookRef={editor.listRef}
+          onAddAt={editor.add}
+          onRemove={editor.remove}
         >
           <div
             className={
@@ -184,27 +144,9 @@ export function HomePageView({
             </div>
             <div className="montar-cell montar-generate">
               <div className="montar-actions">
-                <SongbookToolbar
-                  canUndo={history.canUndo}
-                  canRedo={history.canRedo}
-                  onUndo={() => { history.undo(); setSongbookSort(""); }}
-                  onRedo={() => { history.redo(); setSongbookSort(""); }}
-                  canMakeSections={items.some((item) => !isSongbookSection(item))}
-                  onMakeSections={() => {
-                    setItems(generateSectionsByStyle(items));
-                    setSongbookSort("");
-                  }}
-                  onAddSection={(title) => setItems([...items, songbookSection(title)])}
-                  sortValue={songbookSort}
-                  onSort={(value) => {
-                    setItems(sortSongsWithinSections(items, ...parseSortValue(value)));
-                    setSongbookSort(value);
-                  }}
-                  sectionsCollapsed={sectionsCollapsed}
-                  canSave={items.length > 0}
+                <SongbookEditorToolbar
+                  editor={editor}
                   onSave={collabEnabled ? handleSave : undefined}
-                  onSetAllCollapsed={(collapse) =>
-                    songbookRef.current?.setAllSectionsCollapsed(collapse)}
                 />
               </div>
             </div>
@@ -221,33 +163,21 @@ export function HomePageView({
                 results={results}
                 searchQuery={searchQuery}
                 onSortBy={handleResultsSortBy}
-                onSelectSong={handleSelectSong}
+                onSelectSong={editor.select}
                 filter={{ options: availableFilters, value: filters, onChange: setFilters }}
               />
             </div>
             <div className="montar-cell montar-songbook">
-              <h3 className="results">Caderninho</h3>
-              {currentUser && showSave && (
-                <components.SaveSongbookModal
-                  show
-                  user={currentUser}
-                  items={items}
-                  onHide={() => setShowSave(false)}
-                />
-              )}
-              <SongBookTableView
-                Card={components.Card}
-                ref={songbookRef}
-                rows={items}
-                setItems={setItems}
-                handleSelect={handleSelectSong}
-                handleClear={clearSelected}
-                showSectionsByStyle={false}
-                showSort={false}
-                showAddSection={false}
-                onManualReorder={() => setSongbookSort("")}
-                onSectionsCollapsedChange={setSectionsCollapsed}
-              />
+              <SongbookEditorList editor={editor} Card={components.Card}>
+                {currentUser && showSave && (
+                  <components.SaveSongbookModal
+                    show
+                    user={currentUser}
+                    items={items}
+                    onHide={() => setShowSave(false)}
+                  />
+                )}
+              </SongbookEditorList>
             </div>
           </div>
         </SongbookDragProvider>

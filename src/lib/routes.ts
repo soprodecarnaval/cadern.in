@@ -107,6 +107,10 @@ export const songbookPath = (projectSlug: string, songbookSlug: string) =>
 export const songbookEditPath = (projectSlug: string, songbookSlug: string) =>
   `${songbookPath(projectSlug, songbookSlug)}?detalhes&editar`;
 
+/** The workspace's details: the songbook's PDFs, covers and versions. */
+export const songbookDetailsPath = (projectSlug: string, songbookSlug: string) =>
+  `${songbookPath(projectSlug, songbookSlug)}?detalhes`;
+
 /** Review for one entry's pinned revision, scoped to this songbook (009). */
 export const songbookScorePath = (
   projectSlug: string,

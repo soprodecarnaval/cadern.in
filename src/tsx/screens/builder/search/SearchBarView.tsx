@@ -1,12 +1,10 @@
-import { Input } from "../../../atoms/Input";
 import { useState, useEffect } from "react";
-import { Row, Col, Form } from "react-bootstrap";
+import { Row, Col } from "react-bootstrap";
 
 import type { ScoreViewModel } from "../../../../../types/viewModels";
 import type { CollectionStatus } from "../../../../useCollectionContext";
 
-import searchIcon from "../../../../assets/brand/search.svg";
-import "./SearchBar.css";
+import { SearchField } from "./SearchField";
 
 interface SearchBarViewProps {
   status: CollectionStatus;
@@ -28,37 +26,11 @@ const SearchBarView = ({
     handleResults(search(searchInput), searchInput);
   }, [searchInput, status, handleResults, search]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchInput(e.target.value);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-    }
-  };
-
   return (
     <Row className="mt-4">
       <Col>
-        <Form className="d-flex">
-          <div className="search-field">
-            <img src={searchIcon} alt="" className="search-field-icon" />
-            <Form.Control as={Input}
-              type="search"
-              placeholder="Procurar por título, arranjo ou tags"
-              aria-label="Search"
-              disabled={status !== "ready"}
-              onKeyDown={handleKeyDown}
-              value={searchInput}
-              onChange={handleChange}
-            />
-          </div>
-        </Form>
+        <SearchField value={searchInput} onChange={setSearchInput} disabled={status !== "ready"} />
       </Col>
-      <small className="text-muted lh-sm mt-2 mb-2">
-        Para busca exata, use aspas e chapéuzinho (ex: "^carnaval bh 2024")
-      </small>
     </Row>
   );
 };

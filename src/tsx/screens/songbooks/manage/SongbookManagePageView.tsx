@@ -2,10 +2,11 @@ import { Select } from "../../../atoms/Select";
 import { Page } from "../../../atoms/Page";
 import { List } from "../../../atoms/List";
 import { Input } from "../../../atoms/Input";
+import { Modal } from "../../../atoms/Modal";
 import { Button } from "../../../atoms/Button";
 import { CardPointerSensor } from "../../../../lib/cardPointerSensor";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Form, Spinner, Table } from "react-bootstrap";
 import { Badge } from "../../../atoms/Badge";
 import {
@@ -31,7 +32,6 @@ import {
   hasNewerVersion,
   isSongbookSection,
   repinnedContent,
-  songbookScore,
   songbookScoreVersionLabel,
   toSongbookRevisionContent,
 } from "../../../../lib/songbook";
@@ -54,10 +54,26 @@ import { AddButton } from "../../../components/scores/AddButton";
 import { DragHandle } from "../../../components/songbooks/editor/DragHandle";
 
 import { substringRange } from "../../../../lib/highlight";
-import { SongBookTableView } from "../../../components/songbooks/editor/SongBookTableView";
 
 import { SongbookDragProvider } from "../../../components/songbooks/editor/SongbookDragProvider";
-import type { SongbookSortableListHandle } from "../../../components/songbooks/editor/SongbookSortableList";
+import { ColumnDivider, type CollapsedSide } from "../../../components/songbooks/editor/ColumnDivider";
+import "./SongbookEditColumns.css";
+import { SearchField } from "../../builder/search/SearchField";
+import { createCollectionSearch } from "../../../../lib/collectionSearch";
+import { PaginationBar } from "../../../components/pagination/PaginationBar";
+import { SortMenuButton } from "../../../components/songbooks/editor/toolbar/SortMenuButton";
+import { parseSortValue } from "../../../components/scores/sortOptions";
+import { FilterMenuButton } from "../../builder/search/FilterMenuButton";
+import {
+  filterCount,
+  filterOptions,
+  filterScores,
+  NO_FILTERS,
+  type ResultsFilters,
+} from "../../builder/search/resultsFilter";
+import { sortByColumn } from "../../../../utils/sort";
+import { SongbookEditorList, SongbookEditorToolbar } from "../../../components/songbooks/editor/SongbookEditor";
+import { useSongbookEditor } from "../../../components/songbooks/editor/useSongbookEditor";
 
 import { buildSongbookSections } from "../../../../lib/pdfGeneration";
 
@@ -605,28 +621,18 @@ function SongbookEditor({
   initialItems: SongbookItemViewModel[];
   onDone: (saved: boolean) => void;
 }) {
-  const [items, setItems] = useState(initialItems);
+  // Montar's Caderninho editor.
+  const editor = useSongbookEditor(initialItems);
+  const { items } = editor;
   const [note, setNote] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-
-  const songbookRef = useRef<SongbookSortableListHandle>(null);
-
-  const handleSelect = (
-    score: ScoreViewModel,
-    checked: boolean,
-    index?: number,
-  ) =>
-    setItems((prev) => {
-      if (!checked) {
-        return prev.filter(
-          (r) => isSongbookSection(r) || r.score.id !== score.id,
-        );
-      }
-      const next = [...prev];
-      next.splice(index ?? next.length, 0, songbookScore(score));
-      return next;
-    });
+  // Partituras (left) or Caderninho (right) hidden by the column divider.
+  const [collapsed, setCollapsed] = useState<CollapsedSide>(null);
+  // The toolbar's save button opens "Salvar versão", with its note.
+  const [showSave, setShowSave] = useState(false);
+  // Montar's search, over the scores Partituras offers.
+  const [query, setQuery] = useState("");
 
   const handleSave = async () => {
     if (!currentUser) {
@@ -635,9 +641,20 @@ function SongbookEditor({
     setPending(true);
     setError("");
     try {
+      // Covers belong to each version: carry over the current one's. Read
+      // fresh, since saving a cover on this page makes a version of its own.
+      const latest = await services.getSongbook(songbook.projectId, songbook.slug);
+      const current = latest && await services.getSongbookRevision(
+        songbook.id,
+        latest.currentRevisionId,
+      );
+      if (!current) {
+        // Saving without them would drop the covers.
+        throw new Error("Não foi possível ler a versão atual. Tente novamente.");
+      }
       await services.createSongbookRevision(
         songbook.id,
-        toSongbookRevisionContent(items),
+        toSongbookRevisionContent(items, current.covers),
         {
           createdBy: currentUser.uid,
           note: note.trim(),
@@ -653,60 +670,89 @@ function SongbookEditor({
   return (
     <>
       <SongbookDragProvider
-        songbookRef={songbookRef}
-        onAddAt={(score, index) => handleSelect(score, true, index)}
-        onRemove={(score) => handleSelect(score, false)}
+        songbookRef={editor.listRef}
+        onAddAt={editor.add}
+        onRemove={editor.remove}
       >
-        <div className="row">
-          <div className="col-sm-6">
-            <h5>Partituras</h5>
+        <div
+          className={
+            collapsed
+              ? `songbook-edit-columns is-${collapsed}-collapsed`
+              : "songbook-edit-columns"
+          }
+        >
+          {/* As on Montar: the search box and the toolbar share the top row,
+              Partituras and the Caderninho the one below. */}
+          <div className="songbook-edit-cell songbook-edit-search">
+            <SearchField value={query} onChange={setQuery} />
+          </div>
+          <div className="songbook-edit-cell songbook-edit-toolbar">
+            <SongbookEditorToolbar
+              editor={editor}
+              saveLabel="Salvar versão"
+              canSave
+              onSave={() => setShowSave(true)}
+            />
+          </div>
+          <div className="songbook-edit-cell songbook-edit-picker">
             <ScorePicker
               services={services}
               currentUser={currentUser}
               components={components}
               projectId={projectId}
               selected={items}
-              onAdd={(score) => handleSelect(score, true)}
+              query={query}
+              onAdd={(score) => editor.add(score)}
             />
           </div>
-          <div className="col-sm-6">
-            <h5>Caderninho</h5>
-            <SongBookTableView
+          <ColumnDivider
+            collapsed={collapsed}
+            onChange={setCollapsed}
+            leftLabel="Partituras"
+            rightLabel="Caderninho"
+          />
+          <div className="songbook-edit-cell songbook-edit-songbook">
+            <SongbookEditorList
+              editor={editor}
               Card={components.ScoreCard}
-              songbookProjectId={songbook.projectId}
-              ref={songbookRef}
-              rows={items}
-              setItems={setItems}
-              handleSelect={handleSelect}
-              handleClear={() => setItems([])}
+              countAction={
+                // Leaves editing without saving.
+                <Button variant="secondary" onClick={() => onDone(false)}>
+                  Cancelar
+                </Button>
+              }
             />
           </div>
         </div>
       </SongbookDragProvider>
-      <div className="row">
-        <div className="col-sm-6" />
-        <div className="col-sm-6">
+      <Modal
+        show={showSave}
+        onHide={() => { if (!pending) { setShowSave(false); } }}
+        aria-labelledby="songbook-save-version-title"
+        centered
+      >
+        <Modal.Header closeButton closeLabel="Fechar">
+          <Modal.Title id="songbook-save-version-title">Salvar versão</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
           <Form.Control as={Input}
-            className="mt-3"
+            aria-label="O que mudou nesta versão? (opcional)"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="O que mudou nesta versão? (opcional)"
+            autoFocus
           />
-          <div className="d-flex gap-2 mt-2">
-            <Button disabled={pending} onClick={() => void handleSave()}>
-              {pending ? (
-                <Spinner animation="border" size="sm" />
-              ) : (
-                "Salvar versão"
-              )}
-            </Button>
-            <Button variant="secondary" onClick={() => onDone(false)}>
-              Cancelar
-            </Button>
-          </div>
-          {error && <div className="text-danger mt-2">{error}</div>}
-        </div>
-      </div>
+          {error && <div className="text-danger mt-2" role="alert">{error}</div>}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" disabled={pending} onClick={() => setShowSave(false)}>
+            Cancelar
+          </Button>
+          <Button disabled={pending} onClick={() => void handleSave()}>
+            {pending ? <Spinner animation="border" size="sm" /> : "Salvar versão"}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 }
@@ -715,12 +761,13 @@ interface PickerScore {
   doc: WithId<ScoreDoc>;
   title: string;
   composer: string;
+  tags: string[];
   projectTitle: string;
   songbooks: string[];
 }
 
-// Enough to find a score by filtering; rendering every score would be slow.
-const PICKER_LIMIT = 100;
+// Scores per page, as Montar's Resultados.
+const PICKER_PAGE_SIZE = 10;
 
 /**
  * Linked scores are grouped per project, with the newest descendant first.
@@ -732,6 +779,7 @@ function ScorePicker({
 
   projectId,
   selected,
+  query,
   onAdd,
 }: {
   services: SongbookManagePageServices;
@@ -744,12 +792,25 @@ function ScorePicker({
 
   projectId: string;
   selected: SongbookItemViewModel[];
+  /** What the search box above holds. */
+  query: string;
   onAdd: (score: ScoreViewModel) => void;
 }) {
   const uid = currentUser?.uid;
   const [groups, setGroups] = useState<PickerScore[][] | null>(null);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  // A new search starts on the first page.
+  useEffect(() => setCurrentPage(1), [query]);
+  // Montar's search over every version, also matching songbook names.
+  const versionSearch = useMemo(() => {
+    const versions = (groups ?? []).flatMap((versions, group) =>
+      versions.map((version) => ({ ...version, group })));
+    return createCollectionSearch(versions, ["songbooks"]);
+  }, [groups]);
+  // Montar's "Filtrar" and "Ordenar por", beside the pages.
+  const [filters, setFilters] = useState<ResultsFilters>(NO_FILTERS);
+  const [sortValue, setSortValue] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -852,31 +913,33 @@ function ScorePicker({
   if (!groups) {
     return <Spinner animation="border" size="sm" />;
   }
-  const needle = filter.trim().toLocaleLowerCase("pt-BR");
-  const matches = groups.filter(
-    (versions) =>
-      versions.some((s) => !selectedIds.has(s.doc.id)) &&
-      versions.some((s) =>
-        `${s.title} ${s.composer} ${s.projectTitle} ${s.songbooks.join(" ")}`
-          .toLocaleLowerCase("pt-BR")
-          .includes(needle),
-      ),
-  );
+  // For highlighting: the words searched, without Montar's exact-search marks.
+  const needle = query.replace(/["^']/g, "").trim().toLocaleLowerCase("pt-BR");
+  // The groups with a matching version, best match first (as listed when
+  // nothing is searched), leaving out those already all in the songbook.
+  const matchedGroups = [...new Set(versionSearch.search(query.trim()).map((s) => s.group))];
+  const matches = matchedGroups
+    .map((group) => groups[group])
+    .filter((versions) => versions.some((s) => !selectedIds.has(s.doc.id)));
+  // Filtered and sorted by each group's newest version, as it is shown.
+  const rows = matches.map((versions) => ({ ...versions[0], versions }));
+  const filterChoices = filterOptions(rows);
+  const filtered = filterScores(rows, filters);
+  const shown = (sortValue ? sortByColumn(filtered, ...parseSortValue(sortValue)) : filtered)
+    .map((row) => row.versions);
+  const filtering = filterCount(filters) > 0;
+  const maxNumberPages = Math.max(1, Math.ceil(shown.length / PICKER_PAGE_SIZE));
+  const page = Math.min(currentPage, maxNumberPages);
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(Number.isFinite(pageNumber) ? Math.max(1, Math.min(pageNumber, maxNumberPages)) : 1);
+  };
 
   return (
     <>
-      <Form.Control as={Input}
-        className="mb-2"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        placeholder="Filtrar por título, compositor, projeto ou caderninho"
-      />
-      <div
-        ref={dropRef}
-        className="score-card-list"
-        style={{ maxHeight: 480, overflowY: "auto" }}
-      >
-        {matches.slice(0, PICKER_LIMIT).map((versions) => (
+      {/* As Montar's "Resultados". */}
+      <h3 className="results songbook-editor-title">Partituras</h3>
+      <div ref={dropRef} className="score-card-list">
+        {shown.slice((page - 1) * PICKER_PAGE_SIZE, page * PICKER_PAGE_SIZE).map((versions) => (
           <ScorePickerVersions
             services={services}
             components={components}
@@ -887,13 +950,31 @@ function ScorePicker({
             onAdd={handleAdd}
           />
         ))}
+        {shown.length === 0 && filtering && (
+          <p className="text-muted m-0">Nenhuma música com esses filtros.</p>
+        )}
       </div>
-      {matches.length > PICKER_LIMIT && (
-        <p className="text-muted small mt-1">
-          Mostrando {PICKER_LIMIT} de {matches.length}. Filtre para ver as
-          outras.
-        </p>
-      )}
+      {/* As Montar's Resultados: the pages, only when the scores need more
+          than one, and "Filtrar" and "Ordenar por" at the right. */}
+      <div className="d-flex align-items-center justify-content-between" style={{ marginTop: "15px" }}>
+        {maxNumberPages > 1 && (
+          <PaginationBar onChange={handlePageChange} currentPage={page} maxNumberPages={maxNumberPages} />
+        )}
+        <div className="d-flex gap-2 ms-auto">
+          <FilterMenuButton
+            options={filterChoices}
+            value={filters}
+            onChange={(next) => {
+              setFilters(next);
+              setCurrentPage(1);
+            }}
+          />
+          <SortMenuButton small value={sortValue} onSort={(value) => {
+            setSortValue(value);
+            setCurrentPage(1);
+          }} />
+        </div>
+      </div>
     </>
   );
 }
@@ -925,7 +1006,7 @@ function ScorePickerVersions({
   const [score, setScore] = useState<ScoreViewModel | null>(null);
   const chosen = versions.find((s) => s.doc.id === chosenId) ?? versions[0];
 
-  // Fetched lazily per row (not for the whole PICKER_LIMIT list at once) —
+  // Fetched lazily per row (only for the page shown) —
   // needed for ScoreCard's parts/midi/mscz, re-fetched when the chosen
   // version changes.
   useEffect(() => {

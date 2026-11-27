@@ -1,7 +1,7 @@
 import { pinnedVersionItems } from "../../../../../.storybook/fixtures/components";
-import { score } from "../../../../../.storybook/fixtures/screens";
+import { availableScoreDoc, score } from "../../../../../.storybook/fixtures/screens";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within, waitFor } from "@storybook/test";
+import { expect, fn, screen, userEvent, within, waitFor } from "@storybook/test";
 import { SongbookManagePageView } from "./SongbookManagePageView";
 import {
   bookRevision,
@@ -32,7 +32,13 @@ export const OwnerDetails: Story = {};
 export const DirectEdit: Story = {
   parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByRole("button", { name: "Salvar versão" })).toBeVisible();
+    // The toolbar's save button opens "Salvar versão" with the note.
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "Salvar versão" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    // Once it has faded in.
+    await waitFor(() =>
+      expect(dialog.getByRole("textbox", { name: "O que mudou nesta versão? (opcional)" })).toBeVisible());
+    await expect(dialog.getByRole("button", { name: "Salvar versão" })).toBeEnabled();
   },
 };
 export const AccessDenied: Story = {
@@ -154,6 +160,65 @@ export const EditorAddScore: Story = {
   },
 };
 
+// Saving a new version from the editor keeps the songbook's covers: they
+// belong to each version, and used to be left behind.
+const coveredRevision = {
+  ...bookRevision,
+  covers: { trompete: { path: "capas/trompete.png", url: "#capa-trompete" } },
+};
+const saveRevision = fn(() => Promise.resolve("book-revision-3"));
+export const EditorSaveKeepsCovers: Story = {
+  parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
+  args: {
+    services: {
+      ...services,
+      generateSongbookPdfs: generate,
+      getSongbookRevision: () => Promise.resolve(coveredRevision),
+      createSongbookRevision: saveRevision,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    saveRevision.mockClear();
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "Salvar versão" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.click(dialog.getByRole("button", { name: "Salvar versão" }));
+    await waitFor(() => expect(saveRevision).toHaveBeenCalled());
+    // Its second argument is the new version's content.
+    const [, content] = saveRevision.mock.calls[0] as unknown[];
+    await expect(content).toMatchObject({ covers: coveredRevision.covers });
+  },
+};
+
+// More scores than one page of Partituras (10): the editor shows Montar's
+// pages; moving to the second shows the rest.
+const manyScores: (typeof availableScoreDoc)[] = Array.from({ length: 12 }, (_, i) => ({
+  ...availableScoreDoc,
+  id: `fixture-score-many-${i + 1}`,
+  // Zero-padded, so sorting by title keeps 11 and 12 on the second page.
+  title: `Música ${String(i + 1).padStart(2, "0")}`,
+  cachedMetadata: availableScoreDoc.cachedMetadata && {
+    ...availableScoreDoc.cachedMetadata,
+    title: `Música ${String(i + 1).padStart(2, "0")}`,
+  },
+}));
+export const EditorPagedScores: Story = {
+  parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
+  args: {
+    services: {
+      ...services,
+      generateSongbookPdfs: generate,
+      getAllScores: () => Promise.resolve(manyScores),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Música 01")).toBeVisible();
+    await expect(canvas.queryByText("Música 11")).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByText("Next"));
+    await expect(await canvas.findByText("Música 11")).toBeVisible();
+  },
+};
+
 const labelScores = pinnedVersionItems.flatMap((item) =>
   item.type === "score" ? [item] : [],
 );
@@ -205,8 +270,10 @@ export const EditorPinnedVersionLabels: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "Editar" }));
-    await expect(await canvas.findByText(/bloco-vizinho\/v2/)).toBeVisible();
-    await expect(canvas.getByText("v3").closest(".score-card-meta")).toHaveTextContent("v3 · Ary Barroso");
-    await expect(canvas.queryByText(/bloco-vizinho\/v5/)).toBeNull();
+    // The editor's cards show the arrangement, as on Montar, not the pinned
+    // version (the songbook's details list it).
+    await expect(await canvas.findByText("Ary Barroso", { exact: false })).toBeVisible();
+    await expect(canvas.queryByText(/bloco-vizinho\/v2/)).toBeNull();
+    await expect(canvas.queryByText("v3")).toBeNull();
   },
 };

@@ -20,12 +20,6 @@ import "../../scores/card/ScoreRow.css";
 import "./SongbookGenerationPanel.css";
 import { isSongbookSection } from "../../../../lib/songbook";
 
-const CarnivalModeTooltip = (
-  <Tooltip id="carnival-tooltip">
-    Usa a capa do carnaval 2026 e formatação especial do índice
-  </Tooltip>
-);
-
 const BackPageTooltip = (
   <Tooltip id="back-tooltip">
     Adiciona uma página com o número da música no verso de cada partitura
@@ -84,10 +78,8 @@ export function SongbookGenerationPanelView({
   const [enabledFallbacks, setEnabledFallbacks] = useState<Set<Instrument>>(
     new Set(),
   );
-  const [carnivalMode, setCarnivalMode] = useState(false);
   const [backSheetPageNumber, setBackSheetPageNumber] = useState(false);
   const [antiAssedioPages, setAntiAssedioPages] = useState(false);
-  const [debugBoundingBoxes, setDebugBoundingBoxes] = useState(false);
 
   const [coverInstrument, setCoverInstrument] = useState<Instrument | null>(null);
   const [savedCovers, setSavedCovers] = useState<SongbookRevisionDoc["covers"] | null>(null);
@@ -101,8 +93,9 @@ export function SongbookGenerationPanelView({
     title: songbook.title,
     instrument: coverInstrument,
     coverImageUrl: covers[coverInstrument]?.url ?? "",
-    carnivalMode,
-  }) : null, [coverInstrument, songbook.title, covers, carnivalMode]);
+    // The carnival cover and index aren't offered here.
+    carnivalMode: false,
+  }) : null, [coverInstrument, songbook.title, covers]);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
@@ -141,10 +134,10 @@ export function SongbookGenerationPanelView({
         title: songbook.title,
         covers: generationCovers,
         fallbackInstruments: enabledFallbacks,
-        carnivalMode,
+        carnivalMode: false,
         backSheetPageNumber,
         antiAssedioPages,
-        debugBoundingBoxes,
+        debugBoundingBoxes: false,
         onStart: setCurrentInstrument,
         onComplete: (instrument, index, total) => {
           setCompletedInstruments((prev) => new Set(prev).add(instrument));
@@ -238,10 +231,10 @@ export function SongbookGenerationPanelView({
                   )}
                 </div>
                 {!isGenerating && isIncluded && hasFallback && (
-                  <div className="score-card-details score-card-subline">
+                  <div className="score-card-details generation-fallback">
                     <Checkbox
                       id={`fallback-${instrument}`}
-                      label={`Usar ${fallback} como fallback (+${countWithFallback - count})`}
+                      label={`Usar ${fallback} como alternativa (+${countWithFallback - count})`}
                       checked={fallbackEnabled}
                       onChange={() =>
                         setEnabledFallbacks((prev) => {
@@ -284,16 +277,6 @@ export function SongbookGenerationPanelView({
           <div className="d-flex align-items-center">
             <Form.Check
               type="switch"
-              id="carnival-mode"
-              label="Capa e índice do carnaval"
-              checked={carnivalMode}
-              onChange={(e) => setCarnivalMode(e.target.checked)}
-            />
-            <HelpIcon tooltip={CarnivalModeTooltip} />
-          </div>
-          <div className="d-flex align-items-center">
-            <Form.Check
-              type="switch"
               id="back-number"
               label="Página de número no verso"
               checked={backSheetPageNumber}
@@ -311,15 +294,6 @@ export function SongbookGenerationPanelView({
             />
             <HelpIcon tooltip={AntiAssedioTooltip} />
           </div>
-          {import.meta.env.DEV && (
-            <Form.Check
-              type="switch"
-              id="debug-boxes"
-              label="Debug"
-              checked={debugBoundingBoxes}
-              onChange={(e) => setDebugBoundingBoxes(e.target.checked)}
-            />
-          )}
         </div>
       )}
       <div className="d-flex gap-2 mt-3">
