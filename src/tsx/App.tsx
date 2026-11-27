@@ -10,6 +10,7 @@ import { useAuth } from "../auth";
 import "../styles/app.css";
 import { FEATURE_FLAG_BROWSER_UPLOAD, FEATURE_FLAG_COLLAB_FLOW } from "../featureFlags";
 import { getPendingUserProjectInvitations } from "../lib/db";
+import { listPendingScoreReviewRequests } from "../lib/scoreReviewRequests";
 import { ROUTE_PATTERNS, isReservedProjectSlug, isYearOnlySlug } from "../lib/routes";
 import { CreateProjectPage } from "./screens/projects/create/CreateProjectPage";
 import { MeusProjetosPage } from "./screens/projects/list/MeusProjetosPage";
@@ -81,7 +82,9 @@ function App() {
     setProfileTab(tab);
     setShowUserModal(true);
   };
-  const [inboxCount, setInboxCount] = useState(0);
+  const [invitationCount, setInvitationCount] = useState(0);
+  const [reviewRequestCount, setReviewRequestCount] = useState(0);
+  const inboxCount = invitationCount + reviewRequestCount;
   const { currentUser, pendingUser } = useAuth();
   // Pages that draw their own header and footer do not need LandingChrome.
   const { pathname } = useLocation();
@@ -95,14 +98,28 @@ function App() {
     pathname.startsWith(`${ROUTE_PATTERNS.articles}/`);
 
   useEffect(() => {
+    setInvitationCount(0);
+    setReviewRequestCount(0);
     if (!FEATURE_FLAG_COLLAB_FLOW || !currentUser) {
-      setInboxCount(0);
       return;
     }
-    void getPendingUserProjectInvitations(currentUser.uid).then((invs) =>
-      setInboxCount(invs.length),
+    let active = true;
+    void getPendingUserProjectInvitations(currentUser.uid).then(
+      (invs) => { if (active) { setInvitationCount(invs.length); } },
+      () => { if (active) { setInvitationCount(0); } },
     );
+    return () => { active = false; };
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!FEATURE_FLAG_COLLAB_FLOW || !currentUser) { return; }
+    let active = true;
+    void listPendingScoreReviewRequests(currentUser.uid).then(
+      (requests) => { if (active) { setReviewRequestCount(requests.length); } },
+      () => { if (active) { setReviewRequestCount(0); } },
+    );
+    return () => { active = false; };
+  }, [currentUser, pathname, showUserModal]);
 
   useEffect(() => {
     if (pendingUser) {
@@ -239,7 +256,7 @@ function App() {
           onHide={() => setShowUserModal(false)}
           initialTab={profileTab}
           inboxCount={inboxCount}
-          onInboxCountChange={setInboxCount}
+          onInvitationCountChange={setInvitationCount}
         />
       ) : (
         <AuthModal

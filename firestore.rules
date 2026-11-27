@@ -191,6 +191,12 @@ service cloud.firestore {
       );
     }
 
+    match /projects/{projectId}/scoreReviewRequests/{requestId} {
+      allow read: if isReviewer(projectId);
+      // Mutations are transactional and authorized in the callable.
+      allow write: if false;
+    }
+
     match /scores/{scoreId} {
       allow read: if true;
       // Created before its first revision, so storage rules can resolve the
