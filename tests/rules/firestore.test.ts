@@ -1174,12 +1174,25 @@ describe("review comments", () => {
     );
   });
 
-  it("restricts reading to members", async () => {
+  it("restricts reading private score discussions to members", async () => {
     await seedProject(testEnv());
     await seedRoot();
     await assertSucceeds(getDoc(ref(as(REVIEWER), "root")));
     await assertFails(getDoc(ref(as(OUTSIDER), "root")));
     await assertFails(getDoc(ref(as(null), "root")));
+  });
+
+  it("lets anyone read public score discussions and signed-in outsiders comment", async () => {
+    await seedProject(testEnv());
+    await seedRoot();
+    await seed((db) => updateDoc(doc(db, "scores", SCORE), {
+      published: { revisionId: "1" },
+    }));
+    await assertSucceeds(getDoc(ref(as(null), "root")));
+    await assertFails(setDoc(ref(as(null)), comment(OUTSIDER)));
+    await assertSucceeds(setDoc(ref(as(OUTSIDER)), comment(OUTSIDER)));
+    await assertSucceeds(updateDoc(ref(as(OUTSIDER)), { body: "Novo comentário" }));
+    await assertFails(updateDoc(ref(as(OUTSIDER), "root"), { body: "Outro autor" }));
   });
 
   it("lets authors edit and soft-delete their own, and nobody else", async () => {

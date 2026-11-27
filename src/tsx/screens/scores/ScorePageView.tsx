@@ -54,8 +54,8 @@ export function ScorePageView({
     currentUser?.uid,
     services.getMemberRole,
   );
-  // Review comments: project members only (collab-flow §5.4).
-  const reviewing = role !== "loading" && isReviewer(role) && !!currentUser;
+  const reviewing = collabEnabled && !!score &&
+    (score.publishedRevisionId !== null || (role !== "loading" && isReviewer(role)));
   const [comments, setComments] = useState<WithId<ReviewCommentDoc>[]>([]);
   const [commentReloads, setCommentReloads] = useState(0);
   const [selectedCommentId, setSelectedCommentId] = useState<string | null>(
@@ -73,7 +73,13 @@ export function ScorePageView({
       setComments([]);
       return;
     }
-    void services.getComments(shownScoreId, shownRevisionId).then(setComments);
+    let active = true;
+    setComments([]);
+    void services.getComments(shownScoreId, shownRevisionId).then(
+      (next) => { if (active) { setComments(next); } },
+      () => { if (active) { setComments([]); } },
+    );
+    return () => { active = false; };
   }, [reviewing, shownScoreId, shownRevisionId, commentReloads, services]);
 
   const threads = useMemo(() => commentThreads(comments), [comments]);
@@ -217,7 +223,7 @@ export function ScorePageView({
             }
           />
         </Col>
-        {reviewing && currentUser && (
+        {reviewing && (
           <Col lg={4}>
             <div style={{ position: "sticky", top: 16 }}>
               <components.ReviewCommentsPanel

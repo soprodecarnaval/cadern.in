@@ -60,6 +60,24 @@ export const ForeignScore: Story = {
   },
 };
 
+export const ForeignPrivateScore: Story = {
+  args: {
+    services: {
+      ...services,
+      getMemberRole: () => Promise.resolve(undefined),
+      getScore: () => Promise.resolve({
+        ...scoreDoc, projectId: "bloco-vizinho", published: null,
+      }),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("de outro projeto")).toBeVisible();
+    await expect(canvas.queryByText(comment.body)).not.toBeInTheDocument();
+    await expect(canvas.queryByPlaceholderText("Escreva um comentário sobre esta versão")).not.toBeInTheDocument();
+  },
+};
+
 export const MissingEntry: Story = {
   args: {
     services: {

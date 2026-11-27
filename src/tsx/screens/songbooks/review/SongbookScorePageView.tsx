@@ -7,7 +7,8 @@ import { Link, useParams } from "react-router-dom";
 import type { CommentAnchor, ReviewCommentDoc } from "../../../../../types/docs";
 import type { WithId } from "../../../../lib/db";
 import { commentThreads } from "../../../../lib/comments";
-import { isEditor } from "../../../../lib/roles";
+import { isEditor, isReviewer } from "../../../../lib/roles";
+import { useMemberRoleValue } from "../../../../lib/useMemberRoleValue";
 import { resolveScoreMetadata } from "../../../../lib/scoreMetadata";
 import { publicSongbookPath, songbookPath } from "../../../../lib/routes";
 import { buildExportDeepLink } from "../../../../../types/exportDeepLink";
@@ -29,6 +30,8 @@ interface LoadedScoreThread {
   // the score itself is not (unaffected by this page, which has no such
   // controls).
   foreign: boolean;
+  scoreProjectId: string;
+  scorePublished: boolean;
   // The revision this songbook pins, which may be older than the latest.
   revisionId: string;
   // The score's latest revision: what an upload or a reformat from here
@@ -64,7 +67,7 @@ async function load(
     services.getScore(scoreId),
     services.getScoreRevision(scoreId, revisionId),
   ]);
-  if (!score || !scoreRevision) {
+  if (!score || score.deletedAt || !scoreRevision) {
     return "missing";
   }
   return {
@@ -73,6 +76,8 @@ async function load(
     songbookProjectId: songbook.projectId,
     songbookRevisionId: songbook.currentRevisionId,
     foreign: score.projectId !== songbook.projectId,
+    scoreProjectId: score.projectId,
+    scorePublished: !!score.published,
     revisionId,
     latestRevisionId: score.latestRevisionId,
     ...resolveScoreMetadata(score),
@@ -99,45 +104,13 @@ async function load(
 
 /**
  * Member-only songbook-scoped score review (009): shows the revision this
- * songbook pins, not the score's latest, with a comment thread that belongs
- * to the songbook. Authorized by the songbook's project membership, even for
- * a score owned by a different project — reviewing never grants mutation
- * rights over that score, and this page has no edit/delete controls at all.
+ * songbook pins, not the score's latest. The thread follows the score
+ * revision and its access policy, independent of this songbook.
  */
-export type SongbookScorePageServices = {
-  getSongbookComments: (
-    songbookId: string,
-    scoreId: string,
-    revisionId: string,
-  ) => Promise<WithId<ReviewCommentDoc>[]>;
-  addSongbookComment: (
-    songbookId: string,
-    scoreId: string,
-    revisionId: string,
-    input: {
-      authorId: string;
-      authorName: string;
-      body: string;
-      parentId: string | null;
-      anchor: CommentAnchor | null;
-    },
-  ) => Promise<string>;
-  editSongbookComment: (
-    songbookId: string,
-    scoreId: string,
-    revisionId: string,
-    commentId: string,
-    body: string,
-  ) => Promise<void>;
-  softDeleteSongbookComment: (
-    songbookId: string,
-    scoreId: string,
-    revisionId: string,
-    commentId: string,
-  ) => Promise<void>;
-} & Pick<
+export type SongbookScorePageServices = Pick<
   typeof import("../../../../lib/db"),
   "getSongbook" | "getSongbookRevision" | "getScore" | "getScoreRevision"
+  | "getMemberRole" | "getComments" | "addComment" | "editComment" | "softDeleteComment"
 >;
 
 export function SongbookScorePageView({
@@ -173,6 +146,15 @@ export function SongbookScorePageView({
   );
 
   const isMember = role !== "loading" && role !== undefined;
+  const threadScore = typeof loaded === "object" ? loaded : null;
+  const scoreRole = useMemberRoleValue(
+    threadScore?.foreign ? threadScore.scoreProjectId : undefined,
+    currentUser?.uid,
+    services.getMemberRole,
+  );
+  const threadRole = threadScore?.foreign ? scoreRole : role;
+  const canReadThread = isMember && !!threadScore &&
+    (threadScore.scorePublished || (threadRole !== "loading" && isReviewer(threadRole)));
 
   useEffect(() => {
     if (!projectId || !songbookSlug || !scoreId || !isMember) {
@@ -183,14 +165,17 @@ export function SongbookScorePageView({
   }, [projectId, songbookSlug, scoreId, isMember, services]);
 
   useEffect(() => {
-    if (!loaded || loaded === "loading" || loaded === "missing" || !scoreId) {
-      setComments([]);
-      return;
-    }
+    setComments([]);
+    if (!canReadThread || !threadScore || !scoreId) { return; }
+    let active = true;
     void services
-      .getSongbookComments(loaded.songbookId, scoreId, loaded.revisionId)
-      .then(setComments);
-  }, [loaded, scoreId, commentReloads, services]);
+      .getComments(scoreId, threadScore.revisionId)
+      .then(
+        (next) => { if (active) { setComments(next); } },
+        () => { if (active) { setComments([]); } },
+      );
+    return () => { active = false; };
+  }, [canReadThread, threadScore, scoreId, commentReloads, services]);
 
   const threads = useMemo(() => commentThreads(comments), [comments]);
   const pins: ScorePin[] = threads.flatMap((t) =>
@@ -318,34 +303,11 @@ export function SongbookScorePageView({
             }}
           />
         </Col>
-        {currentUser && (
+        {canReadThread && currentUser && (
           <Col lg={4}>
             <div style={{ position: "sticky", top: 16 }}>
               <components.ReviewCommentsPanel
-                services={{
-                  addComment: (_sc, rev, input) =>
-                    services.addSongbookComment(
-                      loaded.songbookId,
-                      scoreId,
-                      rev,
-                      input,
-                    ),
-                  editComment: (_sc, rev, commentId, body) =>
-                    services.editSongbookComment(
-                      loaded.songbookId,
-                      scoreId,
-                      rev,
-                      commentId,
-                      body,
-                    ),
-                  softDeleteComment: (_sc, rev, commentId) =>
-                    services.softDeleteSongbookComment(
-                      loaded.songbookId,
-                      scoreId,
-                      rev,
-                      commentId,
-                    ),
-                }}
+                services={services}
                 scoreId={scoreId}
                 revisionId={loaded.revisionId}
                 user={currentUser}
