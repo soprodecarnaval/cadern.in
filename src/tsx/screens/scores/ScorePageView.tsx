@@ -11,7 +11,11 @@ import type { CommentAnchor, ReviewCommentDoc } from "../../../../types/docs";
 import { commentThreads } from "../../../lib/comments";
 import type { LoadedScore } from "../../../lib/loadScore";
 import { canDeleteScore, canEditScoreMetadata, isEditor, isReviewer } from "../../../lib/roles";
-import { FEATURE_FLAG_BROWSER_UPLOAD } from "../../../featureFlags";
+import { BROWSER_UPLOAD_MODE, FEATURE_FLAG_BROWSER_UPLOAD } from "../../../featureFlags";
+import { buildExportDeepLink } from "../../../../types/exportDeepLink";
+import { Link as ButtonLink } from "../../atoms/Link";
+import { ProjectBreadcrumb } from "../../components/navigation/ProjectBreadcrumb";
+import { EditCopyButton, type EditCopyButtonServices } from "../../components/scores/EditCopyButton";
 import { uploadPath } from "../../../lib/uploadPath";
 import { projectPath } from "../../../lib/routes";
 import { useMemberRoleValue } from "../../../lib/useMemberRoleValue";
@@ -21,7 +25,7 @@ import type { ScorePin } from "../../components/scores/detail/ScoreDisplay";
 export type ScorePageServices = Pick<
   typeof import("../../../lib/db"),
   "softDeleteScore" | "getComments" | "getMemberRole"
-> & { loadScore: typeof import("../../../lib/loadScore").loadScore };
+> & { loadScore: typeof import("../../../lib/loadScore").loadScore } & EditCopyButtonServices;
 
 export function ScorePageView({
   services,
@@ -38,6 +42,7 @@ export function ScorePageView({
     ScoreRevisionList: typeof import("../../components/scores/detail/ScoreRevisionList").ScoreRevisionList;
     ReviewCommentsPanel: typeof import("../../components/review/ReviewCommentsPanel").ReviewCommentsPanel;
     ScoreMetadataEditor: typeof import("./ScoreMetadataEditor").ScoreMetadataEditor;
+    ScoreReviewRequests?: typeof import("../../components/review/ScoreReviewRequests").ScoreReviewRequests;
   };
 }) {
   const { scoreId, revisionId } = useParams<{
@@ -54,8 +59,8 @@ export function ScorePageView({
     currentUser?.uid,
     services.getMemberRole,
   );
-  // Review comments: project members only (collab-flow §5.4).
-  const reviewing = role !== "loading" && isReviewer(role) && !!currentUser;
+  const reviewing = collabEnabled && !!score &&
+    (score.publishedRevisionId !== null || (role !== "loading" && isReviewer(role)));
   const [comments, setComments] = useState<WithId<ReviewCommentDoc>[]>([]);
   const [commentReloads, setCommentReloads] = useState(0);
   const [selectedCommentId, setSelectedCommentId] = useState<string | null>(
@@ -73,7 +78,13 @@ export function ScorePageView({
       setComments([]);
       return;
     }
-    void services.getComments(shownScoreId, shownRevisionId).then(setComments);
+    let active = true;
+    setComments([]);
+    void services.getComments(shownScoreId, shownRevisionId).then(
+      (next) => { if (active) { setComments(next); } },
+      () => { if (active) { setComments([]); } },
+    );
+    return () => { active = false; };
   }, [reviewing, shownScoreId, shownRevisionId, commentReloads, services]);
 
   const threads = useMemo(() => commentThreads(comments), [comments]);
@@ -128,8 +139,21 @@ export function ScorePageView({
     );
   }
 
+  const canUpload = collabEnabled && role !== "loading" && isEditor(role);
+  const sendContext = {
+    projectId: score.projectId,
+    scoreId: score.scoreId,
+    expectedScoreRevisionId: score.latestRevisionId,
+  };
   return (
     <Page className="mt-4">
+      {collabEnabled && (
+        <ProjectBreadcrumb
+          signedIn={!!currentUser}
+          project={{ id: score.projectId, title: score.projectTitle }}
+          score={{ id: score.scoreId, title: score.title }}
+        />
+      )}
       <div className="d-flex align-items-baseline gap-2 mb-1">
         <h2 className="mb-0">{score.title}</h2>
         <span className="text-muted">versão #{score.revisionNumber}</span>
@@ -137,18 +161,36 @@ export function ScorePageView({
           <Badge variant="accent">publicada</Badge>
         )}
       </div>
-      <div className="d-flex align-items-center justify-content-between mb-3">
-        <p className="mb-0"><Link to={projectPath(score.projectId)}>{score.projectTitle}</Link></p>
-        <div className="d-flex gap-2">
-          {role !== "loading" && canDeleteScore(role) && (
-            <Button
-              variant="danger-secondary"
-              size="sm"
-              disabled={deleting}
-              onClick={() => void handleDelete()}
-            >
-              Excluir partitura
-            </Button>
+      {!collabEnabled && (
+        <p className="mb-2"><Link to={projectPath(score.projectId)}>{score.projectTitle}</Link></p>
+      )}
+      <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div className="d-flex flex-wrap gap-2">
+          {FEATURE_FLAG_BROWSER_UPLOAD && canUpload && (
+            <>
+              <ButtonLink to={uploadPath(sendContext)} size="sm" variant="primary">
+                Enviar nova versão
+              </ButtonLink>
+              <ButtonLink
+                to={uploadPath({ ...sendContext, baseRevisionId: score.revisionId, mode: "reformat" })}
+                size="sm"
+              >
+                Reformatar
+              </ButtonLink>
+            </>
+          )}
+          {canUpload && BROWSER_UPLOAD_MODE !== "default" && (
+            <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink(sendContext)}>
+              Enviar nova versão pelo MuseScore
+            </a>
+          )}
+          {FEATURE_FLAG_BROWSER_UPLOAD && collabEnabled && role !== "loading" && !isEditor(role) && (
+            <EditCopyButton
+              score={{ scoreId: score.scoreId, projectId: score.projectId, title: score.title, revisionId: score.revisionId }}
+              user={currentUser}
+              services={services}
+              variant="primary"
+            />
           )}
           {role !== "loading" && canEditScoreMetadata(role) && (
             <Button
@@ -159,20 +201,8 @@ export function ScorePageView({
               Editar metadados
             </Button>
           )}
-          {FEATURE_FLAG_BROWSER_UPLOAD && role !== "loading" && isEditor(role) && (
-            <a
-              className="btn btn-outline-secondary ds-button btn-sm"
-              href={uploadPath({
-                projectId: score.projectId,
-                scoreId: score.scoreId,
-                expectedScoreRevisionId: score.latestRevisionId,
-                baseRevisionId: score.revisionId,
-                mode: "reformat",
-              })}
-            >
-              Reformatar
-            </a>
-          )}
+        </div>
+        <div className="d-flex flex-wrap gap-2">
           <a className="btn btn-outline-secondary ds-button btn-sm" href={score.msczUrl}
             download={`${score.title}.mscz`}>
             Baixar .mscz
@@ -183,6 +213,16 @@ export function ScorePageView({
               Baixar MusicXML
             </a>
           )}
+          {role !== "loading" && canDeleteScore(role) && (
+            <Button
+              variant="danger-secondary"
+              size="sm"
+              disabled={deleting}
+              onClick={() => void handleDelete()}
+            >
+              Excluir partitura
+            </Button>
+          )}
         </div>
       </div>
       {collabEnabled && (
@@ -190,6 +230,11 @@ export function ScorePageView({
           scoreId={score.scoreId}
           forkedFrom={score.forkedFrom}
         />
+      )}
+      {collabEnabled && currentUser && role !== "loading" && isReviewer(role) && components.ScoreReviewRequests && (
+        <components.ScoreReviewRequests key={`${score.scoreId}/${score.revisionId}`}
+          projectId={score.projectId} scoreId={score.scoreId} revisionId={score.revisionId}
+          uid={currentUser.uid} admin={canEditScoreMetadata(role)} />
       )}
       <Row>
         <Col lg={reviewing ? 8 : 12}>
@@ -217,7 +262,7 @@ export function ScorePageView({
             }
           />
         </Col>
-        {reviewing && currentUser && (
+        {reviewing && (
           <Col lg={4}>
             <div style={{ position: "sticky", top: 16 }}>
               <components.ReviewCommentsPanel

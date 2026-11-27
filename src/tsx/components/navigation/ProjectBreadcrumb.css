@@ -1,0 +1,24 @@
+.ds-breadcrumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-1) var(--ds-space-2);
+  margin: 0 0 var(--ds-space-3);
+  padding: 0;
+  list-style: none;
+  font-size: var(--ds-caption);
+  color: var(--ds-text-secondary);
+}
+
+.ds-breadcrumb li + li::before {
+  content: "›";
+  margin-right: var(--ds-space-2);
+  color: var(--ds-muted);
+}
+
+.ds-breadcrumb a {
+  color: var(--ds-text-secondary);
+}
+
+.ds-breadcrumb [aria-current="page"] {
+  color: var(--ds-ink);
+}

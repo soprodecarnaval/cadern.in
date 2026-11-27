@@ -28,6 +28,8 @@ import type {
 import { SongbookPrintDialog, type SongbookPrintServices } from "./SongbookPrintDialog";
 import { CreateSongbookForm } from "./CreateSongbookForm";
 import { resolveScoreMetadata } from "../../../../lib/scoreMetadata";
+import { ProjectBreadcrumb } from "../../../components/navigation/ProjectBreadcrumb";
+import { DuplicateSongbookButton, type DuplicateSongbookButtonServices } from "../../../components/songbooks/DuplicateSongbookButton";
 import "../../../components/scores/card/ScoreRow.css";
 import "./PublicProjectPage.css";
 
@@ -46,7 +48,7 @@ export type PublicProjectPageServices = Pick<
   | "createSongbook"
   | "getSongbook"
   | "setSongbookPublished"
-> & SongbookPrintServices;
+> & SongbookPrintServices & DuplicateSongbookButtonServices;
 
 export function PublicProjectPageView({
   services,
@@ -174,13 +176,13 @@ export function PublicProjectPageView({
   const canManage = isAdmin(myRole);
   const canUpload = isEditor(myRole);
 
-  const publish = async (id: string) => {
+  const setPublished = async (id: string, isPublished: boolean) => {
     if (publishing.has(id)) {return;}
     setPublishing((current) => new Set(current).add(id));
     setPublishError(null);
     try {
-      await services.setSongbookPublished(id, true);
-      setSongbooks((current) => current?.map((book) => book.id === id ? { ...book, isPublished: true } : book) ?? null);
+      await services.setSongbookPublished(id, isPublished);
+      setSongbooks((current) => current?.map((book) => book.id === id ? { ...book, isPublished } : book) ?? null);
     } catch {
       setPublishError(id);
     } finally {
@@ -192,8 +194,25 @@ export function PublicProjectPageView({
     }
   };
 
+  // The upload page, which links to the Exportador while browser upload is
+  // in beta; without it, MuseScore is the only way in.
+  const uploadActions = canUpload && (
+    <div className="d-flex flex-wrap gap-2">
+      {FEATURE_FLAG_BROWSER_UPLOAD ? (
+        <Link to={uploadPath({ projectId: project.id })} size="sm" variant="primary" className="project-upload-browser">
+          Enviar partitura
+        </Link>
+      ) : (
+        <a className="btn btn-primary ds-button btn-sm project-upload-browser" href={buildExportDeepLink({ projectId: project.id })}>
+          Enviar partitura pelo MuseScore
+        </a>
+      )}
+    </div>
+  );
+
   return (
     <Page className="mt-4">
+      <ProjectBreadcrumb signedIn={!!currentUser} project={{ id: project.id, title: project.title }} />
       <div className="d-flex justify-content-between align-items-start mb-1">
         <h2>{project.title}</h2>
         <div className="d-flex gap-2 align-items-center">
@@ -204,8 +223,8 @@ export function PublicProjectPageView({
           )}
           {canManage && (
             <Link to={projectSettingsPath(slug ?? "")} size="sm" variant="secondary">
-                Configurações
-              </Link>
+              Configurações
+            </Link>
           )}
         </div>
       </div>
@@ -274,16 +293,21 @@ export function PublicProjectPageView({
                       Configurar
                     </Link>
                   )}
-                  {!sb.isPublished && canPublishSongbook(myRole) && (
-                    <Button size="sm" disabled={publishing.has(sb.id)} onClick={() => void publish(sb.id)} aria-label={`Publicar ${sb.title}`}>
-                      {publishing.has(sb.id) ? "Publicando…" : "Publicar"}
+                  <DuplicateSongbookButton songbook={sb} user={currentUser} services={services} />
+                  {canPublishSongbook(myRole) && (
+                    <Button size="sm" variant={sb.isPublished ? "secondary" : "primary"}
+                      disabled={publishing.has(sb.id)} onClick={() => void setPublished(sb.id, !sb.isPublished)}
+                      aria-label={`${sb.isPublished ? "Despublicar" : "Publicar"} ${sb.title}`}>
+                      {publishing.has(sb.id)
+                        ? sb.isPublished ? "Despublicando…" : "Publicando…"
+                        : sb.isPublished ? "Despublicar" : "Publicar"}
                     </Button>
                   )}
                 </div>
               </div>
               {publishError === sb.id && (
                 <div role="alert" className="text-danger project-songbook-error">
-                  Não foi possível publicar este caderninho.
+                  {sb.isPublished ? "Não foi possível despublicar." : "Não foi possível publicar."}
                 </div>
               )}
             </div>
@@ -294,17 +318,7 @@ export function PublicProjectPageView({
       {isMember && (
         <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
           <h5 className="mb-0">Partituras</h5>
-          {/* The upload page (which links to MuseScore while it's in beta);
-              without it, MuseScore is the only way in. */}
-          {canUpload && (FEATURE_FLAG_BROWSER_UPLOAD ? (
-            <RouterLink className="btn btn-primary ds-button btn-sm project-upload-browser" to={uploadPath({ projectId: project.id })}>
-              Enviar partitura
-            </RouterLink>
-          ) : (
-            <a className="btn btn-primary ds-button btn-sm project-upload-browser" href={buildExportDeepLink({ projectId: project.id })}>
-              Enviar partitura pelo MuseScore
-            </a>
-          ))}
+          {(scoresLoading || scoresError || scores.length > 0) && uploadActions}
         </div>
       )}
       {!isMember ? null : scoresError ? (
@@ -314,7 +328,10 @@ export function PublicProjectPageView({
       ) : scoresLoading ? (
         <Spinner animation="border" />
       ) : scores.length === 0 ? (
-        <Alert variant="info" className="project-empty">Nenhuma partitura neste projeto.</Alert>
+        <Alert variant="info" className="project-empty d-flex flex-wrap align-items-center justify-content-between gap-2">
+          Nenhuma partitura neste projeto.
+          {uploadActions}
+        </Alert>
       ) : (
         // Each score as a tag, as the songbooks above: its title and
         // composer at the left, "Ver" at the right.

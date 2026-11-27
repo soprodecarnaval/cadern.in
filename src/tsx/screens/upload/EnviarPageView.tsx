@@ -12,6 +12,7 @@ import { Input } from "../../atoms/Input";
 import { Page } from "../../atoms/Page";
 import { Select } from "../../atoms/Select";
 import { PartTabs } from "../../components/scores/PartTabs";
+import { ProjectBreadcrumb } from "../../components/navigation/ProjectBreadcrumb";
 import { projectPath, ROUTE_PATTERNS } from "../../../lib/routes";
 import type { UploadContext } from "../../../../types/exportDeepLink";
 import { Link as RouterLink } from "react-router-dom";
@@ -711,7 +712,11 @@ function SendStep({ state }: Pick<EnviarPageViewProps, "state">) {
           <dd>{destination}</dd>
           <dt>Partes</dt>
           <dd>{count} {count === 1 ? "parte" : "partes"}</dd>
-          {state.checks?.resolved.songbookTitle && (<><dt>Caderninho</dt><dd>{state.checks.resolved.songbookTitle} (a versão fixada é atualizada)</dd></>)}
+          {state.checks?.resolved.songbookTitle && (<><dt>Caderninho</dt><dd>{state.checks.resolved.songbookTitle} {
+            target?.scoreId === state.checks.resolved.scoreId || !state.checks.resolved.scoreId
+              ? "(a versão fixada é atualizada)"
+              : "(a música passa a usar a cópia deste projeto)"
+          }</dd></>)}
         </dl>
       )}
       {state.checks?.targetMismatch && <div className="alert alert-warning">{state.checks.targetMismatch}</div>}
@@ -728,11 +733,17 @@ function DoneStep({ state, context, onReset }: Pick<EnviarPageViewProps, "state"
     <section aria-labelledby="enviar-feito">
       <h2 id="enviar-feito" tabIndex={-1}>Partitura enviada</h2>
       <p>
-        {context.mode === "reformat"
-          ? "A partitura reformatada foi salva como uma nova versão."
-          : result.target.kind === "version" ? "A nova versão foi salva." : "A partitura foi salva."}
+        {result.target.kind === "fork"
+          ? `Uma cópia de “${result.target.sourceTitle}” foi salva neste projeto. A original não mudou.`
+          : context.mode === "reformat"
+            ? "A partitura reformatada foi salva como uma nova versão."
+            : result.target.kind === "version" ? "A nova versão foi salva." : "A partitura foi salva."}
       </p>
       {result.repin === "updated" && <p>O caderninho passou a usar esta versão.</p>}
+      {result.repin === "swapped" && <p>O caderninho passou a usar a cópia deste projeto.</p>}
+      {result.repin === "swap-failed" && (
+        <div className="alert alert-warning">O caderninho continua com a partitura original. Troque pela cópia na página do caderninho.</div>
+      )}
       {result.repin === "skipped-stale" && (
         <div className="alert alert-warning">O caderninho mudou durante o envio e continua com a versão anterior. Atualize a versão fixada na página do caderninho.</div>
       )}
@@ -801,6 +812,11 @@ export function EnviarPageView(props: EnviarPageViewProps) {
   const reformat = props.context.mode === "reformat";
   return (
     <Page className="enviar-page">
+      <ProjectBreadcrumb
+        signedIn={signedIn}
+        project={{ id: props.context.projectId, title: state.checks?.resolved.projectTitle }}
+        current={reformat ? "Reformatar" : "Enviar partitura"}
+      />
       <h1>{reformat ? `Reformatar ${state.metadata.title || "partitura"}` : "Enviar partitura"}</h1>
       {reformat && (
         <p>As correções manuais são reaplicadas quando as indicações são reconhecidas na nova versão.</p>

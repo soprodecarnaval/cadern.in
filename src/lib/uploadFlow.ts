@@ -21,7 +21,7 @@ export type { UploadContext } from "../../types/exportDeepLink";
 export { exporterPath, uploadContextFromSearchParams, uploadPath } from "./uploadPath";
 
 export type UploadFlowServices = ExportContextServices &
-  Pick<typeof import("./db"), "getSongbookRevision" | "createSongbookRevision">;
+  Pick<typeof import("./db"), "getSongbookRevision" | "createSongbookRevision" | "swapSongbookEntryToFork">;
 
 export type UploadChecks = {
   resolved: ResolvedExportContext;
@@ -46,6 +46,11 @@ export async function prepareUpload(
 ): Promise<PreparedUpload> {
   const check = await validateExportContext(context, uid, services);
   if (!check.ok) {return check;}
+  if (context.mode === "reformat" && !parsed.source && context.scoreId && context.baseRevisionId) {
+    // A reformat's bytes are the base revision's own .mscz; one stored before
+    // identities were stamped is still that revision.
+    parsed = { ...parsed, source: { scoreId: context.scoreId, revisionId: context.baseRevisionId } };
+  }
   if (context.songbookId) {
     // The send screen belongs to one project; a songbook of another project
     // would make the re-pin fail after the upload, breaking all-or-nothing.
@@ -70,14 +75,17 @@ export async function prepareUpload(
         `ele será enviado como ${destination}.`;
     }
   }
-  if (context.mode === "reformat" && (checks.targetMismatch || target.kind !== "version")) {
-    // A reformat is a new version of the same score, never another score.
+  if (context.mode === "reformat" && (checks.targetMismatch || target.kind === "new")) {
+    // A reformat is a new version of the same score, or, for a score of
+    // another project, of this project's copy of it (ticket 031); never
+    // another score.
     return { ok: false, reason: "Este arquivo não é mais uma versão desta partitura; a reformatação foi cancelada." };
   }
   return { ok: true, target, checks };
 }
 
-export type RepinOutcome = "updated" | "skipped-stale" | "none";
+/** "swapped": the entry now points at this project's copy of the score (031). */
+export type RepinOutcome = "updated" | "swapped" | "swap-failed" | "skipped-stale" | "none";
 
 /**
  * Re-pins the launching songbook's entry to the new revision, under the
@@ -90,12 +98,23 @@ export async function repinSongbook(
   identity: ScoreIdentity,
   title: string,
   uid: string,
-  services: Pick<UploadFlowServices, "getSongbookById" | "getSongbookRevision" | "createSongbookRevision">,
+  services: Pick<UploadFlowServices, "getSongbookById" | "getSongbookRevision" | "createSongbookRevision"> &
+    Partial<Pick<UploadFlowServices, "swapSongbookEntryToFork">>,
 ): Promise<RepinOutcome> {
   if (!context.songbookId) {return "none";}
   const songbook = await services.getSongbookById(context.songbookId);
   if (!songbook || songbook.deletedAt || songbook.currentRevisionId !== context.expectedSongbookRevisionId) {
     return "skipped-stale";
+  }
+  if (context.scoreId && identity.scoreId !== context.scoreId && services.swapSongbookEntryToFork) {
+    // The upload went to this project's copy of the entry's score: pins are
+    // keyed by score, so the entry itself moves to the copy (server-side).
+    try {
+      await services.swapSongbookEntryToFork(songbook.id, context.scoreId, identity.scoreId);
+      return "swapped";
+    } catch {
+      return "swap-failed";
+    }
   }
   const current = await services.getSongbookRevision(songbook.id, songbook.currentRevisionId);
   if (!current) {return "skipped-stale";}
@@ -153,6 +172,9 @@ export async function commitUpload(
     stampMscz: options.stampMscz,
     ...(context.mode === "reformat" ? { kind: "reformat" as const } : {}),
   });
-  const repin = await repinSongbook(context, identity, parsed.title, user.uid, options.services);
+  // Swap only for a copy of the launching score, never for a file the person
+  // confirmed is another score.
+  const repin = await repinSongbook(context, identity, parsed.title, user.uid,
+    prepared.checks.targetMismatch ? { ...options.services, swapSongbookEntryToFork: undefined } : options.services);
   return { ok: true, identity, target: prepared.target, repin };
 }

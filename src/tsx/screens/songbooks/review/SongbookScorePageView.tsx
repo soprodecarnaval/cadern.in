@@ -7,12 +7,16 @@ import { Link, useParams } from "react-router-dom";
 import type { CommentAnchor, ReviewCommentDoc } from "../../../../../types/docs";
 import type { WithId } from "../../../../lib/db";
 import { commentThreads } from "../../../../lib/comments";
-import { isEditor } from "../../../../lib/roles";
+import { canEditSongbook, isEditor, isReviewer } from "../../../../lib/roles";
+import { useMemberRoleValue } from "../../../../lib/useMemberRoleValue";
 import { resolveScoreMetadata } from "../../../../lib/scoreMetadata";
-import { publicSongbookPath, songbookPath } from "../../../../lib/routes";
+import { publicSongbookPath, songbookEditPath, songbookPath } from "../../../../lib/routes";
 import { buildExportDeepLink } from "../../../../../types/exportDeepLink";
 import { BROWSER_UPLOAD_MODE, FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
 import { uploadPath } from "../../../../lib/uploadPath";
+import { Link as ButtonLink } from "../../../atoms/Link";
+import { ProjectBreadcrumb } from "../../../components/navigation/ProjectBreadcrumb";
+import { EditCopyButton, type EditCopyButtonServices } from "../../../components/scores/EditCopyButton";
 
 import type { ScoreDisplayArrangement, ScoreDisplayPart, ScorePin } from "../../../components/scores/detail/ScoreDisplay";
 
@@ -29,6 +33,8 @@ interface LoadedScoreThread {
   // the score itself is not (unaffected by this page, which has no such
   // controls).
   foreign: boolean;
+  scoreProjectId: string;
+  scorePublished: boolean;
   // The revision this songbook pins, which may be older than the latest.
   revisionId: string;
   // The score's latest revision: what an upload or a reformat from here
@@ -64,7 +70,7 @@ async function load(
     services.getScore(scoreId),
     services.getScoreRevision(scoreId, revisionId),
   ]);
-  if (!score || !scoreRevision) {
+  if (!score || score.deletedAt || !scoreRevision) {
     return "missing";
   }
   return {
@@ -73,6 +79,8 @@ async function load(
     songbookProjectId: songbook.projectId,
     songbookRevisionId: songbook.currentRevisionId,
     foreign: score.projectId !== songbook.projectId,
+    scoreProjectId: score.projectId,
+    scorePublished: !!score.published,
     revisionId,
     latestRevisionId: score.latestRevisionId,
     ...resolveScoreMetadata(score),
@@ -99,46 +107,17 @@ async function load(
 
 /**
  * Member-only songbook-scoped score review (009): shows the revision this
- * songbook pins, not the score's latest, with a comment thread that belongs
- * to the songbook. Authorized by the songbook's project membership, even for
- * a score owned by a different project — reviewing never grants mutation
- * rights over that score, and this page has no edit/delete controls at all.
+ * songbook pins, not the score's latest. The thread follows the score
+ * revision and its access policy, independent of this songbook.
+ * Editors send new versions from here (a score of
+ * another project becomes this project's copy); reviewers can edit a copy in
+ * a project of their own (031).
  */
-export type SongbookScorePageServices = {
-  getSongbookComments: (
-    songbookId: string,
-    scoreId: string,
-    revisionId: string,
-  ) => Promise<WithId<ReviewCommentDoc>[]>;
-  addSongbookComment: (
-    songbookId: string,
-    scoreId: string,
-    revisionId: string,
-    input: {
-      authorId: string;
-      authorName: string;
-      body: string;
-      parentId: string | null;
-      anchor: CommentAnchor | null;
-    },
-  ) => Promise<string>;
-  editSongbookComment: (
-    songbookId: string,
-    scoreId: string,
-    revisionId: string,
-    commentId: string,
-    body: string,
-  ) => Promise<void>;
-  softDeleteSongbookComment: (
-    songbookId: string,
-    scoreId: string,
-    revisionId: string,
-    commentId: string,
-  ) => Promise<void>;
-} & Pick<
+export type SongbookScorePageServices = Pick<
   typeof import("../../../../lib/db"),
   "getSongbook" | "getSongbookRevision" | "getScore" | "getScoreRevision"
->;
+  | "getMemberRole" | "getComments" | "addComment" | "editComment" | "softDeleteComment"
+> & EditCopyButtonServices;
 
 export function SongbookScorePageView({
   services,
@@ -173,6 +152,15 @@ export function SongbookScorePageView({
   );
 
   const isMember = role !== "loading" && role !== undefined;
+  const threadScore = typeof loaded === "object" ? loaded : null;
+  const scoreRole = useMemberRoleValue(
+    threadScore?.foreign ? threadScore.scoreProjectId : undefined,
+    currentUser?.uid,
+    services.getMemberRole,
+  );
+  const threadRole = threadScore?.foreign ? scoreRole : role;
+  const canReadThread = isMember && !!threadScore &&
+    (threadScore.scorePublished || (threadRole !== "loading" && isReviewer(threadRole)));
 
   useEffect(() => {
     if (!projectId || !songbookSlug || !scoreId || !isMember) {
@@ -183,14 +171,17 @@ export function SongbookScorePageView({
   }, [projectId, songbookSlug, scoreId, isMember, services]);
 
   useEffect(() => {
-    if (!loaded || loaded === "loading" || loaded === "missing" || !scoreId) {
-      setComments([]);
-      return;
-    }
+    setComments([]);
+    if (!canReadThread || !threadScore || !scoreId) { return; }
+    let active = true;
     void services
-      .getSongbookComments(loaded.songbookId, scoreId, loaded.revisionId)
-      .then(setComments);
-  }, [loaded, scoreId, commentReloads, services]);
+      .getComments(scoreId, threadScore.revisionId)
+      .then(
+        (next) => { if (active) { setComments(next); } },
+        () => { if (active) { setComments([]); } },
+      );
+    return () => { active = false; };
+  }, [canReadThread, threadScore, scoreId, commentReloads, services]);
 
   const threads = useMemo(() => commentThreads(comments), [comments]);
   const pins: ScorePin[] = threads.flatMap((t) =>
@@ -262,39 +253,56 @@ export function SongbookScorePageView({
   };
   return (
     <Page className="mt-4">
-      <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
+      <ProjectBreadcrumb
+        signedIn={!!currentUser}
+        project={{ id: loaded.songbookProjectId }}
+        songbook={{ slug: songbookSlug, title: loaded.songbookTitle, member: true }}
+        current={loaded.title}
+      />
+      <div className="d-flex justify-content-between align-items-start gap-2 mb-1 flex-wrap">
         <div className="d-flex align-items-baseline gap-2">
           <h2 className="mb-0">{loaded.title}</h2>
           {loaded.foreign && <Badge variant="muted">de outro projeto</Badge>}
         </div>
-        {isEditor(role) && (
-          <div className="d-flex flex-wrap gap-2">
-            {FEATURE_FLAG_BROWSER_UPLOAD && (
-              <Link className="btn btn-outline-secondary ds-button btn-sm" to={uploadPath(uploadContext)}>
+        <div className="d-flex flex-wrap gap-2">
+          {isEditor(role) && FEATURE_FLAG_BROWSER_UPLOAD && (
+            <>
+              <ButtonLink to={uploadPath(uploadContext)} size="sm" variant="primary">
                 Enviar nova versão
-              </Link>
-            )}
-            {BROWSER_UPLOAD_MODE !== "default" && (
-              <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink(uploadContext)}>
-                Enviar nova versão pelo MuseScore
-              </a>
-            )}
-            {FEATURE_FLAG_BROWSER_UPLOAD && (
-              <Link
-                className="btn btn-outline-secondary ds-button btn-sm"
+              </ButtonLink>
+              <ButtonLink
                 to={uploadPath({ ...uploadContext, baseRevisionId: loaded.revisionId, mode: "reformat" })}
+                size="sm"
               >
                 Reformatar
-              </Link>
-            )}
-          </div>
-        )}
+              </ButtonLink>
+            </>
+          )}
+          {isEditor(role) && BROWSER_UPLOAD_MODE !== "default" && (
+            <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink(uploadContext)}>
+              Enviar nova versão pelo MuseScore
+            </a>
+          )}
+          {!isEditor(role) && FEATURE_FLAG_BROWSER_UPLOAD && (
+            <EditCopyButton
+              score={{ scoreId, projectId: loaded.scoreProjectId, title: loaded.title, revisionId: loaded.revisionId }}
+              user={currentUser}
+              services={services}
+            />
+          )}
+        </div>
       </div>
       <p className="text-muted mb-3">
         Fixada em{" "}
         <Link to={songbookPath(projectId, songbookSlug)}>
           {loaded.songbookTitle}
         </Link>
+        {canEditSongbook(role) && (
+          <>
+            {" · "}
+            <Link to={songbookEditPath(projectId, songbookSlug)}>Editar caderninho</Link>
+          </>
+        )}
       </p>
       <Row>
         <Col lg={8}>
@@ -318,34 +326,11 @@ export function SongbookScorePageView({
             }}
           />
         </Col>
-        {currentUser && (
+        {canReadThread && currentUser && (
           <Col lg={4}>
             <div style={{ position: "sticky", top: 16 }}>
               <components.ReviewCommentsPanel
-                services={{
-                  addComment: (_sc, rev, input) =>
-                    services.addSongbookComment(
-                      loaded.songbookId,
-                      scoreId,
-                      rev,
-                      input,
-                    ),
-                  editComment: (_sc, rev, commentId, body) =>
-                    services.editSongbookComment(
-                      loaded.songbookId,
-                      scoreId,
-                      rev,
-                      commentId,
-                      body,
-                    ),
-                  softDeleteComment: (_sc, rev, commentId) =>
-                    services.softDeleteSongbookComment(
-                      loaded.songbookId,
-                      scoreId,
-                      rev,
-                      commentId,
-                    ),
-                }}
+                services={services}
                 scoreId={scoreId}
                 revisionId={loaded.revisionId}
                 user={currentUser}

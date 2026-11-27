@@ -23,6 +23,7 @@ import {
   canEditSongbook,
   canPublishSongbook,
   canRepinSongbook,
+  isEditor,
   isReviewer,
 } from "../../../../lib/roles";
 import { groupScoreVersions, scoreSongbookSources } from "../../../../lib/scorePicker";
@@ -76,6 +77,14 @@ import { SongbookEditorList, SongbookEditorToolbar } from "../../../components/s
 import { useSongbookEditor } from "../../../components/songbooks/editor/useSongbookEditor";
 
 import { buildSongbookSections } from "../../../../lib/pdfGeneration";
+import { FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
+import { uploadPath } from "../../../../lib/uploadPath";
+import { Link as ButtonLink } from "../../../atoms/Link";
+import { ProjectBreadcrumb } from "../../../components/navigation/ProjectBreadcrumb";
+import {
+  DuplicateSongbookButton,
+  type DuplicateSongbookButtonServices,
+} from "../../../components/songbooks/DuplicateSongbookButton";
 
 // The songbook's table, PDF generation and member tools live under ?detalhes;
 // the reader is the landing view.
@@ -135,7 +144,7 @@ export type SongbookManagePageServices = {
   | "swapSongbookEntryToFork"
 > & {
     loadPinnedScores: typeof import("../../../../lib/songbookScores").loadPinnedScores;
-  };
+  } & DuplicateSongbookButtonServices;
 
 export function SongbookManagePageView({
   services,
@@ -303,7 +312,16 @@ export function SongbookManagePageView({
         projectId={songbook.projectId}
         badges={badges}
         items={items}
-        actions={<Link to={withDetails(true)}>Detalhes, PDF e versões</Link>}
+        actions={
+          <div className="d-flex flex-column gap-2">
+            <ProjectBreadcrumb
+              signedIn={!!currentUser}
+              project={{ id: songbook.projectId }}
+              songbook={{ slug: songbook.slug, title: songbook.title, member: true }}
+            />
+            <Link to={withDetails(true)}>Detalhes, PDF e versões</Link>
+          </div>
+        }
         onDownloadPdf={(instrument) =>
           services.generateSongbookPdfs({
             sections: buildSongbookSections(items),
@@ -322,6 +340,11 @@ export function SongbookManagePageView({
 
   return (
     <Page className="mt-4">
+      <ProjectBreadcrumb
+        signedIn={!!currentUser}
+        project={{ id: songbook.projectId }}
+        songbook={{ slug: songbook.slug, title: songbook.title, member: true }}
+      />
       <div className="d-flex align-items-baseline gap-2 mb-1">
         <h2 className="mb-0">{songbook.title}</h2>
         <span className="text-muted">versão #{revision.revisionNumber}</span>
@@ -347,7 +370,12 @@ export function SongbookManagePageView({
       ) : (
         <>
           {isCurrent && (
-            <div className="d-flex gap-2 mb-3">
+            <div className="d-flex flex-wrap gap-2 mb-3">
+              {FEATURE_FLAG_BROWSER_UPLOAD && isEditor(role) && (
+                <ButtonLink to={uploadPath({ projectId: songbook.projectId })} size="sm" variant="primary">
+                  Enviar partitura
+                </ButtonLink>
+              )}
               {canEditSongbook(role) && (
                 <Button
                   size="sm"
@@ -377,6 +405,7 @@ export function SongbookManagePageView({
                   {songbook.isPublished ? "Despublicar" : "Publicar"}
                 </Button>
               )}
+              <DuplicateSongbookButton songbook={songbook} user={currentUser} services={services} />
             </div>
           )}
           <SongbookContents
