@@ -47,7 +47,9 @@
   flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: 1.1rem;
+  /* As the section titles ("Resultados", "Caderninho"). */
+  font-size: 1.5rem;
+  line-height: 1.25;
   font-weight: var(--ds-weight-heading);
 }
 
@@ -85,6 +87,7 @@
 .reader-rows {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 2px;
   padding: 0 0.5rem;
 }
 
@@ -101,8 +104,10 @@
   text-align: left;
 }
 
+/* The song last opened: a thin black stroke around it, inside its edges so
+   nothing moves. */
 .reader-row[aria-current="true"] {
-  background: var(--ds-yellow);
+  box-shadow: inset 0 0 0 1px var(--ds-ink);
   color: var(--ds-ink);
   font-weight: var(--ds-weight-heading);
 }
@@ -318,7 +323,7 @@
 }
 
 .reader { font-family: var(--ds-font); font-weight: var(--ds-weight-body); color: var(--ds-ink); }
-.reader-section { margin-top: 4px; background: var(--ds-yellow); color: var(--ds-ink); }
+.reader-section { margin-top: 4px; margin-bottom: 8px; background: var(--ds-yellow); color: var(--ds-ink); }
 .reader :is(a, button, input, select):focus-visible { outline: var(--ds-border) solid var(--ds-ink); outline-offset: -3px; }
 .reader a { color: var(--ds-ink); }
 /* As on the home page: a magnifier and a borderless field in a thick black
