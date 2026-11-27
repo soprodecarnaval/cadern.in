@@ -1,0 +1,7 @@
+/* "Caderninho": as the home page's section titles (.landing-section-title),
+   like Montar's "Resultados". */
+h3.songbook-editor-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 30px;
+}

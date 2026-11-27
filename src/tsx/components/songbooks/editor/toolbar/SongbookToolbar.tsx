@@ -3,7 +3,7 @@ import { AddSectionMenuButton } from "./AddSectionMenuButton";
 import { ToolsMenu } from "./ToolsMenu";
 import { CollapseAllIcon, ExpandAllIcon, MakeSectionsIcon, SaveIcon, UndoIcon } from "./toolbarIcons";
 import { SortMenuButton } from "./SortMenuButton";
-import type { SectionsCollapsed } from "../../components/songbooks/editor/SongbookSortableList";
+import type { SectionsCollapsed } from "../SongbookSortableList";
 import "./SongbookToolbar.css";
 
 /** Typing in a field keeps the field's own undo. */
@@ -27,8 +27,11 @@ export interface SongbookToolsProps {
   sectionsCollapsed: SectionsCollapsed;
   onSetAllCollapsed: (collapse: boolean) => void;
   canSave: boolean;
-  /** "Salvar caderninho"; left out where saving isn't offered. */
+  /** The save button; left out where saving isn't offered. */
   onSave?: () => void;
+  /** What saving does, for its label and tooltip: "Salvar caderninho" on
+   *  Montar, "Salvar versão" when editing a songbook. */
+  saveLabel?: string;
 }
 
 export function SongbookToolbar(props: SongbookToolsProps) {
@@ -38,7 +41,7 @@ export function SongbookToolbar(props: SongbookToolsProps) {
     onAddSection,
     sortValue, onSort,
     sectionsCollapsed, onSetAllCollapsed,
-    canSave, onSave,
+    canSave, onSave, saveLabel = "Salvar caderninho",
   } = props;
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -80,7 +83,7 @@ export function SongbookToolbar(props: SongbookToolsProps) {
       </button>
       {onSave && (
         <button type="button" className="songbook-tool is-primary songbook-save" onClick={onSave}
-          disabled={!canSave} aria-label="Salvar caderninho" title="Salvar caderninho">
+          disabled={!canSave} aria-label={saveLabel} title={saveLabel}>
           <SaveIcon />
           {/* Beside the icon when the column has room for it. */}
           <span className="songbook-save-label" aria-hidden="true">Salvar</span>

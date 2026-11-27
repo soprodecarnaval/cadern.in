@@ -1,0 +1,103 @@
+@import "../../../../styles/tokens.css";
+
+/* The divider (design/Asset 14.svg): a 3px line with round ends down the
+   space between two columns, and the chevrons that collapse each side. */
+.column-divider {
+  /* In a grid, the page places it with grid-area: divider. */
+  grid-area: divider;
+  position: relative;
+  /* How far down the line the chevrons sit; each page sets its own. */
+  padding-top: var(--divider-offset, 0);
+  /* Above the cells, so the chevrons stay clickable where they overlap. */
+  z-index: 2;
+}
+
+.column-divider::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 1.5px);
+  width: 3px;
+  border-radius: 1.5px;
+  background: var(--ds-ink, #000);
+}
+
+.column-divider-controls {
+  /* Follows the page down long lists. */
+  position: sticky;
+  top: 16px;
+  /* Centered on the line; wider than the 24px column, so not margin: auto. */
+  margin-left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  display: flex;
+  flex-direction: column;
+}
+
+.column-divider-button {
+  display: block;
+  /* The design's chevrons at 90%. */
+  width: calc(31.33px * 0.9);
+  height: calc(53px * 0.9);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.column-divider-button svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: var(--ds-paper, #fff);
+  stroke: var(--ds-ink, #000);
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Keeps the 3px stroke when the chevron is drawn smaller than the design. */
+.column-divider-button path {
+  vector-effect: non-scaling-stroke;
+}
+
+/* On hover or keyboard focus the chevron slides the way it points (the
+   direction the columns will move) until its open ends meet the line, and
+   slides back after. The ends sit 8.5 units off the line in the design,
+   drawn at 90%. */
+.column-divider-button.is-right {
+  --slide: calc(8.5px * 0.9);
+}
+
+.column-divider-button.is-left {
+  --slide: calc(-8.5px * 0.9);
+}
+
+.column-divider-button svg {
+  transition: transform 0.2s ease-out;
+}
+
+.column-divider-button:is(:hover, :focus-visible) svg {
+  transform: translateX(var(--slide));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .column-divider-button svg {
+    transition: none;
+  }
+}
+
+/* No stroke on keyboard focus: the chevron's slide shows it. The class is
+   doubled to win over the landing pages' outline on every focused button. */
+.column-divider-button.column-divider-button:focus-visible {
+  outline: none;
+}
+
+/* Phones: the columns stack, so there is nothing to divide. */
+@media (max-width: 575.98px) {
+  .column-divider {
+    display: none;
+  }
+}

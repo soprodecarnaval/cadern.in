@@ -1,0 +1,82 @@
+/* Editing a songbook, laid out as Montar (MontarColumns.css): the search box
+   and the Caderninho toolbar share the top row, Partituras and the
+   Caderninho the one below, with the collapsible divider between the
+   columns. Cells keep Bootstrap's 12px column padding. */
+.songbook-edit-columns {
+  --divider-width: 48px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--divider-width) minmax(0, 1fr);
+  grid-template-areas:
+    "search divider toolbar"
+    "picker divider songbook";
+  /* Out by the cells' padding, so their content meets the page's edges. */
+  margin-inline: -12px;
+}
+
+.songbook-edit-cell {
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.songbook-edit-search {
+  grid-area: search;
+}
+
+.songbook-edit-toolbar {
+  grid-area: toolbar;
+  /* Wide enough, the save button says "Salvar" beside its icon. */
+  container: songbook-toolbar / inline-size;
+  display: flex;
+  align-items: flex-start;
+}
+
+.songbook-edit-picker {
+  grid-area: picker;
+  margin-top: 1.5rem;
+}
+
+.songbook-edit-songbook {
+  grid-area: songbook;
+  margin-top: 1.5rem;
+}
+
+/* As on Montar, the chevrons centered in the space between the search box
+   and the first cards: the line starts with the 48px box here (Montar's
+   starts 24px above it), and the hint and title take the 114px below;
+   (114px - 95px of chevrons) / 2 + 48px. */
+.songbook-edit-columns .column-divider {
+  --divider-offset: 57.5px;
+}
+
+.songbook-edit-columns.is-left-collapsed {
+  grid-template-columns: 0 var(--divider-width) minmax(0, 1fr);
+}
+
+.songbook-edit-columns.is-right-collapsed {
+  grid-template-columns: minmax(0, 1fr) var(--divider-width) 0;
+}
+
+.songbook-edit-columns.is-left-collapsed :is(.songbook-edit-search, .songbook-edit-picker),
+.songbook-edit-columns.is-right-collapsed :is(.songbook-edit-toolbar, .songbook-edit-songbook) {
+  display: none;
+}
+
+/* Phones: one column, everything shown (the divider hides itself). */
+@media (max-width: 575.98px) {
+  .songbook-edit-columns,
+  .songbook-edit-columns.is-left-collapsed,
+  .songbook-edit-columns.is-right-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "search" "toolbar" "picker" "songbook";
+  }
+
+  .songbook-edit-columns.is-left-collapsed .songbook-edit-search,
+  .songbook-edit-columns.is-left-collapsed .songbook-edit-picker,
+  .songbook-edit-columns.is-right-collapsed .songbook-edit-songbook {
+    display: block;
+  }
+
+  .songbook-edit-columns.is-right-collapsed .songbook-edit-toolbar {
+    display: flex;
+  }
+}

@@ -1,8 +1,8 @@
 import { Dropdown } from "react-bootstrap";
 import { BsCheck } from "react-icons/bs";
-import { FilterIcon } from "../toolbarIcons";
+import { FilterIcon } from "../../../components/songbooks/editor/toolbar/toolbarIcons";
 import { filterCount, NO_FILTERS, type ResultsFilters } from "./resultsFilter";
-import "../SongbookToolbar.css";
+import "../../../components/songbooks/editor/toolbar/SongbookToolbar.css";
 
 const GROUPS = [
   { key: "styles", label: "Estilo" },
