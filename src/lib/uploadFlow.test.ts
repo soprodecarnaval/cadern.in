@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment -- expect.stringContaining() matchers are typed any. */
 import type { User } from "firebase/auth";
 import { describe, expect, it, vi } from "vitest";
-import { commitUpload, prepareUpload, repinSongbook, uploadContextFromSearchParams, uploadPath } from "./uploadFlow";
+import { commitUpload, exporterPath, prepareUpload, repinSongbook, uploadContextFromSearchParams, uploadPath } from "./uploadFlow";
 import type { ParsedScore } from "./parseUploadedFiles";
 import type { UploadTargetLookups } from "./uploadTarget";
 
@@ -33,6 +33,9 @@ describe("upload context on the web route", () => {
     expect(context).toEqual({ projectId: "bloco", scoreId: "s", expectedScoreRevisionId: "r2", songbookId: "sb" });
     expect(uploadPath(context)).toBe("/bloco/enviar?partitura=s&versao=r2&caderninho=sb");
     expect(uploadPath({ projectId: "bloco" })).toBe("/bloco/enviar");
+    // The Exportador page carries the same context.
+    expect(exporterPath(context)).toBe("/bloco/exportador?partitura=s&versao=r2&caderninho=sb");
+    expect(exporterPath({ projectId: "bloco" })).toBe("/bloco/exportador");
   });
 });
 

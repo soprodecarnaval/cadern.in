@@ -16,7 +16,7 @@ import {
   songbookPath,
 } from "../../../../lib/routes";
 import { buildExportDeepLink } from "../../../../../types/exportDeepLink";
-import { BROWSER_UPLOAD_MODE, FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
+import { FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
 import { uploadPath } from "../../../../lib/uploadPath";
 
 import type {
@@ -292,22 +292,19 @@ export function PublicProjectPageView({
       )}
       {printBook && <SongbookPrintDialog key={printBook.id} songbook={printBook} services={services} onHide={() => setPrintBook(null)} />}
       {isMember && (
-        <div className="d-flex justify-content-between align-items-center mb-2 gap-2">
+        <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
           <h5 className="mb-0">Partituras</h5>
-          {canUpload && (
-            <div className="d-flex flex-wrap gap-2">
-              {FEATURE_FLAG_BROWSER_UPLOAD && (
-                <RouterLink className="btn btn-outline-secondary ds-button btn-sm" to={uploadPath({ projectId: project.id })}>
-                  Enviar partitura pelo navegador
-                </RouterLink>
-              )}
-              {BROWSER_UPLOAD_MODE !== "default" && (
-                <a className="btn btn-primary ds-button btn-sm project-upload-musescore" href={buildExportDeepLink({ projectId: project.id })}>
-                  Enviar partitura pelo MuseScore
-                </a>
-              )}
-            </div>
-          )}
+          {/* The upload page (which links to MuseScore while it's in beta);
+              without it, MuseScore is the only way in. */}
+          {canUpload && (FEATURE_FLAG_BROWSER_UPLOAD ? (
+            <RouterLink className="btn btn-primary ds-button btn-sm project-upload-browser" to={uploadPath({ projectId: project.id })}>
+              Enviar partitura
+            </RouterLink>
+          ) : (
+            <a className="btn btn-primary ds-button btn-sm project-upload-browser" href={buildExportDeepLink({ projectId: project.id })}>
+              Enviar partitura pelo MuseScore
+            </a>
+          ))}
         </div>
       )}
       {!isMember ? null : scoresError ? (

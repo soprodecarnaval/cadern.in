@@ -28,8 +28,8 @@ export function uploadContextFromSearchParams(projectId: string, params: URLSear
   return context;
 }
 
-/** `/:slug/enviar?…` for a context. */
-export function uploadPath(context: UploadContext): string {
+/** A context's query: everything but the project, which is in the path. */
+function contextQuery(context: UploadContext): string {
   const params = new URLSearchParams();
   for (const key of CONTEXT_KEYS) {
     const value = context[key];
@@ -37,6 +37,19 @@ export function uploadPath(context: UploadContext): string {
   }
   if (context.mode === "reformat") {params.set(MODE_KEY, REFORMAT);}
   const query = params.toString();
-  return `${projectPath(context.projectId)}/enviar${query ? `?${query}` : ""}`;
+  return query ? `?${query}` : "";
+}
+
+/** `/:slug/enviar?…` for a context. */
+export function uploadPath(context: UploadContext): string {
+  return `${projectPath(context.projectId)}/enviar${contextQuery(context)}`;
+}
+
+/**
+ * `/:slug/exportador?…`: download the desktop Exportador, or open (or copy)
+ * the link that starts this same upload in it.
+ */
+export function exporterPath(context: UploadContext): string {
+  return `${projectPath(context.projectId)}/exportador${contextQuery(context)}`;
 }
 

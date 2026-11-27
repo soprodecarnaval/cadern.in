@@ -271,7 +271,7 @@ export function SongbookScorePageView({
           <div className="d-flex flex-wrap gap-2">
             {FEATURE_FLAG_BROWSER_UPLOAD && (
               <Link className="btn btn-outline-secondary ds-button btn-sm" to={uploadPath(uploadContext)}>
-                Enviar nova versão pelo navegador
+                Enviar nova versão
               </Link>
             )}
             {BROWSER_UPLOAD_MODE !== "default" && (

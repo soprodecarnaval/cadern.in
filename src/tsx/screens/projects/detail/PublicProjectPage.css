@@ -37,9 +37,9 @@
   padding: 0 0.75rem 0.5rem;
 }
 
-/* "Enviar partitura pelo MuseScore": yellow, and as tall as the white
+/* "Enviar partitura pelo navegador": yellow, and as tall as the white
    buttons (3px border) though its border is 1px, as "Novo caderninho". */
-.project-upload-musescore.btn {
+.project-upload-browser.btn {
   min-height: 38px;
   display: inline-flex;
   align-items: center;

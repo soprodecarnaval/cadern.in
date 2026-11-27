@@ -18,7 +18,7 @@ import { resolveUploadTarget, type UploadTarget, type UploadTargetLookups } from
 
 export type { UploadContext } from "../../types/exportDeepLink";
 
-export { uploadContextFromSearchParams, uploadPath } from "./uploadPath";
+export { exporterPath, uploadContextFromSearchParams, uploadPath } from "./uploadPath";
 
 export type UploadFlowServices = ExportContextServices &
   Pick<typeof import("./db"), "getSongbookRevision" | "createSongbookRevision">;
