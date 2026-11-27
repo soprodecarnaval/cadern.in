@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- The notebook from the header logo (src/assets/brand/logo.svg), filled
+       with the site's yellow so it reads on light and dark browser tabs. -->
+  <rect x="1.5" y="7.18" width="29" height="23" rx="4.5" fill="#fcee21"/>
+  <path d="M26,8.68c1.65,0,3,1.35,3,3v14c0,1.65-1.35,3-3,3H6c-1.65,0-3-1.35-3-3v-14c0-1.65,1.35-3,3-3h20M26,5.68H6c-3.31,0-6,2.69-6,6v14c0,3.31,2.69,6,6,6h20c3.31,0,6-2.69,6-6v-14c0-3.31-2.69-6-6-6h0Z" transform="translate(0 0.16)"/>
+  <g fill="none" stroke="#000" stroke-linecap="round" stroke-width="3" transform="translate(0 0.16)">
+    <line x1="8.98" y1="1.5" x2="8.98" y2="12.6"/>
+    <line x1="16" y1="1.5" x2="16" y2="12.6"/>
+    <line x1="23.02" y1="1.5" x2="23.02" y2="12.6"/>
+  </g>
+</svg>
