@@ -21,6 +21,7 @@ SVGs. The export app and the plugin retire once maintainers sign off.
 
 ## Status
 
-Built behind `VITE_FEATURE_FLAG_BROWSER_UPLOAD` (`off`, `beta`, `default`).
-Evidence and sign-off: [015 — Browser score upload](../../tasks/015-browser-score-upload/TASK.md).
-Retiring the plugin and the export app waits for that sign-off.
+Merged to `main` behind `VITE_FEATURE_FLAG_BROWSER_UPLOAD` (`off`, `beta`,
+`default`). See [015 — Browser score upload](../../tasks/015-browser-score-upload/TASK.md)
+for merge references, validation evidence and the outstanding rollout checklist.
+Switching to `default` and retiring the plugin and export app still require sign-off.

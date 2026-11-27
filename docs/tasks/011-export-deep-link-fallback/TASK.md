@@ -66,7 +66,8 @@ Browser checks exercised the paste form in isolation. Live authenticated
 upload/stale-permission flows and packaged cold/warm protocol launches were
 not exercised; their existing validation pipeline is unchanged.
 
-Implementation ready for user review; task remains in-progress until accepted.
+Merged to `main` in [PR #442](https://github.com/soprodecarnaval/cadern.in/pull/442)
+(`7c3d6589`). Task acceptance is not recorded here.
 
 ## Screenshots
 

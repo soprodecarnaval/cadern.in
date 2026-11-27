@@ -7,6 +7,10 @@ milestone: ux-improvements
 
 # 012 — pt-BR routes
 
+**On `main`:** [PR #446](https://github.com/soprodecarnaval/cadern.in/pull/446)
+merged as `63630c8a`. See the [web app flow diagrams](../../APP_FLOWS.md)
+for the routes and their screens.
+
 ## Objective
 
 Use consistent Brazilian Portuguese paths across the application with GitHub-style
