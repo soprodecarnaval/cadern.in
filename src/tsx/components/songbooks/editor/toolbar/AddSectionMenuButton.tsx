@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Dropdown } from "react-bootstrap";
-import { Button } from "../../atoms/Button";
-import { Input } from "../../atoms/Input";
+import { Button } from "../../../../atoms/Button";
+import { Input } from "../../../../atoms/Input";
 import "./SongbookToolbar.css";
 import { AddSectionIcon } from "./toolbarIcons";
 

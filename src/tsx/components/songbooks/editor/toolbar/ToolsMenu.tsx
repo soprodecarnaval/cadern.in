@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Dropdown } from "react-bootstrap";
 import { BsCheck, BsChevronDown, BsChevronRight } from "react-icons/bs";
-import { Button } from "../../atoms/Button";
-import { Input } from "../../atoms/Input";
-import { SORT_OPTIONS } from "../../components/scores/sortOptions";
+import { Button } from "../../../../atoms/Button";
+import { Input } from "../../../../atoms/Input";
+import { SORT_OPTIONS } from "../../../scores/sortOptions";
 import type { SongbookToolsProps } from "./SongbookToolbar";
 import {
   AddSectionIcon,
@@ -55,7 +55,7 @@ export function ToolsMenu({
   onAddSection,
   sortValue, onSort,
   sectionsCollapsed, onSetAllCollapsed,
-  canSave, onSave,
+  canSave, onSave, saveLabel = "Salvar caderninho",
 }: SongbookToolsProps) {
   const [show, setShow] = useState(false);
   const [open, setOpen] = useState<"sort" | "add" | null>(null);
@@ -144,7 +144,7 @@ export function ToolsMenu({
           disabled={sectionsCollapsed === "none"}
           onClick={run(() => onSetAllCollapsed(!allCollapsed))} />
         {onSave && (
-          <ToolItem icon={<SaveIcon />} label="Salvar caderninho" primary
+          <ToolItem icon={<SaveIcon />} label={saveLabel} primary
             disabled={!canSave} onClick={run(onSave)} />
         )}
       </Dropdown.Menu>

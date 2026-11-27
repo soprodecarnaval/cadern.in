@@ -276,10 +276,13 @@ export function LandingHeader({
     <header className="landing-header">
       <Logo />
       <nav className="landing-header-nav" aria-label="Principal">
+        {/* Signed in: straight to your projects. */}
+        {collabEnabled && currentUser && (
+          <Link to={projectsPath()} className="landing-header-projects">Meus projetos</Link>
+        )}
         <Link to={aboutPath()}>Sobre</Link>
         <Link to={contributePath()}>Contribua</Link>
         <Link to={helpPath()}>Ajuda</Link>
-        {collabEnabled && currentUser && <Link to={projectsPath()}>Meus projetos</Link>}
         {collabEnabled && (
           // Fixed height, so logging in doesn't move the page down.
           <div className="landing-auth">

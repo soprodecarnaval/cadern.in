@@ -1,6 +1,7 @@
 import { Button } from "../../../atoms/Button";
 import { useState, type KeyboardEvent, type ReactNode } from "react";
-import { BsChevronDown, BsChevronRight, BsFillTrashFill, BsPencilFill } from "react-icons/bs";
+import { BsChevronDown, BsChevronRight } from "react-icons/bs";
+import { TbPencil, TbTrash } from "react-icons/tb";
 
 interface SongBookSectionRowProps {
   handleDelete: () => void;
@@ -65,11 +66,11 @@ export function SongBookSectionRow({
         <Button type="button" variant="text" className="p-0"
           aria-label={`Editar seção ${name}`}
           onClick={() => setDraft(title)}>
-          <BsPencilFill aria-hidden="true" />
+          <TbPencil className="tabler-icon" aria-hidden="true" />
         </Button>
         <Button type="button" variant="text" className="p-0" onClick={handleDelete}
           aria-label={`Remover seção ${name}`}>
-          <BsFillTrashFill aria-hidden="true" />
+          <TbTrash className="tabler-icon" aria-hidden="true" />
         </Button>
       </div>
     </div>

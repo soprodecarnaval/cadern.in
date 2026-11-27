@@ -38,6 +38,9 @@ export interface SongBookTableProps {
   showAddSection?: boolean;
   onManualReorder?: () => void;
   onSectionsCollapsedChange?: (state: SectionsCollapsed) => void;
+  /** Beside the count, in place of "Limpar tudo" (e.g. the edit screen's
+   *  "Cancelar"). */
+  countAction?: import("react").ReactNode;
 }
 
 const SongBookTableView = forwardRef<
@@ -61,6 +64,7 @@ const SongBookTableView = forwardRef<
       showAddSection = true,
       onManualReorder,
       onSectionsCollapsedChange,
+      countAction,
     },
     ref,
   ) => {
@@ -172,9 +176,11 @@ const SongBookTableView = forwardRef<
             {rows.filter(isSongbookSection).length} seções e{" "}
             {rows.filter((r) => !isSongbookSection(r)).length} músicas
           </p>
-          <Button className="songbook-clear" onClick={handleClear}>
-            Limpar tudo
-          </Button>
+          {countAction ?? (
+            <Button className="songbook-clear" onClick={handleClear}>
+              Limpar tudo
+            </Button>
+          )}
         </div>
         {showSectionsByStyle && (
           <Button className="mt-3" onClick={() => setRows(generateSectionsByStyle(rows))}>

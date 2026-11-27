@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Alert, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { slugify } from "../../../../lib/slugify";
-import { isReservedSongbookSlug, songbookPath } from "../../../../lib/routes";
+import { isReservedSongbookSlug, songbookEditPath } from "../../../../lib/routes";
 
 type CreateSongbookServices = Pick<
   typeof import("../../../../lib/db"),
@@ -54,7 +54,8 @@ export function CreateSongbookForm({
         content: { entries: [], pins: {}, covers: {} },
         createdBy: currentUser.uid,
       });
-      void navigate(songbookPath(projectId, slug));
+      // Straight into the editor, to add the first songs.
+      void navigate(songbookEditPath(projectId, slug));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Erro ao criar");
       setPending(false);

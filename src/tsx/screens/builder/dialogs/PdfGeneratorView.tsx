@@ -362,7 +362,7 @@ const PDFGeneratorView = ({
                       >
                         <Checkbox
                           id={`fallback-${instrument}`}
-                          label={`Usar ${fallback} como fallback (+${countWithFallback - count})`}
+                          label={`Usar ${fallback} como alternativa (+${countWithFallback - count})`}
                           checked={fallbackEnabled}
                           onChange={() => {
                             setEnabledFallbacks((prev) => {
