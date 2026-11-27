@@ -641,9 +641,20 @@ function SongbookEditor({
     setPending(true);
     setError("");
     try {
+      // Covers belong to each version: carry over the current one's. Read
+      // fresh, since saving a cover on this page makes a version of its own.
+      const latest = await services.getSongbook(songbook.projectId, songbook.slug);
+      const current = latest && await services.getSongbookRevision(
+        songbook.id,
+        latest.currentRevisionId,
+      );
+      if (!current) {
+        // Saving without them would drop the covers.
+        throw new Error("Não foi possível ler a versão atual. Tente novamente.");
+      }
       await services.createSongbookRevision(
         songbook.id,
-        toSongbookRevisionContent(items),
+        toSongbookRevisionContent(items, current.covers),
         {
           createdBy: currentUser.uid,
           note: note.trim(),

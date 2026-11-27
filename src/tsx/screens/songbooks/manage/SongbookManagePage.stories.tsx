@@ -1,7 +1,7 @@
 import { pinnedVersionItems } from "../../../../../.storybook/fixtures/components";
 import { availableScoreDoc, score } from "../../../../../.storybook/fixtures/screens";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, screen, userEvent, within, waitFor } from "@storybook/test";
+import { expect, fn, screen, userEvent, within, waitFor } from "@storybook/test";
 import { SongbookManagePageView } from "./SongbookManagePageView";
 import {
   bookRevision,
@@ -157,6 +157,35 @@ export const EditorAddScore: Story = {
         }),
       ).toBeVisible();
     });
+  },
+};
+
+// Saving a new version from the editor keeps the songbook's covers: they
+// belong to each version, and used to be left behind.
+const coveredRevision = {
+  ...bookRevision,
+  covers: { trompete: { path: "capas/trompete.png", url: "#capa-trompete" } },
+};
+const saveRevision = fn(() => Promise.resolve("book-revision-3"));
+export const EditorSaveKeepsCovers: Story = {
+  parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
+  args: {
+    services: {
+      ...services,
+      generateSongbookPdfs: generate,
+      getSongbookRevision: () => Promise.resolve(coveredRevision),
+      createSongbookRevision: saveRevision,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    saveRevision.mockClear();
+    await userEvent.click(await within(canvasElement).findByRole("button", { name: "Salvar versão" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.click(dialog.getByRole("button", { name: "Salvar versão" }));
+    await waitFor(() => expect(saveRevision).toHaveBeenCalled());
+    // Its second argument is the new version's content.
+    const [, content] = saveRevision.mock.calls[0] as unknown[];
+    await expect(content).toMatchObject({ covers: coveredRevision.covers });
   },
 };
 
