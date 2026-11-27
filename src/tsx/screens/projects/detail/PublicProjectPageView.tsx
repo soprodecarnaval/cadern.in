@@ -2,7 +2,7 @@ import { Button } from "../../../atoms/Button";
 import { Page } from "../../../atoms/Page";
 import { Link } from "../../../atoms/Link";
 import { useEffect, useState } from "react";
-import { Alert, Spinner, Table } from "react-bootstrap";
+import { Alert, Spinner } from "react-bootstrap";
 import { Badge } from "../../../atoms/Badge";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import type { WithId } from "../../../../lib/db";
@@ -11,6 +11,7 @@ import {
   projectSettingsPath,
   publicSongbookPath,
   scorePath,
+  songbookDetailsPath,
   songbookEditPath,
   songbookPath,
 } from "../../../../lib/routes";
@@ -27,6 +28,7 @@ import type {
 import { SongbookPrintDialog, type SongbookPrintServices } from "./SongbookPrintDialog";
 import { CreateSongbookForm } from "./CreateSongbookForm";
 import { resolveScoreMetadata } from "../../../../lib/scoreMetadata";
+import "../../../components/scores/card/ScoreRow.css";
 import "./PublicProjectPage.css";
 
 const ROLE_LABELS: Record<UserProjectRole, string> = {
@@ -235,50 +237,58 @@ export function PublicProjectPageView({
       ) : songbooks === null ? (
         <Spinner animation="border" />
       ) : songbooks.length === 0 ? (
-        <Alert variant="info" className="project-empty">
+        <Alert variant="info" className="project-empty mb-5">
           {isMember
             ? "Nenhum caderninho ainda."
             : "Nenhum caderninho publicado."}
         </Alert>
       ) : (
-        <Table hover className="mb-4">
-          <tbody>
-            {songbooks.map((sb) => (
-              <tr key={sb.id}>
-                <td className="align-middle">
-                  <RouterLink
-                    to={
-                      isMember
-                        ? songbookPath(project.id, sb.slug)
-                        : publicSongbookPath(project.id, sb.slug)
-                    }
-                  >
-                    {sb.title}
-                  </RouterLink>
-                </td>
-                <td className="text-end align-middle">
-                  <div className="d-flex flex-wrap align-items-center justify-content-end gap-2">
-                    {!sb.isPublished && <small className="text-muted">não publicado</small>}
-                    <Button size="sm" variant="secondary" onClick={() => setPrintBook(sb)} aria-label={`Imprimir ${sb.title}`}>
-                      Imprimir
+        // Each songbook as a song card's tag (ScoreRow.css): bordered, round
+        // corners, its title at the left and its actions at the right.
+        <div className="score-card-list project-songbooks mb-5">
+          {songbooks.map((sb) => (
+            <div key={sb.id} className="score-card">
+              <div className="score-card-row project-songbook-row">
+                <RouterLink
+                  className="score-card-main score-card-title"
+                  to={
+                    isMember
+                      ? songbookPath(project.id, sb.slug)
+                      : publicSongbookPath(project.id, sb.slug)
+                  }
+                >
+                  {sb.title}
+                </RouterLink>
+                <div className="d-flex flex-wrap align-items-center justify-content-end gap-2">
+                  {!sb.isPublished && <small className="text-muted">não publicado</small>}
+                  <Button size="sm" variant="secondary" onClick={() => setPrintBook(sb)} aria-label={`Imprimir ${sb.title}`}>
+                    Imprimir
+                  </Button>
+                  {canEditSongbook(myRole) && (
+                    <Link to={songbookEditPath(project.id, sb.slug)} size="sm" variant="secondary" aria-label={`Editar ${sb.title}`}>
+                      Editar
+                    </Link>
+                  )}
+                  {isMember && (
+                    <Link to={songbookDetailsPath(project.id, sb.slug)} size="sm" variant="secondary" aria-label={`Configurar ${sb.title}`}>
+                      Configurar
+                    </Link>
+                  )}
+                  {!sb.isPublished && canPublishSongbook(myRole) && (
+                    <Button size="sm" disabled={publishing.has(sb.id)} onClick={() => void publish(sb.id)} aria-label={`Publicar ${sb.title}`}>
+                      {publishing.has(sb.id) ? "Publicando…" : "Publicar"}
                     </Button>
-                    {canEditSongbook(myRole) && (
-                      <Link to={songbookEditPath(project.id, sb.slug)} size="sm" variant="secondary" aria-label={`Editar ${sb.title}`}>
-                        Editar
-                      </Link>
-                    )}
-                    {!sb.isPublished && canPublishSongbook(myRole) && (
-                      <Button size="sm" disabled={publishing.has(sb.id)} onClick={() => void publish(sb.id)} aria-label={`Publicar ${sb.title}`}>
-                        {publishing.has(sb.id) ? "Publicando…" : "Publicar"}
-                      </Button>
-                    )}
-                  </div>
-                  {publishError === sb.id && <div role="alert" className="text-danger">Não foi possível publicar este caderninho.</div>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+                  )}
+                </div>
+              </div>
+              {publishError === sb.id && (
+                <div role="alert" className="text-danger project-songbook-error">
+                  Não foi possível publicar este caderninho.
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
       {printBook && <SongbookPrintDialog key={printBook.id} songbook={printBook} services={services} onHide={() => setPrintBook(null)} />}
       {isMember && (
@@ -292,7 +302,7 @@ export function PublicProjectPageView({
                 </RouterLink>
               )}
               {BROWSER_UPLOAD_MODE !== "default" && (
-                <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink({ projectId: project.id })}>
+                <a className="btn btn-primary ds-button btn-sm project-upload-musescore" href={buildExportDeepLink({ projectId: project.id })}>
                   Enviar partitura pelo MuseScore
                 </a>
               )}
@@ -309,28 +319,26 @@ export function PublicProjectPageView({
       ) : scores.length === 0 ? (
         <Alert variant="info" className="project-empty">Nenhuma partitura neste projeto.</Alert>
       ) : (
-        <Table bordered hover>
-          <thead>
-            <tr>
-              <th>Título</th>
-              <th>Compositor</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {scores.map((score) => (
-              <tr key={score.id}>
-                <td>{resolveScoreMetadata(score).title}</td>
-                <td>{resolveScoreMetadata(score).composer}</td>
-                <td>
-                  <Link to={scorePath(score.id)} size="sm" variant="secondary">
-                      Ver
-                    </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+        // Each score as a tag, as the songbooks above: its title and
+        // composer at the left, "Ver" at the right.
+        <div className="score-card-list project-scores">
+          {scores.map((score) => {
+            const { title, composer } = resolveScoreMetadata(score);
+            return (
+              <div key={score.id} className="score-card">
+                <div className="score-card-row project-songbook-row">
+                  <div className="score-card-main">
+                    <div className="score-card-title">{title}</div>
+                    {composer && <div className="score-card-meta text-muted small">{composer}</div>}
+                  </div>
+                  <Link to={scorePath(score.id)} size="sm" variant="secondary" aria-label={`Ver ${title}`}>
+                    Ver
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </Page>
   );

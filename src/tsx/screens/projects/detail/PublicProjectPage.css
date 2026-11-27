@@ -9,10 +9,38 @@
 }
 
 /* As wide as a row's Imprimir and Editar buttons with the gap between them,
-   in line with their right edge (the table cell's 0.5rem padding), and as
+   at the page's right edge (as Configurações and "Enviar partitura"), and as
    tall (they have a 3px border, the yellow button 1px). */
 .project-new-songbook.btn {
   width: 176px;
   min-height: 38px;
-  margin-right: 0.5rem;
+}
+
+/* A songbook's tag: its row isn't one button, so no pointer over it; the
+   buttons keep it as tall as a song card's. */
+.project-songbook-row,
+.project-songbook-row:hover {
+  cursor: default;
+}
+
+.project-songbook-row {
+  justify-content: space-between;
+  min-height: calc(44px + 0.5rem);
+}
+
+/* The title shrinks (with "…") before the buttons do. */
+.project-songbook-row > .score-card-main {
+  flex: 1 1 auto;
+}
+
+.project-songbook-error {
+  padding: 0 0.75rem 0.5rem;
+}
+
+/* "Enviar partitura pelo MuseScore": yellow, and as tall as the white
+   buttons (3px border) though its border is 1px, as "Novo caderninho". */
+.project-upload-musescore.btn {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
 }
