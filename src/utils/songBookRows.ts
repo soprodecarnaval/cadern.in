@@ -1,6 +1,7 @@
 import type { ScoreViewModel } from "../../types/viewModels";
 import type { SongbookItemViewModel } from "../../types/viewModels";
 import { isSongbookSection, songbookSection, songbookScore } from "../lib/songbook";
+import { scoreStyleKey, scoreStyleLabel } from "../lib/scoreStyle";
 import {
   SortColumn,
   sortByColumn,
@@ -47,29 +48,21 @@ export const sortSongsWithinSections = (
 };
 
 export const generateSectionsByStyle = (rows: SongbookItemViewModel[]) => {
-  // remove all sections
-  const newRows = rows.filter((r) => !isSongbookSection(r));
-
-  // create sections
-  const sections = new Map<string, SongbookItemViewModel[]>();
-  for (const row of newRows) {
-    // keep type system happy
+  const sections = new Map<string, { title: string; rows: SongbookItemViewModel[] }>();
+  for (const row of rows) {
     if (isSongbookSection(row)) {
       continue;
     }
-    const style = row.score.tags[0];
-    if (sections.has(style)) {
-      sections.get(style)?.push(row);
+    const key = scoreStyleKey(row.score);
+    const section = sections.get(key);
+    if (section) {
+      section.rows.push(row);
     } else {
-      sections.set(style, [row]);
+      sections.set(key, { title: scoreStyleLabel(row.score), rows: [row] });
     }
   }
 
-  // regenerate rows
-  const sorted: SongbookItemViewModel[] = [];
-  for (const [key, value] of sections.entries()) {
-    sorted.push(songbookSection(key));
-    sorted.push(...value);
-  }
-  return sorted;
+  return [...sections.values()].flatMap(({ title, rows }) => [
+    songbookSection(title), ...rows,
+  ]);
 };
