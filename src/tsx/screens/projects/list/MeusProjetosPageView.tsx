@@ -1,11 +1,16 @@
 import { Page } from "../../../atoms/Page";
 import { Link } from "../../../atoms/Link";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "../../../atoms/Button";
+import { ProjectPickerModal } from "../../../components/projects/ProjectPickerModal";
+import { FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
+import { uploadPath } from "../../../../lib/uploadPath";
 import { Alert, Card, Col, Row, Spinner } from "react-bootstrap";
 import { Badge } from "../../../atoms/Badge";
 
 import type { WithId } from "../../../../lib/db";
-import { isAdmin } from "../../../../lib/roles";
+import { isAdmin, isEditor } from "../../../../lib/roles";
 import { newProjectPath, projectPath, projectSettingsPath } from "../../../../lib/routes";
 
 import type { ProjectDoc, UserProjectRole } from "../../../../../types/docs";
@@ -66,10 +71,15 @@ function ProjectCard({
             `${scoreCount} partitura${scoreCount !== 1 ? "s" : ""}`
           )}
         </div>
-        <div className="d-flex gap-2">
+        <div className="d-flex flex-wrap gap-2">
           <Link to={projectPath(project.slug)} size="sm" variant="secondary">
               Ver
             </Link>
+          {FEATURE_FLAG_BROWSER_UPLOAD && myRole !== "loading" && isEditor(myRole) && (
+            <Link to={uploadPath({ projectId: project.id })} size="sm" variant="secondary">
+              Enviar partitura
+            </Link>
+          )}
           {myRole !== "loading" && isAdmin(myRole) && (
             <Link to={projectSettingsPath(project.slug)} size="sm" variant="secondary">
                 Configurações
@@ -95,6 +105,8 @@ export function MeusProjetosPageView({
 }) {
   const [projects, setProjects] = useState<WithId<ProjectDoc>[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!currentUser) {
@@ -116,10 +128,31 @@ export function MeusProjetosPageView({
 
   return (
     <Page className="mt-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-4 gap-2 flex-wrap">
         <h2>Meus projetos</h2>
-        <Link to={newProjectPath()} variant="primary">Novo projeto</Link>
+        <div className="d-flex flex-wrap gap-2">
+          {FEATURE_FLAG_BROWSER_UPLOAD && projects.length > 0 && (
+            <Button onClick={() => setSending(true)}>Enviar partitura</Button>
+          )}
+          <Link to={newProjectPath()} variant={projects.length > 0 && FEATURE_FLAG_BROWSER_UPLOAD ? "secondary" : "primary"}>
+            Novo projeto
+          </Link>
+        </div>
       </div>
+      <ProjectPickerModal
+        show={sending}
+        user={currentUser}
+        services={services}
+        allow={isEditor}
+        heading="Enviar partitura"
+        description="Escolha o projeto que vai receber a partitura."
+        confirmLabel="Continuar"
+        onHide={() => setSending(false)}
+        onConfirm={(projectId) => {
+          setSending(false);
+          void navigate(uploadPath({ projectId }));
+        }}
+      />
 
       {loading ? (
         <Spinner animation="border" />

@@ -279,6 +279,7 @@ export function LandingHeader({
         <Link to={aboutPath()}>Sobre</Link>
         <Link to={contributePath()}>Contribua</Link>
         <Link to={helpPath()}>Ajuda</Link>
+        {collabEnabled && currentUser && <Link to={projectsPath()}>Meus projetos</Link>}
         {collabEnabled && (
           // Fixed height, so logging in doesn't move the page down.
           <div className="landing-auth">

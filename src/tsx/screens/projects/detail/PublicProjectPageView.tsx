@@ -27,6 +27,11 @@ import type {
 import { SongbookPrintDialog, type SongbookPrintServices } from "./SongbookPrintDialog";
 import { CreateSongbookForm } from "./CreateSongbookForm";
 import { resolveScoreMetadata } from "../../../../lib/scoreMetadata";
+import { ProjectBreadcrumb } from "../../../components/navigation/ProjectBreadcrumb";
+import {
+  DuplicateSongbookButton,
+  type DuplicateSongbookButtonServices,
+} from "../../../components/songbooks/DuplicateSongbookButton";
 
 const ROLE_LABELS: Record<UserProjectRole, string> = {
   owner: "Dono",
@@ -43,7 +48,7 @@ export type PublicProjectPageServices = Pick<
   | "createSongbook"
   | "getSongbook"
   | "setSongbookPublished"
-> & SongbookPrintServices;
+> & SongbookPrintServices & DuplicateSongbookButtonServices;
 
 export function PublicProjectPageView({
   services,
@@ -170,14 +175,15 @@ export function PublicProjectPageView({
   const myRole = role === "loading" ? undefined : role;
   const canManage = isAdmin(myRole);
   const canUpload = isEditor(myRole);
+  const showPublishColumn = canPublishSongbook(myRole);
 
-  const publish = async (id: string) => {
+  const setPublished = async (id: string, isPublished: boolean) => {
     if (publishing.has(id)) {return;}
     setPublishing((current) => new Set(current).add(id));
     setPublishError(null);
     try {
-      await services.setSongbookPublished(id, true);
-      setSongbooks((current) => current?.map((book) => book.id === id ? { ...book, isPublished: true } : book) ?? null);
+      await services.setSongbookPublished(id, isPublished);
+      setSongbooks((current) => current?.map((book) => book.id === id ? { ...book, isPublished } : book) ?? null);
     } catch {
       setPublishError(id);
     } finally {
@@ -189,8 +195,24 @@ export function PublicProjectPageView({
     }
   };
 
+  const sendButtons = (
+    <div className="d-flex flex-wrap gap-2">
+      {FEATURE_FLAG_BROWSER_UPLOAD && (
+        <Link to={uploadPath({ projectId: project.id })} size="sm" variant="primary">
+          Enviar partitura
+        </Link>
+      )}
+      {BROWSER_UPLOAD_MODE !== "default" && (
+        <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink({ projectId: project.id })}>
+          Enviar pelo MuseScore
+        </a>
+      )}
+    </div>
+  );
+
   return (
     <Page className="mt-4">
+      <ProjectBreadcrumb signedIn={!!currentUser} project={{ id: project.id, title: project.title }} />
       <div className="d-flex justify-content-between align-items-start mb-1 gap-2 flex-wrap">
         <div className="d-flex flex-wrap gap-2 align-items-center">
           <h2 className="mb-0">{project.title}</h2>
@@ -244,7 +266,7 @@ export function PublicProjectPageView({
           <tbody>
             {songbooks.map((sb) => (
               <tr key={sb.id}>
-                <td>
+                <td className="align-middle">
                   <RouterLink
                     to={
                       isMember
@@ -255,9 +277,12 @@ export function PublicProjectPageView({
                     {sb.title}
                   </RouterLink>
                 </td>
-                <td className="text-end">
-                  <div className="d-flex flex-wrap align-items-center justify-content-end gap-2">
-                    {!sb.isPublished && <small className="text-muted">não publicado</small>}
+                <td className="text-end align-middle">
+                  {!sb.isPublished && <small className="text-muted">não publicado</small>}
+                </td>
+                {/* Fixed columns, so each button sits in the same place on every row. */}
+                <td className="text-end text-nowrap align-middle" style={{ width: "1%" }}>
+                  <div className="d-flex flex-nowrap align-items-center justify-content-end gap-2">
                     <Button size="sm" variant="secondary" onClick={() => setPrintBook(sb)} aria-label={`Imprimir ${sb.title}`}>
                       Imprimir
                     </Button>
@@ -266,14 +291,31 @@ export function PublicProjectPageView({
                         Editar
                       </Link>
                     )}
-                    {!sb.isPublished && canPublishSongbook(myRole) && (
-                      <Button size="sm" disabled={publishing.has(sb.id)} onClick={() => void publish(sb.id)} aria-label={`Publicar ${sb.title}`}>
-                        {publishing.has(sb.id) ? "Publicando…" : "Publicar"}
-                      </Button>
-                    )}
+                    <DuplicateSongbookButton songbook={sb} user={currentUser} services={services} />
                   </div>
-                  {publishError === sb.id && <div role="alert" className="text-danger">Não foi possível publicar este caderninho.</div>}
                 </td>
+                {showPublishColumn && (
+                  <td className="text-end text-nowrap align-middle" style={{ width: "1%" }}>
+                    {/* One button that toggles, at the same width either way. */}
+                    <Button
+                      size="sm"
+                      variant={sb.isPublished ? "secondary" : "primary"}
+                      style={{ minWidth: "7.5rem" }}
+                      disabled={publishing.has(sb.id)}
+                      onClick={() => void setPublished(sb.id, !sb.isPublished)}
+                      aria-label={`${sb.isPublished ? "Despublicar" : "Publicar"} ${sb.title}`}
+                    >
+                      {publishing.has(sb.id)
+                        ? sb.isPublished ? "Despublicando…" : "Publicando…"
+                        : sb.isPublished ? "Despublicar" : "Publicar"}
+                    </Button>
+                    {publishError === sb.id && (
+                      <div role="alert" className="text-danger small">
+                        {sb.isPublished ? "Não foi possível despublicar." : "Não foi possível publicar."}
+                      </div>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -283,20 +325,6 @@ export function PublicProjectPageView({
       {isMember && (
         <div className="d-flex justify-content-between align-items-center mb-2 gap-2">
           <h5 className="mb-0">Partituras</h5>
-          {canUpload && (
-            <div className="d-flex flex-wrap gap-2">
-              {FEATURE_FLAG_BROWSER_UPLOAD && (
-                <RouterLink className="btn btn-outline-secondary ds-button btn-sm" to={uploadPath({ projectId: project.id })}>
-                  Enviar partitura pelo navegador
-                </RouterLink>
-              )}
-              {BROWSER_UPLOAD_MODE !== "default" && (
-                <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink({ projectId: project.id })}>
-                  Enviar partitura pelo MuseScore
-                </a>
-              )}
-            </div>
-          )}
         </div>
       )}
       {!isMember ? null : scoresError ? (
@@ -306,7 +334,10 @@ export function PublicProjectPageView({
       ) : scoresLoading ? (
         <Spinner animation="border" />
       ) : scores.length === 0 ? (
-        <Alert variant="info">Nenhuma partitura neste projeto.</Alert>
+        <Alert variant="info" className="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          Nenhuma partitura neste projeto.
+          {canUpload && sendButtons}
+        </Alert>
       ) : (
         <Table bordered hover>
           <thead>
