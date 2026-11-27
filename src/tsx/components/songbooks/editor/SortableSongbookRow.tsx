@@ -2,7 +2,7 @@ import { Button } from "../../../atoms/Button";
 import { useState, type ReactNode } from "react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { OptimisticSortingPlugin } from "@dnd-kit/dom/sortable";
-import { BsFillTrashFill, BsPencilFill } from "react-icons/bs";
+import { TbPencil, TbTrash } from "react-icons/tb";
 import type { ScoreViewModel } from "../../../../../types/viewModels";
 import type { SongbookEditorItem } from "../../../../lib/songbookReorder";
 import { songbookScoreVersionLabel } from "../../../../lib/songbook";
@@ -43,12 +43,12 @@ function SongbookScoreCard({ Card,
             <Button type="button" variant="text" className="p-0"
               aria-label={`Editar ${score.title}`}
               onClick={() => setShowEditModal(true)}>
-              <BsPencilFill aria-hidden="true" />
+              <TbPencil className="tabler-icon" aria-hidden="true" />
             </Button>
             <Button type="button" variant="text" className="p-0"
               aria-label={`Remover ${score.title}`}
               onClick={() => handleDelete(score, false)}>
-              <BsFillTrashFill aria-hidden="true" />
+              <TbTrash className="tabler-icon" aria-hidden="true" />
             </Button>
           </div>
         }

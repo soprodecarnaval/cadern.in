@@ -8,6 +8,9 @@ function DragIcon() {
       width="1em"
       height={`${17 / 25}em`}
       fill="currentColor"
+      // The bars touch the drawing's edges: unclipped, their rounded ends
+      // and outer edges keep their soft pixels instead of being cut off.
+      overflow="visible"
       aria-hidden="true"
       focusable="false"
     >
