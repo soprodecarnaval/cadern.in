@@ -162,6 +162,7 @@ function App() {
             <ContributePage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
           }
         />
+        <Route path={ROUTE_PATTERNS.exporterDownload} element={<ExporterPage />} />
         <Route path={ROUTE_PATTERNS.score} element={<ScorePage />} />
         <Route path={ROUTE_PATTERNS.scoreRevision} element={<ScorePage />} />
         {FEATURE_FLAG_COLLAB_FLOW && (

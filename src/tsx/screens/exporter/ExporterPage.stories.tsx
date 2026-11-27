@@ -59,3 +59,15 @@ export const CopyFailed: Story = {
     await expect(await canvas.findByText("Não foi possível copiar. Selecione o link e copie.")).toBeVisible();
   },
 };
+
+/** From the footer, with no project: the downloads only. */
+export const DownloadOnly: Story = {
+  parameters: { route: "/exportador", routePath: "/exportador" },
+  args: { context: undefined },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("link", { name: "Baixar para Mac" })).toBeVisible();
+    await expect(canvas.queryByRole("link", { name: "Abrir no Exportador" })).toBeNull();
+    await expect(canvas.getByText(/abra o Exportador pela página de envio de um projeto/)).toBeVisible();
+  },
+};

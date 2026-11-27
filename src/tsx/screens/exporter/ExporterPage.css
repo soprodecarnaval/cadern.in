@@ -10,6 +10,10 @@
   margin-top: calc(var(--ds-space-6) * 2);
 }
 
+.exporter-start {
+  margin-top: calc(var(--ds-space-6) * 2);
+}
+
 .exporter-intro,
 .exporter-copy-hint,
 .exporter-download-detail,
