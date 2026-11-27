@@ -35,9 +35,15 @@ export const Owner: Story = {
     await expect(canvas.getByRole("link", { name: "Editar Ensaios 2027" })).toHaveAttribute("href", "/bloco-exemplo/ensaios/gerenciar?detalhes&editar");
     await expect(canvas.getByRole("link", { name: "Configurar Ensaios 2027" })).toHaveAttribute("href", "/bloco-exemplo/ensaios/gerenciar?detalhes");
     await expect(canvas.queryByRole("button", { name: "Publicar Carnaval 2026" })).toBeNull();
+    await expect(canvas.getByRole("button", { name: "Duplicar Carnaval 2026" })).toBeVisible();
+    await expect(canvas.getByRole("navigation", { name: "Navegação do projeto" })).toHaveTextContent("Meus projetos");
     await userEvent.click(canvas.getByRole("button", { name: "Publicar Ensaios 2027" }));
     await expect(args.services.setSongbookPublished).toHaveBeenCalledWith("draft", true);
     await waitFor(() => expect(canvas.queryByRole("button", { name: "Publicar Ensaios 2027" })).toBeNull());
+    // Published caderninhos get "Despublicar" in the same place.
+    await userEvent.click(canvas.getByRole("button", { name: "Despublicar Carnaval 2026" }));
+    await expect(args.services.setSongbookPublished).toHaveBeenCalledWith(songbook.id, false);
+    await expect(await canvas.findByRole("button", { name: "Publicar Carnaval 2026" })).toBeVisible();
   },
 };
 export const Public: Story = {
@@ -49,6 +55,7 @@ export const Public: Story = {
     await expect(canvas.queryByText("Ensaios 2027")).not.toBeInTheDocument();
     await expect(canvas.queryByText("Partituras")).not.toBeInTheDocument();
     await expect(canvas.queryByRole("button", { name: "Novo caderninho" })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("button", { name: "Duplicar Carnaval 2026" })).not.toBeInTheDocument();
   },
 };
 export const PrintOptions: Story = {
@@ -115,6 +122,7 @@ export const Admin: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("link", { name: "Editar Ensaios 2027" })).toBeVisible();
     await expect(canvas.queryByRole("button", { name: "Publicar Ensaios 2027" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Despublicar Carnaval 2026" })).toBeNull();
   },
 };
 export const Editor: Story = { args: { role: "editor" } };

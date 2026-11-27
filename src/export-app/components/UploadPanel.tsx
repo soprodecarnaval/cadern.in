@@ -15,7 +15,7 @@ import {
   validateExportContext,
   type ResolvedExportContext,
 } from "../../lib/exportContext";
-import { repinSongbook } from "../../lib/uploadFlow";
+import { repinSongbook, type RepinOutcome } from "../../lib/uploadFlow";
 import type { ExportDeepLinkContext } from "../../../types/exportDeepLink";
 import type { UploadTarget } from "../../lib/uploadTarget";
 import {
@@ -50,7 +50,7 @@ type Status =
       scoreId: string;
       localStamped: boolean;
       directory: string;
-      repin: "updated" | "skipped-stale" | "none";
+      repin: RepinOutcome;
     }
   | { kind: "error"; message: string };
 

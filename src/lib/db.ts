@@ -656,6 +656,8 @@ export async function createSongbook(input: {
   title: string;
   content: SongbookRevisionContent;
   createdBy: string;
+  // The first revision's note, e.g. where a copy came from (ticket 029).
+  note?: string;
 }): Promise<string> {
   if (isReservedSongbookSlug(input.slug)) {
     throw new Error("Esse nome de URL é reservado.");
@@ -681,7 +683,7 @@ export async function createSongbook(input: {
       revisionNumber: 1,
       prevRevisionId: null,
       createdBy: input.createdBy,
-      note: "",
+      note: input.note ?? "",
     }),
     createdAt: serverTimestamp(),
   });

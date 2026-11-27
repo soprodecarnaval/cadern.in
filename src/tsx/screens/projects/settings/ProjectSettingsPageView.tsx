@@ -1,4 +1,5 @@
 import { Button } from "../../../atoms/Button";
+import { ProjectBreadcrumb } from "../../../components/navigation/ProjectBreadcrumb";
 import { Page } from "../../../atoms/Page";
 import { Input } from "../../../atoms/Input";
 import { useEffect, useState } from "react";
@@ -239,6 +240,7 @@ export function ProjectSettingsPageView({
 
   return (
     <Page className="mt-4" style={{ maxWidth: 680 }}>
+      <ProjectBreadcrumb signedIn project={{ id: project.id, title: project.title }} current="Configurações" />
       <h2 className="mb-4">Configurações: {project.title}</h2>
 
       {/* Title */}

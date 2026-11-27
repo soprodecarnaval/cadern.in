@@ -1,6 +1,6 @@
 import { pinnedVersionItems } from "../../../../../.storybook/fixtures/components";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "@storybook/test";
+import { expect, userEvent, within } from "@storybook/test";
 import { SongbookReader } from "../../../components/songbooks/reader/SongbookReader";
 import { SongbookPageView } from "./SongbookPageView";
 import {
@@ -9,6 +9,7 @@ import {
   services,
   songbook,
   songbookComponents,
+  user,
 } from "../../../../../.storybook/fixtures/screens";
 const meta = {
   title: "Screens/SongbookPage",
@@ -26,6 +27,36 @@ export default meta;
 type Story = StoryObj<typeof SongbookPageView>;
 
 export const Published: Story = {};
+export const Admin: Story = {
+  args: { currentUser: user, role: "admin", components: { SongbookReader } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("link", { name: "Editar Carnaval 2026" })).toHaveAttribute(
+      "href",
+      "/bloco-exemplo/carnaval/gerenciar?detalhes&editar",
+    );
+    await expect(canvas.getByRole("link", { name: "Meus projetos" })).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Duplicar Carnaval 2026" })).toBeVisible();
+  },
+};
+export const Editor: Story = {
+  args: { currentUser: user, role: "editor", components: { SongbookReader } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("link", { name: "Trocar versões" })).toBeVisible();
+    await expect(canvas.queryByRole("link", { name: "Editar Carnaval 2026" })).toBeNull();
+  },
+};
+export const SignedInVisitor: Story = {
+  args: { currentUser: user, role: undefined, components: { SongbookReader } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Duplicar Carnaval 2026" }));
+    const body = within(document.body);
+    await expect(await body.findByLabelText("Título da cópia")).toHaveValue("Cópia de Carnaval 2026");
+    await expect(canvas.queryByRole("link", { name: "Trocar versões" })).toBeNull();
+  },
+};
 export const NotFound: Story = {
   args: {
     services: {

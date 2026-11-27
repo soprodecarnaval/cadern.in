@@ -16,6 +16,7 @@ const services = () => ({
   getSongbookById: vi.fn().mockResolvedValue({ id: "sb", projectId: "p", title: "Caderninho", currentRevisionId: "br2", deletedAt: null }),
   getSongbookRevision: vi.fn().mockResolvedValue({ entries: [], pins: { s: "r1" }, covers: {} }),
   createSongbookRevision: vi.fn().mockResolvedValue(undefined),
+  swapSongbookEntryToFork: vi.fn().mockResolvedValue(undefined),
 });
 const lookups = (s: ReturnType<typeof services>): UploadTargetLookups => ({
   getScore: s.getScore as UploadTargetLookups["getScore"],
@@ -49,7 +50,26 @@ describe("reformat context", () => {
     const s = services();
     const context = { projectId: "p", scoreId: "s", expectedScoreRevisionId: "r2", baseRevisionId: "r2", mode: "reformat" as const };
     expect(await prepareUpload(context, parsed({ scoreId: "s", revisionId: "r2" }), "uid", s, lookups(s))).toMatchObject({ ok: true });
-    expect(await prepareUpload(context, parsed(), "uid", s, lookups(s))).toMatchObject({ ok: false, reason: expect.stringContaining("reformatação") });
+    expect(await prepareUpload(context, parsed({ scoreId: "gone", revisionId: "x" }), "uid", s, lookups(s)))
+      .toMatchObject({ ok: false, reason: expect.stringContaining("reformatação") });
+  });
+
+  it("treats a stored file without an identity as the base revision", async () => {
+    const s = services();
+    const context = { projectId: "p", scoreId: "s", expectedScoreRevisionId: "r2", baseRevisionId: "r1", mode: "reformat" as const };
+    expect(await prepareUpload(context, parsed(), "uid", s, lookups(s))).toMatchObject({ ok: true, target: { kind: "version", scoreId: "s" } });
+  });
+
+  it("saves an edit of another project's score as a copy here (031)", async () => {
+    const s = services();
+    const l = lookups(s);
+    (l.getScoreForks as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    const context = { projectId: "p", scoreId: "q-s", baseRevisionId: "r2", mode: "reformat" as const };
+    expect(await prepareUpload(context, parsed({ scoreId: "q-s", revisionId: "r2" }), "uid", s, l))
+      .toMatchObject({ ok: true, target: { kind: "fork", source: { scoreId: "q-s", projectId: "q", revisionId: "r2" } } });
+    // A second edit adds a version to the copy already here.
+    expect(await prepareUpload(context, parsed({ scoreId: "q-s", revisionId: "r2" }), "uid", s, lookups(s)))
+      .toMatchObject({ ok: true, target: { kind: "version", scoreId: "p-fork" } });
   });
 
   it("labels the new revision as a reformat", async () => {
@@ -116,6 +136,18 @@ describe("commitUpload", () => {
     const result = await commitUpload(context, parsed({ scoreId: "s", revisionId: "r2" }), { kind: "version", scoreId: "s", title: "s" }, user, { services: s, upload, lookups: lookups(s) });
     expect(result).toMatchObject({ ok: true, repin: "updated", identity: { revisionId: "r3" } });
     expect(s.createSongbookRevision).toHaveBeenCalledWith("sb", { entries: [], pins: { s: "r3" }, covers: {} }, { createdBy: "uid", note: "atualiza: Música" });
+  });
+
+  it("moves the songbook entry to this project's copy instead of pinning it", async () => {
+    const s = services();
+    const upload = vi.fn().mockResolvedValue({ scoreId: "p-fork", revisionId: "f2" });
+    const context = { projectId: "p", scoreId: "q-s", songbookId: "sb", expectedSongbookRevisionId: "br2", baseRevisionId: "r2", mode: "reformat" as const };
+    const result = await commitUpload(context, parsed({ scoreId: "q-s", revisionId: "r2" }), { kind: "version", scoreId: "p-fork", title: "p-fork" }, user, { services: s, upload, lookups: lookups(s) });
+    expect(result).toMatchObject({ ok: true, repin: "swapped" });
+    expect(s.swapSongbookEntryToFork).toHaveBeenCalledWith("sb", "q-s", "p-fork");
+    expect(s.createSongbookRevision).not.toHaveBeenCalled();
+    s.swapSongbookEntryToFork.mockRejectedValueOnce(new Error("already in it"));
+    expect(await repinSongbook(context, { scoreId: "p-fork", revisionId: "f3" }, "M", "uid", s)).toBe("swap-failed");
   });
 
   it("writes nothing when the context went stale or the target changed", async () => {
