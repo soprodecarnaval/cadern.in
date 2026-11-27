@@ -263,6 +263,7 @@ service cloud.firestore {
 
           allow read: if canReadThread();
           allow create: if request.auth != null && canReadThread() &&
+            exists(/databases/$(database)/documents/scores/$(scoreId)/scoreRevisions/$(revisionId)) &&
             request.resource.data.keys().hasOnly(['authorId', 'authorName',
               'body', 'parentId', 'anchor', 'createdAt', 'updatedAt',
               'deletedAt']) &&
