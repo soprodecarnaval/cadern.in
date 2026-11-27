@@ -15,6 +15,9 @@ import { PartTabs } from "../../components/scores/PartTabs";
 import { ProjectBreadcrumb } from "../../components/navigation/ProjectBreadcrumb";
 import { projectPath, ROUTE_PATTERNS } from "../../../lib/routes";
 import type { UploadContext } from "../../../../types/exportDeepLink";
+import { Link as RouterLink } from "react-router-dom";
+import { exporterPath } from "../../../lib/uploadPath";
+import { BROWSER_UPLOAD_MODE } from "../../../featureFlags";
 import type { ScoreMetadata } from "../../../../types/docs";
 import {
   STEPS,
@@ -117,7 +120,7 @@ function Stepper({ step }: { step: Step }) {
   );
 }
 
-function FileStep({ state, onFile }: Pick<EnviarPageViewProps, "state" | "onFile">) {
+function FileStep({ state, context, onFile }: Pick<EnviarPageViewProps, "state" | "context" | "onFile">) {
   return (
     <section aria-labelledby="enviar-arquivo">
       <h2 id="enviar-arquivo" tabIndex={-1}>Arquivo</h2>
@@ -148,6 +151,14 @@ function FileStep({ state, onFile }: Pick<EnviarPageViewProps, "state" | "onFile
         />
       </label>
       <p className="enviar-hint">Arquivos .mscz ou .mscx do MuseScore 4, até {mb(MAX_SCORE_BYTES)}.</p>
+      {/* The other way in, while browser upload is in beta: the desktop
+          Exportador's page (download it, open this upload in it). */}
+      {BROWSER_UPLOAD_MODE !== "default" && (
+        <p className="enviar-hint">
+          Se preferir, envie a partitura usando o{" "}
+          <RouterLink className="enviar-export-link" to={exporterPath(context)}>Exportador Musescore</RouterLink>
+        </p>
+      )}
     </section>
   );
 }
@@ -466,7 +477,16 @@ function PartControls({ state, onProfile, onRows, row, label, automaticStaff, au
     const profile = on ? withFormattingForAll(state.profile, names(targets), { fingering: { notation: value as FingeringNotation } }) : state.profile;
     onRows(rows, profile);
   };
-  const fingeredOthers = others.filter((candidate) => candidate.fingeringsAvailable);
+  // Trombones read positions, never valves: no "Pistos" for them, here or
+  // applied from another part.
+  const takesNotation = (candidate: PartRow, value: string) =>
+    !(value === "valves" && candidate.family === "trombone");
+  const fingeredOthers = others.filter((candidate) =>
+    candidate.fingeringsAvailable && takesNotation(candidate, piratas));
+  const notationOptions: [string, string][] = [
+    ["positions", "Posições (1–7)"], ["valves", "Pistos"], ["file", "Do arquivo"], ["off", "Desligado"],
+  ];
+  const partNotations = notationOptions.filter(([value]) => takesNotation(row, value));
   return (
     <>
       <fieldset className="enviar-choice">
@@ -491,7 +511,7 @@ function PartControls({ state, onProfile, onRows, row, label, automaticStaff, au
       )}
       {row.fingeringsAvailable && (
         <Choice label="Piratas" name="part-notation" value={piratas}
-          options={[["positions", "Posições (1–7)"], ["valves", "Pistos"], ["file", "Do arquivo"], ["off", "Desligado"]]}
+          options={partNotations}
           onChange={(value) => setPiratas([], value)}>
           {link("Piratas", fingeredOthers, () => {
             setPiratas(fingeredOthers, piratas);

@@ -17,6 +17,7 @@ import { initialsOf } from "../../../lib/displayName";
 import {
   aboutPath,
   contributePath,
+  exporterDownloadPath,
   helpPath,
   libraryPath,
   publicSongbookPath,
@@ -103,11 +104,9 @@ export function LandingPageView({
   onOpenUserModal: (tab?: ProfileTab) => void;
   onSignOut: () => void;
 }) {
-  // Arriving from another page's "Exportador desktop" link opens its panel.
+  // Every tool box starts closed; a link to "#exportador" opens that one.
   const [openTools, setOpenTools] = useState<string[]>(() =>
-    window.location.hash === `#${EXPORTER_ANCHOR}`
-      ? ["plugin", "exporter"]
-      : ["plugin"],
+    window.location.hash === `#${EXPORTER_ANCHOR}` ? ["exporter"] : [],
   );
   useEffect(() => {
     if (window.location.hash === `#${EXPORTER_ANCHOR}`) {
@@ -116,15 +115,6 @@ export function LandingPageView({
         ?.scrollIntoView({ block: "center" });
     }
   }, []);
-  // The exporter has no page of its own yet: links to it open its panel here.
-  const showExporter = () => {
-    setOpenTools((open) =>
-      open.includes("exporter") ? open : [...open, "exporter"],
-    );
-    document
-      .getElementById(EXPORTER_ANCHOR)
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
-  };
 
   return (
     <div className="landing">
@@ -185,9 +175,10 @@ export function LandingPageView({
                   E faça upload de novas partituras para seus projetos no
                   cadern.in. Disponível para Windows, Mac e Linux.
                 </p>
-                <Button className="landing-cta" disabled>
-                  Em breve
-                </Button>
+                {/* The Exportador's page: its downloads for each system. */}
+                <Link className="btn btn-primary ds-button landing-cta" to={exporterDownloadPath()}>
+                  Baixar
+                </Link>
               </Accordion.Body>
             </Accordion.Item>
           </Accordion>
@@ -245,7 +236,6 @@ export function LandingPageView({
         currentUser={currentUser}
         collabEnabled={collabEnabled}
         onOpenUserModal={onOpenUserModal}
-        onShowExporter={showExporter}
       />
     </div>
   );
@@ -529,13 +519,10 @@ export function LandingFooter({
   currentUser,
   collabEnabled,
   onOpenUserModal,
-  onShowExporter,
 }: {
   currentUser: import("firebase/auth").User | null;
   collabEnabled: boolean;
   onOpenUserModal: () => void;
-  /** Off the landing page, the link goes to the landing page's panel. */
-  onShowExporter?: () => void;
 }) {
   return (
     <footer className="landing-footer">
@@ -568,21 +555,8 @@ export function LandingFooter({
               </>
             )}
             <li><Link to={PLANNED.carnaval}>Carnaval 2027</Link></li>
-            <li>
-              {onShowExporter ? (
-                <a
-                  href={`#${EXPORTER_ANCHOR}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onShowExporter();
-                  }}
-                >
-                  Exportador desktop
-                </a>
-              ) : (
-                <Link to={`/#${EXPORTER_ANCHOR}`}>Exportador desktop</Link>
-              )}
-            </li>
+            {/* The Exportador's own page: download it. */}
+            <li><Link to={exporterDownloadPath()}>Exportador desktop</Link></li>
           </ul>
           <ul>
             <li><Link to={aboutPath()}>Sobre</Link></li>

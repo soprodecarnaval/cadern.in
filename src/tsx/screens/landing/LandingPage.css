@@ -511,7 +511,9 @@
   --bs-accordion-bg: transparent;
   --bs-accordion-active-bg: transparent;
   --bs-accordion-active-color: var(--landing-ink);
-  --bs-accordion-btn-focus-box-shadow: 0 0 0 4px var(--landing-yellow);
+  /* No yellow focus ring: the item clips it to a yellow line under the
+     title after a click. Keyboard focus lifts the box instead, below. */
+  --bs-accordion-btn-focus-box-shadow: none;
   --bs-accordion-btn-icon: url("../../../assets/brand/chevron-down.svg");
   --bs-accordion-btn-active-icon: url("../../../assets/brand/chevron-up.svg");
   --bs-accordion-btn-icon-transform: none;
@@ -544,6 +546,21 @@
 .landing-tools .accordion-button:not(.collapsed) {
   box-shadow: none;
   border-bottom: 2px solid var(--landing-ink);
+}
+
+/* Keyboard focus on a title lifts its box with the hard black shadow, as a
+   focused field. The doubled class wins over the landing pages' outline. */
+.landing-tools .accordion-item {
+  transition: transform 0.15s;
+}
+
+.landing-tools .accordion-item:has(.accordion-button:focus-visible) {
+  transform: translateY(var(--ds-lift));
+  box-shadow: var(--ds-shadow-raised);
+}
+
+.landing-tools .accordion-button.accordion-button:focus-visible {
+  outline: none;
 }
 
 .landing-tools .accordion-body {
@@ -606,13 +623,20 @@
   box-shadow: 4px 4px 0 var(--landing-ink);
 }
 
-/* Hover and keyboard focus turn the card yellow (in place of the browser's
-   focus ring). */
+/* Hover and keyboard focus turn the card yellow. */
 .landing-action:hover,
 .landing-action:focus-visible {
-  outline: none;
   background: var(--landing-yellow);
   border-color: var(--landing-yellow);
+}
+
+/* Keyboard focus also lifts it with the hard black shadow, as a focused
+   field (in place of the browser's focus ring). The doubled class wins over
+   the landing pages' outline. */
+.landing-action.landing-action:focus-visible {
+  outline: none;
+  transform: translateY(var(--ds-lift));
+  box-shadow: var(--ds-shadow-raised);
 }
 
 .landing-action-chevron {

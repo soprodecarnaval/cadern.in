@@ -287,6 +287,29 @@ export const ApplyToAllParts: Story = {
   },
 };
 
+// Trombones read positions, never valves: no "Pistos" on a trombone, and a
+// trumpet's "Pistos" isn't applied to it.
+const tromboneRows = partRows([
+  { ordinal: 1, name: "Pete", instruments: [{ id: "bb-trumpet", soundId: "brass.trumpet.bflat", longName: "Trompete B♭", shortName: "Tpt." }] },
+  { ordinal: 2, name: "Trombone", instruments: [{ id: "trombone", soundId: "brass.trombone", longName: "Trombone", shortName: "Tbn." }] },
+]);
+export const TrombonePiratas: Story = {
+  args: {
+    state: state({ step: "formatacao", rows: tromboneRows, previews: { 1: preview(1), 2: preview(2) } }),
+  },
+  render: ApplyToAllParts.render,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const piratas = () => within(canvas.getByRole("group", { name: "Piratas" }));
+    await userEvent.click(canvas.getByRole("tab", { name: "Trombone" }));
+    await expect(piratas().getByRole("radio", { name: "Posições (1–7)" })).toBeChecked();
+    await expect(piratas().queryByRole("radio", { name: "Pistos" })).toBeNull();
+    await userEvent.click(canvas.getByRole("tab", { name: "Trompete" }));
+    await userEvent.click(piratas().getByRole("radio", { name: "Pistos" }));
+    await expect(canvas.queryByRole("button", { name: "Aplicar a todas as partes: Piratas" })).toBeNull();
+  },
+};
+
 // The arranger already wrote the piratas: "Do arquivo" keeps them, and cadern.in adds none.
 export const FileFingerings: Story = {
   args: ApplyToAllParts.args,

@@ -1,0 +1,88 @@
+@import "../../../styles/tokens.css";
+
+/* The Exportador page: two sections, each with a section title as on the
+   upload page; white download buttons, yellow "Abrir no Exportador". */
+.exporter-page h1 {
+  margin-bottom: var(--ds-space-3);
+}
+
+.exporter-page section {
+  margin-top: calc(var(--ds-space-6) * 2);
+}
+
+.exporter-start {
+  margin-top: calc(var(--ds-space-6) * 2);
+}
+
+.exporter-intro,
+.exporter-copy-hint,
+.exporter-download-detail,
+.exporter-copy-status {
+  color: var(--ds-text-secondary);
+}
+
+.exporter-page a:not(.btn) {
+  color: var(--ds-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* One row per system: the button, and which build it is beside it. The
+   buttons share a column as wide as the widest, so all three match. */
+.exporter-downloads {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: var(--ds-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exporter-downloads li {
+  display: contents;
+}
+
+/* "Abrir no Exportador" the size of the download buttons above: 244px wide
+   (the width of "Baixar para Windows") and as tall, though the yellow
+   button's border is 1px where theirs is 3px. */
+.exporter-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15.25rem;
+  min-height: 47px;
+}
+
+.exporter-download-detail {
+  font-size: var(--ds-caption);
+}
+
+.exporter-copy-hint {
+  margin: var(--ds-space-4) 0 var(--ds-space-2);
+  font-size: var(--ds-caption);
+}
+
+/* The link in a field (select it to copy by hand), "Copiar link" beside it. */
+.exporter-copy {
+  display: flex;
+  gap: var(--ds-space-2);
+  align-items: stretch;
+}
+
+.exporter-copy .btn {
+  white-space: nowrap;
+}
+
+.exporter-copy .ds-field {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--ds-font-mono, monospace);
+  font-size: var(--ds-caption);
+}
+
+.exporter-copy-status {
+  min-height: 1.5em;
+  margin-top: var(--ds-space-2);
+  font-size: var(--ds-caption);
+}

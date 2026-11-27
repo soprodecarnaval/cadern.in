@@ -110,7 +110,7 @@ export const PickingComment: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "📍 Marcar ponto" }),
+      await canvas.findByRole("button", { name: "Marcar ponto" }),
     );
     await expect(
       canvas.getByRole("button", { name: "Clique na partitura…" }),

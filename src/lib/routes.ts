@@ -18,6 +18,9 @@ export const ROUTE_PATTERNS = {
   project: "/:slug",
   projectSettings: "/:slug/config",
   upload: "/:slug/enviar",
+  exporter: "/:slug/exportador",
+  // The same page without a project: download the Exportador only.
+  exporterDownload: "/exportador",
   publicSongbook: "/:slug/:songbookSlug",
   songbook: "/:slug/:songbookSlug/gerenciar",
   songbookScore: "/:slug/:songbookSlug/gerenciar/partituras/:scoreId",
@@ -36,11 +39,15 @@ const RESERVED_PROJECT_SLUGS = new Set([
   "montar",
   "biblioteca",
   "plugin",
+  "exportador",
   "assets",
   // Engine assets for in-browser rendering (scripts/browserScore/assets.mjs).
   "browser-score",
   "index.html",
   "vite.svg",
+  "favicon.svg",
+  "favicon-32.png",
+  "apple-touch-icon.png",
   "soundfont-player.min.js",
   "favicon.ico",
   "robots.txt",
@@ -56,7 +63,7 @@ const RESERVED_PROJECT_SLUGS = new Set([
 
 // Project routes occupy the second segment, so a songbook cannot use a name
 // that is also a project-level route.
-const RESERVED_SONGBOOK_SLUGS = new Set(["config", "enviar"]);
+const RESERVED_SONGBOOK_SLUGS = new Set(["config", "enviar", "exportador"]);
 
 export const YEAR_ONLY_SLUG = /^\d{4}$/;
 
@@ -82,6 +89,9 @@ export const contributePath = () => ROUTE_PATTERNS.contribute;
 export const aboutPath = () => ROUTE_PATTERNS.about;
 
 export const helpPath = () => ROUTE_PATTERNS.help;
+
+/** The desktop Exportador's download page, from anywhere (the footer). */
+export const exporterDownloadPath = () => ROUTE_PATTERNS.exporterDownload;
 
 export const articlePath = (slug: string) =>
   `${ROUTE_PATTERNS.articles}/${encodeURIComponent(slug)}`;

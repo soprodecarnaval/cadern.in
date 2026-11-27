@@ -105,6 +105,8 @@ describe("reserved slugs", () => {
   it("reserves config and enviar as songbook slugs", () => {
     expect(isReservedSongbookSlug("config")).toBe(true);
     expect(isReservedSongbookSlug("enviar")).toBe(true);
+    expect(isReservedSongbookSlug("exportador")).toBe(true);
+    expect(isReservedProjectSlug("exportador")).toBe(true);
     expect(isReservedSongbookSlug("carnaval")).toBe(false);
   });
 });

@@ -19,6 +19,7 @@ import { ProjectSettingsPage } from "./screens/projects/settings/ProjectSettings
 import { PublicProjectPage } from "./screens/projects/detail/PublicProjectPage";
 import { ScorePage } from "./screens/scores/ScorePage";
 import { EnviarPage } from "./screens/upload/EnviarPage";
+import { ExporterPage } from "./screens/exporter/ExporterPage";
 import { SongbookManagePage } from "./screens/songbooks/manage/SongbookManagePage";
 import { SongbookPage } from "./screens/songbooks/public/SongbookPage";
 import { SongbookScorePage } from "./screens/songbooks/review/SongbookScorePage";
@@ -178,6 +179,7 @@ function App() {
             <ContributePage inboxCount={inboxCount} onOpenUserModal={openUserModal} />
           }
         />
+        <Route path={ROUTE_PATTERNS.exporterDownload} element={<ExporterPage />} />
         <Route path={ROUTE_PATTERNS.score} element={<ScorePage />} />
         <Route path={ROUTE_PATTERNS.scoreRevision} element={<ScorePage />} />
         {FEATURE_FLAG_COLLAB_FLOW && (
@@ -202,6 +204,14 @@ function App() {
                 }
               />
             )}
+            <Route
+              path={ROUTE_PATTERNS.exporter}
+              element={
+                <ProjectRoute>
+                  <ExporterPage />
+                </ProjectRoute>
+              }
+            />
             <Route
               path={ROUTE_PATTERNS.projectSettings}
               element={

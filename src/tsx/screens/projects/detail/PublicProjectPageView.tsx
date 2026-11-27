@@ -16,7 +16,7 @@ import {
   songbookPath,
 } from "../../../../lib/routes";
 import { buildExportDeepLink } from "../../../../../types/exportDeepLink";
-import { BROWSER_UPLOAD_MODE, FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
+import { FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
 import { uploadPath } from "../../../../lib/uploadPath";
 
 import type {
@@ -194,16 +194,17 @@ export function PublicProjectPageView({
     }
   };
 
+  // The upload page, which links to the Exportador while browser upload is
+  // in beta; without it, MuseScore is the only way in.
   const uploadActions = canUpload && (
     <div className="d-flex flex-wrap gap-2">
-      {FEATURE_FLAG_BROWSER_UPLOAD && (
-        <Link to={uploadPath({ projectId: project.id })} size="sm" variant="primary">
+      {FEATURE_FLAG_BROWSER_UPLOAD ? (
+        <Link to={uploadPath({ projectId: project.id })} size="sm" variant="primary" className="project-upload-browser">
           Enviar partitura
         </Link>
-      )}
-      {BROWSER_UPLOAD_MODE !== "default" && (
-        <a className="btn btn-outline-secondary ds-button btn-sm project-upload-musescore" href={buildExportDeepLink({ projectId: project.id })}>
-          Enviar pelo MuseScore
+      ) : (
+        <a className="btn btn-primary ds-button btn-sm project-upload-browser" href={buildExportDeepLink({ projectId: project.id })}>
+          Enviar partitura pelo MuseScore
         </a>
       )}
     </div>
@@ -315,7 +316,7 @@ export function PublicProjectPageView({
       )}
       {printBook && <SongbookPrintDialog key={printBook.id} songbook={printBook} services={services} onHide={() => setPrintBook(null)} />}
       {isMember && (
-        <div className="d-flex justify-content-between align-items-center mb-2 gap-2">
+        <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
           <h5 className="mb-0">Partituras</h5>
           {(scoresLoading || scoresError || scores.length > 0) && uploadActions}
         </div>

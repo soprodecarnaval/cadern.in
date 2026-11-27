@@ -11,15 +11,21 @@
 }
 .enviar-steps li.is-current { color: var(--ds-ink); font-weight: var(--ds-weight-heading); }
 .enviar-steps li.is-done { color: var(--ds-ink); }
+/* A white circle with a 1px black stroke; the current step's is filled
+   yellow, with no stroke. The number on a 1:1 line, so it sits in the
+   middle of the circle, not on the text's baseline. */
 .enviar-step-number {
   display: inline-grid;
   place-items: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border: 1px solid var(--ds-muted);
+  width: calc(1.6rem + 4px);
+  height: calc(1.6rem + 4px);
+  border: 1px solid var(--ds-ink);
   border-radius: 50%;
+  background: var(--ds-paper);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
-.enviar-steps li.is-current .enviar-step-number { background: var(--ds-yellow); border-color: var(--ds-ink); }
+.enviar-steps li.is-current .enviar-step-number { border-color: var(--ds-yellow); background: var(--ds-yellow); }
 
 .enviar-status { min-height: 1.5rem; }
 
@@ -38,6 +44,22 @@
 .enviar-drop:focus-within, .enviar-drop:hover { border-color: var(--ds-ink); }
 .enviar-drop input { margin-top: var(--ds-space-2); }
 .enviar-hint { color: var(--ds-text-secondary); font-size: var(--ds-caption); }
+
+/* "Exportador Musescore": the articles' link, a thick unbroken yellow underline. */
+.enviar-hint .enviar-export-link {
+  color: var(--ds-ink);
+  font-weight: var(--ds-weight-action);
+  text-decoration: underline;
+  text-decoration-color: var(--ds-yellow);
+  text-decoration-thickness: 4px;
+  text-underline-offset: 2px;
+  /* An unbroken line, also under descenders like p and q. */
+  text-decoration-skip-ink: none;
+}
+
+.enviar-hint .enviar-export-link:hover {
+  background: var(--ds-yellow);
+}
 
 .enviar-data { display: flex; flex-direction: column; gap: var(--ds-space-4); max-width: 36rem; }
 .enviar-field { display: flex; flex-direction: column; gap: var(--ds-space-1); }
