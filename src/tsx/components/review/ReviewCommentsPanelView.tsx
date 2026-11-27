@@ -5,6 +5,7 @@ import type { User } from "firebase/auth";
 import { useEffect, useRef, useState } from "react";
 import { CloseButton, Form, Spinner } from "react-bootstrap";
 import { Badge } from "../../atoms/Badge";
+import { AddPinIcon } from "./AddPinIcon";
 import type { CommentAnchor, ReviewCommentDoc } from "../../../../types/docs";
 import { type CommentThread } from "../../../lib/comments";
 import type { WithId } from "../../../lib/db";
@@ -122,7 +123,12 @@ export function ReviewCommentsPanelView({
             variant={picking ? "primary" : "secondary"}
             onClick={onStartPicking}
           >
-            {picking ? "Clique na partitura…" : "📍 Marcar ponto"}
+            {picking ? "Clique na partitura…" : (
+              <span className="d-flex align-items-center justify-content-center gap-2">
+                <AddPinIcon />
+                Marcar ponto
+              </span>
+            )}
           </Button>
           <Button size="sm" type="submit" disabled={pending || !body.trim()}>
             {pending ? <Spinner animation="border" size="sm" /> : "Enviar"}

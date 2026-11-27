@@ -35,7 +35,13 @@ export function ScoreSvgFrame({ svg, label, activeNotes = emptyNotes, css = "", 
 <style>
   html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
   body > svg { display: block; width: 100%; height: 100%; }
-  [data-playing] { color: #1659c5; fill: #1659c5; }
+  /* The note playing stays black, with the site's yellow glowing around it
+     like a highlighter: a yellow note would vanish on the white page. The
+     sizes are in the score's own units (Verovio draws at about 1/20 of a
+     screen pixel on a score page), so this is a 1–2px glow on screen. */
+  [data-playing] {
+    filter: drop-shadow(0 0 30px #fcee21) drop-shadow(0 0 30px #fcee21) drop-shadow(0 0 30px #fcee21);
+  }
   ${css}
 </style></head><body>${svg}</body></html>`, [css, svg]);
 
