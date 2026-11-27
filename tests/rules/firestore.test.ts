@@ -1114,6 +1114,10 @@ describe("score review requests", () => {
 });
 
 describe("review comments", () => {
+  const seedScore = async () => {
+    await seedProject(testEnv());
+    await seed((db) => setDoc(doc(db, "scores", SCORE, "scoreRevisions", "1"), {}));
+  };
   const ref = (db: Firestore, id = "c1") =>
     doc(db, "scores", SCORE, "scoreRevisions", "1", "comments", id);
   const comment = (authorId: string, extra: Record<string, unknown> = {}) => ({
@@ -1129,15 +1133,26 @@ describe("review comments", () => {
     seed((db) => setDoc(ref(db, "root"), comment(REVIEWER)));
 
   it("lets any member comment, pinned or on the whole version", async () => {
-    await seedProject(testEnv());
+    await seedScore();
     await assertSucceeds(setDoc(ref(as(REVIEWER)), comment(REVIEWER)));
     await assertSucceeds(
       setDoc(ref(as(EDITOR), "c2"), comment(EDITOR, { anchor: null })),
     );
   });
 
+  it("denies comments on nonexistent revisions of public scores", async () => {
+    await seedScore();
+    await seed((db) => updateDoc(doc(db, "scores", SCORE), {
+      published: { revisionId: "1" },
+    }));
+    await assertFails(setDoc(
+      doc(as(OUTSIDER), "scores", SCORE, "scoreRevisions", "missing", "comments", "c1"),
+      comment(OUTSIDER),
+    ));
+  });
+
   it("denies outsiders, impersonation and empty or malformed comments", async () => {
-    await seedProject(testEnv());
+    await seedScore();
     await assertFails(setDoc(ref(as(OUTSIDER)), comment(OUTSIDER)));
     await assertFails(setDoc(ref(as(EDITOR)), comment(REVIEWER)));
     await assertFails(setDoc(ref(as(EDITOR)), comment(EDITOR, { body: "" })));
@@ -1163,7 +1178,7 @@ describe("review comments", () => {
   });
 
   it("allows replies to roots only, without an anchor", async () => {
-    await seedProject(testEnv());
+    await seedScore();
     await seedRoot();
     await assertSucceeds(
       setDoc(
@@ -1197,7 +1212,7 @@ describe("review comments", () => {
   });
 
   it("lets anyone read public score discussions and signed-in outsiders comment", async () => {
-    await seedProject(testEnv());
+    await seedScore();
     await seedRoot();
     await seed((db) => updateDoc(doc(db, "scores", SCORE), {
       published: { revisionId: "1" },
