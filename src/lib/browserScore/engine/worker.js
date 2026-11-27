@@ -39,6 +39,12 @@ self.onmessage = ({ data }) => {
                 await score.setExcerptId(data.params[0]);
                 result = await score.saveMidi(true, true);
                 break;
+            case 'positions':
+                // Full-score measures in MuseScore's playback order, with repeats, endings and
+                // jumps (D.C., D.S., coda, fine) unwound: { elements, events: [{ elid, position }] }.
+                await score.setExcerptId(-1);
+                result = await score.savePositions(false);
+                break;
             case 'musicxml':
                 await score.setExcerptId(-1);
                 result = await score.saveXml();
