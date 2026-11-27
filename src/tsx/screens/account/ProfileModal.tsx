@@ -2,6 +2,7 @@ import type { ComponentProps } from "react";
 import { useMemo } from "react";
 import { useAuth } from "../../../auth";
 import * as db from "../../../lib/db";
+import { listPendingScoreReviewRequests } from "../../../lib/scoreReviewRequests";
 import { ProfileModalView } from "./ProfileModalView";
 
 export function ProfileModal(
@@ -18,7 +19,7 @@ export function ProfileModal(
     logout,
   } = useAuth();
   const services = useMemo(
-    () => ({ ...db, updateDisplayName, updateAvatar, changePassword, logout }),
+    () => ({ ...db, listPendingScoreReviewRequests, updateDisplayName, updateAvatar, changePassword, logout }),
     [updateDisplayName, updateAvatar, changePassword, logout],
   );
   return (
