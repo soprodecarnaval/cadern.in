@@ -40,7 +40,7 @@ interface ProfileModalViewProps {
   /** The tab shown each time the modal opens. Defaults to the profile. */
   initialTab?: ProfileTab;
   inboxCount?: number;
-  onInboxCountChange?: (count: number) => void;
+  onInvitationCountChange?: (count: number) => void;
 }
 
 export function ProfileModalView({
@@ -50,7 +50,7 @@ export function ProfileModalView({
   onHide,
   initialTab = "profile",
   inboxCount,
-  onInboxCountChange,
+  onInvitationCountChange,
 }: ProfileModalViewProps) {
   const [tab, setTab] = useState<string>(initialTab);
 
@@ -104,7 +104,7 @@ export function ProfileModalView({
       await action(inv);
       const updated = invitations.filter((i) => i.projectId !== inv.projectId);
       setInvitations(updated);
-      onInboxCountChange?.(updated.length);
+      onInvitationCountChange?.(updated.length);
     } finally {
       setRespondingTo(null);
     }

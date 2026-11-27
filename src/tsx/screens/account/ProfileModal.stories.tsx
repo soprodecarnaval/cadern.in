@@ -62,8 +62,10 @@ export const EmptyInbox: Story = {
 export const ReviewRequestInbox: Story = {
   args: {
     initialTab: "inbox",
+    inboxCount: 1,
     services: {
       ...services,
+      getPendingUserProjectInvitations: () => Promise.resolve([]),
       listPendingScoreReviewRequests: () => Promise.resolve([{
         id: "review-1", projectId: "bloco-exemplo", scoreId: "fixture-score",
         revisionId: "older-version", assigneeId: user.uid, requesterId: "requester",
@@ -72,7 +74,10 @@ export const ReviewRequestInbox: Story = {
     },
   },
   play: async () => {
-    const link = await within(document.body).findByRole("link", { name: /Revisar partitura/ });
+    const modal = within(document.body);
+    await expect(await modal.findByRole("tab", { name: "Caixa de entrada (1)" })).toBeVisible();
+    await expect(await modal.findByText("Nenhum convite pendente.")).toBeVisible();
+    const link = await modal.findByRole("link", { name: /Revisar partitura/ });
     await expect(link).toHaveAttribute("href", "/partituras/fixture-score/versoes/older-version");
   },
 };
