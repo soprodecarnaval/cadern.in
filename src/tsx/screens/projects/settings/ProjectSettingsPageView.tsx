@@ -1,4 +1,5 @@
 import { Button } from "../../../atoms/Button";
+import { ProjectBreadcrumb } from "../../../components/navigation/ProjectBreadcrumb";
 import { Page } from "../../../atoms/Page";
 import { Input } from "../../../atoms/Input";
 import { useEffect, useState } from "react";
@@ -239,6 +240,7 @@ export function ProjectSettingsPageView({
 
   return (
     <Page className="mt-4" style={{ maxWidth: 680 }}>
+      <ProjectBreadcrumb signedIn project={{ id: project.id, title: project.title }} current="Configurações" />
       <h2 className="mb-4">Configurações: {project.title}</h2>
 
       {/* Title */}
@@ -254,7 +256,7 @@ export function ProjectSettingsPageView({
               required
             />
             <Form.Text className="text-muted">
-              Slug: <code>{projectPath(project.slug)}</code> (imutável)
+              Slug: <code className="text-black">{projectPath(project.slug)}</code> (imutável)
             </Form.Text>
           </Form.Group>
           <Button type="submit" size="sm" disabled={titlePending}>
@@ -270,7 +272,7 @@ export function ProjectSettingsPageView({
       {/* Members */}
       <section className="mb-5">
         <h5>Membros</h5>
-        <Table bordered size="sm">
+        <Table bordered size="sm" className="align-middle">
           <thead>
             <tr>
               <th>Nome</th>
@@ -374,7 +376,8 @@ export function ProjectSettingsPageView({
                 ))}
               </Form.Select>
             </Form.Group>
-            <Button type="submit" disabled={invitePending}>
+            {/* As tall as the fields beside it (48px). */}
+            <Button type="submit" disabled={invitePending} style={{ minHeight: 48 }}>
               {invitePending ? (
                 <Spinner animation="border" size="sm" />
               ) : (
@@ -396,7 +399,7 @@ export function ProjectSettingsPageView({
       {pendingInvitations.length > 0 && (
         <section className="mb-5">
           <h5>Convites pendentes</h5>
-          <Table bordered size="sm">
+          <Table bordered size="sm" className="align-middle">
             <thead>
               <tr>
                 <th>Para</th>
@@ -418,7 +421,7 @@ export function ProjectSettingsPageView({
                   <td>
                     <Button
                       size="sm"
-                      variant="danger-secondary"
+                      variant="secondary"
                       disabled={cancellingInvite === inv.toUserId}
                       onClick={() => void handleCancelInvitation(inv.toUserId)}
                     >
@@ -500,6 +503,7 @@ function DeleteProjectSection({
           type="submit"
           variant="danger"
           disabled={pending || confirmation !== project.title}
+          style={{ minHeight: 48 }}
         >
           {pending ? (
             <Spinner animation="border" size="sm" />

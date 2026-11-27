@@ -29,13 +29,16 @@ export type SortColumn = "title" | "projectTitle" | "style" | "carnivalStyle";
 
 export type SortDirection = "asc" | "desc";
 
-export const sortByColumn = (
-  arrayToSort: ScoreViewModel[],
+/** What sorting looks at: title, arrangement and style (first tag). */
+type Sortable = Pick<ScoreViewModel, "title" | "projectTitle" | "tags">;
+
+export const sortByColumn = <T extends Sortable>(
+  arrayToSort: T[],
   columnToSort: SortColumn,
   directionToSort: SortDirection,
-): ScoreViewModel[] => {
-  let sorted: ScoreViewModel[] = arrayToSort.sort(
-    (a: ScoreViewModel, b: ScoreViewModel) => {
+): T[] => {
+  let sorted: T[] = arrayToSort.sort(
+    (a: T, b: T) => {
       if (columnToSort === "title") {
         return a.title.localeCompare(b.title);
       } else if (columnToSort === "projectTitle") {

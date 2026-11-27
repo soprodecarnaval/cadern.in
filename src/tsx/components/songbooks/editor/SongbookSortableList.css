@@ -93,11 +93,24 @@
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  /* As the song cards' icons. */
+  gap: 6px;
 }
 
 .songbook-section-toggle {
   flex: 0 0 auto;
+  display: inline-flex;
+}
+
+/* The arrow, pencil and trash centered on the bar, not resting on a line of
+   text below it, as on the song cards. */
+.songbook-section-toggle,
+.songbook-section-actions > button {
+  align-items: center;
+  justify-content: center;
+}
+
+.songbook-section-actions > button {
   display: inline-flex;
 }
 

@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
+import "./ColumnDivider.css";
 
-/** Which Montar column is hidden, if any. */
+/** Which of two columns is hidden, if any. */
 export type CollapsedSide = "left" | "right" | null;
 
 /**
- * The line between Resultados (left) and Caderninho (right). With both open
+ * The line between two columns: on Montar, Resultados and Caderninho; when
+ * editing a songbook, Partituras and Caderninho. With both open
  * it offers to collapse either side; with one collapsed it sits at that edge
  * and offers to bring it back.
  */

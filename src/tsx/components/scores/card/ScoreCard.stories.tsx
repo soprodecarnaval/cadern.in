@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
+import { expect, fn, within } from "@storybook/test";
+import { TbPencil, TbTrash } from "react-icons/tb";
 import { ScoreCardView } from "./ScoreCardView";
 import { score, noop } from "../../../../../.storybook/fixtures/components";
 
@@ -38,3 +39,28 @@ export const NoParts: Story = {
   },
 };
 export const Highlighted: Story = { args: { highlight: { title: [[0, 7]] } } };
+// A song with MIDI and MuseScore files, as in a songbook: every icon the
+// card can show, eye, play (MIDI), note (MuseScore), pencil and trash.
+export const WithMidi: Story = {
+  args: {
+    score: {
+      ...score,
+      latestRevision: { ...score.latestRevision, midi: "#fixture-midi", mscz: "#fixture-mscz" },
+    },
+    trailing: (
+      <div className="score-card-actions">
+        <button type="button" className="btn btn-link ds-button p-0" aria-label="Editar">
+          <TbPencil className="tabler-icon" aria-hidden="true" />
+        </button>
+        <button type="button" className="btn btn-link ds-button p-0" aria-label="Remover">
+          <TbTrash className="tabler-icon" aria-hidden="true" />
+        </button>
+      </div>
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("link", { name: "MIDI" })).toBeVisible();
+    await expect(canvas.getByRole("link", { name: "MuseScore" })).toBeVisible();
+  },
+};

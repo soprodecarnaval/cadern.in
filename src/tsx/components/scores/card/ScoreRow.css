@@ -59,12 +59,44 @@
   overflow-wrap: anywhere;
 }
 
+/* The icons 6px apart, within their group and across groups. */
+.score-card {
+  --score-card-icon-gap: 6px;
+}
+
+/* The icons a little larger than the text (18px). */
+.score-card :is(.score-card-links, .score-card-actions),
+.songbook-section-actions {
+  font-size: calc(var(--ds-text) * 1.15);
+}
+
+/* Buttons set their own size; these follow the icons'. Two classes, to
+   outrank the design system's button size (Button.css). */
+.score-card :is(.score-card-links, .score-card-actions) > button,
+.songbook-section-row .songbook-section-actions > button {
+  font-size: inherit;
+}
+
 .score-card-links {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--score-card-icon-gap);
   color: var(--ds-ink);
+}
+
+/* The MIDI and MuseScore links in the card's black, not the link blue. */
+.score-card-links > a {
+  color: inherit;
+}
+
+/* Each icon link or button centered on the row, not resting on a line of
+   text below it. */
+.score-card-links > :is(a, button),
+.score-card-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .score-card-actions,
@@ -72,7 +104,26 @@
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--score-card-icon-gap);
+}
+
+/* Tabler's outline icons (music note, pencil, trash) leave a sixth of
+   their width empty on each side; trimmed, the space between icons looks
+   the same as beside the eye and the play icon, which have none. */
+.score-card .tabler-icon,
+.songbook-section-actions .tabler-icon {
+  margin-inline: calc(-1em / 6);
+}
+
+/* The icon buttons' invisible 1px border would add 2px between them. */
+.score-card :is(.score-card-links, .score-card-actions) > button,
+.songbook-section-actions > button {
+  border-width: 0;
+}
+
+/* The row's 0.5rem gap, brought down to the icons' own. */
+.score-card-links + * {
+  margin-left: calc(var(--score-card-icon-gap) - 0.5rem);
 }
 
 .score-card-details {

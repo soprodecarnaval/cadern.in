@@ -5,7 +5,7 @@ import type { ScoreViewModel } from "../../../../../types/viewModels";
 import type { SortColumn, SortDirection } from "../../../../utils/sort";
 import { ScoreSearchResultTable } from "./ScoreSearchResultTable";
 import { parseSortValue } from "../../../components/scores/sortOptions";
-import { SortMenuButton } from "../SortMenuButton";
+import { SortMenuButton } from "../../../components/songbooks/editor/toolbar/SortMenuButton";
 import { FilterMenuButton } from "./FilterMenuButton";
 import { filterCount, type ResultsFilters } from "./resultsFilter";
 

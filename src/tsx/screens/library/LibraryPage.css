@@ -6,21 +6,6 @@
   margin-top: 0;
 }
 
-/* The newest songbooks under a section title, as on the home page: the
-   title's own margin spaces the carousel. */
-.library-highlights {
-  margin-top: 30px;
-}
-
-.library-highlights .landing-carousel {
-  margin-top: 0;
-}
-
-/* Below the carousel, the search box gets the same space above as below. */
-.library-highlights + .landing-search {
-  margin-top: 56px;
-}
-
 .library-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));

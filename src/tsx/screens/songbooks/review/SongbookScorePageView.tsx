@@ -7,13 +7,16 @@ import { Link, useParams } from "react-router-dom";
 import type { CommentAnchor, ReviewCommentDoc } from "../../../../../types/docs";
 import type { WithId } from "../../../../lib/db";
 import { commentThreads } from "../../../../lib/comments";
-import { isEditor, isReviewer } from "../../../../lib/roles";
+import { canEditSongbook, isEditor, isReviewer } from "../../../../lib/roles";
 import { useMemberRoleValue } from "../../../../lib/useMemberRoleValue";
 import { resolveScoreMetadata } from "../../../../lib/scoreMetadata";
-import { publicSongbookPath, songbookPath } from "../../../../lib/routes";
+import { publicSongbookPath, songbookEditPath, songbookPath } from "../../../../lib/routes";
 import { buildExportDeepLink } from "../../../../../types/exportDeepLink";
 import { BROWSER_UPLOAD_MODE, FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
 import { uploadPath } from "../../../../lib/uploadPath";
+import { Link as ButtonLink } from "../../../atoms/Link";
+import { ProjectBreadcrumb } from "../../../components/navigation/ProjectBreadcrumb";
+import { EditCopyButton, type EditCopyButtonServices } from "../../../components/scores/EditCopyButton";
 
 import type { ScoreDisplayArrangement, ScoreDisplayPart, ScorePin } from "../../../components/scores/detail/ScoreDisplay";
 
@@ -106,12 +109,15 @@ async function load(
  * Member-only songbook-scoped score review (009): shows the revision this
  * songbook pins, not the score's latest. The thread follows the score
  * revision and its access policy, independent of this songbook.
+ * Editors send new versions from here (a score of
+ * another project becomes this project's copy); reviewers can edit a copy in
+ * a project of their own (031).
  */
 export type SongbookScorePageServices = Pick<
   typeof import("../../../../lib/db"),
   "getSongbook" | "getSongbookRevision" | "getScore" | "getScoreRevision"
   | "getMemberRole" | "getComments" | "addComment" | "editComment" | "softDeleteComment"
->;
+> & EditCopyButtonServices;
 
 export function SongbookScorePageView({
   services,
@@ -247,39 +253,56 @@ export function SongbookScorePageView({
   };
   return (
     <Page className="mt-4">
-      <div className="d-flex justify-content-between align-items-start gap-2 mb-1">
+      <ProjectBreadcrumb
+        signedIn={!!currentUser}
+        project={{ id: loaded.songbookProjectId }}
+        songbook={{ slug: songbookSlug, title: loaded.songbookTitle, member: true }}
+        current={loaded.title}
+      />
+      <div className="d-flex justify-content-between align-items-start gap-2 mb-1 flex-wrap">
         <div className="d-flex align-items-baseline gap-2">
           <h2 className="mb-0">{loaded.title}</h2>
           {loaded.foreign && <Badge variant="muted">de outro projeto</Badge>}
         </div>
-        {isEditor(role) && (
-          <div className="d-flex flex-wrap gap-2">
-            {FEATURE_FLAG_BROWSER_UPLOAD && (
-              <Link className="btn btn-outline-secondary ds-button btn-sm" to={uploadPath(uploadContext)}>
-                Enviar nova versão pelo navegador
-              </Link>
-            )}
-            {BROWSER_UPLOAD_MODE !== "default" && (
-              <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink(uploadContext)}>
-                Enviar nova versão pelo MuseScore
-              </a>
-            )}
-            {FEATURE_FLAG_BROWSER_UPLOAD && (
-              <Link
-                className="btn btn-outline-secondary ds-button btn-sm"
+        <div className="d-flex flex-wrap gap-2">
+          {isEditor(role) && FEATURE_FLAG_BROWSER_UPLOAD && (
+            <>
+              <ButtonLink to={uploadPath(uploadContext)} size="sm" variant="primary">
+                Enviar nova versão
+              </ButtonLink>
+              <ButtonLink
                 to={uploadPath({ ...uploadContext, baseRevisionId: loaded.revisionId, mode: "reformat" })}
+                size="sm"
               >
                 Reformatar
-              </Link>
-            )}
-          </div>
-        )}
+              </ButtonLink>
+            </>
+          )}
+          {isEditor(role) && BROWSER_UPLOAD_MODE !== "default" && (
+            <a className="btn btn-outline-secondary ds-button btn-sm" href={buildExportDeepLink(uploadContext)}>
+              Enviar nova versão pelo MuseScore
+            </a>
+          )}
+          {!isEditor(role) && FEATURE_FLAG_BROWSER_UPLOAD && (
+            <EditCopyButton
+              score={{ scoreId, projectId: loaded.scoreProjectId, title: loaded.title, revisionId: loaded.revisionId }}
+              user={currentUser}
+              services={services}
+            />
+          )}
+        </div>
       </div>
       <p className="text-muted mb-3">
         Fixada em{" "}
         <Link to={songbookPath(projectId, songbookSlug)}>
           {loaded.songbookTitle}
         </Link>
+        {canEditSongbook(role) && (
+          <>
+            {" · "}
+            <Link to={songbookEditPath(projectId, songbookSlug)}>Editar caderninho</Link>
+          </>
+        )}
       </p>
       <Row>
         <Col lg={8}>

@@ -8,6 +8,14 @@ import type { SongbookDoc, SongbookRevisionDoc } from "../../../../../types/docs
 import type { NumberedSongbookItemViewModel } from "../../../../../types/viewModels";
 import { fromSongbookRevision } from "../../../../lib/songbook";
 import { buildSongbookSections } from "../../../../lib/pdfGeneration";
+import { canEditSongbook, canRepinSongbook, type Role } from "../../../../lib/roles";
+import { songbookEditPath, songbookPath } from "../../../../lib/routes";
+import { Link } from "../../../atoms/Link";
+import { ProjectBreadcrumb } from "../../../components/navigation/ProjectBreadcrumb";
+import {
+  DuplicateSongbookButton,
+  type DuplicateSongbookButtonServices,
+} from "../../../components/songbooks/DuplicateSongbookButton";
 
 interface Loaded {
   songbook: WithId<SongbookDoc>;
@@ -39,9 +47,9 @@ async function load(
 
 /**
  * Public reader for a published songbook: its current revision only, no
- * review history, no member controls — even for a signed-in member who
- * reached this URL directly (008). The member workspace lives at
- * SongbookManagePageView, behind a membership check.
+ * review history (008). Members get a link to their workspace
+ * (SongbookManagePageView, behind a membership check) and signed-in people
+ * can duplicate the songbook into their own project (029, 030).
  */
 export type SongbookPageServices = {
   generateSongbookPdfs: typeof import("../../../../lib/generateSongbookPdfs").generateSongbookPdfs;
@@ -50,13 +58,18 @@ export type SongbookPageServices = {
   "getSongbook" | "getSongbookRevision"
 > & {
     loadPinnedScores: typeof import("../../../../lib/songbookScores").loadPinnedScores;
-  };
+  } & DuplicateSongbookButtonServices;
 
 export function SongbookPageView({
   services,
   components,
+  currentUser = null,
+  role,
 }: {
   services: SongbookPageServices;
+  currentUser?: import("firebase/auth").User | null;
+  // The viewer's role in the songbook's project: members get "Editar" (030).
+  role?: Role | "loading";
   components: {
     SongbookReader: typeof import("../../../components/songbooks/reader/SongbookReader").SongbookReader;
   };
@@ -91,11 +104,34 @@ export function SongbookPageView({
   }
 
   const { songbook, revision, items } = loaded;
+  const myRole = role === "loading" ? undefined : role;
+  const actions = (
+    <div className="d-flex flex-column gap-2">
+      <ProjectBreadcrumb
+        signedIn={!!currentUser}
+        project={{ id: songbook.projectId }}
+        songbook={{ slug: songbook.slug, title: songbook.title }}
+      />
+      <div className="d-flex flex-wrap gap-2">
+        {canEditSongbook(myRole) ? (
+          <Link to={songbookEditPath(songbook.projectId, songbook.slug)} size="sm" aria-label={`Editar ${songbook.title}`}>
+            Editar
+          </Link>
+        ) : canRepinSongbook(myRole) ? (
+          <Link to={songbookPath(songbook.projectId, songbook.slug)} size="sm">
+            Trocar versões
+          </Link>
+        ) : null}
+        <DuplicateSongbookButton songbook={songbook} user={currentUser} services={services} />
+      </div>
+    </div>
+  );
   return (
     <components.SongbookReader
       title={songbook.title}
       projectId={songbook.projectId}
       items={items}
+      actions={actions}
       onDownloadPdf={(instrument) =>
         services.generateSongbookPdfs({
           sections: buildSongbookSections(items),

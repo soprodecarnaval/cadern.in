@@ -13,12 +13,7 @@ import {
 import { publicSongbookPath } from "../../../lib/routes";
 import type { CoverUrls } from "../../../lib/songbookCovers";
 import { matchesEveryWord } from "../../../utils/searchText";
-import {
-  LandingFooter,
-  LandingHeader,
-  SectionTitle,
-  SongbookCarousel,
-} from "../landing/LandingPageView";
+import { LandingFooter, LandingHeader } from "../landing/LandingPageView";
 import type { ProfileTab } from "../account/ProfileModalView";
 
 import search from "../../../assets/brand/search.svg";
@@ -52,9 +47,6 @@ const ORDERS: { value: Order; label: string }[] = [
 const ANY_INSTRUMENT = "";
 
 const LOADING_PLACEHOLDERS = 6;
-
-// The carousel shows the newest few, as on the home page.
-const CAROUSEL_SIZE = 12;
 
 const updatedFormat = new Intl.DateTimeFormat("pt-BR", {
   day: "numeric",
@@ -109,14 +101,6 @@ export function LibraryPageView({
     [songbooks, instrument],
   );
 
-  const newest = useMemo(
-    () =>
-      [...items]
-        .sort((a, b) => compare(a, b, "newest"))
-        .slice(0, CAROUSEL_SIZE),
-    [items],
-  );
-
   const shown = useMemo(
     () =>
       items
@@ -141,19 +125,6 @@ export function LibraryPageView({
         onSignOut={onSignOut}
       />
       <main className="landing-main">
-        {/* Not when there's nothing to show: the list below already says so. */}
-        {(songbooks.status === "loading" || newest.length > 0) && (
-          <section className="library-highlights" aria-labelledby="destaques">
-            <SectionTitle id="destaques">Destaques</SectionTitle>
-            <SongbookCarousel
-              songbooks={
-                songbooks.status === "loading"
-                  ? songbooks
-                  : { status: "ready", items: newest }
-              }
-            />
-          </section>
-        )}
         {/* The home page's search box, filtering the songbooks below. */}
         <div className="landing-search" role="search">
           <label className="landing-search-box">

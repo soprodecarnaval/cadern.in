@@ -101,9 +101,15 @@
   font-weight: 300;
 }
 
-/* Sobre, Contribua, Ajuda only: not the account menu's links. */
+/* Meus projetos, Sobre, Contribua, Ajuda only: not the account menu's
+   links. */
 .landing-header-nav > a:hover {
   text-decoration: underline;
+}
+
+/* Each link on one line: "Meus projetos" never breaks in two. */
+.landing-header-nav > a {
+  white-space: nowrap;
 }
 
 /* The design system's secondary button (atoms/Button.css), with the
@@ -858,6 +864,15 @@
 
   .landing-auth {
     margin-left: auto;
+  }
+}
+
+/* Below 700px the signed-in header with "Meus projetos" no longer fits on
+   the lines the signed-out one uses; the link stays in the account menu, so
+   signing in doesn't change the header's height. */
+@media (max-width: 699px) {
+  .landing-header-projects {
+    display: none;
   }
 }
 

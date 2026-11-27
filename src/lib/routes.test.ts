@@ -11,6 +11,7 @@ import {
   publicSongbookPath,
   scorePath,
   scoreRevisionPath,
+  songbookDetailsPath,
   songbookPath,
   songbookScorePath,
 } from "./routes";
@@ -47,6 +48,9 @@ describe("route builders", () => {
     );
     expect(songbookPath("bloco-exemplo", "carnaval")).toBe(
       "/bloco-exemplo/carnaval/gerenciar",
+    );
+    expect(songbookDetailsPath("bloco-exemplo", "carnaval")).toBe(
+      "/bloco-exemplo/carnaval/gerenciar?detalhes",
     );
     expect(songbookScorePath("bloco-exemplo", "carnaval", "score-1")).toBe(
       "/bloco-exemplo/carnaval/gerenciar/partituras/score-1",

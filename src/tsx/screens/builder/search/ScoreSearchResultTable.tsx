@@ -82,10 +82,13 @@ const ScoreSearchResultTable = ({ Card, scores, searchQuery, handleSelect, pager
         {scores.length === 0 && empty && <p className="text-muted m-0">{empty}</p>}
       </div>
       {/* 15px down from the last card, as far as the Caderninho's tip text
-          sits below its songs. */}
+          sits below its songs. Pages only when the results need more than
+          one; the tools stay at the right either way. */}
       <div className="d-flex align-items-center justify-content-between" style={{ marginTop: "15px" }}>
-        <PaginationBar onChange={handlePageChange} currentPage={page} maxNumberPages={maxNumberPages} />
-        {pagerEnd}
+        {maxNumberPages > 1 && (
+          <PaginationBar onChange={handlePageChange} currentPage={page} maxNumberPages={maxNumberPages} />
+        )}
+        {pagerEnd && <div className="ms-auto">{pagerEnd}</div>}
       </div>
     </>
   );

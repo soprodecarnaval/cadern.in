@@ -2,7 +2,8 @@ import { Button } from "../../../atoms/Button";
 import { type ReactNode } from "react";
 import { BsChevronDown, BsChevronRight } from "react-icons/bs";
 import { EyeIcon } from "./EyeIcon";
-import { SiMidi, SiMusescore } from "react-icons/si";
+import { MidiIcon } from "./MidiIcon";
+import { TbMusic } from "react-icons/tb";
 import { PartItemView } from "./PartItemView";
 import { highlightRanges, type HighlightRanges } from "../../../../lib/highlight";
 import type { ScoreViewModel } from "../../../../../types/viewModels";
@@ -100,12 +101,12 @@ const ScoreCardView = ({
           </Button>
           {score.latestRevision.midi != "" && (
             <a href={score.latestRevision.midi} target="_blank" rel="noreferrer" aria-label="MIDI">
-              <SiMidi />
+              <MidiIcon />
             </a>
           )}
           {score.latestRevision.mscz != "" && (
             <a href={score.latestRevision.mscz} target="_blank" rel="noreferrer" aria-label="MuseScore">
-              <SiMusescore />
+              <TbMusic className="tabler-icon" aria-hidden="true" />
             </a>
           )}
         </div>

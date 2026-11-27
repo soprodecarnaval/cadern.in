@@ -10,3 +10,12 @@
   background: none;
   cursor: default;
 }
+
+/* "Usar … como alternativa": centered in its strip, 12px above and below
+   inside the line over it. A flex box, so no line of text leaves room under
+   the checkbox. */
+.score-card-details.generation-fallback {
+  display: flex;
+  align-items: center;
+  padding-block: 0.75rem;
+}

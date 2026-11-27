@@ -1,4 +1,4 @@
-@import "../../../styles/tokens.css";
+@import "../../../../../styles/tokens.css";
 
 /* Icon buttons in boxes of their own, as tall as "Salvar caderninho" beside
    them and spaced as it is from them. */
@@ -323,7 +323,8 @@ form.songbook-tools-sub {
   display: none;
 }
 
-@container montar-generate (min-width: 490px) {
+/* The column around the toolbar is a `songbook-toolbar` container. */
+@container songbook-toolbar (min-width: 490px) {
   .songbook-tool.songbook-save {
     width: auto;
     gap: calc(0.375rem + 2px);
