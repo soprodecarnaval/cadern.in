@@ -104,11 +104,9 @@ export function LandingPageView({
   onOpenUserModal: (tab?: ProfileTab) => void;
   onSignOut: () => void;
 }) {
-  // Arriving from another page's "Exportador desktop" link opens its panel.
+  // Every tool box starts closed; a link to "#exportador" opens that one.
   const [openTools, setOpenTools] = useState<string[]>(() =>
-    window.location.hash === `#${EXPORTER_ANCHOR}`
-      ? ["plugin", "exporter"]
-      : ["plugin"],
+    window.location.hash === `#${EXPORTER_ANCHOR}` ? ["exporter"] : [],
   );
   useEffect(() => {
     if (window.location.hash === `#${EXPORTER_ANCHOR}`) {
