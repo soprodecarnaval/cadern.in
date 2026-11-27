@@ -1,7 +1,7 @@
 import { pinnedVersionItems } from "../../../../../.storybook/fixtures/components";
 import { score } from "../../../../../.storybook/fixtures/screens";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within, waitFor } from "@storybook/test";
+import { expect, fireEvent, fn, userEvent, within, waitFor } from "@storybook/test";
 import { SongbookManagePageView } from "./SongbookManagePageView";
 import {
   bookRevision,
@@ -29,6 +29,42 @@ export default meta;
 type Story = StoryObj<typeof SongbookManagePageView>;
 
 export const OwnerDetails: Story = {};
+export const ForkOlderRevision: Story = {
+  parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&versao=older" },
+  args: {
+    role: "admin",
+    services: {
+      ...services,
+      generateSongbookPdfs: generate,
+      getSongbook: (_project, slug) => Promise.resolve(slug === songbook.slug ? songbook : null),
+      getSongbookRevision: () => Promise.resolve({ ...bookRevision, id: "older" }),
+      createSongbook: fn(services.createSongbook),
+    },
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Criar cópia desta versão" }));
+    const form = within(canvas.getByRole("form", { name: "Criar cópia do caderninho" }));
+    const title = form.getByRole("textbox", { name: "Título do novo caderninho" });
+    await fireEvent.change(title, { target: { value: "Cópia de Carnaval" } });
+    await userEvent.click(form.getByRole("button", { name: "Criar cópia" }));
+    await waitFor(() => expect(args.services.createSongbook).toHaveBeenCalledWith({
+      projectId: songbook.projectId,
+      createdBy: user.uid,
+      slug: "copia-de-carnaval",
+      title: "Cópia de Carnaval",
+      content: { entries: bookRevision.entries, pins: bookRevision.pins, covers: {} },
+    }));
+  },
+};
+export const EditorCannotFork: Story = {
+  args: { role: "editor" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("heading", { name: songbook.title });
+    await expect(canvas.queryByRole("button", { name: "Criar cópia desta versão" })).not.toBeInTheDocument();
+  },
+};
 export const DirectEdit: Story = {
   parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
   play: async ({ canvasElement }) => {

@@ -1,6 +1,7 @@
 import { Button } from "../../../atoms/Button";
 import { Input } from "../../../atoms/Input";
-import { useState } from "react";
+import { useId, useState } from "react";
+import type { SongbookRevisionContent } from "../../../../../types/docs";
 import { Alert, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { slugify } from "../../../../lib/slugify";
@@ -16,13 +17,16 @@ export function CreateSongbookForm({
   currentUser,
   projectId,
   onCancel,
+  forkFrom,
 }: {
   services: CreateSongbookServices;
   currentUser: import("firebase/auth").User | null;
   projectId: string;
   onCancel: () => void;
+  forkFrom?: Pick<SongbookRevisionContent, "entries" | "pins">;
 }) {
   const navigate = useNavigate();
+  const titleId = useId();
   const [title, setTitle] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -51,7 +55,7 @@ export function CreateSongbookForm({
         projectId,
         slug,
         title: title.trim(),
-        content: { entries: [], pins: {}, covers: {} },
+        content: { entries: forkFrom?.entries ?? [], pins: forkFrom?.pins ?? {}, covers: {} },
         createdBy: currentUser.uid,
       });
       void navigate(songbookPath(projectId, slug));
@@ -65,9 +69,9 @@ export function CreateSongbookForm({
     <Form
       onSubmit={(e) => void handleCreate(e)}
       className="border rounded bg-light p-3 mb-3"
-      aria-label="Novo caderninho"
+      aria-label={forkFrom ? "Criar cópia do caderninho" : "Novo caderninho"}
     >
-      <Form.Group controlId="new-songbook-title">
+      <Form.Group controlId={titleId}>
         <Form.Label>Título do novo caderninho</Form.Label>
         <Form.Control as={Input}
           value={title}
@@ -86,7 +90,7 @@ export function CreateSongbookForm({
         <Button type="submit" disabled={pending || !currentUser}>
           {pending ? (
             <><Spinner animation="border" size="sm" /> Criando…</>
-          ) : "Criar"}
+          ) : forkFrom ? "Criar cópia" : "Criar"}
         </Button>
         <Button variant="secondary" onClick={onCancel} disabled={pending}>
           Cancelar

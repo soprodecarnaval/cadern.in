@@ -60,6 +60,7 @@ import { SongbookDragProvider } from "../../../components/songbooks/editor/Songb
 import type { SongbookSortableListHandle } from "../../../components/songbooks/editor/SongbookSortableList";
 
 import { buildSongbookSections } from "../../../../lib/pdfGeneration";
+import { CreateSongbookForm } from "../../projects/detail/CreateSongbookForm";
 
 // The songbook's table, PDF generation and member tools live under ?detalhes;
 // the reader is the landing view.
@@ -104,6 +105,7 @@ export type SongbookManagePageServices = {
   generateSongbookPdfs: typeof import("../../../../lib/generateSongbookPdfs").generateSongbookPdfs;
 } & Pick<
   typeof import("../../../../lib/db"),
+  | "createSongbook"
   | "createSongbookRevision"
   | "getAllProjects"
   | "getAllScores"
@@ -145,6 +147,7 @@ export function SongbookManagePageView({
   const navigate = useNavigate();
   const [loaded, setLoaded] = useState<Loaded | null | "loading">("loading");
   const [reloads, setReloads] = useState(0);
+  const [forkingRevision, setForkingRevision] = useState<string | null>(null);
   const [forks, setForks] = useState<Map<string, string>>(new Map());
 
   // Membership of the songbook's owning project, not just a role check in
@@ -317,6 +320,24 @@ export function SongbookManagePageView({
         <Link to={projectPath(projectId)}>caderninhos do projeto</Link>
         {revision.note && <> · {revision.note}</>}
       </p>
+
+      {!editing && currentUser && canEditSongbook(role) && (
+        forkingRevision === revision.id ? (
+          <CreateSongbookForm
+            key={revision.id}
+            services={services}
+            currentUser={currentUser}
+            projectId={songbook.projectId}
+            forkFrom={revision}
+            onCancel={() => setForkingRevision(null)}
+          />
+        ) : (
+          <Button className="mb-3" size="sm" variant="secondary"
+            onClick={() => setForkingRevision(revision.id)}>
+            Criar cópia desta versão
+          </Button>
+        )
+      )}
 
       {editing ? (
         <SongbookEditor
