@@ -38,6 +38,7 @@ export function ScorePageView({
     ScoreRevisionList: typeof import("../../components/scores/detail/ScoreRevisionList").ScoreRevisionList;
     ReviewCommentsPanel: typeof import("../../components/review/ReviewCommentsPanel").ReviewCommentsPanel;
     ScoreMetadataEditor: typeof import("./ScoreMetadataEditor").ScoreMetadataEditor;
+    ScoreReviewRequests?: typeof import("../../components/review/ScoreReviewRequests").ScoreReviewRequests;
   };
 }) {
   const { scoreId, revisionId } = useParams<{
@@ -196,6 +197,11 @@ export function ScorePageView({
           scoreId={score.scoreId}
           forkedFrom={score.forkedFrom}
         />
+      )}
+      {collabEnabled && currentUser && role !== "loading" && isReviewer(role) && components.ScoreReviewRequests && (
+        <components.ScoreReviewRequests key={`${score.scoreId}/${score.revisionId}`}
+          projectId={score.projectId} scoreId={score.scoreId} revisionId={score.revisionId}
+          uid={currentUser.uid} admin={canEditScoreMetadata(role)} />
       )}
       <Row>
         <Col lg={reviewing ? 8 : 12}>

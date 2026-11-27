@@ -1099,6 +1099,20 @@ describe("invitations", () => {
   });
 });
 
+describe("score review requests", () => {
+  it("allows members to query requests, but forbids direct client writes and public reads", async () => {
+    await seedProject(testEnv());
+    const path = ["projects", PROJECT, "scoreReviewRequests"] as const;
+    await seed((db) => setDoc(doc(db, ...path, "request"), {
+      scoreId: SCORE, revisionId: "1", assigneeId: REVIEWER, status: "pending",
+    }));
+    await assertSucceeds(getDocs(query(collection(as(REVIEWER), ...path), where("assigneeId", "==", REVIEWER))));
+    await assertFails(getDoc(doc(as(OUTSIDER), ...path, "request")));
+    await assertFails(getDoc(doc(as(null), ...path, "request")));
+    await assertFails(updateDoc(doc(as(OWNER), ...path, "request"), { status: "dismissed" }));
+  });
+});
+
 describe("review comments", () => {
   const ref = (db: Firestore, id = "c1") =>
     doc(db, "scores", SCORE, "scoreRevisions", "1", "comments", id);

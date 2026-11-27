@@ -32,7 +32,7 @@ export const Password: Story = {
 export const Invitations: Story = {
   play: async () => {
     await userEvent.click(
-      await within(document.body).findByRole("tab", { name: "Convites (1)" }),
+      await within(document.body).findByRole("tab", { name: "Caixa de entrada (1)" }),
     );
     await waitFor(async () => {
       await expect(
@@ -50,13 +50,30 @@ export const EmptyInbox: Story = {
   },
   play: async () => {
     await userEvent.click(
-      await within(document.body).findByRole("tab", { name: "Convites (1)" }),
+      await within(document.body).findByRole("tab", { name: "Caixa de entrada (1)" }),
     );
     await waitFor(async () => {
       await expect(
         await within(document.body).findByText("Nenhum convite pendente."),
       ).toBeVisible();
     });
+  },
+};
+export const ReviewRequestInbox: Story = {
+  args: {
+    initialTab: "inbox",
+    services: {
+      ...services,
+      listPendingScoreReviewRequests: () => Promise.resolve([{
+        id: "review-1", projectId: "bloco-exemplo", scoreId: "fixture-score",
+        revisionId: "older-version", assigneeId: user.uid, requesterId: "requester",
+        status: "pending",
+      }]),
+    },
+  },
+  play: async () => {
+    const link = await within(document.body).findByRole("link", { name: /Revisar partitura/ });
+    await expect(link).toHaveAttribute("href", "/partituras/fixture-score/versoes/older-version");
   },
 };
 export const LoadingInbox: Story = {
@@ -68,7 +85,7 @@ export const LoadingInbox: Story = {
   },
   play: async () => {
     await userEvent.click(
-      await within(document.body).findByRole("tab", { name: "Convites (1)" }),
+      await within(document.body).findByRole("tab", { name: "Caixa de entrada (1)" }),
     );
   },
 };
