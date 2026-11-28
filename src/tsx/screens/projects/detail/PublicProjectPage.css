@@ -8,9 +8,8 @@
   --bs-alert-color: var(--ds-ink);
 }
 
-/* As wide as a row's Imprimir and Editar buttons with the gap between them,
-   at the page's right edge (as Configurações and "Enviar partitura"), and as
-   tall (they have a 3px border, the yellow button 1px). */
+/* At the page's right edge (as Configurações and "Enviar partitura"), and as
+   tall as the white buttons (they have a 3px border, the yellow button 1px). */
 .project-new-songbook.btn {
   width: 176px;
   min-height: 38px;
@@ -43,4 +42,37 @@
   min-height: 38px;
   display: inline-flex;
   align-items: center;
+}
+
+/* A songbook row's actions (036): square icon buttons of one size, so rows
+   line up whatever each person may do, and Publicar/Despublicar swap in place.
+   The yellow button's 1px border is made up to the white ones' 3px. */
+.project-icon-button.btn {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.project-icon-button.btn-primary {
+  border-width: var(--ds-border);
+}
+
+/* Phones: five icons leave the title a few letters, so the actions go on a
+   line of their own under it, at the left. */
+@media (max-width: 575.98px) {
+  .project-songbook-row {
+    flex-wrap: wrap;
+  }
+
+  .project-songbook-row > .score-card-main {
+    flex-basis: 100%;
+  }
+
+  .project-songbook-row > .project-songbook-actions {
+    justify-content: flex-start !important;
+  }
 }

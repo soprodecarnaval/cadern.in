@@ -4,6 +4,7 @@ import { Link } from "../../../atoms/Link";
 import { useEffect, useState } from "react";
 import { Alert, Spinner } from "react-bootstrap";
 import { Badge } from "../../../atoms/Badge";
+import { BsEye, BsEyeSlash, BsGear, BsPencil, BsPrinter } from "react-icons/bs";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import type { WithId } from "../../../../lib/db";
 import { canEditSongbook, canPublishSongbook, isAdmin, isEditor, isReviewer } from "../../../../lib/roles";
@@ -212,20 +213,20 @@ export function PublicProjectPageView({
   return (
     <Page className="mt-4">
       <ProjectBreadcrumb signedIn={!!currentUser} project={{ id: project.id, title: project.title }} />
-      <div className="d-flex justify-content-between align-items-start mb-1">
-        <h2>{project.title}</h2>
+      <div className="d-flex justify-content-between align-items-start mb-1 gap-2">
         <div className="d-flex gap-2 align-items-center">
+          <h2 className="mb-0">{project.title}</h2>
           {myRole && (
             <Badge variant="strong">
               {ROLE_LABELS[myRole]}
             </Badge>
           )}
-          {canManage && (
-            <Link to={projectSettingsPath(slug ?? "")} size="sm" variant="secondary">
-              Configurações
-            </Link>
-          )}
         </div>
+        {canManage && (
+          <Link to={projectSettingsPath(slug ?? "")} size="sm" variant="secondary">
+            Configurações
+          </Link>
+        )}
       </div>
       <p className="text-muted mb-4">
         <small>/{project.slug}</small>
@@ -277,29 +278,34 @@ export function PublicProjectPageView({
                 >
                   {sb.title}
                 </RouterLink>
-                <div className="d-flex flex-wrap align-items-center justify-content-end gap-2">
-                  {!sb.isPublished && <small className="text-muted">não publicado</small>}
-                  <Button size="sm" variant="secondary" onClick={() => setPrintBook(sb)} aria-label={`Imprimir ${sb.title}`}>
-                    Imprimir
+                <div className="project-songbook-actions d-flex flex-wrap align-items-center justify-content-end gap-2">
+                  {/* Icon buttons (036): each label is the accessible name and the tooltip. */}
+                  <Button size="sm" variant="secondary" className="project-icon-button" onClick={() => setPrintBook(sb)}
+                    aria-label={`Imprimir ${sb.title}`} title={`Imprimir ${sb.title}`}>
+                    <BsPrinter aria-hidden />
                   </Button>
                   {canEditSongbook(myRole) && (
-                    <Link to={songbookEditPath(project.id, sb.slug)} size="sm" variant="secondary" aria-label={`Editar ${sb.title}`}>
-                      Editar
+                    <Link to={songbookEditPath(project.id, sb.slug)} size="sm" variant="secondary" className="project-icon-button"
+                      aria-label={`Editar ${sb.title}`} title={`Editar ${sb.title}`}>
+                      <BsPencil aria-hidden />
                     </Link>
                   )}
                   {isMember && (
-                    <Link to={songbookDetailsPath(project.id, sb.slug)} size="sm" variant="secondary" aria-label={`Configurar ${sb.title}`}>
-                      Configurar
+                    <Link to={songbookDetailsPath(project.id, sb.slug)} size="sm" variant="secondary" className="project-icon-button"
+                      aria-label={`Gerenciar ${sb.title}`} title={`Gerenciar ${sb.title}`}>
+                      <BsGear aria-hidden />
                     </Link>
                   )}
-                  <DuplicateSongbookButton songbook={sb} user={currentUser} services={services} />
+                  <DuplicateSongbookButton songbook={sb} user={currentUser} services={services} iconOnly className="project-icon-button" />
                   {canPublishSongbook(myRole) && (
-                    <Button size="sm" variant={sb.isPublished ? "secondary" : "primary"}
+                    // Unpublished: yellow "Publicar" (eye); published: white "Despublicar" (crossed eye).
+                    <Button size="sm" variant={sb.isPublished ? "secondary" : "primary"} className="project-icon-button"
                       disabled={publishing.has(sb.id)} onClick={() => void setPublished(sb.id, !sb.isPublished)}
-                      aria-label={`${sb.isPublished ? "Despublicar" : "Publicar"} ${sb.title}`}>
+                      aria-label={`${sb.isPublished ? "Despublicar" : "Publicar"} ${sb.title}`}
+                      title={`${sb.isPublished ? "Despublicar" : "Publicar"} ${sb.title}`}>
                       {publishing.has(sb.id)
-                        ? sb.isPublished ? "Despublicando…" : "Publicando…"
-                        : sb.isPublished ? "Despublicar" : "Publicar"}
+                        ? <Spinner animation="border" size="sm" aria-hidden />
+                        : sb.isPublished ? <BsEyeSlash aria-hidden /> : <BsEye aria-hidden />}
                     </Button>
                   )}
                 </div>

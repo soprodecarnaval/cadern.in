@@ -33,7 +33,7 @@ export const Owner: Story = {
     await expect(projectServices.getProjectSongbooks).toHaveBeenCalledWith("bloco-exemplo", { publishedOnly: false });
     await expect(canvas.getByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/bloco-exemplo/carnaval/gerenciar");
     await expect(canvas.getByRole("link", { name: "Editar Ensaios 2027" })).toHaveAttribute("href", "/bloco-exemplo/ensaios/gerenciar?detalhes&editar");
-    await expect(canvas.getByRole("link", { name: "Configurar Ensaios 2027" })).toHaveAttribute("href", "/bloco-exemplo/ensaios/gerenciar?detalhes");
+    await expect(canvas.getByRole("link", { name: "Gerenciar Ensaios 2027" })).toHaveAttribute("href", "/bloco-exemplo/ensaios/gerenciar?detalhes");
     await expect(canvas.queryByRole("button", { name: "Publicar Carnaval 2026" })).toBeNull();
     await expect(canvas.getByRole("button", { name: "Duplicar Carnaval 2026" })).toBeVisible();
     await expect(canvas.getByRole("navigation", { name: "Navegação do projeto" })).toHaveTextContent("Meus projetos");
