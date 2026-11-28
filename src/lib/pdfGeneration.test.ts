@@ -36,7 +36,8 @@ describe("computeInstrumentStats", () => {
     ];
     const { stats, totalScores } = computeInstrumentStats(scores);
     expect(totalScores).toBe(3);
-    expect(stats.map((s) => s.instrument)).toEqual(["trompete", "trombone", "sax alto"]);
+    // Low brass come along through their trombone fallback (039), with no parts of their own.
+    expect(stats.filter((s) => s.count > 0).map((s) => s.instrument)).toEqual(["trompete", "trombone", "sax alto"]);
     expect(stats.find((s) => s.instrument === "trompete")?.count).toBe(2);
   });
 
@@ -55,6 +56,24 @@ describe("computeInstrumentStats", () => {
     const clarinete = stats.find((s) => s.instrument === "clarinete");
     expect(clarinete?.count).toBe(1);
     expect(clarinete?.countWithFallback).toBe(2);
+  });
+});
+
+describe("trombone fallback (039)", () => {
+  it("covers tuba, tuba eb and bombardino with trombone parts", () => {
+    const scores = [
+      item("a", ["tuba"], 1),
+      item("b", ["trombone"], 2),
+    ];
+    const { stats } = computeInstrumentStats(scores);
+    const tuba = stats.find((s) => s.instrument === "tuba");
+    expect(tuba?.count).toBe(1);
+    expect(tuba?.countWithFallback).toBe(2);
+    for (const instrument of ["tuba eb", "bombardino"] as const) {
+      const stat = stats.find((s) => s.instrument === instrument);
+      expect(stat?.count).toBe(0);
+      expect(stat?.countWithFallback).toBe(1);
+    }
   });
 });
 

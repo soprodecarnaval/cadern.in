@@ -12,6 +12,10 @@ export const allInstruments = zInstrument.options.filter((instrument) => !instru
 // Fallback instrument mapping: when primary instrument is missing, use fallback
 export const instrumentFallbacks: Partial<Record<Instrument, Instrument>> = {
   clarinete: "sax tenor",
+  // Low brass read the trombone's bass-clef part (039).
+  tuba: "trombone",
+  "tuba eb": "trombone",
+  bombardino: "trombone",
 };
 
 export type SectionScore = {
