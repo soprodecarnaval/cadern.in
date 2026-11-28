@@ -2,7 +2,7 @@ import { comparePartsByInstrument, partInstrumentLabels } from "../../../../lib/
 import { Button } from "../../../atoms/Button";
 import { useScoreSvg } from "../../../../lib/useSvgUrl";
 import { PartTabs } from "../PartTabs";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Card, Modal, Placeholder } from "react-bootstrap";
 import { Badge } from "../../../atoms/Badge";
 import { SiMidi } from "react-icons/si";
@@ -11,6 +11,16 @@ import { zScorePlaybackTiming, type PlaybackFrame } from "../../../../../types/s
 import { notesAtTime } from "../../../../lib/browserScore/playbackNotes";
 import type { MidiPlayerProps } from "../../audio/MidiPlayer";
 import { ScoreSvgFrame } from "../ScoreSvgFrame";
+import { cursorAnchors, cursorAt, type CursorSystem, type CursorTarget } from "../../../../lib/browserScore/playbackCursor";
+import { PlaybackBand } from "../PlaybackBand";
+import { measureCursorGeometry, type PageCursorGeometry } from "../cursorGeometry";
+
+/** Where the playback band is drawn on one page, in the page's pixels. */
+interface PageCursor {
+  x: number;
+  top: number;
+  bottom: number;
+}
 
 /** A numbered comment pin on one page of one part. */
 export interface ScorePin {
@@ -36,6 +46,7 @@ function SvgImage({
   page,
   pinsProps,
   activeNotes,
+  cursor,
   onPageReady,
 }: {
   url: string;
@@ -44,14 +55,32 @@ function SvgImage({
   page: number;
   pinsProps?: ScorePinsProps;
   activeNotes?: readonly string[];
+  cursor?: PageCursor;
+  // Called when the frame is drawn, and again when the page is resized.
   onPageReady?: (doc: Document, page: HTMLDivElement) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
+  const frameDoc = useRef<Document | null>(null);
   const [loaded, setLoaded] = useState(false);
   const shown = useScoreSvg(url, !!activeNotes);
   const [readyMarkup, setReadyMarkup] = useState<string | undefined>();
   const frameReady = !!shown.markup && readyMarkup === shown.markup;
   const picking = pinsProps?.picking ?? false;
+  const pageReady = useRef(onPageReady);
+  pageReady.current = onPageReady;
+
+  useEffect(() => {
+    const element = container.current;
+    if (!element) {return;}
+    let width = element.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (element.clientWidth === width) {return;}
+      width = element.clientWidth;
+      if (frameDoc.current) {pageReady.current?.(frameDoc.current, element);}
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!pinsProps || !picking) {
@@ -136,6 +165,7 @@ function SvgImage({
           activeNotes={activeNotes}
           tabIndex={-1}
           onReady={(doc) => {
+            frameDoc.current = doc;
             setReadyMarkup(shown.markup);
             if (container.current) {onPageReady?.(doc, container.current);}
           }}
@@ -152,8 +182,29 @@ function SvgImage({
           }}
         />
       )}
+      {frameReady && cursor && <PlaybackBand {...cursor} />}
     </div>
   );
+}
+
+/**
+ * The part's systems in reading order across its pages, and each note's
+ * position in that order, so one cursor timeline runs through every page.
+ */
+function partCursorGeometry(pages: readonly (PageCursorGeometry | undefined)[]) {
+  const systems: (CursorSystem & { page: number })[] = [];
+  const targets = new Map<string, CursorTarget>();
+  let measures = 0;
+  pages.forEach((geometry, page) => {
+    if (!geometry) {return;}
+    const offset = systems.length;
+    systems.push(...geometry.systems.map((system) => ({ ...system, page })));
+    for (const [id, target] of geometry.targets) {
+      targets.set(id, { ...target, system: offset + target.system, measure: target.measure === undefined ? undefined : measures + target.measure });
+    }
+    measures += geometry.measures;
+  });
+  return { systems, targets };
 }
 
 export interface ScoreDisplayPart {
@@ -189,13 +240,28 @@ function PartPages({ part, partLabel = part.name, MidiPlayer, pinsProps, followP
   const timingUrl = part.playback?.midiUrl ? part.playback.timingUrl : undefined;
   const [frames, setFrames] = useState<readonly PlaybackFrame[] | null | undefined>(timingUrl ? null : undefined);
   const [notes, setNotes] = useState<readonly string[]>([]);
+  const [playbackMs, setPlaybackMs] = useState<number | null>(null);
+  const [pageGeometry, setPageGeometry] = useState<readonly (PageCursorGeometry | undefined)[]>([]);
   const pageByNote = useRef(new Map<string, HTMLDivElement>());
   const followedPage = useRef<HTMLDivElement | null>(null);
-  const registerPage = (doc: Document, page: HTMLDivElement) => {
+  const registerPage = (index: number, doc: Document, page: HTMLDivElement) => {
     for (const note of doc.querySelectorAll("g.note[id]")) {
       pageByNote.current.set(note.id, page);
     }
+    const geometry = measureCursorGeometry(doc);
+    setPageGeometry((current) => {
+      const next = [...current];
+      next[index] = geometry;
+      return next;
+    });
   };
+  const geometry = useMemo(() => partCursorGeometry(pageGeometry), [pageGeometry]);
+  const anchors = useMemo(
+    () => (frames ? cursorAnchors(frames, (id) => geometry.targets.get(id), geometry.systems) : []),
+    [frames, geometry],
+  );
+  const cursor = playbackMs === null ? null : cursorAt(anchors, geometry.systems, playbackMs);
+  const cursorSystem = cursor ? geometry.systems[cursor.system] : undefined;
   const follow = (active: readonly string[]) => {
     const page = active.map((id) => pageByNote.current.get(id)).find((element) => element?.isConnected);
     if (!page || page === followedPage.current) {return;}
@@ -228,6 +294,7 @@ function PartPages({ part, partLabel = part.name, MidiPlayer, pinsProps, followP
           onPlaybackTime={frames ? (seconds) => {
             const active = notesAtTime(frames, seconds);
             setNotes(active);
+            setPlaybackMs(seconds === null ? null : seconds * 1000);
             if (followPages && seconds !== null) {follow(active);}
             if (seconds === null) {followedPage.current = null;}
           } : undefined}
@@ -236,7 +303,9 @@ function PartPages({ part, partLabel = part.name, MidiPlayer, pinsProps, followP
       <div className="d-flex flex-column gap-2">
         {part.svgUrls.map((url, i) => (
           <SvgImage key={`${i}:${url}`} url={url} partName={part.name} partLabel={partLabel} page={i + 1}
-            pinsProps={pinsProps} activeNotes={timingUrl ? notes : undefined} onPageReady={followPages ? registerPage : undefined} />
+            pinsProps={pinsProps} activeNotes={timingUrl ? notes : undefined}
+            cursor={cursor && cursorSystem?.page === i ? { x: cursor.x, top: cursorSystem.top, bottom: cursorSystem.bottom } : undefined}
+            onPageReady={timingUrl ? (doc, page) => registerPage(i, doc, page) : undefined} />
         ))}
       </div>
     </>

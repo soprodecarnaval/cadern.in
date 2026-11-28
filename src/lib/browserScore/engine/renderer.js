@@ -26,7 +26,7 @@ const systems = svg => (svg.match(/class="system"/g) || []).length;
 
 // Expanded IDs distinguish repeat passes. Each pass highlights the same
 // notated SVG note or rest, while its own on/off events delimit its interval.
-function partPlayback(tk) {
+function partPlayback(tk, data, pages) {
     try {
         const active = new Map(), notated = new Map();
         const frames = [];
@@ -42,10 +42,43 @@ function partPlayback(tk) {
             frames.push({ timeMs: event.tstamp, notes: [...new Set(active.values())] });
         }
         const midi = tk.renderToMIDI();
-        return midi && frames.length ? { midi, frames } : undefined;
+        return midi && frames.length ? { midi, frames, linear: linearPlayback(tk, data, pages) } : undefined;
     } catch {
         // A playable excerpt is optional. The SVG remains available for formatting.
         return undefined;
+    }
+}
+
+// The notes and MIDI on a straight-through timeline, repeats not unrolled, with the IDs drawn on the page.
+// The library lays them out again in MuseScore's play order (playbackOrder.ts): Verovio misreads
+// some repeats and jumps in MuseScore's MusicXML. Verovio keeps the first timeline it builds for a
+// load, so this one needs its own load of the same data, with the same options and ID seed.
+function linearPlayback(tk, data, pages) {
+    const options = tk.getOptions();
+    try {
+        tk.resetOptions();
+        tk.setOptions({ ...options, xmlIdSeed: 1, expandNever: true });
+        if (!tk.loadData(data)) return undefined;
+        const measureStartsMs = [], notes = new Map();
+        let endMs = 0;
+        for (const event of tk.renderToTimemap({ includeRests: true, includeMeasures: true })) {
+            if (event.measureOn) measureStartsMs.push(event.tstamp);
+            for (const id of [...(event.on ?? []), ...(event.restsOn ?? [])]) notes.set(id, [id, event.tstamp, event.tstamp]);
+            for (const id of [...(event.off ?? []), ...(event.restsOff ?? [])]) { const note = notes.get(id); if (note) note[2] = event.tstamp; }
+            endMs = Math.max(endMs, event.tstamp);
+        }
+        const midi = tk.renderToMIDI();
+        // The highlight finds notes by ID: they must be the ones on the drawn pages.
+        const drawn = new Set();
+        for (const svg of pages) for (const match of svg.matchAll(/ id="([^"]+)"/g)) drawn.add(match[1]);
+        if (![...notes.keys()].every(id => drawn.has(id))) return undefined;
+        return measureStartsMs.length && midi ? { measureStartsMs, endMs, notes: [...notes.values()], midi } : undefined;
+    } catch {
+        return undefined;
+    } finally {
+        tk.resetOptions();
+        tk.setOptions(options);
+        tk.loadData(data);
     }
 }
 
@@ -113,7 +146,7 @@ export async function renderMusicXml(musicXml, page, includePlayback = false) {
             if (result?.pages) return {
                 pages: result.pages,
                 staffSpaceMm: unit / 5 / paperScale,
-                playback: includePlayback ? partPlayback(tk) : undefined,
+                playback: includePlayback ? partPlayback(tk, musicXml, result.pages) : undefined,
             };
             break;
         }
@@ -409,7 +442,7 @@ export async function renderSheet(musicXml, area, widths, layout = {}, includePl
     const result = () => {
         const pages = [];
         for (let n = 1; n <= tk.getPageCount(); n++) pages.push(withNoteHeightFingerings(withoutPlaceholders(tk.renderToSVG(n, false)), verovioScale(current.unit).verovioUnit, fontMultiplier()));
-        const playback = includePlayback ? partPlayback(tk) : undefined;
+        const playback = includePlayback ? partPlayback(tk, current.starts ? withBreaks(musicXml, current.starts) : musicXml, pages) : undefined;
         const { unit, starts } = current;
         const count = pages.reduce((sum, page) => sum + systems(page), 0);
         // Height the music needs, for the fill ratio: the lowest horizontal line (staff or ledger
