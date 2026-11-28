@@ -28,7 +28,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof SongbookManagePageView>;
 
-export const OwnerDetails: Story = {};
+export const OwnerDetails: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("button", { name: "Editar" })).toBeVisible();
+    // Print settings live in Editar now (034).
+    await expect(canvas.queryByRole("heading", { name: "Gerar caderninhos" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: "Configurações de impressão" })).toBeNull();
+  },
+};
 export const DirectEdit: Story = {
   parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
   play: async ({ canvasElement }) => {
@@ -39,6 +47,32 @@ export const DirectEdit: Story = {
     await waitFor(() =>
       expect(dialog.getByRole("textbox", { name: "O que mudou nesta versão? (opcional)" })).toBeVisible());
     await expect(dialog.getByRole("button", { name: "Salvar versão" })).toBeEnabled();
+  },
+};
+export const EditorPrintSettings: Story = {
+  parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const toggle = await canvas.findByRole("button", { name: "Configurações de impressão" });
+    // Collapsed until opened.
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(canvas.queryByRole("heading", { name: "Gerar caderninhos" })).toBeNull();
+    await userEvent.click(toggle);
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(await canvas.findByRole("heading", { name: "Gerar caderninhos" })).toBeVisible();
+    await userEvent.click(toggle);
+    await expect(canvas.queryByRole("heading", { name: "Gerar caderninhos" })).toBeNull();
+  },
+};
+export const EditorRoleNoPrintSettings: Story = {
+  // Editors may open ?editar but get the details page, without print settings.
+  args: { role: "editor" },
+  parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText(/versão #/)).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Configurações de impressão" })).toBeNull();
+    await expect(canvas.queryByRole("heading", { name: "Gerar caderninhos" })).toBeNull();
   },
 };
 export const AccessDenied: Story = {

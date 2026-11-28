@@ -6,7 +6,8 @@ import { Modal } from "../../../atoms/Modal";
 import { Button } from "../../../atoms/Button";
 import { CardPointerSensor } from "../../../../lib/cardPointerSensor";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { BsChevronDown, BsChevronRight } from "react-icons/bs";
 import { Alert, Form, Spinner, Table } from "react-bootstrap";
 import { Badge } from "../../../atoms/Badge";
 import {
@@ -86,8 +87,8 @@ import {
   type DuplicateSongbookButtonServices,
 } from "../../../components/songbooks/DuplicateSongbookButton";
 
-// The songbook's table, PDF generation and member tools live under ?detalhes;
-// the reader is the landing view.
+// The songbook's table and member tools (Gerenciar) live under ?detalhes and
+// PDF generation in its editor (034); the reader is the landing view.
 const DETAILS_PARAM = "detalhes";
 const EDIT_PARAM = "editar";
 
@@ -248,6 +249,11 @@ export function SongbookManagePageView({
     else {next.delete(EDIT_PARAM);}
     setSearchParams(next, { replace: !on });
   };
+  // A cover saved while editing makes a version of its own: reload without
+  // the spinner, which would unmount the editor and drop unsaved changes.
+  const refreshQuietly = () => {
+    void load(projectId, songbook.slug, revisionParam, services).then(setLoaded);
+  };
   const handleEditDone = (saved: boolean) => {
     setEditing(false);
     if (saved) {
@@ -319,7 +325,7 @@ export function SongbookManagePageView({
               project={{ id: songbook.projectId }}
               songbook={{ slug: songbook.slug, title: songbook.title, member: true }}
             />
-            <Link to={withDetails(true)}>Detalhes, PDF e versões</Link>
+            <Link to={withDetails(true)}>Gerenciar</Link>
           </div>
         }
         onDownloadPdf={(instrument) =>
@@ -358,15 +364,27 @@ export function SongbookManagePageView({
       </p>
 
       {editing ? (
-        <SongbookEditor
-          services={services}
-          currentUser={currentUser}
-          components={components}
-          projectId={projectId}
-          songbook={songbook}
-          initialItems={items}
-          onDone={handleEditDone}
-        />
+        <>
+          <SongbookEditor
+            services={services}
+            currentUser={currentUser}
+            components={components}
+            projectId={projectId}
+            songbook={songbook}
+            initialItems={items}
+            onDone={handleEditDone}
+          />
+          {/* Print settings (034): only here, so only for those who can edit. */}
+          <PrintSettingsSection>
+            <components.SongbookGenerationPanel
+              songbook={songbook}
+              revision={revision}
+              items={items}
+              canEditCovers
+              onCoversSaved={refreshQuietly}
+            />
+          </PrintSettingsSection>
+        </>
       ) : (
         <>
           {isCurrent && (
@@ -421,13 +439,6 @@ export function SongbookManagePageView({
                 : undefined
             }
           />
-          <components.SongbookGenerationPanel
-            songbook={songbook}
-            revision={revision}
-            items={items}
-            canEditCovers={isCurrent && canEditSongbook(role)}
-            onCoversSaved={() => setReloads((n) => n + 1)}
-          />
           {isReviewer(role) && (
             <SongbookHistory
               services={services}
@@ -446,6 +457,37 @@ export function SongbookManagePageView({
         </>
       )}
     </Page>
+  );
+}
+
+/**
+ * "Configurações de impressão" (034): the PDF generation panel, collapsed by
+ * default under the editor. It prints the saved version, not unsaved edits.
+ */
+function PrintSettingsSection({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="songbook-print-settings mt-4">
+      <button
+        type="button"
+        className="songbook-print-settings-toggle"
+        aria-expanded={open}
+        aria-controls="songbook-print-settings-body"
+        onClick={() => setOpen((o) => !o)}
+      >
+        {open ? <BsChevronDown aria-hidden /> : <BsChevronRight aria-hidden />}
+        <span>Configurações de impressão</span>
+      </button>
+      {open && (
+        <div id="songbook-print-settings-body">
+          <p className="text-muted small mb-0">
+            Usa a versão salva do caderninho; salve a versão antes de gerar
+            para incluir as mudanças.
+          </p>
+          {children}
+        </div>
+      )}
+    </section>
   );
 }
 
