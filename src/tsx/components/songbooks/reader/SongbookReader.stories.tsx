@@ -65,7 +65,7 @@ const meta = {
   args: {
     title: "Carnaval 2026",
     items: songbookItems(songbookFixture),
-    actions: <a href="#detalhes">Detalhes, PDF e versões</a>,
+    actions: <a href="#detalhes">Gerenciar</a>,
     onDownloadPdf: fn(() => Promise.resolve()),
   },
 } satisfies Meta<typeof SongbookReader>;

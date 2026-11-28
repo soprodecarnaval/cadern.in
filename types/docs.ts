@@ -205,6 +205,16 @@ export const zSongbookDoc = zSongbookData.extend({
 });
 export type SongbookDoc = z.infer<typeof zSongbookDoc>;
 
+// How the songbook prints (037): per revision, like covers, so a printed
+// version never changes silently. Absent on older revisions = the defaults.
+export const zSongbookPrintSettings = z.object({
+  // Instruments whose missing parts are filled with their fallback's.
+  fallbacks: z.array(zInstrument),
+  backSheetPageNumber: z.boolean(),
+  antiAssedioPages: z.boolean(),
+});
+export type SongbookPrintSettings = z.infer<typeof zSongbookPrintSettings>;
+
 export const zSongbookRevisionContent = z.object({
   // Structure: which scores, in what order, under which sections. Admin-only.
   entries: z.array(zSongbookEntry),
@@ -213,6 +223,8 @@ export const zSongbookRevisionContent = z.object({
   pins: z.record(z.string()),
   // Per-instrument cover image. Admin-only.
   covers: z.record(zInstrument, zStorageFile),
+  // Print settings. Admin-only; carried over by every other write.
+  print: zSongbookPrintSettings.optional(),
 });
 export type SongbookRevisionContent = z.infer<typeof zSongbookRevisionContent>;
 

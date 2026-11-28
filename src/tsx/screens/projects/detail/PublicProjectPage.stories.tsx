@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, userEvent, within, waitFor } from "@storybook/test";
 import { PublicProjectPageView } from "./PublicProjectPageView";
-import { pending, score, services, user, songbook } from "../../../../../.storybook/fixtures/screens";
+import { bookRevision, pending, score, services, user, songbook } from "../../../../../.storybook/fixtures/screens";
 
 const projectServices = {
   ...services,
@@ -33,7 +33,7 @@ export const Owner: Story = {
     await expect(projectServices.getProjectSongbooks).toHaveBeenCalledWith("bloco-exemplo", { publishedOnly: false });
     await expect(canvas.getByRole("link", { name: "Carnaval 2026" })).toHaveAttribute("href", "/bloco-exemplo/carnaval/gerenciar");
     await expect(canvas.getByRole("link", { name: "Editar Ensaios 2027" })).toHaveAttribute("href", "/bloco-exemplo/ensaios/gerenciar?detalhes&editar");
-    await expect(canvas.getByRole("link", { name: "Configurar Ensaios 2027" })).toHaveAttribute("href", "/bloco-exemplo/ensaios/gerenciar?detalhes");
+    await expect(canvas.getByRole("link", { name: "Gerenciar Ensaios 2027" })).toHaveAttribute("href", "/bloco-exemplo/ensaios/gerenciar?detalhes");
     await expect(canvas.queryByRole("button", { name: "Publicar Carnaval 2026" })).toBeNull();
     await expect(canvas.getByRole("button", { name: "Duplicar Carnaval 2026" })).toBeVisible();
     await expect(canvas.getByRole("navigation", { name: "Navegação do projeto" })).toHaveTextContent("Meus projetos");
@@ -88,6 +88,34 @@ export const PrintOptions: Story = {
     for (const part of parts) {await expect(part).not.toBeChecked();}
     await expect(arrangements).toBeChecked();
     await expect(download).toBeEnabled();
+  },
+};
+export const PrintWithFallback: Story = {
+  // Saved settings (038): tuba prints from trombone parts, so Imprimir offers it.
+  args: {
+    role: undefined,
+    currentUser: null,
+    services: {
+      ...projectServices,
+      getSongbookRevision: () => Promise.resolve({
+        ...bookRevision,
+        print: { fallbacks: ["tuba"], backSheetPageNumber: false, antiAssedioPages: false },
+      }),
+      loadPinnedScores: () => Promise.resolve(new Map([[score.id, {
+        score: { ...score, latestRevision: { ...score.latestRevision, parts: score.latestRevision.parts.map((p) => ({ ...p, instrument: "trombone" as const })) } },
+        latestRevisionId: score.latestRevision.id,
+        deleted: false,
+      }]])),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Imprimir Carnaval 2026" }));
+    const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog", { name: "Imprimir Carnaval 2026" }));
+    await expect(await dialog.findByRole("checkbox", { name: "Trombone" })).toBeVisible();
+    await expect(dialog.getByRole("checkbox", { name: "Tuba (com trombone)" })).toBeVisible();
+    // Bombardino's fallback isn't on, so it isn't offered.
+    await expect(dialog.queryByRole("checkbox", { name: /Bombardino/ })).toBeNull();
   },
 };
 export const Reviewer: Story = {

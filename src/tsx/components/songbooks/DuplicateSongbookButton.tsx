@@ -4,6 +4,7 @@ import type { User } from "firebase/auth";
 import { copyTitle, duplicateSongbook, type DuplicateSongbookServices } from "../../../lib/duplicateSongbook";
 import { canEditSongbook } from "../../../lib/roles";
 import { songbookPath } from "../../../lib/routes";
+import { BsFiles } from "react-icons/bs";
 import { Button, type ButtonProps } from "../../atoms/Button";
 import { ProjectPickerModal, type ProjectPickerServices } from "../projects/ProjectPickerModal";
 
@@ -20,12 +21,17 @@ export function DuplicateSongbookButton({
   services,
   size = "sm",
   variant = "secondary",
+  iconOnly = false,
+  className,
 }: {
   songbook: { id: string; title: string };
   user: User | null;
   services: DuplicateSongbookButtonServices;
   size?: ButtonProps["size"];
   variant?: ButtonProps["variant"];
+  /** Just the icon (project page rows, 036); the label stays the accessible name. */
+  iconOnly?: boolean;
+  className?: string;
 }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -37,10 +43,12 @@ export function DuplicateSongbookButton({
       <Button
         size={size}
         variant={variant}
+        className={className}
         onClick={() => setOpen(true)}
         aria-label={`Duplicar ${songbook.title}`}
+        title={iconOnly ? `Duplicar ${songbook.title}` : undefined}
       >
-        Duplicar
+        {iconOnly ? <BsFiles aria-hidden /> : "Duplicar"}
       </Button>
       <ProjectPickerModal
         show={open}

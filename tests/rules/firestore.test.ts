@@ -634,7 +634,7 @@ describe("songbooks", () => {
   /** What createSongbookRevision commits. */
   function reviseBatch(
     db: Firestore,
-    data: ReturnType<typeof revision>,
+    data: ReturnType<typeof revision> & { print?: unknown },
     rev = "r2",
   ) {
     const batch = writeBatch(db);
@@ -704,6 +704,36 @@ describe("songbooks", () => {
         entries: [],
       }).commit(),
     );
+  });
+
+  it("lets an admin change the print settings", async () => {
+    await seedSongbook();
+    await assertSucceeds(reviseBatch(as(ADMIN), {
+      ...revision(2, "r1"),
+      print: { fallbacks: ["tuba"], backSheetPageNumber: true, antiAssedioPages: false },
+    }).commit());
+  });
+
+  it("denies an editor changing the print settings", async () => {
+    await seedSongbook();
+    await assertFails(reviseBatch(as(EDITOR), {
+      ...revision(2, "r1", EDITOR, { [SCORE]: "2" }),
+      print: { fallbacks: [], backSheetPageNumber: true, antiAssedioPages: false },
+    }).commit());
+  });
+
+  it("lets an editor re-pin when it carries the print settings over", async () => {
+    const print = { fallbacks: ["tuba"], backSheetPageNumber: true, antiAssedioPages: false };
+    await seedSongbook();
+    await seed(async (db) => {
+      await setDoc(revRef(db, "r2"), { ...revision(2, "r1"), print });
+      await updateDoc(sbRef(db), { currentRevisionId: "r2" });
+    });
+    await assertSucceeds(reviseBatch(as(EDITOR), {
+      ...revision(3, "r2", EDITOR, { [SCORE]: "2" }), print,
+    }, "r3").commit());
+    // Dropping them is a change too.
+    await assertFails(reviseBatch(as(EDITOR), revision(3, "r2", EDITOR, { [SCORE]: "2" }), "r3").commit());
   });
 
   it("denies building on anything but the current revision", async () => {

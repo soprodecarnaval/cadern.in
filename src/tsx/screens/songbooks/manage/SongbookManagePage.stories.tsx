@@ -3,6 +3,7 @@ import { availableScoreDoc, score } from "../../../../../.storybook/fixtures/scr
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, fn, screen, userEvent, within, waitFor } from "@storybook/test";
 import { SongbookManagePageView } from "./SongbookManagePageView";
+import { SongbookReader } from "../../../components/songbooks/reader/SongbookReader";
 import {
   bookRevision,
   generate,
@@ -28,7 +29,19 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof SongbookManagePageView>;
 
-export const OwnerDetails: Story = {};
+export const OwnerDetails: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("button", { name: "Editar" })).toBeVisible();
+    // Duplicar, Editar, Publicar/Despublicar, in that order; no Enviar partitura.
+    const actions = canvas.getByRole("button", { name: "Editar" }).parentElement!;
+    await expect([...actions.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["Duplicar", "Editar", "Despublicar"]);
+    await expect(canvas.queryByRole("link", { name: "Enviar partitura" })).toBeNull();
+    // Print settings live in Editar (037); Gerenciar keeps its links.
+    await expect(canvas.queryByRole("button", { name: "Configurações de impressão" })).toBeNull();
+    await expect(canvas.getByRole("link", { name: "abrir caderninho" })).toBeVisible();
+  },
+};
 export const DirectEdit: Story = {
   parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
   play: async ({ canvasElement }) => {
@@ -41,10 +54,66 @@ export const DirectEdit: Story = {
     await expect(dialog.getByRole("button", { name: "Salvar versão" })).toBeEnabled();
   },
 };
+export const EditorPrintSettings: Story = {
+  parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // The button takes the links' place (037).
+    const button = await canvas.findByRole("button", { name: "Configurações de impressão" });
+    await expect(canvas.queryByRole("link", { name: "abrir caderninho" })).toBeNull();
+    await expect(canvas.queryByRole("link", { name: "caderninhos do projeto" })).toBeNull();
+    await userEvent.click(button);
+    const dialog = within(await screen.findByRole("dialog", { name: "Configurações de impressão" }));
+    await expect(dialog.queryByRole("button", { name: /Gerar/ })).toBeNull();
+    await expect(dialog.getByRole("button", { name: "Salvar" })).toBeDisabled();
+    await userEvent.click(dialog.getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  },
+};
+export const EditorRoleNoPrintSettings: Story = {
+  // Editors may open ?editar but get the details page, without print settings.
+  args: { role: "editor" },
+  parameters: { route: "/bloco-exemplo/carnaval/gerenciar?detalhes&editar" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText(/versão #/)).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Configurações de impressão" })).toBeNull();
+  },
+};
+export const ReaderEditButton: Story = {
+  // The reader the caderninho's name opens: Editar next to Gerenciar.
+  args: { components: { ...songbookComponents, SongbookReader } },
+  parameters: { route: "/bloco-exemplo/carnaval/gerenciar" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("link", { name: "Editar" })).toHaveAttribute("href", "/bloco-exemplo/carnaval/gerenciar?detalhes&editar");
+    await expect(canvas.getByRole("link", { name: "Gerenciar" })).toBeVisible();
+    // Right after the title.
+    await expect(canvas.getByRole("heading", { name: songbook.title }).nextElementSibling).toBe(canvas.getByRole("link", { name: "Editar" }));
+  },
+};
+export const ReaderReviewerNoEdit: Story = {
+  args: { role: "reviewer", components: { ...songbookComponents, SongbookReader } },
+  parameters: { route: "/bloco-exemplo/carnaval/gerenciar" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("link", { name: "Gerenciar" })).toBeVisible();
+    await expect(canvas.queryByRole("link", { name: "Editar" })).toBeNull();
+  },
+};
 export const AccessDenied: Story = {
   args: { currentUser: null, role: undefined },
 };
-export const ReviewerDetails: Story = { args: { role: "reviewer" } };
+export const ReviewerDetails: Story = {
+  args: { role: "reviewer" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    // Only Duplicar: reviewers may neither edit nor publish.
+    await expect(await canvas.findByRole("button", { name: /Duplicar/ })).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Editar" })).toBeNull();
+    await expect(canvas.queryByRole("button", { name: /Publicar|Despublicar/ })).toBeNull();
+  },
+};
 export const Loading: Story = { args: { role: "loading" } };
 export const NotFound: Story = {
   args: {

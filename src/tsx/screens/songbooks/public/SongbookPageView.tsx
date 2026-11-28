@@ -1,4 +1,5 @@
 import { Page } from "../../../atoms/Page";
+import { printOptions } from "../../../../lib/songbookPrint";
 import { useEffect, useState } from "react";
 import { Alert, Spinner } from "react-bootstrap";
 import { useParams } from "react-router-dom";
@@ -138,10 +139,10 @@ export function SongbookPageView({
           instruments: [instrument],
           title: songbook.title,
           covers: { [instrument]: revision.covers[instrument]?.url ?? "" },
-          fallbackInstruments: new Set(),
+
           carnivalMode: false,
-          backSheetPageNumber: false,
-          antiAssedioPages: false,
+          // The version's saved print settings (038).
+          ...printOptions(revision),
         })
       }
     />

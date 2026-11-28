@@ -5,13 +5,13 @@ import { generateSongbookPdfs } from "../../../../lib/generateSongbookPdfs";
 import { loadPinnedScores } from "../../../../lib/songbookScores";
 import { useMemberRole } from "../../../../lib/useMemberRole";
 import { ScoreCard } from "../../../components/scores/card/ScoreCard";
-import { SongbookGenerationPanel } from "../../../components/songbooks/generation/SongbookGenerationPanel";
+import { SongbookPrintSettingsDialog } from "../../../components/songbooks/generation/SongbookPrintSettingsDialog";
 import { SongbookManagePageView } from "./SongbookManagePageView";
 import { SongbookReader } from "../../../components/songbooks/reader/SongbookReader";
 const services = { ...db, loadPinnedScores, generateSongbookPdfs };
 const components = {
   ScoreCard,
-  SongbookGenerationPanel,
+  SongbookPrintSettingsDialog,
   SongbookReader,
 };
 export function SongbookManagePage() {

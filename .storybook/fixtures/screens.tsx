@@ -28,7 +28,7 @@ import { ScoreLineageView } from "../../src/tsx/components/scores/detail/ScoreLi
 import { ScoreMetadataEditorView } from "../../src/tsx/screens/scores/ScoreMetadataEditorView";
 import { ScoreRevisionListView } from "../../src/tsx/components/scores/detail/ScoreRevisionListView";
 import { coverPreviewFixture } from "./components";
-import { SongbookGenerationPanelView } from "../../src/tsx/components/songbooks/generation/SongbookGenerationPanelView";
+import { SongbookPrintSettingsDialogView } from "../../src/tsx/components/songbooks/generation/SongbookPrintSettingsDialogView";
 import { noop, part } from "./components";
 
 export const date = Timestamp.fromDate(new Date("2026-02-01T12:00:00Z"));
@@ -357,18 +357,20 @@ function SaveModal(
 ) {
   return <SaveSongbookModalView {...props} services={services} />;
 }
-function Generation(
+function PrintSettings(
   props: ComponentProps<
-    typeof import("../../src/tsx/components/songbooks/generation/SongbookGenerationPanel").SongbookGenerationPanel
+    typeof import("../../src/tsx/components/songbooks/generation/SongbookPrintSettingsDialog").SongbookPrintSettingsDialog
   >,
 ) {
   return (
-    <SongbookGenerationPanelView
+    <SongbookPrintSettingsDialogView
       {...props}
       currentUser={user}
-      generateSongbookPdfs={generate}
-      saveSongbookCovers={(input) => Promise.resolve(input.current.covers)}
-      createCoverPreview={coverPreviewFixture}
+      services={{
+        saveSongbookPrintSettings: () => Promise.resolve("book-revision-3"),
+        saveSongbookCovers: (input) => Promise.resolve(input.current.covers),
+        createCoverPreview: coverPreviewFixture,
+      }}
     />
   );
 }
@@ -385,7 +387,7 @@ export const homeComponents = {
 };
 export const songbookComponents = {
   ScoreCard: ScreenCard,
-  SongbookGenerationPanel: Generation,
+  SongbookPrintSettingsDialog: PrintSettings,
   SongbookReader: (): JSX.Element => {
     return (
       <p className="text-muted">SongbookReader fora do escopo desta galeria.</p>

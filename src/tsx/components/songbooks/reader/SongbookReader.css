@@ -43,9 +43,26 @@
   background: var(--ds-paper);
 }
 
-.reader-index-title {
+.reader-index-title-group {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reader-index-head .reader-index-title-group { flex-wrap: nowrap; }
+
+/* With Editar beside it, the title keeps room for a word or two: on phones
+   the instrument menu and PDF button go to the next line instead. */
+.reader-index-title-group.has-actions {
+  min-width: min(100%, 13rem);
+}
+
+.reader-index-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-wrap: break-word;
   margin: 0;
   font-size: 1.1rem;
   font-weight: var(--ds-weight-heading);
@@ -141,7 +158,7 @@
   color: var(--bs-secondary-color);
   font-size: 0.75rem;
   font-weight: 400;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .reader-row-s {
