@@ -1,0 +1,17 @@
+/* Each instrument is a score card (ScoreRow.css): the same border, corners
+   and gap, with a row as tall as a song card's. Not a button: no hover. */
+.print-settings-row,
+.print-settings-row:hover {
+  min-height: calc(44px + 0.5rem);
+  background: none;
+  cursor: default;
+}
+
+/* "Usar … como alternativa": centered in its strip, 12px above and below
+   inside the line over it. A flex box, so no line of text leaves room under
+   the checkbox. */
+.score-card-details.print-settings-fallback {
+  display: flex;
+  align-items: center;
+  padding-block: 0.75rem;
+}

@@ -1,7 +1,7 @@
 import { Modal } from "../../../atoms/Modal";
 import { Input } from "../../../atoms/Input";
 import { Button } from "../../../atoms/Button";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Alert, Form, Spinner } from "react-bootstrap";
 import type { User } from "firebase/auth";
 import type { Instrument } from "../../../../../types/instrument";
@@ -23,6 +23,7 @@ export function SongbookCoverModal({
   onSaved: (covers: SongbookRevisionDoc["covers"]) => void;
   onHide: () => void;
 }) {
+  const heading = useId();
   const [file, setFile] = useState<File | null>(null);
   const [removed, setRemoved] = useState(false);
   const [fileUrl, setFileUrl] = useState("");
@@ -100,9 +101,9 @@ export function SongbookCoverModal({
   const dismiss = () => { if (!saveLock.current) { onHide(); } };
 
   return (
-    <Modal show onHide={dismiss} backdrop={saving ? "static" : true} keyboard={!saving} size="lg" centered>
+    <Modal show onHide={dismiss} backdrop={saving ? "static" : true} keyboard={!saving} size="lg" centered aria-labelledby={heading}>
       <Modal.Header closeButton={!saving}>
-        <Modal.Title>Capa · {instrument.charAt(0).toUpperCase() + instrument.slice(1)}</Modal.Title>
+        <Modal.Title id={heading}>Capa · {instrument.charAt(0).toUpperCase() + instrument.slice(1)}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <p className="text-muted small mb-2">{songbook.title} · Prévia da capa</p>

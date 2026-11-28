@@ -6,8 +6,7 @@ import { Modal } from "../../../atoms/Modal";
 import { Button } from "../../../atoms/Button";
 import { CardPointerSensor } from "../../../../lib/cardPointerSensor";
 import { useDraggable, useDroppable } from "@dnd-kit/react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { BsChevronDown, BsChevronRight } from "react-icons/bs";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Form, Spinner, Table } from "react-bootstrap";
 import { Badge } from "../../../atoms/Badge";
 import {
@@ -18,13 +17,13 @@ import {
 } from "react-router-dom";
 
 import type { WithId } from "../../../../lib/db";
-import { projectPath, publicSongbookPath, scorePath, songbookScorePath } from "../../../../lib/routes";
+import { projectPath, publicSongbookPath, scorePath, songbookEditPath, songbookScorePath } from "../../../../lib/routes";
+import { Link as ButtonLink } from "../../../atoms/Link";
 import {
   canDeleteSongbook,
   canEditSongbook,
   canPublishSongbook,
   canRepinSongbook,
-  isEditor,
   isReviewer,
 } from "../../../../lib/roles";
 import { groupScoreVersions, scoreSongbookSources } from "../../../../lib/scorePicker";
@@ -78,17 +77,15 @@ import { SongbookEditorList, SongbookEditorToolbar } from "../../../components/s
 import { useSongbookEditor } from "../../../components/songbooks/editor/useSongbookEditor";
 
 import { buildSongbookSections } from "../../../../lib/pdfGeneration";
-import { FEATURE_FLAG_BROWSER_UPLOAD } from "../../../../featureFlags";
-import { uploadPath } from "../../../../lib/uploadPath";
-import { Link as ButtonLink } from "../../../atoms/Link";
+import { printOptions } from "../../../../lib/songbookPrint";
 import { ProjectBreadcrumb } from "../../../components/navigation/ProjectBreadcrumb";
 import {
   DuplicateSongbookButton,
   type DuplicateSongbookButtonServices,
 } from "../../../components/songbooks/DuplicateSongbookButton";
 
-// The songbook's table and member tools (Gerenciar) live under ?detalhes and
-// PDF generation in its editor (034); the reader is the landing view.
+// The songbook's table and member tools (Gerenciar) live under ?detalhes, its
+// print settings in the editor (037); the reader is the landing view.
 const DETAILS_PARAM = "detalhes";
 const EDIT_PARAM = "editar";
 
@@ -158,7 +155,7 @@ export function SongbookManagePageView({
   role: import("../../../../lib/roles").Role | "loading";
   components: {
     ScoreCard: typeof import("../../../components/scores/card/ScoreCard").ScoreCard;
-    SongbookGenerationPanel: typeof import("../../../components/songbooks/generation/SongbookGenerationPanel").SongbookGenerationPanel;
+    SongbookPrintSettingsDialog: typeof import("../../../components/songbooks/generation/SongbookPrintSettingsDialog").SongbookPrintSettingsDialog;
     SongbookReader: typeof import("../../../components/songbooks/reader/SongbookReader").SongbookReader;
   };
 }) {
@@ -172,6 +169,9 @@ export function SongbookManagePageView({
   const [loaded, setLoaded] = useState<Loaded | null | "loading">("loading");
   const [reloads, setReloads] = useState(0);
   const [forks, setForks] = useState<Map<string, string>>(new Map());
+  // "Configurações de impressão" (037); each opening remounts the dialog.
+  const [printSettingsOpens, setPrintSettingsOpens] = useState(0);
+  const [printSettingsOpen, setPrintSettingsOpen] = useState(false);
 
   // Membership of the songbook's owning project, not just a role check in
   // the UI: a non-member never triggers the loads below (008).
@@ -328,16 +328,23 @@ export function SongbookManagePageView({
             <Link to={withDetails(true)}>Gerenciar</Link>
           </div>
         }
+        headActions={
+          // Only for those who may edit the songbook, and on its current version.
+          isCurrent && canEditSongbook(role) && (
+            <ButtonLink to={songbookEditPath(songbook.projectId, songbook.slug)} size="sm" variant="secondary">
+              Editar
+            </ButtonLink>
+          )
+        }
         onDownloadPdf={(instrument) =>
           services.generateSongbookPdfs({
             sections: buildSongbookSections(items),
             instruments: [instrument],
             title: songbook.title,
             covers: { [instrument]: revision.covers[instrument]?.url ?? "" },
-            fallbackInstruments: new Set(),
             carnivalMode: false,
-            backSheetPageNumber: false,
-            antiAssedioPages: false,
+            // The version's saved print settings (038).
+            ...printOptions(revision),
           })
         }
       />
@@ -356,12 +363,30 @@ export function SongbookManagePageView({
         <span className="text-muted">versão #{revision.revisionNumber}</span>
         {badges}
       </div>
-      <p className="text-muted">
-        <Link to={withDetails(false)}>abrir caderninho</Link>
-        {" · "}
-        <Link to={projectPath(projectId)}>caderninhos do projeto</Link>
-        {revision.note && <> · {revision.note}</>}
-      </p>
+      {editing ? (
+        // In Editar the print settings take the links' place (037); the
+        // breadcrumb still leads back.
+        <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setPrintSettingsOpens((n) => n + 1);
+              setPrintSettingsOpen(true);
+            }}
+          >
+            Configurações de impressão
+          </Button>
+          {revision.note && <span className="text-muted">{revision.note}</span>}
+        </div>
+      ) : (
+        <p className="text-muted">
+          <Link to={withDetails(false)}>abrir caderninho</Link>
+          {" · "}
+          <Link to={projectPath(projectId)}>caderninhos do projeto</Link>
+          {revision.note && <> · {revision.note}</>}
+        </p>
+      )}
 
       {editing ? (
         <>
@@ -374,26 +399,23 @@ export function SongbookManagePageView({
             initialItems={items}
             onDone={handleEditDone}
           />
-          {/* Print settings (034): only here, so only for those who can edit. */}
-          <PrintSettingsSection>
-            <components.SongbookGenerationPanel
-              songbook={songbook}
-              revision={revision}
-              items={items}
-              canEditCovers
-              onCoversSaved={refreshQuietly}
-            />
-          </PrintSettingsSection>
+          {/* Print settings (037): only in Editar, so only for those who can edit. */}
+          <components.SongbookPrintSettingsDialog
+            key={printSettingsOpens}
+            show={printSettingsOpen}
+            songbook={songbook}
+            revision={revision}
+            items={items}
+            onSaved={refreshQuietly}
+            onHide={() => setPrintSettingsOpen(false)}
+          />
         </>
       ) : (
         <>
           {isCurrent && (
+            // Duplicar, Editar, Publicar: each only for those allowed to.
             <div className="d-flex flex-wrap gap-2 mb-3">
-              {FEATURE_FLAG_BROWSER_UPLOAD && isEditor(role) && (
-                <ButtonLink to={uploadPath({ projectId: songbook.projectId })} size="sm" variant="primary">
-                  Enviar partitura
-                </ButtonLink>
-              )}
+              <DuplicateSongbookButton songbook={songbook} user={currentUser} services={services} />
               {canEditSongbook(role) && (
                 <Button
                   size="sm"
@@ -401,15 +423,6 @@ export function SongbookManagePageView({
                   onClick={() => setEditing(true)}
                 >
                   Editar
-                </Button>
-              )}
-              {canRepin && stale.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={() => void handleRepin(stale.map((i) => i.score.id))}
-                >
-                  Atualizar todas ({stale.length})
                 </Button>
               )}
               {canPublishSongbook(role) && (
@@ -423,7 +436,15 @@ export function SongbookManagePageView({
                   {songbook.isPublished ? "Despublicar" : "Publicar"}
                 </Button>
               )}
-              <DuplicateSongbookButton songbook={songbook} user={currentUser} services={services} />
+              {canRepin && stale.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => void handleRepin(stale.map((i) => i.score.id))}
+                >
+                  Atualizar todas ({stale.length})
+                </Button>
+              )}
             </div>
           )}
           <SongbookContents
@@ -457,37 +478,6 @@ export function SongbookManagePageView({
         </>
       )}
     </Page>
-  );
-}
-
-/**
- * "Configurações de impressão" (034): the PDF generation panel, collapsed by
- * default under the editor. It prints the saved version, not unsaved edits.
- */
-function PrintSettingsSection({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <section className="songbook-print-settings mt-4">
-      <button
-        type="button"
-        className="songbook-print-settings-toggle"
-        aria-expanded={open}
-        aria-controls="songbook-print-settings-body"
-        onClick={() => setOpen((o) => !o)}
-      >
-        {open ? <BsChevronDown aria-hidden /> : <BsChevronRight aria-hidden />}
-        <span>Configurações de impressão</span>
-      </button>
-      {open && (
-        <div id="songbook-print-settings-body">
-          <p className="text-muted small mb-0">
-            Usa a versão salva do caderninho; salve a versão antes de gerar
-            para incluir as mudanças.
-          </p>
-          {children}
-        </div>
-      )}
-    </section>
   );
 }
 
@@ -683,7 +673,7 @@ function SongbookEditor({
   currentUser: import("firebase/auth").User | null;
   components: {
     ScoreCard: typeof import("../../../components/scores/card/ScoreCard").ScoreCard;
-    SongbookGenerationPanel: typeof import("../../../components/songbooks/generation/SongbookGenerationPanel").SongbookGenerationPanel;
+    SongbookPrintSettingsDialog: typeof import("../../../components/songbooks/generation/SongbookPrintSettingsDialog").SongbookPrintSettingsDialog;
     SongbookReader: typeof import("../../../components/songbooks/reader/SongbookReader").SongbookReader;
   };
 
@@ -857,7 +847,7 @@ function ScorePicker({
   currentUser: import("firebase/auth").User | null;
   components: {
     ScoreCard: typeof import("../../../components/scores/card/ScoreCard").ScoreCard;
-    SongbookGenerationPanel: typeof import("../../../components/songbooks/generation/SongbookGenerationPanel").SongbookGenerationPanel;
+    SongbookPrintSettingsDialog: typeof import("../../../components/songbooks/generation/SongbookPrintSettingsDialog").SongbookPrintSettingsDialog;
     SongbookReader: typeof import("../../../components/songbooks/reader/SongbookReader").SongbookReader;
   };
 
@@ -1061,7 +1051,7 @@ function ScorePickerVersions({
   services: SongbookManagePageServices;
   components: {
     ScoreCard: typeof import("../../../components/scores/card/ScoreCard").ScoreCard;
-    SongbookGenerationPanel: typeof import("../../../components/songbooks/generation/SongbookGenerationPanel").SongbookGenerationPanel;
+    SongbookPrintSettingsDialog: typeof import("../../../components/songbooks/generation/SongbookPrintSettingsDialog").SongbookPrintSettingsDialog;
     SongbookReader: typeof import("../../../components/songbooks/reader/SongbookReader").SongbookReader;
   };
 

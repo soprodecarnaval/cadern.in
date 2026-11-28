@@ -146,6 +146,7 @@ export function SongbookReader({
   badges,
   items,
   actions,
+  headActions,
   onDownloadPdf,
 }: {
   title: string;
@@ -154,6 +155,9 @@ export function SongbookReader({
   items: NumberedSongbookItemViewModel[];
   // Shown under the index header, e.g. a link to the songbook's details.
   actions?: ReactNode;
+  // Right after the title (e.g. Editar), so the buttons after it don't move
+  // when it's hidden.
+  headActions?: ReactNode;
   // Builds and downloads the songbook's PDF for one instrument.
   onDownloadPdf?: (instrument: Instrument) => Promise<void>;
 }) {
@@ -569,6 +573,7 @@ export function SongbookReader({
       onOpen={(song) => openSong(song)}
       onClose={onClose}
       actions={onClose ? undefined : actions}
+      headActions={onClose ? undefined : headActions}
       pdf={onClose ? undefined : pdfButton}
       pdfError={onClose ? undefined : pdfError}
       inputRef={inputRef}
@@ -801,6 +806,7 @@ function SongIndex({
   onOpen,
   onClose,
   actions,
+  headActions,
   pdf,
   pdfError,
   inputRef,
@@ -820,6 +826,7 @@ function SongIndex({
   onOpen: (song: Song) => void;
   onClose?: () => void;
   actions?: ReactNode;
+  headActions?: ReactNode;
   // Download button, shown after the instrument menu.
   pdf?: ReactNode;
   pdfError?: string;
@@ -910,7 +917,12 @@ function SongIndex({
     <>
       <div className="reader-index-head">
         <div className="d-flex align-items-center gap-2 mb-2">
-          <h1 className="reader-index-title">{title}</h1>
+          {/* The title and what sits right after it (Editar) take the free
+              space together, so the controls after them stay at the right. */}
+          <div className={headActions ? "reader-index-title-group has-actions" : "reader-index-title-group"}>
+            <h1 className="reader-index-title">{title}</h1>
+            {headActions}
+          </div>
           {badges}
           {instruments.length > 0 && instrument && (
             <Select

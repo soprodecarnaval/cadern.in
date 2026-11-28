@@ -1,11 +1,12 @@
 import { useEffect, useId, useState } from "react";
 import { Alert } from "react-bootstrap";
 import type { SongbookDoc, SongbookRevisionDoc } from "../../../../../types/docs";
-import { zInstrument, type Instrument } from "../../../../../types/instrument";
+import type { Instrument } from "../../../../../types/instrument";
 import type { WithId } from "../../../../lib/db";
 import { buildSongbookSections, type Section } from "../../../../lib/pdfGeneration";
 import { instrumentLabel } from "../../../../lib/preferredInstrument";
 import { fromSongbookRevision } from "../../../../lib/songbook";
+import { printableInstruments, printOptions } from "../../../../lib/songbookPrint";
 import { Button } from "../../../atoms/Button";
 import { Checkbox } from "../../../atoms/Choice";
 import { Modal } from "../../../atoms/Modal";
@@ -18,10 +19,18 @@ export type SongbookPrintServices = Pick<typeof import("../../../../lib/db"), "g
 type PrintBook = {
   sections: Section[];
   covers: SongbookRevisionDoc["covers"];
+  print: SongbookRevisionDoc["print"];
   instruments: Instrument[];
+  // Instruments printed from their fallback's parts (038), e.g. tuba → trombone.
+  via: Map<Instrument, Instrument>;
   arrangements: ArrangementPdfEntry[];
   withoutArrangement: number;
 };
+
+/** "Tuba (com trombone)" when the parts come from a fallback (038). */
+function printLabel(instrument: Instrument, via: Instrument | undefined): string {
+  return via ? `${instrumentLabel(instrument)} (com ${via})` : instrumentLabel(instrument);
+}
 
 export function SongbookPrintDialog({ songbook, services, onHide }: {
   songbook: WithId<SongbookDoc>;
@@ -43,15 +52,16 @@ export function SongbookPrintDialog({ songbook, services, onHide }: {
         if (!revision) {throw new Error("Caderninho não encontrado.");}
         const sections = buildSongbookSections(fromSongbookRevision(revision, await services.loadPinnedScores(revision)));
         const scores = sections.flatMap((section) => section.scores).filter((item) => !item.deleted);
-        const instruments = zInstrument.options.filter((instrument) =>
-          scores.some(({ revision }) => revision.parts.some((part) => part.instrument === instrument)),
-        );
+        // With parts, or through an enabled fallback (038).
+        const printable = printableInstruments(sections, revision);
+        const instruments = printable.map((p) => p.instrument);
+        const via = new Map(printable.flatMap((p) => p.via ? [[p.instrument, p.via] as const] : []));
         const arrangements = scores.flatMap(({ score, revision }) => revision.arrangementSvg?.length
           ? [{ title: score.title, urls: revision.arrangementSvg }]
           : []);
         const withoutArrangement = scores.length - arrangements.length;
         if (active) {
-          setBook({ sections, covers: revision.covers, instruments, arrangements, withoutArrangement });
+          setBook({ sections, covers: revision.covers, print: revision.print, instruments, via, arrangements, withoutArrangement });
         }
       } catch {
         if (active) {setError("Não foi possível carregar este caderninho.");}
@@ -76,10 +86,9 @@ export function SongbookPrintDialog({ songbook, services, onHide }: {
           sections: book.sections,
           instruments,
           covers: Object.fromEntries(instruments.map((instrument) => [instrument, book.covers[instrument]?.url ?? ""])),
-          fallbackInstruments: new Set(),
           carnivalMode: false,
-          backSheetPageNumber: false,
-          antiAssedioPages: false,
+          // The version's saved print settings (038).
+          ...printOptions({ print: book.print }),
         });
       }
       if (includeArrangements) {
@@ -115,7 +124,7 @@ export function SongbookPrintDialog({ songbook, services, onHide }: {
               <div className="ms-4 mb-3 d-flex flex-column gap-2">
                 {book.instruments.map((instrument) => (
                   <Checkbox key={instrument} id={`${heading}-${instrument.replace(/ /g, "-")}`}
-                    label={instrumentLabel(instrument)} checked={selectedParts.includes(instrument)} onChange={(event) => {
+                    label={printLabel(instrument, book.via.get(instrument))} checked={selectedParts.includes(instrument)} onChange={(event) => {
                       setSelectedParts(event.target.checked
                         ? [...selectedParts, instrument]
                         : selectedParts.filter((part) => part !== instrument));

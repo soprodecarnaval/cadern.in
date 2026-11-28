@@ -80,29 +80,3 @@
     display: flex;
   }
 }
-
-/* "Configurações de impressão" (034): a disclosure under the editor, h5-sized
-   heading button with a chevron and the ink focus ring. */
-.songbook-print-settings {
-  border-top: var(--ds-border) solid var(--ds-ink);
-  padding-top: var(--ds-space-3);
-}
-
-.songbook-print-settings-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--ds-space-2);
-  padding: var(--ds-space-1) 0;
-  border: 0;
-  background: none;
-  color: var(--ds-ink);
-  font: inherit;
-  font-size: 1.25rem;
-  font-weight: var(--ds-weight-action);
-  text-align: left;
-}
-
-.songbook-print-settings-toggle:focus-visible {
-  outline: var(--ds-border) solid var(--ds-ink);
-  outline-offset: 2px;
-}
