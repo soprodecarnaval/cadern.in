@@ -58,7 +58,11 @@ export async function duplicateSongbook(
     projectId: input.targetProjectId,
     slug,
     title,
-    content: { entries: revision.entries, pins: revision.pins, covers: revision.covers },
+    content: {
+      entries: revision.entries, pins: revision.pins, covers: revision.covers,
+      // The copy prints like the original (037).
+      ...(revision.print ? { print: revision.print } : {}),
+    },
     createdBy: input.createdBy,
     note: `Cópia de ${source.projectId}/${source.slug} v${revision.revisionNumber}`,
   });

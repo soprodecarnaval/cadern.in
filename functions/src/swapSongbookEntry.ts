@@ -78,6 +78,7 @@ export async function swapSongbookEntryHandler(
         e.scoreId === scoreId ? { ...e, scoreId: forkId } : e),
       pins,
       covers: current.get("covers") ?? {},
+      ...(current.get("print") ? { print: current.get("print") } : {}),
       revisionNumber: (current.get("revisionNumber") as number) + 1,
       prevRevisionId: current.id,
       createdBy: uid,

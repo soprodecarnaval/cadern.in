@@ -373,7 +373,8 @@ service cloud.firestore {
         }
 
         // Builds on the current revision. Admins change anything; editors only
-        // re-pin, so `entries` and `covers` must match the current revision.
+        // re-pin, so `entries`, `covers` and `print` must match the current
+        // revision (`print` may be absent on both).
         function extendsCurrent(songbookId) {
           let songbook = get(songbookPath(songbookId)).data;
           let current = get(songbookRevisionPath(songbookId, songbook.currentRevisionId)).data;
@@ -382,7 +383,8 @@ service cloud.firestore {
             (isAdmin(songbook.projectId) || (
               isEditor(songbook.projectId) &&
               request.resource.data.entries == current.entries &&
-              request.resource.data.covers == current.covers
+              request.resource.data.covers == current.covers &&
+              request.resource.data.get('print', null) == current.get('print', null)
             ));
         }
       }

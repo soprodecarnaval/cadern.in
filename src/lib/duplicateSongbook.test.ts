@@ -8,6 +8,7 @@ const content = {
   ],
   pins: { "outro-a": "outro-a-r3" },
   covers: { trompete: { path: "projects/outro/songbooks/x/r/capa.png", url: "https://x/capa.png" } },
+  print: { fallbacks: ["tuba" as const], backSheetPageNumber: true, antiAssedioPages: false },
 };
 
 function services(taken: string[] = []): DuplicateSongbookServices {
@@ -35,7 +36,7 @@ describe("freeSongbookSlug", () => {
 });
 
 describe("duplicateSongbook", () => {
-  it("copies entries, pins and covers into the target project", async () => {
+  it("copies entries, pins, covers and print settings into the target project", async () => {
     const s = services();
     const result = await duplicateSongbook(
       { sourceId: "outro~carnaval", targetProjectId: "acervo", title: " Cópia de Carnaval ", createdBy: "u1" },

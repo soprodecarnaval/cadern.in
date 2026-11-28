@@ -48,6 +48,7 @@ import {
   type CommentAnchor,
   type ReviewCommentDoc,
   type SongbookDoc,
+  type SongbookPrintSettings,
   type SongbookRevisionContent,
   type SongbookRevisionDoc,
   type ScoreMetadata,
@@ -718,6 +719,10 @@ export async function createSongbookRevision(
     tx.set(songbookRevisionRef(id, revisionId), {
       ...zSongbookRevisionData.parse({
         ...content,
+        // Print settings carry over unless the write sets them (037), so a
+        // re-pin, cover or editor save never drops them. Left out when there
+        // are none: Firestore rejects undefined.
+        ...((content.print ?? prev.print) ? { print: content.print ?? prev.print } : {}),
         revisionNumber: prev.revisionNumber + 1,
         prevRevisionId: songbook.currentRevisionId,
         createdBy: input.createdBy,
@@ -731,6 +736,28 @@ export async function createSongbookRevision(
     });
     return revisionId;
   });
+}
+
+/**
+ * Saves a songbook's print settings (037) as a revision of its own, with the
+ * current revision's entries, pins and covers, as a cover save does.
+ */
+export async function saveSongbookPrintSettings(
+  songbook: Pick<WithId<SongbookDoc>, "id" | "projectId" | "slug">,
+  print: SongbookPrintSettings,
+  createdBy: string,
+): Promise<string> {
+  // The current revision, read fresh: another save may have moved it.
+  const latest = await getSongbook(songbook.projectId, songbook.slug);
+  const current = latest && await getSongbookRevision(songbook.id, latest.currentRevisionId);
+  if (!current) {
+    throw new Error("Não foi possível ler a versão atual. Tente novamente.");
+  }
+  return createSongbookRevision(
+    songbook.id,
+    { entries: current.entries, pins: current.pins, covers: current.covers, print },
+    { createdBy, note: "Configurações de impressão" },
+  );
 }
 
 /** Owner-only: makes the current revision readable by everyone, or not. */

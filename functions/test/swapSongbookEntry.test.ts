@@ -65,6 +65,15 @@ describe("swapSongbookEntryToFork", () => {
     expect(revision.get("note")).toBe("troca: Eva → derivação");
   });
 
+  it("carries the print settings over (037)", async () => {
+    const print = { fallbacks: ["tuba"], backSheetPageNumber: true, antiAssedioPages: false };
+    const songbook = db().collection("songbooks").doc(SB);
+    await songbook.collection("songbookRevisions").doc("r1").update({ print });
+    const { revisionId } = await swap("ed");
+    const revision = await songbook.collection("songbookRevisions").doc(revisionId).get();
+    expect(revision.get("print")).toEqual(print);
+  });
+
   it("rejects anyone below editor", async () => {
     await expect(swap(undefined)).rejects.toMatchObject({
       code: "unauthenticated",
